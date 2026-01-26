@@ -1,45 +1,74 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+# -----------------------
+# 1. 杂项 & 系统文件 (防止系统垃圾上传)
+# -----------------------
 .DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# -----------------------
+# 2. Flutter/Dart 核心构建产物 (最重要)
+# -----------------------
+/build/
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
-/coverage/
+.packages
 
-# Symbolication related
-app.*.symbols
+# -----------------------
+# 3. Android 相关 (防止本地构建环境冲突)
+# -----------------------
+/android/local.properties
+/android/.gradle
+/android/captures/
+/android/gradlew
+/android/gradlew.bat
+/android/app/src/main/assets/
+# 密钥文件 (绝对不能上传!!!)
+*.jks
+*.keystore
+key.properties
 
-# Obfuscation related
-app.*.map.json
+# -----------------------
+# 4. iOS/MacOS 相关
+# -----------------------
+/ios/Flutter/.last_build_id
+/ios/Flutter/App.framework
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/app.flx
+/ios/Flutter/app.zip
+/ios/ServiceDefinitions.json
+/ios/Runner/GeneratedPluginRegistrant.*
+/macos/Flutter/ephemeral/
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# -----------------------
+# 5. Web 相关 (防止上次提到的误传浏览器配置)
+# -----------------------
+lib/generated_plugin_registrant.dart
+
+# -----------------------
+# 6. 编辑器/IDE 配置 (防止别人用了你的设置)
+# -----------------------
+# IntelliJ / Android Studio
+*.iml
+.idea/
+*.ipr
+*.iws
+
+# VS Code (建议忽略，除非团队强制统一配置)
+.vscode/
+.history/
+
+# -----------------------
+# 7. 其他生成文件
+# -----------------------
+doc/api/
+coverage/
