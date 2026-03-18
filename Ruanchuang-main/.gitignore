@@ -1,0 +1,73 @@
+# -----------------------
+# 1. 杂项 & 系统文件 (防止系统垃圾上传)
+# -----------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+
+# -----------------------
+# 2. Flutter/Dart 核心构建产物 (最重要)
+# -----------------------
+/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+.packages
+
+# -----------------------
+# 3. Android 相关 (防止本地构建环境冲突)
+# -----------------------
+/android/local.properties
+/android/.gradle
+/android/captures/
+/android/gradlew
+/android/gradlew.bat
+/android/app/src/main/assets/
+# 密钥文件 (绝对不能上传!!!)
+*.jks
+*.keystore
+key.properties
+
+# -----------------------
+# 4. iOS/MacOS 相关
+# -----------------------
+/ios/Flutter/.last_build_id
+/ios/Flutter/App.framework
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/app.flx
+/ios/Flutter/app.zip
+/ios/ServiceDefinitions.json
+/ios/Runner/GeneratedPluginRegistrant.*
+/macos/Flutter/ephemeral/
+
+# -----------------------
+# 5. Web 相关 (防止上次提到的误传浏览器配置)
+# -----------------------
+
+# -----------------------
+# 6. 编辑器/IDE 配置 (防止别人用了你的设置)
+# -----------------------
+# IntelliJ / Android Studio
+*.iml
+.idea/
+*.ipr
+*.iws
+
+# VS Code (建议忽略，除非团队强制统一配置)
+.vscode/
+.history/
+
+# -----------------------
+# 7. 其他生成文件
+# -----------------------
+doc/api/
+coverage/
