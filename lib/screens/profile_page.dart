@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
+
 import '../main.dart';
-import '../utils/app_strings.dart'; // 1. 引入字典
+import '../models/models.dart';
+import '../services/app_services.dart';
+import '../utils/app_strings.dart';
+import 'debug/diagnostics_page.dart';
+import 'emotion_page.dart';
+import 'goals_page.dart';
+import 'integrations_page.dart';
+import 'review_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -8,7 +16,6 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 使用字典
       appBar: AppBar(title: Text(AppStrings.of(context, 'profile_title'))),
       body: ListView(
         children: [
@@ -19,19 +26,31 @@ class ProfilePage extends StatelessWidget {
               child: Icon(Icons.person, size: 40),
             ),
           ),
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Text(
-                "BattleMan User",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
+          FutureBuilder<UserProfile>(
+            future: AppServices.dataService.getUserProfile(),
+            builder: (ctx, snap) {
+              final p = snap.data;
+              final name = p?.displayName ?? 'BattleMan User';
+              final status = p?.status ?? '';
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (status.isNotEmpty)
+                    Text(status, style: const TextStyle(color: Colors.grey)),
+                ],
+              );
+            },
           ),
-
           const Divider(),
-
-          // ... (雷达图和建议卡片代码保持不变，因为这些通常是用户数据或服务端下发的) ...
           Container(
             height: 200,
             margin: const EdgeInsets.all(16),
@@ -42,21 +61,17 @@ class ProfilePage extends StatelessWidget {
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.radar, size: 60, color: Colors.indigo),
-                  // 此处如果需要国际化也可以替换，暂且保留演示核心 UI
+                children: [
+                  const Icon(Icons.radar, size: 60, color: Colors.indigo),
+                  const SizedBox(height: 6),
                   Text(
-                    "AI 认知效率模型 (每周更新)",
-                    style: TextStyle(color: Colors.grey),
+                    AppStrings.of(context, 'profile_model_card'),
+                    style: const TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
             ),
           ),
-
-          // ... (建议卡片代码省略) ...
-          const SizedBox(height: 10),
-
           ListTile(
             leading: const Icon(Icons.watch),
             title: Text(AppStrings.of(context, 'profile_device')),
@@ -69,14 +84,45 @@ class ProfilePage extends StatelessWidget {
             leading: const Icon(Icons.sync),
             title: Text(AppStrings.of(context, 'profile_auth')),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const IntegrationsPage()),
+              );
+            },
           ),
-
-          // --- 系统设置 ---
+          ListTile(
+            leading: const Icon(Icons.flag_outlined),
+            title: Text(AppStrings.of(context, 'goal_title')),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const GoalsPage()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.monitor_heart_outlined),
+            title: Text(AppStrings.of(context, 'emo_title')),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const EmotionPage()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.auto_graph),
+            title: Text(AppStrings.of(context, 'review_title')),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ReviewPage()),
+              );
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.settings),
-            title: Text(
-              AppStrings.of(context, 'settings_title'),
-            ), // "系统设置" or "System Settings"
+            title: Text(AppStrings.of(context, 'settings_title')),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () => _openSettingsPanel(context),
           ),
@@ -112,9 +158,7 @@ class ProfilePage extends StatelessWidget {
               child: Column(
                 children: [
                   AppBar(
-                    title: Text(
-                      AppStrings.of(context, 'settings_title'),
-                    ), // 动态标题
+                    title: Text(AppStrings.of(context, 'settings_title')),
                     backgroundColor: Colors.transparent,
                     elevation: 0,
                     foregroundColor: Colors.black,
@@ -127,23 +171,26 @@ class ProfilePage extends StatelessWidget {
                     ],
                   ),
                   const Divider(height: 1),
-
-                  // 更改语言
                   ListTile(
                     leading: const Icon(Icons.language),
-                    title: Text(
-                      AppStrings.of(context, 'settings_language'),
-                    ), // "更改语言" or "Change Language"
+                    title: Text(AppStrings.of(context, 'settings_language')),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      _showLanguageDialog(ctx);
-                    },
+                    onTap: () => _showLanguageDialog(ctx),
                   ),
-
                   ListTile(
                     leading: const Icon(Icons.notifications_outlined),
                     title: Text(AppStrings.of(context, 'settings_notify')),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.bug_report_outlined),
+                    title: Text(AppStrings.of(context, 'diag_title')),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const DiagnosticsPage()),
+                      );
+                    },
                   ),
                   ListTile(
                     leading: const Icon(Icons.dark_mode_outlined),
@@ -158,10 +205,9 @@ class ProfilePage extends StatelessWidget {
       },
       transitionBuilder: (ctx, anim1, anim2, child) {
         return SlideTransition(
-          position: Tween(
-            begin: const Offset(1, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeInOut)),
+          position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(
+            CurvedAnimation(parent: anim1, curve: Curves.easeInOut),
+          ),
           child: child,
         );
       },
@@ -172,7 +218,7 @@ class ProfilePage extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: Text(AppStrings.of(context, 'settings_language')), // 动态标题
+        title: Text(AppStrings.of(context, 'settings_language')),
         children: [
           SimpleDialogOption(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
@@ -180,13 +226,9 @@ class ProfilePage extends StatelessWidget {
               BattleManApp.setLocale(context, const Locale('zh', 'CN'));
               Navigator.pop(ctx);
             },
-            child: Row(
-              children: [
-                Text(
-                  AppStrings.of(context, 'lang_zh'),
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ],
+            child: Text(
+              AppStrings.of(context, 'lang_zh'),
+              style: const TextStyle(fontSize: 16),
             ),
           ),
           SimpleDialogOption(
@@ -195,13 +237,9 @@ class ProfilePage extends StatelessWidget {
               BattleManApp.setLocale(context, const Locale('en', 'US'));
               Navigator.pop(ctx);
             },
-            child: Row(
-              children: [
-                Text(
-                  AppStrings.of(context, 'lang_en'),
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ],
+            child: Text(
+              AppStrings.of(context, 'lang_en'),
+              style: const TextStyle(fontSize: 16),
             ),
           ),
         ],
@@ -209,3 +247,4 @@ class ProfilePage extends StatelessWidget {
     );
   }
 }
+

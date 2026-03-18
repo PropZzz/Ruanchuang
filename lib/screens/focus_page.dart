@@ -1,9 +1,13 @@
-import 'dart:async';
+﻿import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../models/models.dart';
-import '../services/mock_data_service.dart';
+import '../services/app_services.dart';
+import '../services/microtask_crystals/microtask_crystal_engine.dart';
+import '../utils/app_strings.dart';
 import '../utils/helpers.dart';
-import '../utils/app_strings.dart'; // 引入字典
+import '../utils/schedule_occurrence.dart';
 
 class FocusPage extends StatefulWidget {
   const FocusPage({super.key});
@@ -13,15 +17,21 @@ class FocusPage extends StatefulWidget {
 }
 
 class _FocusPageState extends State<FocusPage> {
-  final _dataService = MockDataService.instance;
+  final _dataService = AppServices.dataService;
 
+  EnergyStatus? _energyStatus;
   ScheduleEntry? _currentTask;
   List<ScheduleEntry> _nextTasks = [];
+
+  List<TimeCrystalRecommendation> _crystalRecs = [];
+  bool _isRecsLoading = false;
 
   Timer? _timer;
   int _remainingSeconds = 0;
   bool _isTimerRunning = false;
   bool _isLoading = true;
+
+  String? _activeTaskId;
 
   @override
   void initState() {
@@ -35,18 +45,130 @@ class _FocusPageState extends State<FocusPage> {
     super.dispose();
   }
 
+  List<TimeWindow> _defaultWindows() {
+    return const [
+      TimeWindow(
+        start: TimeOfDay(hour: 8, minute: 0),
+        end: TimeOfDay(hour: 12, minute: 0),
+      ),
+      TimeWindow(
+        start: TimeOfDay(hour: 13, minute: 30),
+        end: TimeOfDay(hour: 18, minute: 30),
+      ),
+    ];
+  }
+
+  EnergyTier _tierFromBattery(int batteryPercent) {
+    final p = batteryPercent.clamp(0, 100);
+    if (p < 20) return EnergyTier.veryLow;
+    if (p < 40) return EnergyTier.low;
+    if (p < 60) return EnergyTier.medium;
+    if (p < 80) return EnergyTier.high;
+    return EnergyTier.veryHigh;
+  }
+
+  String _taskIdFor(ScheduleEntry e) {
+    final id = e.id;
+    if (id != null && id.isNotEmpty) return id;
+    return 'focus_${e.title}_${e.time.hour}_${e.time.minute}';
+  }
+
+  void _logStart(ScheduleEntry e) {
+    final taskId = _taskIdFor(e);
+    if (_activeTaskId == taskId) return;
+    _activeTaskId = taskId;
+
+    final planned = ((e.height / 80.0) * 60.0).round().clamp(1, 24 * 60);
+    unawaited(
+      _dataService.logTaskEvent(
+        TaskEvent(
+          id: 'evt_start_${DateTime.now().microsecondsSinceEpoch}_$taskId',
+          taskId: taskId,
+          title: e.title,
+          tag: e.tag,
+          load: e.load,
+          at: DateTime.now(),
+          type: TaskEventType.start,
+          plannedMinutes: planned,
+          energy: _energyStatus == null
+              ? null
+              : _tierFromBattery(_energyStatus!.batteryPercent),
+        ),
+      ),
+    );
+  }
+
+  void _logComplete(ScheduleEntry e, {required int actualMinutes}) {
+    final taskId = _taskIdFor(e);
+    final planned = ((e.height / 80.0) * 60.0).round().clamp(1, 24 * 60);
+    unawaited(
+      _dataService.logTaskEvent(
+        TaskEvent(
+          id: 'evt_done_${DateTime.now().microsecondsSinceEpoch}_$taskId',
+          taskId: taskId,
+          title: e.title,
+          tag: e.tag,
+          load: e.load,
+          at: DateTime.now(),
+          type: TaskEventType.complete,
+          plannedMinutes: planned,
+          actualMinutes: actualMinutes.clamp(1, 24 * 60),
+          energy: _energyStatus == null
+              ? null
+              : _tierFromBattery(_energyStatus!.batteryPercent),
+        ),
+      ),
+    );
+    _activeTaskId = null;
+  }
+
+  Future<void> _loadCrystalRecommendations(
+    List<ScheduleEntry> schedule,
+    EnergyStatus energy,
+  ) async {
+    if (_isRecsLoading) return;
+
+    setState(() {
+      _isRecsLoading = true;
+    });
+
+    final microTasks = await _dataService.getMicroTasks();
+    if (!mounted) return;
+
+    final recs = AppServices.microTaskCrystalEngine.recommend(
+      schedule: schedule,
+      microTasks: microTasks,
+      windows: _defaultWindows(),
+      energy: _tierFromBattery(energy.batteryPercent),
+      now: TimeOfDay.now(),
+      maxRecommendations: 4,
+    );
+
+    setState(() {
+      _crystalRecs = recs;
+      _isRecsLoading = false;
+    });
+  }
+
   Future<void> _loadTasks() async {
     setState(() {
       _isLoading = true;
     });
 
+    final energyFuture = _dataService.getEnergyStatus();
     final now = TimeOfDay.now();
     final nowMinutes = now.hour * 60 + now.minute;
-    final allEntries = await _dataService.getScheduleEntries();
+    final entriesFuture = _dataService.getScheduleEntries();
+
+    final energy = await energyFuture;
+    final allEntries = await entriesFuture;
 
     if (!mounted) return;
 
-    allEntries.sort((a, b) {
+    final today = dateOnly(DateTime.now());
+    final entries = entriesForDay(day: today, allEntries: allEntries);
+
+    entries.sort((a, b) {
       final aMin = a.time.hour * 60 + a.time.minute;
       final bMin = b.time.hour * 60 + b.time.minute;
       return aMin.compareTo(bMin);
@@ -55,7 +177,7 @@ class _FocusPageState extends State<FocusPage> {
     ScheduleEntry? current;
     final List<ScheduleEntry> upcoming = [];
 
-    for (final e in allEntries) {
+    for (final e in entries) {
       final start = e.time.hour * 60 + e.time.minute;
       final duration = (e.height / 80.0) * 60.0;
       final end = (start + duration).toInt();
@@ -67,6 +189,7 @@ class _FocusPageState extends State<FocusPage> {
     }
 
     setState(() {
+      _energyStatus = energy;
       _currentTask = current;
       if (current != null) {
         final start = current.time.hour * 60 + current.time.minute;
@@ -80,6 +203,8 @@ class _FocusPageState extends State<FocusPage> {
       }
       _isLoading = false;
     });
+
+    unawaited(_loadCrystalRecommendations(entries, energy));
   }
 
   void _startTimer() {
@@ -95,9 +220,7 @@ class _FocusPageState extends State<FocusPage> {
         next.time.hour,
         next.time.minute,
       );
-      final wait = taskStart.isAfter(now)
-          ? taskStart.difference(now)
-          : Duration.zero;
+      final wait = taskStart.isAfter(now) ? taskStart.difference(now) : Duration.zero;
 
       final msg = AppStrings.of(
         context,
@@ -120,6 +243,10 @@ class _FocusPageState extends State<FocusPage> {
     }
 
     if (_remainingSeconds == 0) return;
+
+    if (_currentTask != null) {
+      _logStart(_currentTask!);
+    }
 
     _isTimerRunning = true;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -161,6 +288,14 @@ class _FocusPageState extends State<FocusPage> {
   }
 
   void _startNextTask() {
+    final current = _currentTask;
+    if (current != null) {
+      final planned = ((current.height / 80.0) * 60.0).round().clamp(1, 24 * 60);
+      final remainingMinutes = (_remainingSeconds / 60.0).round().clamp(0, planned);
+      final actual = (planned - remainingMinutes).clamp(1, planned);
+      _logComplete(current, actualMinutes: actual);
+    }
+
     if (_nextTasks.isEmpty) {
       setState(() {
         _currentTask = null;
@@ -179,9 +314,7 @@ class _FocusPageState extends State<FocusPage> {
       nextTask.time.minute,
     );
 
-    Duration waitDuration = taskStartTime.isAfter(now)
-        ? taskStartTime.difference(now)
-        : Duration.zero;
+    final waitDuration = taskStartTime.isAfter(now) ? taskStartTime.difference(now) : Duration.zero;
 
     final msg = AppStrings.of(
       context,
@@ -239,25 +372,96 @@ class _FocusPageState extends State<FocusPage> {
                   const SizedBox(height: 8),
                   _buildCurrentTaskCard(context),
                   const SizedBox(height: 24),
-                  Text(
-                    AppStrings.of(context, 'focus_header_next'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: _nextTasks.length,
-                      itemBuilder: (context, index) {
-                        final task = _nextTasks[index];
-                        return _buildNextTaskItem(
-                          '${task.time.format(context)} ${task.title}',
-                          iconForTag(task.tag),
-                          task.color,
-                        );
-                      },
+                    child: ListView(
+                      children: [
+                        Text(
+                          AppStrings.of(context, 'focus_header_next'),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (_nextTasks.isEmpty)
+                          Text(
+                            AppStrings.of(context, 'focus_empty_task'),
+                            style: const TextStyle(color: Colors.grey),
+                          )
+                        else
+                          ..._nextTasks.map((task) {
+                            return _buildNextTaskItem(
+                              '${task.time.format(context)} ${task.title}',
+                              iconForTag(task.tag),
+                              task.color,
+                            );
+                          }),
+                        const SizedBox(height: 16),
+                        Text(
+                          AppStrings.of(context, 'focus_time_crystal_title'),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (_isRecsLoading)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else if (_crystalRecs.isEmpty)
+                          Text(
+                            AppStrings.of(context, 'focus_time_crystal_empty'),
+                            style: const TextStyle(color: Colors.grey),
+                          )
+                        else
+                          ..._crystalRecs.map((r) {
+                            return Card(
+                              child: ListTile(
+                                leading: const Icon(Icons.bubble_chart_outlined),
+                                title: Text(r.task.title),
+                                subtitle: Text(
+                                  AppStrings.of(
+                                    context,
+                                    'focus_time_crystal_subtitle',
+                                    params: {
+                                      'start': r.crystal.start.format(context),
+                                      'minutes': r.crystal.minutes.toString(),
+                                      'bucket': r.crystal.bucket,
+                                      'taskMinutes': r.task.minutes.toString(),
+                                    },
+                                  ),
+                                ),
+                                trailing: ElevatedButton(
+                                  onPressed: () async {
+                                    final entry = ScheduleEntry(
+                                      day: dateOnly(DateTime.now()),
+                                      title: r.task.title,
+                                      tag: r.task.tag.isEmpty
+                                          ? 'Micro Task'
+                                          : r.task.tag,
+                                      height: (r.task.minutes / 60.0) * 80.0,
+                                      color: Colors.orange,
+                                      time: r.crystal.start,
+                                    );
+                                    await _dataService.addScheduleEntry(entry);
+                                    await _dataService.removeMicroTask(r.task);
+                                    if (mounted) {
+                                      await _loadTasks();
+                                    }
+                                  },
+                                  child: Text(
+                                    AppStrings.of(
+                                      context,
+                                      'focus_btn_one_click_insert',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                      ],
                     ),
                   ),
                 ],
@@ -267,6 +471,7 @@ class _FocusPageState extends State<FocusPage> {
   }
 
   Widget _buildEnergyStatusCard() {
+    final energy = _energyStatus;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -281,22 +486,31 @@ class _FocusPageState extends State<FocusPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 修改点：使用字典中的状态文案
               Text(
-                "${AppStrings.of(context, 'focus_status_label')}${AppStrings.of(context, 'status_flow_value')}",
+                "${AppStrings.of(context, 'focus_status_label')}${energy?.status ?? AppStrings.of(context, 'status_flow_value')}",
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
                 ),
               ),
               Text(
-                AppStrings.of(context, 'status_flow_desc'),
+                energy?.description ?? AppStrings.of(context, 'status_flow_desc'),
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),
           const Spacer(),
-          const Chip(label: Text("🔋 85%"), backgroundColor: Colors.white),
+          Chip(
+            backgroundColor: Colors.white,
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.battery_full, size: 16, color: Colors.teal),
+                const SizedBox(width: 6),
+                Text("${energy?.batteryPercent ?? 85}%"),
+              ],
+            ),
+          ),
         ],
       ),
     );

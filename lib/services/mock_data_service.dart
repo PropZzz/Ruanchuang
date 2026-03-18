@@ -1,157 +1,253 @@
-import 'dart:async';
-import 'package:flutter/material.dart';
+﻿import 'dart:async';
+import 'dart:math';
+
+
 import '../models/models.dart';
 import 'data_service.dart';
 
-/// 模拟数据服务实现
-/// 使用内存列表存储数据，模拟网络延迟
+/// In-memory mock implementation of [DataService].
 class MockDataService implements DataService {
-  // 私有构造函数，防止外部实例化
-  MockDataService._private();
+  MockDataService._();
 
-  // 单例实例
-  static final MockDataService instance = MockDataService._private();
+  static final MockDataService instance = MockDataService._();
 
-  // 内存中的模拟数据源
-  final List<ScheduleEntry> _scheduleData = [
-    ScheduleEntry(
-      title: "深度工作：架构设计",
-      tag: "状态匹配：完美",
-      height: 120,
-      color: Colors.teal,
-      time: const TimeOfDay(hour: 9, minute: 0),
-    ), // 90 mins
-    ScheduleEntry(
-      title: "产品评审会",
-      tag: "协作窗口",
-      height: 80,
-      color: Colors.blue,
-      time: const TimeOfDay(hour: 14, minute: 0),
-    ), // 60 mins
-    ScheduleEntry(
-      title: "处理邮件 (微任务)",
-      tag: "利用碎片时间",
-      height: 40,
-      color: Colors.orange,
-      time: const TimeOfDay(hour: 11, minute: 30),
-    ), // 30 mins
-    ScheduleEntry(
-      title: "项目周报撰写",
-      tag: "常规任务",
-      height: 60,
-      color: Colors.blueAccent,
-      time: const TimeOfDay(hour: 16, minute: 0),
-    ), // 45 mins
-  ];
+  final _rand = Random();
+  final List<ScheduleEntry> _schedule = [];
+  final List<MicroTask> _microTasks = [];
+  final List<TaskEvent> _events = [];
+  final List<TeamMemberCalendar> _team = [];
+  final List<EmotionCheckIn> _emotion = [];
+  final List<Goal> _goals = [];
+  SchedulingTuning _tuning = const SchedulingTuning();
 
-  // --- 接口实现 ---
+  String _newId(String prefix) {
+    final ts = DateTime.now().microsecondsSinceEpoch;
+    final r = _rand.nextInt(1 << 32);
+    return '$prefix$ts-$r';
+  }
+
+  Future<void> _delay([int ms = 20]) => Future.delayed(Duration(milliseconds: ms));
 
   @override
   Future<EnergyStatus> getEnergyStatus() async {
-    // 模拟网络延迟 120ms
-    await Future.delayed(const Duration(milliseconds: 120));
-    return EnergyStatus(
-      status: '高效 (Flow)',
-      description: 'HRV 稳定，适合深度思考',
+    await _delay();
+    return const EnergyStatus(
+      status: 'Flow',
+      description: 'Mock',
       batteryPercent: 85,
     );
   }
 
   @override
+  Future<EmotionState> getEmotionState() async {
+    await _delay();
+    if (_emotion.isEmpty) return EmotionState.stable;
+    final all = List<EmotionCheckIn>.from(_emotion)
+      ..sort((a, b) => a.at.compareTo(b.at));
+    return all.last.state;
+  }
+
+  @override
+  Future<void> addEmotionCheckIn(EmotionCheckIn checkIn) async {
+    await _delay();
+    final id = checkIn.id.isEmpty ? _newId('emo_') : checkIn.id;
+    bool sameDay(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month && a.day == b.day;
+    final day = DateTime(checkIn.at.year, checkIn.at.month, checkIn.at.day);
+    _emotion.removeWhere((e) => sameDay(e.at, day));
+    _emotion.add(
+      EmotionCheckIn(
+        id: id,
+        at: checkIn.at,
+        state: checkIn.state,
+        note: checkIn.note,
+      ),
+    );
+  }
+
+  @override
+  Future<List<EmotionCheckIn>> getEmotionCheckIns(DateTime day) async {
+    await _delay();
+    bool sameDay(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month && a.day == b.day;
+    final d = DateTime(day.year, day.month, day.day);
+    final out = _emotion.where((e) => sameDay(e.at, d)).toList()
+      ..sort((a, b) => a.at.compareTo(b.at));
+    return out;
+  }
+
+  @override
+  Future<List<Goal>> getGoals() async {
+    await _delay();
+    return List<Goal>.from(_goals);
+  }
+
+  @override
+  Future<void> upsertGoal(Goal goal) async {
+    await _delay();
+    final id = goal.id.isEmpty ? _newId('goal_') : goal.id;
+    final g = Goal(
+      id: id,
+      title: goal.title,
+      due: goal.due,
+      priority: goal.priority,
+      tasks: goal.tasks,
+    );
+    final idx = _goals.indexWhere((x) => x.id == id);
+    if (idx == -1) {
+      _goals.add(g);
+    } else {
+      _goals[idx] = g;
+    }
+  }
+
+  @override
+  Future<void> deleteGoal(String goalId) async {
+    await _delay();
+    _goals.removeWhere((g) => g.id == goalId);
+  }
+
+  @override
   Future<Task> getCurrentTask() async {
-    await Future.delayed(const Duration(milliseconds: 120));
-    return Task(
-      title: '编写时序优化算法核心模块',
-      description: '实现任务调度与能量感知',
-      remainingMinutes: 45,
-      progress: 0.3,
+    await _delay();
+    return const Task(
+      title: 'Mock',
+      description: 'Mock',
+      remainingMinutes: 10,
+      progress: 0.5,
     );
   }
 
   @override
   Future<List<Task>> getNextTasks() async {
-    await Future.delayed(const Duration(milliseconds: 80));
-    return [
-      Task(
-        title: '团队进度同步会',
-        description: '15:00 视频会议',
-        remainingMinutes: 0,
-        progress: 0,
-      ),
-      Task(
-        title: '整理开发文档 (微任务)',
-        description: '16:30 文档整理',
-        remainingMinutes: 0,
-        progress: 0,
-      ),
-    ];
+    await _delay();
+    return const [];
   }
 
   @override
   Future<List<ScheduleEntry>> getScheduleEntries() async {
-    await Future.delayed(const Duration(milliseconds: 50));
-    // 返回按时间排序的副本，防止外部直接修改源数据
-    _scheduleData.sort((a, b) {
-      final aMinutes = a.time.hour * 60 + a.time.minute;
-      final bMinutes = b.time.hour * 60 + b.time.minute;
-      return aMinutes.compareTo(bMinutes);
-    });
-    return List<ScheduleEntry>.from(_scheduleData);
+    await _delay();
+    return List<ScheduleEntry>.from(_schedule);
   }
 
   @override
   Future<void> addScheduleEntry(ScheduleEntry entry) async {
-    await Future.delayed(const Duration(milliseconds: 50));
-    _scheduleData.add(entry);
+    await _delay();
+    final withId = (entry.id == null || entry.id!.isEmpty)
+        ? entry.copyWith(id: _newId('sch_'))
+        : entry;
+    _schedule.add(withId);
   }
 
   @override
   Future<void> removeScheduleEntry(ScheduleEntry entry) async {
-    await Future.delayed(const Duration(milliseconds: 50));
-    _scheduleData.removeWhere(
-      (e) => e.title == entry.title && e.time == entry.time,
-    );
+    await _delay();
+    _schedule.removeWhere((e) => (entry.id != null && e.id == entry.id) ||
+        (e.title == entry.title && e.time == entry.time));
   }
 
   @override
   Future<List<MicroTask>> getMicroTasks() async {
-    await Future.delayed(const Duration(milliseconds: 60));
-    return [
-      MicroTask(title: '回复 HR 邮件', tag: '需电脑', minutes: 5, requirement: '电脑'),
-      MicroTask(title: '电话确认需求', tag: '移动场景', minutes: 10, requirement: '电话'),
-      MicroTask(title: '整理桌面文件', tag: '低脑力', minutes: 15, requirement: '桌面'),
-      MicroTask(title: '查看行业新闻', tag: '任意', minutes: 8, requirement: '任意'),
-    ];
+    await _delay();
+    return _microTasks.map((t) => t.clone()).toList();
+  }
+
+  @override
+  Future<void> addMicroTask(MicroTask task) async {
+    await _delay();
+    final t = task.clone();
+    t.id ??= _newId('mt_');
+    _microTasks.add(t);
+  }
+
+  @override
+  Future<void> removeMicroTask(MicroTask task) async {
+    await _delay();
+    _microTasks.removeWhere((t) => (task.id != null && t.id == task.id) ||
+        (t.title == task.title && t.tag == task.tag));
+  }
+
+  @override
+  Future<void> updateMicroTask(MicroTask task) async {
+    await _delay();
   }
 
   @override
   Future<List<TeamMember>> getTeamMembers() async {
-    await Future.delayed(const Duration(milliseconds: 80));
-    return [
-      const TeamMember(
-        name: '李一诺 (PM)',
-        task: '0.5.1 文档修订',
-        progress: 0.9,
-        isHighEnergy: true,
-      ),
-      const TeamMember(
-        name: '宋子谦 (Dev)',
-        task: 'Transformer 模型调试',
-        progress: 0.6,
-        isHighEnergy: true,
-      ),
-      const TeamMember(
-        name: '杨子翔 (Dev)',
-        task: '后端 API 联调',
-        progress: 0.4,
-        isHighEnergy: false,
-      ),
-    ];
+    await _delay();
+    return const [];
   }
 
   @override
   Future<UserProfile> getUserProfile() async {
-    await Future.delayed(const Duration(milliseconds: 60));
-    return const UserProfile(displayName: 'BattleMan User', status: '已连接设备');
+    await _delay();
+    return const UserProfile(displayName: 'Mock', status: 'Mock');
+  }
+
+  @override
+  Future<void> logTaskEvent(TaskEvent event) async {
+    await _delay();
+    _events.add(event);
+  }
+
+  @override
+  Future<List<TaskEvent>> getTaskEvents(DateTime from, DateTime to) async {
+    await _delay();
+    return _events
+        .where((e) => !e.at.isBefore(from) && e.at.isBefore(to))
+        .toList();
+  }
+
+  @override
+  Future<ReviewReport> getWeeklyReport(DateTime weekStart) async {
+    await _delay();
+    return ReviewReport(
+      weekStart: weekStart,
+      weekEnd: weekStart.add(const Duration(days: 7)),
+      startedCount: 0,
+      completedCount: 0,
+      completionRate: 0,
+      plannedMinutesTotal: 0,
+      actualMinutesTotal: 0,
+      actualDurationBuckets: const {
+        '<=15': 0,
+        '16-30': 0,
+        '31-60': 0,
+        '61-120': 0,
+        '121+': 0,
+      },
+      delayAttribution: const {
+        'underestimated': 0,
+        'interruptions': 0,
+        'context_switch': 0,
+        'unknown': 0,
+      },
+      suggestions: const [],
+      tuning: _tuning,
+    );
+  }
+
+  @override
+  Future<SchedulingTuning> getSchedulingTuning() async {
+    await _delay();
+    return _tuning;
+  }
+
+  @override
+  Future<void> setSchedulingTuning(SchedulingTuning tuning) async {
+    await _delay();
+    _tuning = tuning;
+  }
+
+  @override
+  Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day) async {
+    await _delay();
+    return List<TeamMemberCalendar>.from(_team);
+  }
+
+  @override
+  Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request) async {
+    await _delay();
   }
 }
+

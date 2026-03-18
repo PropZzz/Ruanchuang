@@ -1,32 +1,52 @@
-import '../models/models.dart';
+﻿import '../models/models.dart';
 
-/// 数据服务接口
-/// 定义了 App 所需的所有数据获取能力
+/// Data service interface.
+///
+/// Design goals:
+/// - Local-first persistence (offline-friendly)
+/// - Swappable implementations (local/remote/mock)
+/// - Stable contract for UI (screens)
 abstract class DataService {
-  /// 获取当前用户的能量/生理状态
   Future<EnergyStatus> getEnergyStatus();
+  Future<EmotionState> getEmotionState();
+  Future<void> addEmotionCheckIn(EmotionCheckIn checkIn);
+  Future<List<EmotionCheckIn>> getEmotionCheckIns(DateTime day);
 
-  /// 获取当前正在进行的专注任务
+  Future<List<Goal>> getGoals();
+  Future<void> upsertGoal(Goal goal);
+  Future<void> deleteGoal(String goalId);
+
   Future<Task> getCurrentTask();
-
-  /// 获取后续待办任务列表
   Future<List<Task>> getNextTasks();
 
-  /// 获取完整的日程安排
   Future<List<ScheduleEntry>> getScheduleEntries();
-
-  /// 添加新的日程
   Future<void> addScheduleEntry(ScheduleEntry entry);
-
-  /// 移除指定日程
   Future<void> removeScheduleEntry(ScheduleEntry entry);
 
-  /// 获取微任务池
   Future<List<MicroTask>> getMicroTasks();
+  Future<void> addMicroTask(MicroTask task);
+  Future<void> removeMicroTask(MicroTask task);
+  Future<void> updateMicroTask(MicroTask task);
 
-  /// 获取团队成员状态
   Future<List<TeamMember>> getTeamMembers();
 
-  /// 获取用户基础信息
   Future<UserProfile> getUserProfile();
+
+  // ---------------------------------------------------------------------------
+  // Review loop & tuning
+  // ---------------------------------------------------------------------------
+
+  Future<void> logTaskEvent(TaskEvent event);
+  Future<List<TaskEvent>> getTaskEvents(DateTime from, DateTime to);
+  Future<ReviewReport> getWeeklyReport(DateTime weekStart);
+  Future<SchedulingTuning> getSchedulingTuning();
+  Future<void> setSchedulingTuning(SchedulingTuning tuning);
+
+  // ---------------------------------------------------------------------------
+  // Team collaboration
+  // ---------------------------------------------------------------------------
+
+  Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day);
+
+  Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request);
 }
