@@ -342,12 +342,14 @@ class TeamMember {
   final String task;
   final double progress;
   final bool isHighEnergy;
+  final List<TimeRange> busyTimes;
 
   const TeamMember({
     required this.name,
     required this.task,
     required this.progress,
     required this.isHighEnergy,
+    this.busyTimes = const [],
   });
 
   Map<String, Object?> toJson() => {
@@ -355,6 +357,7 @@ class TeamMember {
         'task': task,
         'progress': progress,
         'isHighEnergy': isHighEnergy,
+        'busyTimes': busyTimes.map((t) => t.toJson()).toList(),
       };
 
   static TeamMember fromJson(Map<String, Object?> json) => TeamMember(
@@ -362,6 +365,7 @@ class TeamMember {
         task: (json['task'] as String?) ?? '',
         progress: ((json['progress'] as num?)?.toDouble()) ?? 0.0,
         isHighEnergy: (json['isHighEnergy'] as bool?) ?? false,
+        busyTimes: ((json['busyTimes'] as List?)?.map((t) => TimeRange.fromJson(t as Map<String, Object?>)).toList()) ?? [],
       );
 }
 
@@ -1148,4 +1152,39 @@ class TeamMeetingRequest {
     required this.minutes,
     required this.participantIds,
   });
+}
+
+class TimeRange {
+  final TimeOfDay start;
+  final TimeOfDay end;
+
+  const TimeRange({
+    required this.start,
+    required this.end,
+  });
+
+  Map<String, Object?> toJson() => {
+        'start': {'hour': start.hour, 'minute': start.minute},
+        'end': {'hour': end.hour, 'minute': end.minute},
+      };
+
+  static TimeRange fromJson(Map<String, Object?> json) => TimeRange(
+        start: TimeOfDay(
+          hour: ((json['start'] as Map?)?['hour'] as int?) ?? 0,
+          minute: ((json['start'] as Map?)?['minute'] as int?) ?? 0,
+        ),
+        end: TimeOfDay(
+          hour: ((json['end'] as Map?)?['hour'] as int?) ?? 0,
+          minute: ((json['end'] as Map?)?['minute'] as int?) ?? 0,
+        ),
+      );
+
+  int get durationMinutes => (end.hour * 60 + end.minute) - (start.hour * 60 + start.minute);
+
+  bool contains(TimeOfDay time) {
+    final timeMinutes = time.hour * 60 + time.minute;
+    final startMinutes = start.hour * 60 + start.minute;
+    final endMinutes = end.hour * 60 + end.minute;
+    return timeMinutes >= startMinutes && timeMinutes <= endMinutes;
+  }
 }

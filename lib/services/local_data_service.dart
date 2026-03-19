@@ -34,6 +34,7 @@ class LocalDataService implements DataService {
   final List<TeamMemberCalendar> _teamCalendars = [];
   final List<EmotionCheckIn> _emotion = [];
   final List<Goal> _goals = [];
+  String? _favoriteDeviceId;
 
   SchedulingTuning _tuning = const SchedulingTuning();
 
@@ -57,6 +58,7 @@ class LocalDataService implements DataService {
           final tuningJson = decoded['schedulingTuning'];
           final emotionJson = decoded['emotionCheckIns'];
           final goalsJson = decoded['goals'];
+          final favoriteDeviceIdJson = decoded['favoriteDeviceId'];
 
           if (scheduleJson is List) {
             _schedule
@@ -122,6 +124,9 @@ class LocalDataService implements DataService {
                   .map((m) => Goal.fromJson(
                         Map<String, Object?>.from(m),
                       )));
+          }
+          if (favoriteDeviceIdJson is String) {
+            _favoriteDeviceId = favoriteDeviceIdJson;
           }
         }
       } catch (_) {
@@ -302,6 +307,7 @@ class LocalDataService implements DataService {
       'schedulingTuning': _tuning.toJson(),
       'emotionCheckIns': _emotion.map((e) => e.toJson()).toList(),
       'goals': _goals.map((g) => g.toJson()).toList(),
+      'favoriteDeviceId': _favoriteDeviceId,
     };
 
     final jsonText = const JsonEncoder.withIndent('  ').convert(obj);
@@ -529,6 +535,19 @@ class LocalDataService implements DataService {
       displayName: 'BattleMan User',
       status: 'Local storage',
     );
+  }
+
+  @override
+  Future<void> setFavoriteDevice(String deviceId) async {
+    await _ensureLoaded();
+    _favoriteDeviceId = deviceId;
+    await _save();
+  }
+
+  @override
+  Future<String?> getFavoriteDevice() async {
+    await _ensureLoaded();
+    return _favoriteDeviceId;
   }
 
   void _markGoalTaskDoneFromScheduleCompletion(String scheduleTaskId) {

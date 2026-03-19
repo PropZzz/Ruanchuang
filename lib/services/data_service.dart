@@ -32,6 +32,9 @@ abstract class DataService {
 
   Future<UserProfile> getUserProfile();
 
+  Future<void> setFavoriteDevice(String deviceId);
+  Future<String?> getFavoriteDevice();
+
   // ---------------------------------------------------------------------------
   // Review loop & tuning
   // ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import '../main.dart';
 import '../models/models.dart';
 import '../services/app_services.dart';
 import '../utils/app_strings.dart';
+import 'bluetooth_page.dart';
 import 'debug/diagnostics_page.dart';
 import 'emotion_page.dart';
 import 'goals_page.dart';
@@ -55,18 +56,20 @@ class ProfilePage extends StatelessWidget {
             height: 200,
             margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: Theme.of(context).colorScheme.surfaceVariant,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.radar, size: 60, color: Colors.indigo),
+                  Icon(Icons.radar,
+                      size: 60, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 6),
                   Text(
                     AppStrings.of(context, 'profile_model_card'),
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -75,10 +78,12 @@ class ProfilePage extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.watch),
             title: Text(AppStrings.of(context, 'profile_device')),
-            trailing: Text(
-              AppStrings.of(context, 'profile_connected'),
-              style: const TextStyle(color: Colors.green),
-            ),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BluetoothPage()),
+              );
+            },
           ),
           ListTile(
             leading: const Icon(Icons.sync),
@@ -149,8 +154,8 @@ class ProfilePage extends StatelessWidget {
             child: Container(
               width: MediaQuery.of(context).size.width * 0.75,
               height: double.infinity,
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.horizontal(
                   left: Radius.circular(16),
                 ),
@@ -161,7 +166,7 @@ class ProfilePage extends StatelessWidget {
                     title: Text(AppStrings.of(context, 'settings_title')),
                     backgroundColor: Colors.transparent,
                     elevation: 0,
-                    foregroundColor: Colors.black,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
                     automaticallyImplyLeading: false,
                     actions: [
                       IconButton(
@@ -192,10 +197,59 @@ class ProfilePage extends StatelessWidget {
                       );
                     },
                   ),
-                  ListTile(
+                  ExpansionTile(
                     leading: const Icon(Icons.dark_mode_outlined),
-                    title: Text(AppStrings.of(context, 'settings_dark')),
-                    trailing: const Switch(value: false, onChanged: null),
+                    title: Builder(
+                      builder: (context) {
+                        final currentThemeMode = _getCurrentThemeMode(context);
+                        String themeModeName;
+                        switch (currentThemeMode) {
+                          case ThemeMode.system:
+                            themeModeName = AppStrings.of(context, 'theme_system');
+                            break;
+                          case ThemeMode.light:
+                            themeModeName = AppStrings.of(context, 'theme_light');
+                            break;
+                          case ThemeMode.dark:
+                            themeModeName = AppStrings.of(context, 'theme_dark');
+                            break;
+                        }
+                        return Text(
+                            '${AppStrings.of(context, 'settings_dark')}: $themeModeName');
+                      },
+                    ),
+                    children: [
+                      RadioListTile<ThemeMode>(
+                        title: Text(AppStrings.of(context, 'theme_system')),
+                        value: ThemeMode.system,
+                        groupValue: _getCurrentThemeMode(context),
+                        onChanged: (value) {
+                          if (value != null) {
+                            BattleManApp.setThemeMode(context, value);
+                          }
+                        },
+                      ),
+                      RadioListTile<ThemeMode>(
+                        title: Text(AppStrings.of(context, 'theme_light')),
+                        value: ThemeMode.light,
+                        groupValue: _getCurrentThemeMode(context),
+                        onChanged: (value) {
+                          if (value != null) {
+                            BattleManApp.setThemeMode(context, value);
+                          }
+                        },
+                      ),
+                      RadioListTile<ThemeMode>(
+                        title: Text(AppStrings.of(context, 'theme_dark')),
+                        value: ThemeMode.dark,
+                        groupValue: _getCurrentThemeMode(context),
+                        onChanged: (value) {
+                          if (value != null) {
+                            BattleManApp.setThemeMode(context, value);
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -212,6 +266,10 @@ class ProfilePage extends StatelessWidget {
         );
       },
     );
+  }
+
+  ThemeMode _getCurrentThemeMode(BuildContext context) {
+    return BattleManApp.getThemeMode(context);
   }
 
   void _showLanguageDialog(BuildContext context) {

@@ -96,6 +96,13 @@ class CompositeDataService implements DataService {
   Future<UserProfile> getUserProfile() => _read((s) => s.getUserProfile());
 
   @override
+  Future<void> setFavoriteDevice(String deviceId) =>
+      local.setFavoriteDevice(deviceId);
+
+  @override
+  Future<String?> getFavoriteDevice() => local.getFavoriteDevice();
+
+  @override
   Future<void> logTaskEvent(TaskEvent event) => local.logTaskEvent(event);
 
   @override

@@ -300,7 +300,7 @@ class _TeamPageState extends State<TeamPage> {
                 ),
                 const SizedBox(height: 10),
                 Card(
-                  color: Colors.blue.shade50,
+                  color: Theme.of(context).colorScheme.secondaryContainer,
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
@@ -308,7 +308,7 @@ class _TeamPageState extends State<TeamPage> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.stars, color: Colors.amber),
+                            Icon(Icons.stars, color: Theme.of(context).colorScheme.primary),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(

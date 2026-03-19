@@ -637,19 +637,20 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
   }
 
   Widget _buildPriorityBadge(MicroTask task) {
+    final theme = Theme.of(context);
     final p = task.priority.clamp(1, 5);
 
     final Color color;
     if (p >= 5) {
-      color = Colors.red;
+      color = theme.colorScheme.error;
     } else if (p >= 4) {
-      color = Colors.deepOrange;
+      color = theme.colorScheme.errorContainer;
     } else if (p >= 3) {
-      color = Colors.orange;
+      color = theme.colorScheme.tertiary;
     } else if (p >= 2) {
-      color = Colors.blueGrey;
+      color = theme.colorScheme.secondary;
     } else {
-      color = Colors.grey;
+      color = theme.colorScheme.outline;
     }
 
     return Container(
@@ -698,13 +699,13 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(20),
-                  color: Colors.orange.shade50,
+                  color: Theme.of(context).colorScheme.tertiaryContainer,
                   child: Row(
                     children: [
                       Expanded(
                         child: Text(
                           AppStrings.of(context, 'micro_ai_suggestion'),
-                          style: const TextStyle(color: Colors.brown),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onTertiaryContainer),
                         ),
                       ),
                       ElevatedButton(
@@ -768,7 +769,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
               onPressed: () => _showAddMicroTaskDialog(context),
               label: Text(AppStrings.of(context, 'micro_btn_add')),
               icon: const Icon(Icons.add),
-              backgroundColor: Colors.orange,
+              backgroundColor: Theme.of(context).colorScheme.tertiary,
             ),
     );
   }
@@ -779,12 +780,14 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
 
     final card = Container(
       decoration: BoxDecoration(
-        color: task.done ? Colors.grey.shade200 : Colors.white,
+        color: task.done 
+          ? Theme.of(context).colorScheme.surfaceVariant 
+          : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.orange.shade200),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withAlpha((0.1 * 255).round()),
+            color: Theme.of(context).colorScheme.shadow.withAlpha((0.1 * 255).round()),
             blurRadius: 10,
           ),
         ],
@@ -794,7 +797,9 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
         children: [
           Icon(
             task.done ? Icons.check_circle : Icons.task_alt,
-            color: Colors.orange,
+            color: task.done 
+              ? Theme.of(context).colorScheme.primary 
+              : Theme.of(context).colorScheme.tertiary,
             size: 32,
           ),
           const SizedBox(height: 8),
@@ -810,10 +815,10 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.access_time, size: 12, color: Colors.grey),
+              Icon(Icons.access_time, size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               Text(
                 ' ${task.minutes} ${AppStrings.of(context, 'micro_card_min')} | $safeTag',
-                style: const TextStyle(fontSize: 10, color: Colors.grey),
+                style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
           ),

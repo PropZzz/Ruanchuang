@@ -346,6 +346,7 @@ class _FocusPageState extends State<FocusPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(AppStrings.of(context, 'focus_title')),
@@ -386,7 +387,7 @@ class _FocusPageState extends State<FocusPage> {
                         if (_nextTasks.isEmpty)
                           Text(
                             AppStrings.of(context, 'focus_empty_task'),
-                            style: const TextStyle(color: Colors.grey),
+                            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                           )
                         else
                           ..._nextTasks.map((task) {
@@ -413,7 +414,7 @@ class _FocusPageState extends State<FocusPage> {
                         else if (_crystalRecs.isEmpty)
                           Text(
                             AppStrings.of(context, 'focus_time_crystal_empty'),
-                            style: const TextStyle(color: Colors.grey),
+                            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                           )
                         else
                           ..._crystalRecs.map((r) {
@@ -442,7 +443,7 @@ class _FocusPageState extends State<FocusPage> {
                                           ? 'Micro Task'
                                           : r.task.tag,
                                       height: (r.task.minutes / 60.0) * 80.0,
-                                      color: Colors.orange,
+                                      color: theme.colorScheme.tertiary,
                                       time: r.crystal.start,
                                     );
                                     await _dataService.addScheduleEntry(entry);
@@ -471,41 +472,43 @@ class _FocusPageState extends State<FocusPage> {
   }
 
   Widget _buildEnergyStatusCard() {
+    final theme = Theme.of(context);
     final energy = _energyStatus;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFE0F2F1),
+        color: theme.colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.teal.shade200),
+        border: Border.all(color: theme.colorScheme.primary),
       ),
       child: Row(
         children: [
-          const Icon(Icons.monitor_heart, color: Colors.teal, size: 32),
+          Icon(Icons.monitor_heart, color: theme.colorScheme.primary, size: 32),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 "${AppStrings.of(context, 'focus_status_label')}${energy?.status ?? AppStrings.of(context, 'status_flow_value')}",
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
+                  color: theme.colorScheme.onPrimaryContainer,
                 ),
               ),
               Text(
                 energy?.description ?? AppStrings.of(context, 'status_flow_desc'),
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(fontSize: 12, color: theme.colorScheme.onPrimaryContainer.withOpacity(0.7)),
               ),
             ],
           ),
           const Spacer(),
           Chip(
-            backgroundColor: Colors.white,
+            backgroundColor: theme.colorScheme.surface,
             label: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.battery_full, size: 16, color: Colors.teal),
+                Icon(Icons.battery_full, size: 16, color: theme.colorScheme.primary),
                 const SizedBox(width: 6),
                 Text("${energy?.batteryPercent ?? 85}%"),
               ],
@@ -517,6 +520,7 @@ class _FocusPageState extends State<FocusPage> {
   }
 
   Widget _buildCurrentTaskCard(BuildContext context) {
+    final theme = Theme.of(context);
     if (_currentTask == null) {
       return Card(
         child: Padding(
@@ -524,7 +528,7 @@ class _FocusPageState extends State<FocusPage> {
           child: Center(
             child: Text(
               AppStrings.of(context, 'focus_empty_task'),
-              style: const TextStyle(fontSize: 18, color: Colors.grey),
+              style: TextStyle(fontSize: 18, color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
         ),
@@ -534,17 +538,17 @@ class _FocusPageState extends State<FocusPage> {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: _currentTask!.color,
+      color: theme.colorScheme.secondaryContainer,
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            Icon(iconForTag(_currentTask!.tag), color: Colors.white, size: 48),
+            Icon(iconForTag(_currentTask!.tag), color: theme.colorScheme.onSecondaryContainer, size: 48),
             const SizedBox(height: 16),
             Text(
               _currentTask!.title,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: theme.colorScheme.onSecondaryContainer,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -553,8 +557,8 @@ class _FocusPageState extends State<FocusPage> {
             const SizedBox(height: 8),
             Text(
               "${AppStrings.of(context, 'focus_time_remaining')}${_formatDuration(_remainingSeconds)}",
-              style: const TextStyle(
-                color: Colors.white70,
+              style: TextStyle(
+                color: theme.colorScheme.onSecondaryContainer.withOpacity(0.7),
                 fontSize: 16,
                 fontFamily: 'monospace',
               ),
@@ -580,13 +584,13 @@ class _FocusPageState extends State<FocusPage> {
                     _resetTimer();
                     _startNextTask();
                   },
-                  icon: const Icon(Icons.check, color: Colors.white),
+                  icon: Icon(Icons.check, color: theme.colorScheme.onSecondaryContainer),
                   label: Text(
                     AppStrings.of(context, 'btn_finish'),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white),
+                    side: BorderSide(color: theme.colorScheme.onSecondaryContainer),
                   ),
                 ),
               ],

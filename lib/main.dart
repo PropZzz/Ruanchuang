@@ -43,16 +43,33 @@ class BattleManApp extends StatefulWidget {
     state?.setLocale(newLocale);
   }
 
+  static void setThemeMode(BuildContext context, ThemeMode newThemeMode) {
+    final state = context.findAncestorStateOfType<_BattleManAppState>();
+    state?.setThemeMode(newThemeMode);
+  }
+
+  static ThemeMode getThemeMode(BuildContext context) {
+    final state = context.findAncestorStateOfType<_BattleManAppState>();
+    return state?._themeMode ?? ThemeMode.system;
+  }
+
   @override
   State<BattleManApp> createState() => _BattleManAppState();
 }
 
 class _BattleManAppState extends State<BattleManApp> {
   Locale _locale = const Locale('zh', 'CN');
+  ThemeMode _themeMode = ThemeMode.system;
 
   void setLocale(Locale newLocale) {
     setState(() {
       _locale = newLocale;
+    });
+  }
+
+  void setThemeMode(ThemeMode newThemeMode) {
+    setState(() {
+      _themeMode = newThemeMode;
     });
   }
 
@@ -70,8 +87,19 @@ class _BattleManAppState extends State<BattleManApp> {
           seedColor: const Color(0xFF00BFA5),
           secondary: const Color(0xFF2979FF),
           tertiary: const Color(0xFFFF9100),
+          brightness: Brightness.light,
         ),
       ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF00BFA5),
+          secondary: const Color(0xFF2979FF),
+          tertiary: const Color(0xFFFF9100),
+          brightness: Brightness.dark,
+        ),
+      ),
+      themeMode: _themeMode, // 动态主题模式
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

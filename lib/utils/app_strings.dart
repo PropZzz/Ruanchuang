@@ -199,7 +199,10 @@ class AppStrings {
       'settings_title': '系统设置',
       'settings_language': '更改语言',
       'settings_notify': '通知管理',
-      'settings_dark': '深色模式',
+      'settings_dark': '外观模式',
+      'theme_system': '跟随系统',
+      'theme_light': '浅色模式',
+      'theme_dark': '深色模式',
       'lang_zh': '中文 (简体)',
       'lang_en': 'English',
 
@@ -499,7 +502,10 @@ class AppStrings {
       'settings_title': 'Settings',
       'settings_language': 'Language',
       'settings_notify': 'Notifications',
-      'settings_dark': 'Dark Mode',
+      'settings_dark': 'Appearance',
+      'theme_system': 'System',
+      'theme_light': 'Light',
+      'theme_dark': 'Dark',
       'lang_zh': 'Chinese',
       'lang_en': 'English',
 

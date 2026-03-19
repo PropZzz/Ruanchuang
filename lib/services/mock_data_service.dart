@@ -18,6 +18,7 @@ class MockDataService implements DataService {
   final List<TeamMemberCalendar> _team = [];
   final List<EmotionCheckIn> _emotion = [];
   final List<Goal> _goals = [];
+  String? _favoriteDeviceId;
   SchedulingTuning _tuning = const SchedulingTuning();
 
   String _newId(String prefix) {
@@ -218,13 +219,25 @@ class MockDataService implements DataService {
       },
       delayAttribution: const {
         'underestimated': 0,
-        'interruptions': 0,
+        'interruption': 0,
         'context_switch': 0,
-        'unknown': 0,
+        'other': 0,
       },
       suggestions: const [],
       tuning: _tuning,
     );
+  }
+
+  @override
+  Future<String?> getFavoriteDevice() async {
+    await _delay();
+    return _favoriteDeviceId;
+  }
+
+  @override
+  Future<void> setFavoriteDevice(String deviceId) async {
+    await _delay();
+    _favoriteDeviceId = deviceId;
   }
 
   @override
@@ -242,12 +255,13 @@ class MockDataService implements DataService {
   @override
   Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day) async {
     await _delay();
-    return List<TeamMemberCalendar>.from(_team);
+    return _team;
   }
 
   @override
   Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request) async {
     await _delay();
+    // Mock implementation - do nothing
   }
 }
 

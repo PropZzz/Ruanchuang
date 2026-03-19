@@ -98,7 +98,10 @@ class RemoteDataService implements DataService {
       Future.error(_unavailable());
 
   @override
-  Future<void> setSchedulingTuning(SchedulingTuning tuning) async =>
+  Future<String?> getFavoriteDevice() async => Future.error(_unavailable());
+
+  @override
+  Future<void> setFavoriteDevice(String deviceId) async =>
       Future.error(_unavailable());
 
   @override
@@ -107,5 +110,9 @@ class RemoteDataService implements DataService {
 
   @override
   Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request) async =>
+      Future.error(_unavailable());
+
+  @override
+  Future<void> setSchedulingTuning(SchedulingTuning tuning) async =>
       Future.error(_unavailable());
 }

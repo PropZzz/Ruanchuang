@@ -360,6 +360,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final allEntries = List<ScheduleEntry>.from(_blocks)
       ..sort((a, b) {
         final aMinutes = a.time.hour * 60 + a.time.minute;
@@ -554,6 +555,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
   }
 
   Widget _buildDayView(BuildContext context, List<ScheduleEntry> dayEntries) {
+    final theme = Theme.of(context);
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
       child: SizedBox(
@@ -591,7 +593,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                           decoration: BoxDecoration(
                             border: Border(
                               top: BorderSide(
-                                color: Colors.grey.shade200,
+                                color: theme.colorScheme.outlineVariant,
                                 width: 1,
                               ),
                             ),
@@ -605,10 +607,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.teal.withAlpha((0.08 * 255).round()),
-                            Colors.teal.withAlpha((0.08 * 255).round()),
-                            Colors.orange.withAlpha((0.08 * 255).round()),
-                            Colors.blue.withAlpha((0.08 * 255).round()),
+                            theme.colorScheme.primary.withAlpha((0.08 * 255).round()),
+                            theme.colorScheme.primary.withAlpha((0.08 * 255).round()),
+                            theme.colorScheme.tertiary.withAlpha((0.08 * 255).round()),
+                            theme.colorScheme.secondary.withAlpha((0.08 * 255).round()),
                           ],
                         ),
                       ),
