@@ -1,14 +1,11 @@
-import 'bluetooth_service.dart';
-import 'composite_data_service.dart';
-import 'data_service.dart';
-import 'remote_data_service.dart';
+import 'package:flutter/foundation.dart';
 
-import 'local_data_service_io.dart'
-    if (dart.library.html) 'local_data_service_web.dart';
+import 'bluetooth_service.dart';
+import 'data_service.dart';
+import 'local_data_service.dart';
 
 import 'microtask_crystals/heuristic_microtask_crystal_engine.dart';
 import 'microtask_crystals/microtask_crystal_engine.dart';
-import 'mock_data_service.dart';
 import 'reminders/reminder_service.dart';
 import 'scheduling/heuristic_scheduling_engine.dart';
 import 'scheduling/scheduling_engine.dart';
@@ -20,7 +17,9 @@ import 'telemetry/diagnostics_service.dart';
 
 /// Single place for wiring app-wide services.
 class AppServices {
-  static final DataService dataService = MockDataService.instance;
+  static final DataService _defaultDataService = LocalDataService.instance;
+  static DataService? _dataServiceOverride;
+  static DataService get dataService => _dataServiceOverride ?? _defaultDataService;
 
   static final SchedulingEngine schedulingEngine = HeuristicSchedulingEngine();
 
@@ -29,13 +28,33 @@ class AppServices {
 
   static final TeamCollabEngine teamCollabEngine = HeuristicTeamCollabEngine();
 
-  static final ReminderService reminderService = ReminderService();
+  static final ReminderService _defaultReminderService = ReminderService();
+  static ReminderService? _reminderServiceOverride;
+  static ReminderService get reminderService =>
+      _reminderServiceOverride ?? _defaultReminderService;
 
   static final BluetoothService bluetoothService =
       BluetoothService(dataService);
 
   static final AppLogStore logStore = AppLogStore();
   static final AppDiagnostics diagnostics = AppDiagnostics();
+
+  @visibleForTesting
+  static void installTestOverrides({
+    DataService? dataService,
+    ReminderService? reminderService,
+  }) {
+    _dataServiceOverride = dataService;
+    _reminderServiceOverride = reminderService;
+  }
+
+  @visibleForTesting
+  static void resetForTests() {
+    _reminderServiceOverride?.dispose();
+    _defaultReminderService.dispose();
+    _dataServiceOverride = null;
+    _reminderServiceOverride = null;
+  }
 
   /// Optional warm-up (loads local storage early).
   static Future<void> prewarm() async {

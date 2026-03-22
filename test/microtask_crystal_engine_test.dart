@@ -1,8 +1,8 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:sxzppp/models/models.dart';
-import 'package:sxzppp/services/microtask_crystals/heuristic_microtask_crystal_engine.dart';
+import 'package:shixuzhipei/models/models.dart';
+import 'package:shixuzhipei/services/microtask_crystals/heuristic_microtask_crystal_engine.dart';
 
 int _m(TimeOfDay t) => t.hour * 60 + t.minute;
 

@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:convert';
 
 class IcsEvent {
   final String uid;
@@ -102,14 +102,31 @@ class IcsCodec {
     final startRaw = m['DTSTART'];
     final endRaw = m['DTEND'];
     final summaryRaw = m['SUMMARY'];
+    final durationRaw = m['DURATION'];
 
-    if (startRaw == null || endRaw == null || summaryRaw == null) return null;
+    if (startRaw == null || summaryRaw == null) return null;
 
     final start = _parseDateTime(startRaw);
-    final end = _parseDateTime(endRaw);
-    if (start == null || end == null) return null;
+    if (start == null) return null;
 
-    final uid = _unescapeText(m['UID'] ?? _newUid());
+    DateTime? end;
+    if (endRaw != null) {
+      end = _parseDateTime(endRaw);
+    }
+    if (end == null && durationRaw != null) {
+      final dur = _parseDuration(durationRaw);
+      if (dur != null) {
+        end = start.add(dur);
+      }
+    }
+    if (end == null) return null;
+
+    final uid = _unescapeText(m['UID'] ?? _deriveUid(
+      start: start,
+      end: end,
+      summary: summaryRaw,
+      description: m['DESCRIPTION'] ?? '',
+    ));
     final summary = _unescapeText(summaryRaw);
     final description = _unescapeText(m['DESCRIPTION'] ?? '');
 
@@ -122,10 +139,15 @@ class IcsCodec {
     );
   }
 
-  static String _newUid() {
-    final r = Random();
-    final ts = DateTime.now().microsecondsSinceEpoch;
-    return 'sxzppp-$ts-${r.nextInt(1 << 32)}';
+  static String _deriveUid({
+    required DateTime start,
+    required DateTime end,
+    required String summary,
+    required String description,
+  }) {
+    final seed =
+        '${start.toIso8601String()}|${end.toIso8601String()}|$summary|$description';
+    return 'sxzppp-${_fnv1a32(seed)}';
   }
 
   static DateTime? _parseDateTime(String s) {
@@ -177,6 +199,40 @@ class IcsCodec {
     return isUtc ? dt.toUtc().toLocal() : dt;
   }
 
+  static Duration? _parseDuration(String raw) {
+    // Supported subset: PnD, PTnH, PTnM, PTnHnM.
+    final s = raw.trim().toUpperCase();
+    if (!s.startsWith('P')) return null;
+
+    final dayRe = RegExp(r'P(\d+)D');
+    final timeRe = RegExp(r'T(\d+H)?(\d+M)?');
+
+    var days = 0;
+    var hours = 0;
+    var minutes = 0;
+
+    final dm = dayRe.firstMatch(s);
+    if (dm != null) {
+      days = int.tryParse(dm.group(1) ?? '') ?? 0;
+    }
+
+    final tm = timeRe.firstMatch(s);
+    if (tm != null) {
+      final hRaw = tm.group(1);
+      final mRaw = tm.group(2);
+      if (hRaw != null) {
+        hours = int.tryParse(hRaw.replaceAll('H', '')) ?? 0;
+      }
+      if (mRaw != null) {
+        minutes = int.tryParse(mRaw.replaceAll('M', '')) ?? 0;
+      }
+    }
+
+    final totalMinutes = days * 24 * 60 + hours * 60 + minutes;
+    if (totalMinutes <= 0) return null;
+    return Duration(minutes: totalMinutes);
+  }
+
   static String _formatUtc(DateTime dt) {
     final u = dt.toUtc();
     return '${_yyyymmddThhmmss(u)}Z';
@@ -211,23 +267,48 @@ class IcsCodec {
 
   static List<String> _foldLines(List<String> lines) {
     // RFC5545: lines longer than 75 octets should be folded with CRLF + space.
-    // P0: fold at 75 chars (ASCII-only in our content).
     final out = <String>[];
     for (final l in lines) {
-      if (l.length <= 75) {
+      final chunks = _foldUtf8Chunks(l);
+      if (chunks.length == 1) {
         out.add(l);
         continue;
       }
-      var i = 0;
-      out.add(l.substring(0, 75));
-      i = 75;
-      while (i < l.length) {
-        final end = (i + 74 < l.length) ? i + 74 : l.length;
-        out.add(' ');
-        i = end;
+      out.add(chunks.first);
+      for (final chunk in chunks.skip(1)) {
+        out.add(' $chunk');
       }
     }
     return out;
+  }
+
+  static List<String> _foldUtf8Chunks(String line) {
+    const firstLimit = 75;
+    const continuationLimit = 74;
+
+    final chunks = <String>[];
+    var buffer = StringBuffer();
+    var bytes = 0;
+    var limit = firstLimit;
+
+    for (final rune in line.runes) {
+      final char = String.fromCharCode(rune);
+      final charBytes = utf8.encode(char).length;
+      if (buffer.isNotEmpty && bytes + charBytes > limit) {
+        chunks.add(buffer.toString());
+        buffer = StringBuffer();
+        bytes = 0;
+        limit = continuationLimit;
+      }
+      buffer.writeCharCode(rune);
+      bytes += charBytes;
+    }
+
+    if (buffer.isNotEmpty) {
+      chunks.add(buffer.toString());
+    }
+
+    return chunks.isEmpty ? [line] : chunks;
   }
 
   static List<String> _unfold(String ics) {
@@ -246,5 +327,14 @@ class IcsCodec {
     }
 
     return out;
+  }
+
+  static String _fnv1a32(String input) {
+    var hash = 0x811c9dc5;
+    for (final c in input.codeUnits) {
+      hash ^= c;
+      hash = (hash * 0x01000193) & 0xffffffff;
+    }
+    return hash.toRadixString(16).padLeft(8, '0');
   }
 }

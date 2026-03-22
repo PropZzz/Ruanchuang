@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sxzppp/models/models.dart';
-import 'package:sxzppp/services/review/weekly_report_formatter.dart';
+import 'package:shixuzhipei/models/models.dart';
+import 'package:shixuzhipei/services/review/weekly_report_formatter.dart';
 
 void main() {
   test('formatWeeklyReportMarkdown includes key sections and tuning', () {
@@ -25,7 +25,7 @@ void main() {
         'context_switch': 1,
         'unknown': 0,
       },
-      suggestions: const ['Increase duration estimate for "Deep Work" tasks (+15%).'],
+      suggestions: const ['建议为“Deep Work”类任务上调时长预估（+15%）。'],
       tuning: const SchedulingTuning(
         defaultDurationMultiplier: 1.0,
         tagDurationMultiplier: {'Deep Work': 1.15},
@@ -34,12 +34,12 @@ void main() {
     );
 
     final md = formatWeeklyReportMarkdown(report);
-    expect(md, contains('Weekly Review'));
-    expect(md, contains('Completion: 70% (7/10)'));
-    expect(md, contains('planned 600m, actual 720m'));
-    expect(md, contains('## Suggestions'));
+    expect(md, contains('周复盘'));
+    expect(md, contains('完成率：70%（7/10）'));
+    expect(md, contains('计划 600 分钟，实际 720 分钟'));
+    expect(md, contains('## 建议'));
     expect(md, contains('Deep Work'));
-    expect(md, contains('highLoadPenaltyWhenLowEnergy: 1.20'));
+    expect(md, contains('低能量时高负荷惩罚：1.20'));
   });
 }
 

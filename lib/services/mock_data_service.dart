@@ -1,6 +1,5 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math';
-
 
 import '../models/models.dart';
 import 'data_service.dart';
@@ -27,14 +26,15 @@ class MockDataService implements DataService {
     return '$prefix$ts-$r';
   }
 
-  Future<void> _delay([int ms = 20]) => Future.delayed(Duration(milliseconds: ms));
+  Future<void> _delay([int ms = 20]) =>
+      Future.delayed(Duration(milliseconds: ms));
 
   @override
   Future<EnergyStatus> getEnergyStatus() async {
     await _delay();
     return const EnergyStatus(
-      status: 'Flow',
-      description: 'Mock',
+      status: '心流',
+      description: '模拟数据',
       batteryPercent: 85,
     );
   }
@@ -112,8 +112,8 @@ class MockDataService implements DataService {
   Future<Task> getCurrentTask() async {
     await _delay();
     return const Task(
-      title: 'Mock',
-      description: 'Mock',
+      title: '模拟任务',
+      description: '模拟数据',
       remainingMinutes: 10,
       progress: 0.5,
     );
@@ -143,8 +143,11 @@ class MockDataService implements DataService {
   @override
   Future<void> removeScheduleEntry(ScheduleEntry entry) async {
     await _delay();
-    _schedule.removeWhere((e) => (entry.id != null && e.id == entry.id) ||
-        (e.title == entry.title && e.time == entry.time));
+    _schedule.removeWhere(
+      (e) =>
+          (entry.id != null && e.id == entry.id) ||
+          (e.title == entry.title && e.time == entry.time),
+    );
   }
 
   @override
@@ -164,8 +167,11 @@ class MockDataService implements DataService {
   @override
   Future<void> removeMicroTask(MicroTask task) async {
     await _delay();
-    _microTasks.removeWhere((t) => (task.id != null && t.id == task.id) ||
-        (t.title == task.title && t.tag == task.tag));
+    _microTasks.removeWhere(
+      (t) =>
+          (task.id != null && t.id == task.id) ||
+          (t.title == task.title && t.tag == task.tag),
+    );
   }
 
   @override
@@ -182,7 +188,7 @@ class MockDataService implements DataService {
   @override
   Future<UserProfile> getUserProfile() async {
     await _delay();
-    return const UserProfile(displayName: 'Mock', status: 'Mock');
+    return const UserProfile(displayName: '模拟用户', status: '模拟数据');
   }
 
   @override
@@ -259,9 +265,27 @@ class MockDataService implements DataService {
   }
 
   @override
+  Future<void> updateTeamSharePermission(
+    String memberId,
+    TeamSharePermission permission,
+  ) async {
+    await _delay();
+    final idx = _team.indexWhere((c) => c.memberId == memberId);
+    if (idx == -1) return;
+    final current = _team[idx];
+    _team[idx] = TeamMemberCalendar(
+      memberId: current.memberId,
+      displayName: current.displayName,
+      role: current.role,
+      energy: current.energy,
+      permission: permission,
+      busy: List<ScheduleEntry>.from(current.busy),
+    );
+  }
+
+  @override
   Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request) async {
     await _delay();
     // Mock implementation - do nothing
   }
 }
-

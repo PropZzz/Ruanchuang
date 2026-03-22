@@ -1,8 +1,8 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:sxzppp/models/models.dart';
-import 'package:sxzppp/services/team_collab/heuristic_team_collab_engine.dart';
+import 'package:shixuzhipei/models/models.dart';
+import 'package:shixuzhipei/services/team_collab/heuristic_team_collab_engine.dart';
 
 void main() {
   test('golden window exists when two members share free time and energy', () {

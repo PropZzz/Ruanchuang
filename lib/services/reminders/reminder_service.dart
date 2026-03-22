@@ -60,7 +60,7 @@ class ReminderService {
     required List<ScheduleEntry> entries,
   }) async {
     // P0 policy: clear and re-schedule for the current day's visible entries.
-    dispose();
+    _cancelTimersForDay(day);
     final now = DateTime.now();
     for (final e in entries) {
       await scheduleEntry(day: day, entry: e, now: now);
@@ -157,6 +157,33 @@ class ReminderService {
 
   static DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 
+  static bool _sameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  static DateTime? _startAtFromTimerKey(String key) {
+    final last = key.lastIndexOf('|');
+    if (last <= 0) return null;
+    final prev = key.lastIndexOf('|', last - 1);
+    if (prev <= 0) return null;
+    final millisStr = key.substring(prev + 1, last);
+    final millis = int.tryParse(millisStr);
+    if (millis == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(millis);
+  }
+
+  void _cancelTimersForDay(DateTime day) {
+    final target = _dateOnly(day);
+    final keys = _timers.keys.toList(growable: false);
+    for (final key in keys) {
+      final startAt = _startAtFromTimerKey(key);
+      if (startAt == null) continue;
+      if (_sameDay(_dateOnly(startAt), target)) {
+        _timers.remove(key)?.cancel();
+      }
+    }
+  }
+
   static List<DateTime> _upcomingOccurrenceDays({
     required DateTime day,
     required DateTime now,
@@ -216,7 +243,7 @@ class ReminderService {
     final monthIndex = day.month - 1 + months;
     final year = day.year + monthIndex ~/ 12;
     final month = (monthIndex % 12) + 1;
-    final clampedDay = day.day.clamp(1, _daysInMonth(year, month));
+    final clampedDay = day.day.clamp(1, _daysInMonth(year, month)).toInt();
     return DateTime(year, month, clampedDay);
   }
 

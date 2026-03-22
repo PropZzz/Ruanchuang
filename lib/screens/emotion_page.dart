@@ -38,7 +38,8 @@ class _EmotionPageState extends State<EmotionPage> {
 
     EmotionState? lastState(List<EmotionCheckIn> xs) {
       if (xs.isEmpty) return null;
-      final s = List<EmotionCheckIn>.from(xs)..sort((a, b) => a.at.compareTo(b.at));
+      final s = List<EmotionCheckIn>.from(xs)
+        ..sort((a, b) => a.at.compareTo(b.at));
       return s.last.state;
     }
 
@@ -83,17 +84,16 @@ class _EmotionPageState extends State<EmotionPage> {
 
   Future<void> _checkIn(EmotionState s) async {
     await _data.addEmotionCheckIn(
-      EmotionCheckIn(
-        id: '',
-        at: DateTime.now(),
-        state: s,
-        note: null,
-      ),
+      EmotionCheckIn(id: '', at: DateTime.now(), state: s, note: null),
     );
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${AppStrings.of(context, 'emo_checked_in')}: ${_label(context, s)}')),
+      SnackBar(
+        content: Text(
+          '${AppStrings.of(context, 'emo_checked_in')}: ${_label(context, s)}',
+        ),
+      ),
     );
     await _load();
 
@@ -116,6 +116,12 @@ class _EmotionPageState extends State<EmotionPage> {
 
   @override
   Widget build(BuildContext context) {
+    final guidance = EmotionPolicy.adaptiveSnapshot(
+      emotion: _state,
+      recentCheckInCount: _today.length,
+      careHint: _careHint != null,
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: Text(AppStrings.of(context, 'emo_title')),
@@ -149,7 +155,11 @@ class _EmotionPageState extends State<EmotionPage> {
                     padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
-                        Icon(Icons.monitor_heart, color: _color(_state), size: 28),
+                        Icon(
+                          Icons.monitor_heart,
+                          color: _color(_state),
+                          size: 28,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -162,7 +172,56 @@ class _EmotionPageState extends State<EmotionPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(AppStrings.of(context, 'emo_quick'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                Card(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.secondaryContainer.withValues(alpha: 0.45),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.tips_and_updates, color: _color(_state)),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                '自适应建议',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          guidance.headline,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(guidance.detail),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: guidance.highlights
+                              .map(
+                                (text) => Chip(
+                                  visualDensity: VisualDensity.compact,
+                                  label: Text(text),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  AppStrings.of(context, 'emo_quick'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -175,17 +234,31 @@ class _EmotionPageState extends State<EmotionPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Text(AppStrings.of(context, 'emo_today'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  AppStrings.of(context, 'emo_today'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 if (_today.isEmpty)
-                  Text(AppStrings.of(context, 'emo_today_empty'), style: const TextStyle(color: Colors.grey))
+                  Text(
+                    AppStrings.of(context, 'emo_today_empty'),
+                    style: const TextStyle(color: Colors.grey),
+                  )
                 else
                   ..._today.map(
                     (e) => ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.circle, size: 12, color: _color(e.state)),
+                      leading: Icon(
+                        Icons.circle,
+                        size: 12,
+                        color: _color(e.state),
+                      ),
                       title: Text(_label(context, e.state)),
-                      subtitle: Text(e.note == null ? e.at.toLocal().toString() : '${e.at.toLocal()}\n${e.note}'),
+                      subtitle: Text(
+                        e.note == null
+                            ? e.at.toLocal().toString()
+                            : '${e.at.toLocal()}\n${e.note}',
+                      ),
                       isThreeLine: e.note != null,
                     ),
                   ),

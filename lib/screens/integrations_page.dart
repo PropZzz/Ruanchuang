@@ -42,7 +42,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
   }
 
   _ParsedExternalEvent? _parse(String raw) {
-    final ev = McpIngest.parse(raw, source: 'MCP');
+    final ev = McpIngest.parse(raw, source: _detectSource(raw));
     if (ev == null) return null;
     return _ParsedExternalEvent(
       uid: ev.uid,
@@ -67,22 +67,34 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
 
     final ds = AppServices.dataService;
     final all = await ds.getScheduleEntries();
-    final id = 'mcp_${p.uid}';
-    final existedEntry =
-        all.cast<ScheduleEntry?>().firstWhere((e) => e?.id == id, orElse: () => null);
+    final normalizedId = 'mcp_${_normalizeUidForEntryId(p.uid)}';
+    final legacyId = 'mcp_${p.uid}';
+    final existedEntry = all.cast<ScheduleEntry?>().firstWhere(
+      (e) => e?.id == normalizedId || e?.id == legacyId,
+      orElse: () => null,
+    );
+    final id = existedEntry?.id ?? normalizedId;
 
     final day = DateTime(p.start.year, p.start.month, p.start.day);
     final tod = TimeOfDay(hour: p.start.hour, minute: p.start.minute);
-    final entry = ScheduleEntry(
-      id: id,
-      day: day,
-      title: p.title,
-      tag: p.source,
-      height: _heightFromMinutes(p.minutes),
-      color: Colors.blue,
-      time: tod,
-      reminderMinutesBefore: 10,
-    );
+    final entry = existedEntry == null
+        ? ScheduleEntry(
+            id: id,
+            day: day,
+            title: p.title,
+            tag: p.source,
+            height: _heightFromMinutes(p.minutes),
+            color: Colors.blue,
+            time: tod,
+            reminderMinutesBefore: 10,
+          )
+        : existedEntry.copyWith(
+            title: p.title,
+            day: day,
+            time: tod,
+            height: _heightFromMinutes(p.minutes),
+            tag: existedEntry.tag.isEmpty ? p.source : existedEntry.tag,
+          );
 
     await ds.addScheduleEntry(entry);
 
@@ -99,6 +111,28 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
             ? AppStrings.of(context, 'mcp_change_synced')
             : AppStrings.of(context, 'mcp_updated');
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  String _detectSource(String raw) {
+    final s = raw.toLowerCase();
+    if (s.contains('begin:vcalendar') || s.contains('dtstart') || s.contains('dtend')) {
+      return 'ICS';
+    }
+    if (s.contains('organizer:') ||
+        s.contains('required attendees') ||
+        s.contains('optional attendees')) {
+      return 'Outlook';
+    }
+    if (s.contains('from:') && s.contains('subject:')) {
+      return 'Email';
+    }
+    return 'MCP';
+  }
+
+  String _normalizeUidForEntryId(String uid) {
+    final normalized = uid.trim().toLowerCase();
+    if (normalized.isEmpty) return 'unknown';
+    return normalized.replaceAll(RegExp(r'[^a-z0-9_\-]'), '_');
   }
 
   @override

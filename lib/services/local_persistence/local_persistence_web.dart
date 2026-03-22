@@ -6,20 +6,32 @@ import 'local_persistence.dart';
 
 class WebLocalPersistence implements LocalPersistence {
   static const _key = 'sxzppp_data_v1';
+  static const _backupKey = 'sxzppp_data_v1_backup';
 
   @override
   Future<bool> exists() async {
-    return html.window.localStorage.containsKey(_key);
+    final storage = html.window.localStorage;
+    return storage.containsKey(_key) || storage.containsKey(_backupKey);
   }
 
   @override
   Future<String?> read() async {
-    return html.window.localStorage[_key];
+    final storage = html.window.localStorage;
+    final primary = storage[_key];
+    if (primary != null && primary.trim().isNotEmpty) {
+      return primary;
+    }
+    return storage[_backupKey];
   }
 
   @override
   Future<void> write(String content) async {
-    html.window.localStorage[_key] = content;
+    final storage = html.window.localStorage;
+    final old = storage[_key];
+    if (old != null && old.trim().isNotEmpty) {
+      storage[_backupKey] = old;
+    }
+    storage[_key] = content;
   }
 }
 

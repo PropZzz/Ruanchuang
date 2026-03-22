@@ -47,13 +47,60 @@ class EmotionPolicy {
     }
   }
 
+  static EmotionAdaptiveSnapshot adaptiveSnapshot({
+    required EmotionState emotion,
+    required int recentCheckInCount,
+    required bool careHint,
+  }) {
+    final policy = schedulingFor(emotion);
+
+    String headline;
+    String detail;
+    switch (emotion) {
+      case EmotionState.efficient:
+        headline = '优先推进更深度的工作。';
+        detail = '今天可以承担更多认知深度，建议把最难的任务放在前面。';
+        break;
+      case EmotionState.stable:
+        headline = '保持今天的节奏平稳。';
+        detail = '沿用当前节奏即可，尽量避免不必要的任务重排。';
+        break;
+      case EmotionState.tired:
+        headline = '优先保护精力，并缩短任务块。';
+        detail = '减少高负荷工作，增加恢复空间，优先处理低压力任务。';
+        break;
+      case EmotionState.irritable:
+        headline = '降低摩擦，优先轻量任务。';
+        detail = '尽量减少上下文切换，保持承诺更小，并保护专注窗口。';
+        break;
+    }
+
+    final highlights = <String>[
+      '时长倍率 x${policy.durationMultiplier.toStringAsFixed(1)}',
+      '高负荷上限：${policy.maxHighLoadTasks}',
+      if (policy.restMinutes > 0) '${policy.restMinutes} 分钟休息块',
+      if (recentCheckInCount > 0)
+        '今日已打卡 $recentCheckInCount 次',
+      if (careHint) '已启用关怀提示',
+    ];
+
+    return EmotionAdaptiveSnapshot(
+      emotion: emotion,
+      policy: policy,
+      headline: headline,
+      detail: detail,
+      highlights: List<String>.unmodifiable(highlights),
+    );
+  }
+
   static EnergyTier adjustEnergy({
     required EnergyTier base,
     required EmotionState emotion,
   }) {
     final policy = schedulingFor(emotion);
     final idx = (base.index + policy.energyDelta)
-        .clamp(0, EnergyTier.values.length - 1);
+        .clamp(0, EnergyTier.values.length - 1)
+        .toInt();
     return EnergyTier.values[idx];
   }
 
@@ -77,7 +124,7 @@ class EmotionPolicy {
                 title: t.title,
                 durationMinutes: t.durationMinutes,
                 priority: (t.load == CognitiveLoad.high)
-                    ? (t.priority + 1).clamp(1, 5)
+                    ? (t.priority + 1).clamp(1, 5).toInt()
                     : t.priority,
                 load: t.load,
                 tag: t.tag,
@@ -110,7 +157,7 @@ class EmotionPolicy {
             title: t.title,
             durationMinutes: t.durationMinutes,
             priority: (t.load == CognitiveLoad.low)
-                ? (t.priority + 1).clamp(1, 5)
+                ? (t.priority + 1).clamp(1, 5).toInt()
                 : t.priority,
             load: t.load,
             tag: t.tag,
@@ -127,7 +174,10 @@ class EmotionPolicy {
     required EmotionState emotion,
   }) {
     final policy = schedulingFor(emotion);
-    return (minutes * policy.durationMultiplier).round().clamp(1, 24 * 60);
+    return (minutes * policy.durationMultiplier)
+        .round()
+        .clamp(1, 24 * 60)
+        .toInt();
   }
 
   /// Fixed "rest" blocks to reduce task density when emotion is low.
@@ -157,17 +207,35 @@ class EmotionPolicy {
     required TimeOfDay time,
   }) {
     // Keep consistent with the UI mapping: 80.0 ~= 60 minutes.
-    final height = ((minutes / 60.0) * 80.0).clamp(20.0, 24 * 60 * 80.0);
+    final height = ((minutes / 60.0) * 80.0)
+        .clamp(20.0, 24 * 60 * 80.0)
+        .toDouble();
     return ScheduleEntry(
       id: 'rest_${time.hour}_${time.minute}',
-      title: 'Rest',
-      tag: 'Care',
+      title: '休息',
+      tag: '关怀',
       height: height,
       color: Colors.grey.shade400,
       time: time,
       reminderMinutesBefore: 0,
     );
   }
+}
+
+class EmotionAdaptiveSnapshot {
+  final EmotionState emotion;
+  final EmotionSchedulingPolicy policy;
+  final String headline;
+  final String detail;
+  final List<String> highlights;
+
+  const EmotionAdaptiveSnapshot({
+    required this.emotion,
+    required this.policy,
+    required this.headline,
+    required this.detail,
+    required this.highlights,
+  });
 }
 
 class EmotionSchedulingPolicy {
@@ -183,4 +251,3 @@ class EmotionSchedulingPolicy {
     required this.restMinutes,
   });
 }
-

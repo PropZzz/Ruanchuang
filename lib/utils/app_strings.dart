@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class AppStrings {
   static const Map<String, Map<String, String>> _data = {
     'zh': {
-      'app_title': '时序智配 BattleMan',
+      'app_title': '时序智配',
 
       // Bottom navigation
       'nav_focus': '专注',
@@ -30,10 +30,10 @@ class AppStrings {
       // Common labels
       'label_title': '标题',
       'label_tag': '标签',
-      'label_desc': '描述(可选)',
+      'label_desc': '描述（可选）',
       'label_date': '日期',
-      'label_duration': '时长(分钟):',
-      'label_start_time': '开始时间:',
+      'label_duration': '时长（分钟）：',
+      'label_start_time': '开始时间：',
       'label_start': '开始',
       'label_minutes': '分钟',
       'label_priority': '优先级',
@@ -46,7 +46,7 @@ class AppStrings {
 
       // Common tooltips / states
       'tooltip_more': '更多',
-      'common_loading': '加载中...',
+      'common_loading': '加载中…',
       'common_ok': '成功',
       'common_fail': '失败',
       'common_count': '数量',
@@ -57,15 +57,15 @@ class AppStrings {
 
       // Focus page
       'focus_title': '当下专注',
-      'focus_status_label': '当前状态:',
-      'status_flow_value': '高效 (Flow)',
+      'focus_status_label': '当前状态：',
+      'status_flow_value': '高效（Flow）',
       'status_flow_desc': '状态稳定，适合深度工作',
       'focus_header_current': '当前任务',
       'focus_header_next': '后续待办',
       'focus_empty_task': '今日已无更多日程',
-      'focus_time_remaining': '剩余时间: ',
-      'focus_snack_start': '将于 {min} 分钟后开始 {task}',
-      'focus_snack_upcoming': '{task} 将于 {min} 分钟后开始...',
+      'focus_time_remaining': '剩余时间：',
+      'focus_snack_start': '任务「{task}」将在 {min} 分钟后开始',
+      'focus_snack_upcoming': '任务「{task}」将在 {min} 分钟后开始',
       'focus_time_crystal_title': '时间晶体推荐',
       'focus_time_crystal_empty': '暂无可用空档或微任务。',
       'focus_time_crystal_subtitle':
@@ -129,13 +129,13 @@ class AppStrings {
 
       // Micro tasks
       'micro_title': '微任务晶体池',
-      'micro_ai_suggestion': 'AI 识别到你现在有约 15 分钟碎片时间，建议处理以下任务:',
+      'micro_ai_suggestion': 'AI 检测到你当前约有 15 分钟碎片时间，建议优先处理以下任务：',
       'micro_btn_fill': '一键填充',
       'micro_btn_add': '添加微任务',
       'micro_dialog_add': '新增微任务',
       'micro_dialog_del': '删除微任务',
       'micro_dialog_edit': '编辑微任务',
-      'micro_label_min': '预计分钟:',
+      'micro_label_min': '预计时长：',
       'micro_card_min': '分钟',
       'micro_batch_enter': '批量完成',
       'micro_batch_exit': '退出批量',
@@ -143,15 +143,15 @@ class AppStrings {
       'micro_batch_schedule': '集中安排',
       'micro_batch_need_select': '请先选择微任务',
       'micro_batch_need_same_tag': '集中安排需要选择同一标签的任务',
-      'micro_batch_default_title': '{minutes} 分钟 {tag} batch',
+      'micro_batch_default_title': '{minutes} 分钟 {tag} 批处理',
       'micro_schedule_dialog_title': '同类集中安排',
 
       // Team
       'team_title': '团队协作',
       'team_rec_title': '协作黄金窗口推荐',
-      'team_best_time': '最佳会议时间: 今日 15:00 - 16:00',
+      'team_best_time': '最佳会议时间：今日 15:00 - 16:00',
       'team_btn_book': '发起预约',
-      'team_reason': '理由: 多人空闲且能量状态满足阈值',
+      'team_reason': '理由：多人空闲且能量状态达标',
       'team_track_title': '项目进度追踪',
       'team_btn_add_task': '添加任务',
       'team_dialog_add': '添加团队任务',
@@ -160,9 +160,9 @@ class AppStrings {
       'team_label_task': '任务标题',
       'team_label_progress': '进度',
       'team_label_high_energy': '高效状态',
-      'team_label_due': '到期时间:',
-      'team_card_ongoing': '正在进行:',
-      'team_card_due': '到期:',
+      'team_label_due': '截止时间：',
+      'team_card_ongoing': '进行中：',
+      'team_card_due': '截止：',
       'team_meeting_title': '团队会议',
       'team_snack_booked_meeting': '已预约会议：{time}',
       'team_conflict_check_title': '冲突检查',
@@ -171,7 +171,7 @@ class AppStrings {
       'team_busy_members': '忙碌成员：{members}',
       'team_golden_windows_header': '黄金窗口（>= {participants} 人，>= {energy}）',
       'team_golden_windows_empty':
-          '未找到共同空档。可用右上角放大镜进行冲突检查，或稍后调整能量阈值。',
+          '未找到共同空档。可使用右上角放大镜进行冲突检查，或稍后调整能量阈值。',
       'team_free_members': '空闲成员：{count}',
       'team_merged_schedule_today': '合并团队日程（今天）',
       'team_busy_overlap_title': '忙碌重叠（冲突提示）',
@@ -192,18 +192,18 @@ class AppStrings {
 
       // Profile & settings
       'profile_title': '效率画像',
-      'profile_device': '设备连接 (Apple Watch/Huawei)',
+      'profile_device': '设备连接（Apple Watch / 华为）',
       'profile_connected': '已连接',
-      'profile_auth': '第三方应用授权 (MCP)',
-      'profile_model_card': 'AI 认知效率模型 (每周更新)',
+      'profile_auth': '第三方应用授权（MCP）',
+      'profile_model_card': 'AI 认知效率画像（每周更新）',
       'settings_title': '系统设置',
-      'settings_language': '更改语言',
+      'settings_language': '语言设置',
       'settings_notify': '通知管理',
       'settings_dark': '外观模式',
       'theme_system': '跟随系统',
       'theme_light': '浅色模式',
       'theme_dark': '深色模式',
-      'lang_zh': '中文 (简体)',
+      'lang_zh': '简体中文',
       'lang_en': 'English',
 
       // Review
@@ -225,7 +225,7 @@ class AppStrings {
       'review_tuning_high_load_penalty_low_energy': '低能量时高负荷惩罚：{value}',
       'review_tuning_tag_multiplier_none': '标签时长倍率：无',
       'review_tuning_tag_multiplier_entry': '标签时长倍率[{tag}] = {value}',
-      'review_tip_replan': '提示：前往“日程 -> 智能模式”，点击重新规划以查看参数生效。',
+      'review_tip_replan': '提示：前往“日程 -> 智能模式”，点击“重新规划”即可查看参数生效。',
       'review_snack_simulated': '已模拟 1 周，报告已生成并保存调度参数。',
 
       // Diagnostics
@@ -237,7 +237,7 @@ class AppStrings {
       'diag_section_logs': '关键日志 (可导出)',
       'diag_btn_clear': '清空日志',
       'diag_btn_export': '导出日志',
-      'diag_logs_empty': '暂无日志。去“智能日程 / 团队协作”等页面操作以产生日志。',
+      'diag_logs_empty': '暂无日志。请到“智能日程”或“团队协作”等页面操作以产生日志。',
       'diag_tooltip_refresh': '刷新',
       'diag_tooltip_export_logs': '导出日志',
       'diag_export_failed': '日志导出失败：{error}',
@@ -273,7 +273,7 @@ class AppStrings {
       'emo_stable': '平稳',
       'emo_tired': '疲惫',
       'emo_irritable': '烦躁',
-      'emo_care_hint': '检测到情绪连续偏低。是否考虑减少未来 1-2 天任务量，优先安排低压力任务并补充休息？',
+      'emo_care_hint': '系统检测到情绪连续偏低，建议减少未来 1-2 天任务量，优先安排低压力任务并补充休息。',
 
       // Goals
       'goal_title': '目标规划',
@@ -283,22 +283,22 @@ class AppStrings {
       'goal_due': '截止日期',
       'goal_pick_date': '选择日期',
       'goal_priority': '优先级',
-      'goal_hint': '系统将自动拆解为一组可执行任务，并可一键落地到日程。',
+      'goal_hint': '系统会自动拆解为可执行任务，并可一键落地到日程。',
       'goal_tasks': '任务拆解',
       'goal_schedule_next': '安排下一个任务',
       'goal_all_done': '该目标任务已全部完成。',
-      'goal_no_slot': '今天没有找到合适的空档，请先调整日程或缩短任务时长。',
+      'goal_no_slot': '今天没有找到合适空档，请先调整日程或缩短任务时长。',
       'goal_scheduled': '已加入日程',
       'goal_empty': '暂无目标，点击右下角创建。',
 
       // MCP
-      'mcp_title': '多应用融合监听 (MCP)',
-      'mcp_hint': '把第三方通知/邮件/会议消息粘贴到下面，系统会提取时间与主题并生成日程。',
-      'mcp_placeholder': '示例:\nUID: zoom-123\n主题: 客户会议\n时间: 2026-03-16 15:00\n时长: 60 分钟\n或:\n明天下午3点 客户会议 60分钟',
+      'mcp_title': '多应用融合接入（MCP）',
+      'mcp_hint': '将第三方通知、邮件或会议消息粘贴到下方，系统会提取时间与主题并生成日程。',
+      'mcp_placeholder': '示例：\nUID: zoom-123\n主题: 客户会议\n时间: 2026-03-16 15:00\n时长: 60 分钟\n或：\n明天下午3点 客户会议 60分钟',
       'mcp_btn_parse': '解析',
       'mcp_btn_import': '生成日程',
       'mcp_preview': '解析预览',
-      'mcp_parse_fail': '未识别到可用的时间信息(建议包含“2026-03-16 15:00”或“明天下午3点”)',
+      'mcp_parse_fail': '未识别到可用的时间信息，建议包含“2026-03-16 15:00”或“明天下午3点”。',
       'mcp_imported': '已生成日程。',
       'mcp_updated': '日程已同步。',
       'mcp_change_synced': '变更已同步。',
@@ -317,7 +317,7 @@ class AppStrings {
       'cognitive_load_high': '高',
     },
     'en': {
-      'app_title': 'BattleMan',
+      'app_title': 'ShiXuZhiPei',
 
       'nav_focus': 'Focus',
       'nav_schedule': 'Schedule',

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:sxzppp/models/models.dart';
-import 'package:sxzppp/services/reminders/reminder_service.dart';
+import 'package:shixuzhipei/models/models.dart';
+import 'package:shixuzhipei/services/reminders/reminder_service.dart';
 
 void main() {
   test('Reminder planner schedules today and next occurrence for repeats', () {

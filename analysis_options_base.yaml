@@ -1,0 +1,2 @@
+# Local analysis defaults for sandboxed tooling.
+# Keep this file repo-local so Dart tools do not need pub-cache access.

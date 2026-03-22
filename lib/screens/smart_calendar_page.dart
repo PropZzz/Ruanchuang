@@ -14,22 +14,13 @@ import 'emotion_page.dart';
 import 'goals_page.dart';
 import 'integrations_page.dart';
 
-enum _CalendarMode {
-  manual,
-  smart,
-}
+enum _CalendarMode { manual, smart }
 
-enum _CalendarView {
-  day,
-  week,
-}
+enum _CalendarView { day, week, month, gantt }
 
-enum _EntryStatus {
-  notStarted,
-  inProgress,
-  completed,
-  overdue,
-}
+enum _CalendarField { time, tag, status, reminder, goal }
+
+enum _EntryStatus { notStarted, inProgress, completed, overdue }
 
 /// 智能日程页面
 class SmartCalendarPage extends StatefulWidget {
@@ -46,6 +37,12 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
   _CalendarMode _mode = _CalendarMode.manual;
   _CalendarView _view = _CalendarView.day;
+  final Set<_CalendarField> _visibleFields = {
+    _CalendarField.time,
+    _CalendarField.tag,
+    _CalendarField.status,
+    _CalendarField.reminder,
+  };
   late DateTime _selectedDay;
 
   final _dataService = AppServices.dataService;
@@ -85,8 +82,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
       final today = dateOnly(now);
       final isToday = sameDay(viewDay, today);
-      final status =
-          isToday ? _computeStatus(entries: visible, events: events, now: now) : const <String, _EntryStatus>{};
+      final status = isToday
+          ? _computeStatus(entries: visible, events: events, now: now)
+          : const <String, _EntryStatus>{};
       if (!mounted) return;
       setState(() {
         _blocks = entries;
@@ -238,27 +236,27 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     ];
 
     final tuning = await _dataService.getSchedulingTuning();
-    final shapedTasks = EmotionPolicy.adaptTasks(tasks: tasks, emotion: emotion);
-    final tunedTasks = shapedTasks
-        .map((t) {
-          final mult = tuning.durationMultiplierForTag(t.tag);
-          final tunedMinutes =
-              (t.durationMinutes * mult).round().clamp(1, 24 * 60);
-          final emotionMinutes = EmotionPolicy.applyDurationMultiplier(
-            minutes: tunedMinutes,
-            emotion: emotion,
-          );
-          return PlanTask(
-            id: t.id,
-            title: t.title,
-            durationMinutes: emotionMinutes,
-            priority: t.priority,
-            load: t.load,
-            tag: t.tag,
-            due: t.due,
-          );
-        })
-        .toList();
+    final shapedTasks = EmotionPolicy.adaptTasks(
+      tasks: tasks,
+      emotion: emotion,
+    );
+    final tunedTasks = shapedTasks.map((t) {
+      final mult = tuning.durationMultiplierForTag(t.tag);
+      final tunedMinutes = (t.durationMinutes * mult).round().clamp(1, 24 * 60);
+      final emotionMinutes = EmotionPolicy.applyDurationMultiplier(
+        minutes: tunedMinutes,
+        emotion: emotion,
+      );
+      return PlanTask(
+        id: t.id,
+        title: t.title,
+        durationMinutes: emotionMinutes,
+        priority: t.priority,
+        load: t.load,
+        tag: t.tag,
+        due: t.due,
+      );
+    }).toList();
 
     final fixed = EmotionPolicy.fixedRestBlocks(day: day, emotion: emotion);
 
@@ -293,8 +291,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
     if (!mounted) return;
 
-    final planned =
-        plan.entries.map((e) => e.copyWith(day: req.day)).toList(growable: false);
+    final planned = plan.entries
+        .map((e) => e.copyWith(day: req.day))
+        .toList(growable: false);
 
     setState(() {
       _blocks = planned;
@@ -322,7 +321,8 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
   }
 
   double _calculateTopOffset(TimeOfDay time) {
-    final double minutesFromStart = (time.hour - _startHour) * 60.0 + time.minute;
+    final double minutesFromStart =
+        (time.hour - _startHour) * 60.0 + time.minute;
     return minutesFromStart / 60.0 * _hourHeight;
   }
 
@@ -360,7 +360,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final allEntries = List<ScheduleEntry>.from(_blocks)
       ..sort((a, b) {
         final aMinutes = a.time.hour * 60 + a.time.minute;
@@ -384,19 +383,23 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             tooltip: AppStrings.of(context, 'goal_title'),
             icon: const Icon(Icons.flag_outlined),
             onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const GoalsPage()),
-              );
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const GoalsPage()));
             },
           ),
           IconButton(
             tooltip: _mode == _CalendarMode.manual
                 ? AppStrings.of(context, 'calendar_tooltip_switch_to_smart')
                 : AppStrings.of(context, 'calendar_tooltip_switch_to_manual'),
-            icon: Icon(_mode == _CalendarMode.manual ? Icons.bolt : Icons.edit_calendar),
+            icon: Icon(
+              _mode == _CalendarMode.manual ? Icons.bolt : Icons.edit_calendar,
+            ),
             onPressed: () async {
               setState(() {
-                _mode = _mode == _CalendarMode.manual ? _CalendarMode.smart : _CalendarMode.manual;
+                _mode = _mode == _CalendarMode.manual
+                    ? _CalendarMode.smart
+                    : _CalendarMode.manual;
               });
               await _loadSchedule();
             },
@@ -407,6 +410,38 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               icon: const Icon(Icons.add_alert),
               onPressed: _showInsertUrgentDialog,
             ),
+          PopupMenuButton<_CalendarField>(
+            tooltip: '显示字段',
+            icon: const Icon(Icons.tune),
+            onSelected: _toggleField,
+            itemBuilder: (ctx) => [
+              CheckedPopupMenuItem(
+                value: _CalendarField.time,
+                checked: _visibleFields.contains(_CalendarField.time),
+                child: Text(_fieldLabel(ctx, _CalendarField.time)),
+              ),
+              CheckedPopupMenuItem(
+                value: _CalendarField.tag,
+                checked: _visibleFields.contains(_CalendarField.tag),
+                child: Text(_fieldLabel(ctx, _CalendarField.tag)),
+              ),
+              CheckedPopupMenuItem(
+                value: _CalendarField.status,
+                checked: _visibleFields.contains(_CalendarField.status),
+                child: Text(_fieldLabel(ctx, _CalendarField.status)),
+              ),
+              CheckedPopupMenuItem(
+                value: _CalendarField.reminder,
+                checked: _visibleFields.contains(_CalendarField.reminder),
+                child: Text(_fieldLabel(ctx, _CalendarField.reminder)),
+              ),
+              CheckedPopupMenuItem(
+                value: _CalendarField.goal,
+                checked: _visibleFields.contains(_CalendarField.goal),
+                child: Text(_fieldLabel(ctx, _CalendarField.goal)),
+              ),
+            ],
+          ),
           IconButton(
             tooltip: AppStrings.of(context, 'calendar_tooltip_export_ics'),
             icon: const Icon(Icons.upload_file),
@@ -422,13 +457,13 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             tooltip: AppStrings.of(context, 'tooltip_more'),
             onSelected: (v) {
               if (v == 'emotion') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const EmotionPage()),
-                );
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const EmotionPage()));
               } else if (v == 'goals') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const GoalsPage()),
-                );
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const GoalsPage()));
               } else if (v == 'mcp') {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const IntegrationsPage()),
@@ -466,18 +501,28 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 ),
                 _buildViewToolbar(context),
                 Expanded(
-                  child: _view == _CalendarView.day
-                      ? _buildDayView(context, dayEntries)
-                      : _buildWeekView(context, allEntries),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeIn,
+                    child: KeyedSubtree(
+                      key: ValueKey(
+                        '${_view.name}-${_selectedDay.toIso8601String()}',
+                      ),
+                      child: _buildViewBody(context, allEntries, dayEntries),
+                    ),
+                  ),
                 ),
               ],
             ),
       floatingActionButton: _mode == _CalendarMode.manual
           ? FloatingActionButton(
+              heroTag: 'smart-calendar-add-fab',
               child: const Icon(Icons.add),
               onPressed: () => _showAddDialog(context),
             )
           : FloatingActionButton.extended(
+              heroTag: 'smart-calendar-replan-fab',
               icon: const Icon(Icons.bolt),
               label: Text(AppStrings.of(context, 'calendar_btn_replan')),
               onPressed: _loadSmartSchedule,
@@ -489,53 +534,125 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     final ml = MaterialLocalizations.of(context);
     final weekStart = startOfWeek(_selectedDay);
     final weekEnd = weekStart.add(const Duration(days: 6));
-
-    final label = _view == _CalendarView.week
-        ? '${ml.formatMediumDate(weekStart)} - ${ml.formatMediumDate(weekEnd)}'
-        : ml.formatMediumDate(_selectedDay);
-
-    final stepDays = _view == _CalendarView.week ? 7 : 1;
+    final label = switch (_view) {
+      _CalendarView.day => ml.formatMediumDate(_selectedDay),
+      _CalendarView.week =>
+        '${ml.formatMediumDate(weekStart)} - ${ml.formatMediumDate(weekEnd)}',
+      _CalendarView.month => ml.formatMonthYear(_selectedDay),
+      _CalendarView.gantt =>
+        '${ml.formatMediumDate(weekStart)} - ${ml.formatMediumDate(weekEnd)}',
+    };
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SegmentedButton<_CalendarView>(
-            segments: [
-              ButtonSegment<_CalendarView>(
-                value: _CalendarView.day,
-                icon: const Icon(Icons.view_day_outlined),
-                label: Text(AppStrings.of(context, 'calendar_view_day')),
-              ),
-              ButtonSegment<_CalendarView>(
-                value: _CalendarView.week,
-                icon: const Icon(Icons.view_week_outlined),
-                label: Text(AppStrings.of(context, 'calendar_view_week')),
-              ),
-            ],
-            selected: {_view},
-            onSelectionChanged: (s) {
-              setState(() => _view = s.first);
-            },
-          ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final showSegmentIcons = constraints.maxWidth >= 600;
+          final segmentPadding = showSegmentIcons
+              ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10)
+              : const EdgeInsets.symmetric(horizontal: 18, vertical: 10);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                onPressed: () => _shiftSelectedDay(-stepDays),
-                icon: const Icon(Icons.chevron_left),
+              Align(
+                alignment: Alignment.topCenter,
+                child: SegmentedButton<_CalendarView>(
+                  style: ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+                      segmentPadding,
+                    ),
+                  ),
+                  segments: [
+                    _viewSegment(
+                      context,
+                      view: _CalendarView.day,
+                      icon: Icons.view_day_outlined,
+                      showIcon: showSegmentIcons,
+                      minLabelWidth: showSegmentIcons ? 28 : 30,
+                    ),
+                    _viewSegment(
+                      context,
+                      view: _CalendarView.week,
+                      icon: Icons.view_week_outlined,
+                      showIcon: showSegmentIcons,
+                      minLabelWidth: showSegmentIcons ? 28 : 30,
+                    ),
+                    _viewSegment(
+                      context,
+                      view: _CalendarView.month,
+                      icon: Icons.calendar_month_outlined,
+                      showIcon: showSegmentIcons,
+                      minLabelWidth: showSegmentIcons ? 28 : 30,
+                    ),
+                    _viewSegment(
+                      context,
+                      view: _CalendarView.gantt,
+                      icon: Icons.timeline_outlined,
+                      showIcon: showSegmentIcons,
+                      minLabelWidth: showSegmentIcons ? 40 : 44,
+                    ),
+                  ],
+                  selected: {_view},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (s) {
+                    if (s.isEmpty) return;
+                    setState(() => _view = s.first);
+                  },
+                ),
               ),
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-              IconButton(
-                onPressed: () => _shiftSelectedDay(stepDays),
-                icon: const Icon(Icons.chevron_right),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => _shiftSelectedPeriod(-1),
+                    icon: const Icon(Icons.chevron_left),
+                  ),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _shiftSelectedPeriod(1),
+                    icon: const Icon(Icons.chevron_right),
+                  ),
+                ],
               ),
             ],
-          ),
-        ],
+          );
+        },
       ),
+    );
+  }
+
+  ButtonSegment<_CalendarView> _viewSegment(
+    BuildContext context, {
+    required _CalendarView view,
+    required IconData icon,
+    required bool showIcon,
+    required double minLabelWidth,
+  }) {
+    final label = _viewLabel(context, view);
+    return ButtonSegment<_CalendarView>(
+      value: view,
+      icon: showIcon ? Icon(icon, size: 18) : null,
+      label: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: minLabelWidth),
+        child: Text(
+          label,
+          maxLines: 1,
+          softWrap: false,
+          textAlign: TextAlign.center,
+          overflow: TextOverflow.visible,
+        ),
+      ),
+      tooltip: label,
     );
   }
 
@@ -546,12 +663,68 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     await _loadSchedule();
   }
 
+  Future<void> _shiftSelectedMonth(int deltaMonths) async {
+    final current = dateOnly(_selectedDay);
+    final monthIndex = current.month - 1 + deltaMonths;
+    final year = current.year + (monthIndex ~/ 12);
+    final month = (monthIndex % 12) + 1;
+    final lastDay = DateTime(year, month + 1, 0).day;
+    final day = current.day.clamp(1, lastDay);
+
+    setState(() {
+      _selectedDay = DateTime(year, month, day);
+    });
+    await _loadSchedule();
+  }
+
+  Future<void> _shiftSelectedPeriod(int direction) async {
+    switch (_view) {
+      case _CalendarView.day:
+        await _shiftSelectedDay(direction);
+        return;
+      case _CalendarView.week:
+      case _CalendarView.gantt:
+        await _shiftSelectedDay(direction * 7);
+        return;
+      case _CalendarView.month:
+        await _shiftSelectedMonth(direction);
+        return;
+    }
+  }
+
   Future<void> _jumpToDay(DateTime day) async {
     setState(() {
       _selectedDay = dateOnly(day);
       _view = _CalendarView.day;
     });
     await _loadSchedule();
+  }
+
+  void _toggleField(_CalendarField field) {
+    setState(() {
+      if (_visibleFields.contains(field)) {
+        _visibleFields.remove(field);
+      } else {
+        _visibleFields.add(field);
+      }
+    });
+  }
+
+  Widget _buildViewBody(
+    BuildContext context,
+    List<ScheduleEntry> allEntries,
+    List<ScheduleEntry> dayEntries,
+  ) {
+    switch (_view) {
+      case _CalendarView.day:
+        return _buildDayView(context, dayEntries);
+      case _CalendarView.week:
+        return _buildWeekView(context, allEntries);
+      case _CalendarView.month:
+        return _buildMonthView(context, allEntries);
+      case _CalendarView.gantt:
+        return _buildGanttView(context, allEntries);
+    }
   }
 
   Widget _buildDayView(BuildContext context, List<ScheduleEntry> dayEntries) {
@@ -607,10 +780,18 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            theme.colorScheme.primary.withAlpha((0.08 * 255).round()),
-                            theme.colorScheme.primary.withAlpha((0.08 * 255).round()),
-                            theme.colorScheme.tertiary.withAlpha((0.08 * 255).round()),
-                            theme.colorScheme.secondary.withAlpha((0.08 * 255).round()),
+                            theme.colorScheme.primary.withAlpha(
+                              (0.08 * 255).round(),
+                            ),
+                            theme.colorScheme.primary.withAlpha(
+                              (0.08 * 255).round(),
+                            ),
+                            theme.colorScheme.tertiary.withAlpha(
+                              (0.08 * 255).round(),
+                            ),
+                            theme.colorScheme.secondary.withAlpha(
+                              (0.08 * 255).round(),
+                            ),
                           ],
                         ),
                       ),
@@ -630,6 +811,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                               ? null
                               : _statusByTaskId[block.id!],
                           time: block.time,
+                          reminderMinutesBefore: block.reminderMinutesBefore,
+                          goalId: block.goalId,
+                          goalTaskId: block.goalTaskId,
                           onDelete: _mode == _CalendarMode.manual
                               ? () => _showDeleteDialog(block)
                               : null,
@@ -658,7 +842,13 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: days
-              .map((d) => _buildWeekDayColumn(context, day: d, allEntries: allEntries))
+              .map(
+                (d) => _buildWeekDayColumn(
+                  context,
+                  day: d,
+                  allEntries: allEntries,
+                ),
+              )
               .toList(growable: false),
         ),
       ),
@@ -736,7 +926,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                       ),
                     )
                   else
-                    ...dayEntries.map((e) => _buildWeekEntryCard(context, e)),
+                    ...dayEntries.map(
+                      (e) => _buildWeekEntryCard(context, e, day: day),
+                    ),
                 ],
               ),
             ),
@@ -746,8 +938,17 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     );
   }
 
-  Widget _buildWeekEntryCard(BuildContext context, ScheduleEntry e) {
+  Widget _buildWeekEntryCard(
+    BuildContext context,
+    ScheduleEntry e, {
+    required DateTime day,
+  }) {
     final color = e.color.withAlpha((0.88 * 255).round());
+    final status =
+        sameDay(day, _selectedDay) && e.id != null && e.id!.isNotEmpty
+        ? _statusByTaskId[e.id!]
+        : null;
+    final chips = _buildEntryMetaChips(e, status: status);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -756,11 +957,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         color: color,
         borderRadius: BorderRadius.circular(10),
         boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 3, offset: Offset(0, 1)),
         ],
       ),
       child: Row(
@@ -773,11 +970,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  e.time.format(context),
-                  style: const TextStyle(color: Colors.white70, fontSize: 10),
-                ),
-                const SizedBox(height: 2),
-                Text(
                   _scheduleTitleLabel(context, e.title),
                   style: const TextStyle(
                     color: Colors.white,
@@ -787,11 +979,861 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
+                const SizedBox(height: 4),
+                Wrap(spacing: 6, runSpacing: 4, children: chips),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  String _viewLabel(BuildContext context, _CalendarView view) {
+    final isEn = Localizations.localeOf(context).languageCode == 'en';
+    switch (view) {
+      case _CalendarView.day:
+        return isEn ? 'Day' : '日';
+      case _CalendarView.week:
+        return isEn ? 'Week' : '周';
+      case _CalendarView.month:
+        return isEn ? 'Month' : '月';
+      case _CalendarView.gantt:
+        return isEn ? 'Gantt' : '甘特';
+    }
+  }
+
+  String _fieldLabel(BuildContext context, _CalendarField field) {
+    final isEn = Localizations.localeOf(context).languageCode == 'en';
+    switch (field) {
+      case _CalendarField.time:
+        return isEn ? 'Time' : '时间';
+      case _CalendarField.tag:
+        return isEn ? 'Tag' : '标签';
+      case _CalendarField.status:
+        return isEn ? 'Status' : '状态';
+      case _CalendarField.reminder:
+        return isEn ? 'Reminder' : '提醒';
+      case _CalendarField.goal:
+        return isEn ? 'Goal' : '目标';
+    }
+  }
+
+  int _entryDurationMinutes(ScheduleEntry entry) {
+    return ((entry.height / 80.0) * 60.0).round().clamp(1, 24 * 60);
+  }
+
+  int _entryStartMinutes(ScheduleEntry entry) {
+    return entry.time.hour * 60 + entry.time.minute;
+  }
+
+  bool _entryHasGoalLink(ScheduleEntry entry) {
+    return (entry.goalId != null && entry.goalId!.isNotEmpty) ||
+        (entry.goalTaskId != null && entry.goalTaskId!.isNotEmpty);
+  }
+
+  List<ScheduleEntry> _entriesForMonth(
+    DateTime monthAnchor,
+    List<ScheduleEntry> allEntries,
+  ) {
+    final start = DateTime(monthAnchor.year, monthAnchor.month, 1);
+    final end = DateTime(monthAnchor.year, monthAnchor.month + 1, 1);
+    final out = <ScheduleEntry>[];
+
+    for (
+      var day = start;
+      day.isBefore(end);
+      day = day.add(const Duration(days: 1))
+    ) {
+      out.addAll(entriesForDay(day: day, allEntries: allEntries));
+    }
+
+    out.sort((a, b) {
+      final aMinutes = a.time.hour * 60 + a.time.minute;
+      final bMinutes = b.time.hour * 60 + b.time.minute;
+      return aMinutes.compareTo(bMinutes);
+    });
+    return out;
+  }
+
+  List<DateTime> _monthGridDays(DateTime anchor) {
+    final first = DateTime(anchor.year, anchor.month, 1);
+    final gridStart = startOfWeek(first);
+    return List.generate(42, (i) => gridStart.add(Duration(days: i)));
+  }
+
+  Widget _buildInfoChip({
+    required String label,
+    IconData? icon,
+    Color background = Colors.white24,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: Colors.white70),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildEntryMetaChips(
+    ScheduleEntry entry, {
+    _EntryStatus? status,
+    bool includeReminder = true,
+  }) {
+    final chips = <Widget>[];
+
+    if (_visibleFields.contains(_CalendarField.time)) {
+      chips.add(
+        _buildInfoChip(label: entry.time.format(context), icon: Icons.schedule),
+      );
+    }
+
+    if (_visibleFields.contains(_CalendarField.tag) && entry.tag.isNotEmpty) {
+      chips.add(
+        _buildInfoChip(
+          label: _tagLabel(context, entry.tag),
+          icon: iconForTag(entry.tag),
+        ),
+      );
+    }
+
+    if (_visibleFields.contains(_CalendarField.status) && status != null) {
+      chips.add(_statusPill(status));
+    }
+
+    if (_visibleFields.contains(_CalendarField.reminder) &&
+        includeReminder &&
+        entry.reminderMinutesBefore > 0) {
+      final isEn = Localizations.localeOf(context).languageCode == 'en';
+      chips.add(
+        _buildInfoChip(
+          label: isEn
+              ? '${entry.reminderMinutesBefore}m before'
+              : '${entry.reminderMinutesBefore} 分钟前',
+          icon: Icons.notifications_none,
+        ),
+      );
+    }
+
+    if (_visibleFields.contains(_CalendarField.goal) &&
+        _entryHasGoalLink(entry)) {
+      chips.add(
+        _buildInfoChip(
+          label: _fieldLabel(context, _CalendarField.goal),
+          icon: Icons.flag_outlined,
+        ),
+      );
+    }
+
+    return chips;
+  }
+
+  Widget _buildMonthOverviewCard(
+    BuildContext context,
+    List<ScheduleEntry> monthEntries,
+  ) {
+    final activeDays = <String>{};
+    final reminderCount = monthEntries
+        .where((e) => e.reminderMinutesBefore > 0)
+        .length;
+    final goalCount = monthEntries.where(_entryHasGoalLink).length;
+
+    for (final entry in monthEntries) {
+      final day = entry.day;
+      if (day != null) {
+        activeDays.add('${day.year}-${day.month}-${day.day}');
+      }
+    }
+
+    final totalMinutes = monthEntries.fold<int>(
+      0,
+      (sum, entry) => sum + _entryDurationMinutes(entry),
+    );
+
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withAlpha(160),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_month_outlined,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _viewLabel(context, _CalendarView.month),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                MaterialLocalizations.of(context).formatMonthYear(_selectedDay),
+                style: TextStyle(color: theme.colorScheme.outline),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildInfoChip(
+                label: '${monthEntries.length}',
+                icon: Icons.event_available,
+                background: theme.colorScheme.primary.withAlpha(120),
+              ),
+              _buildInfoChip(
+                label: '${activeDays.length}',
+                icon: Icons.date_range,
+                background: theme.colorScheme.secondary.withAlpha(120),
+              ),
+              _buildInfoChip(
+                label: '${reminderCount}',
+                icon: Icons.notifications_active_outlined,
+                background: theme.colorScheme.tertiary.withAlpha(120),
+              ),
+              _buildInfoChip(
+                label: '${goalCount}',
+                icon: Icons.flag_outlined,
+                background: Colors.black26,
+              ),
+              _buildInfoChip(
+                label: '${totalMinutes}m',
+                icon: Icons.schedule_outlined,
+                background: Colors.black26,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthView(BuildContext context, List<ScheduleEntry> allEntries) {
+    final monthAnchor = DateTime(_selectedDay.year, _selectedDay.month, 1);
+    final monthEntries = _entriesForMonth(monthAnchor, allEntries);
+    final gridDays = _monthGridDays(monthAnchor);
+    final ml = MaterialLocalizations.of(context);
+    final weekdayLabels = [
+      ml.narrowWeekdays[1],
+      ml.narrowWeekdays[2],
+      ml.narrowWeekdays[3],
+      ml.narrowWeekdays[4],
+      ml.narrowWeekdays[5],
+      ml.narrowWeekdays[6],
+      ml.narrowWeekdays[0],
+    ];
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      children: [
+        _buildMonthOverviewCard(context, monthEntries),
+        const SizedBox(height: 12),
+        Row(
+          children: weekdayLabels
+              .map(
+                (label) => Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ),
+                  ),
+                ),
+              )
+              .toList(growable: false),
+        ),
+        const SizedBox(height: 8),
+        ...List.generate(6, (weekIndex) {
+          final days = gridDays
+              .skip(weekIndex * 7)
+              .take(7)
+              .toList(growable: false);
+          return SizedBox(
+            height: 116,
+            child: Row(
+              children: days
+                  .map(
+                    (day) => Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: _buildMonthDayCell(
+                          context,
+                          day: day,
+                          monthAnchor: monthAnchor,
+                          allEntries: allEntries,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildMonthDayCell(
+    BuildContext context, {
+    required DateTime day,
+    required DateTime monthAnchor,
+    required List<ScheduleEntry> allEntries,
+  }) {
+    final inMonth = day.month == monthAnchor.month;
+    final selected = sameDay(day, _selectedDay);
+    final today = sameDay(day, dateOnly(DateTime.now()));
+    final dayEntries = entriesForDay(day: day, allEntries: allEntries).toList()
+      ..sort((a, b) {
+        final aMinutes = a.time.hour * 60 + a.time.minute;
+        final bMinutes = b.time.hour * 60 + b.time.minute;
+        return aMinutes.compareTo(bMinutes);
+      });
+
+    final theme = Theme.of(context);
+    final borderColor = selected
+        ? theme.colorScheme.primary
+        : today
+        ? theme.colorScheme.tertiary
+        : theme.colorScheme.outlineVariant;
+
+    return Material(
+      color: selected
+          ? theme.colorScheme.primaryContainer.withAlpha(150)
+          : theme.colorScheme.surfaceContainerLowest.withAlpha(
+              inMonth ? 255 : 170,
+            ),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _jumpToDay(day),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            border: Border.all(color: borderColor),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Opacity(
+            opacity: inMonth ? 1.0 : 0.45,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final showCountChip =
+                        dayEntries.isNotEmpty && constraints.maxWidth >= 44;
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${day.day}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: selected
+                                  ? theme.colorScheme.primary
+                                  : null,
+                            ),
+                          ),
+                        ),
+                        if (showCountChip)
+                          _buildInfoChip(
+                            label: '${dayEntries.length}',
+                            icon: Icons.circle,
+                            background: Colors.black26,
+                          ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 6),
+                if (dayEntries.isEmpty)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        ' ',
+                        style: TextStyle(color: theme.colorScheme.outline),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          ...dayEntries
+                              .take(1)
+                              .map(
+                                (entry) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: _buildMonthEntryLine(
+                                    context,
+                                    day: day,
+                                    entry: entry,
+                                    compact: true,
+                                  ),
+                                ),
+                              ),
+                          if (dayEntries.length > 1)
+                            Text(
+                              '+${dayEntries.length - 1} more',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: theme.colorScheme.outline,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthEntryLine(
+    BuildContext context, {
+    required DateTime day,
+    required ScheduleEntry entry,
+    bool compact = false,
+  }) {
+    if (compact) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 5,
+            height: 5,
+            margin: const EdgeInsets.only(top: 6, right: 5),
+            decoration: BoxDecoration(
+              color: entry.color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              '${entry.time.format(context)} ${_scheduleTitleLabel(context, entry.title)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface,
+                height: 1.05,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final chips = <Widget>[];
+    final status =
+        sameDay(day, _selectedDay) && entry.id != null && entry.id!.isNotEmpty
+        ? _statusByTaskId[entry.id!]
+        : null;
+    if (_visibleFields.contains(_CalendarField.time)) {
+      chips.add(
+        Text(
+          entry.time.format(context),
+          style: TextStyle(
+            fontSize: 10,
+            color: Theme.of(context).colorScheme.outline,
+          ),
+        ),
+      );
+    }
+    if (_visibleFields.contains(_CalendarField.tag) && entry.tag.isNotEmpty) {
+      chips.add(
+        Text(
+          _tagLabel(context, entry.tag),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        ),
+      );
+    }
+    if (_visibleFields.contains(_CalendarField.reminder) &&
+        entry.reminderMinutesBefore > 0) {
+      chips.add(
+        Text(
+          '-${entry.reminderMinutesBefore}m',
+          style: TextStyle(
+            fontSize: 10,
+            color: Theme.of(context).colorScheme.outline,
+          ),
+        ),
+      );
+    }
+    if (_visibleFields.contains(_CalendarField.status) && status != null) {
+      chips.add(
+        Text(
+          _statusLabel(status),
+          style: TextStyle(
+            fontSize: 10,
+            color: Theme.of(context).colorScheme.outline,
+          ),
+        ),
+      );
+    }
+    if (_visibleFields.contains(_CalendarField.goal) &&
+        _entryHasGoalLink(entry)) {
+      chips.add(
+        Text(
+          _fieldLabel(context, _CalendarField.goal),
+          style: TextStyle(
+            fontSize: 10,
+            color: Theme.of(context).colorScheme.outline,
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          margin: const EdgeInsets.only(top: 6, right: 6),
+          decoration: BoxDecoration(color: entry.color, shape: BoxShape.circle),
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _scheduleTitleLabel(context, entry.title),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (chips.isNotEmpty)
+                Wrap(spacing: 6, runSpacing: 2, children: chips),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGanttView(BuildContext context, List<ScheduleEntry> allEntries) {
+    final weekStart = startOfWeek(_selectedDay);
+    final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
+    final availableWidth = MediaQuery.of(context).size.width - 168;
+    final timelineWidth = availableWidth > 720 ? availableWidth : 720.0;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: 160 + timelineWidth,
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const SizedBox(width: 160),
+                    Expanded(
+                      child: _buildTimelineHeader(context, timelineWidth),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...days.map(
+                  (day) => _buildGanttDaySection(
+                    context,
+                    day: day,
+                    entries:
+                        entriesForDay(day: day, allEntries: allEntries).toList()
+                          ..sort((a, b) {
+                            final aMinutes = a.time.hour * 60 + a.time.minute;
+                            final bMinutes = b.time.hour * 60 + b.time.minute;
+                            return aMinutes.compareTo(bMinutes);
+                          }),
+                    timelineWidth: timelineWidth,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTimelineHeader(BuildContext context, double timelineWidth) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      height: 24,
+      child: Stack(
+        children: [
+          for (var hour = 0; hour <= 24; hour += 2)
+            Positioned(
+              left: (hour / 24.0) * timelineWidth,
+              top: 0,
+              bottom: 0,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(width: 1, color: theme.colorScheme.outlineVariant),
+                  const SizedBox(width: 4),
+                  Text(
+                    hour == 24 ? '24' : hour.toString().padLeft(2, '0'),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGanttDaySection(
+    BuildContext context, {
+    required DateTime day,
+    required List<ScheduleEntry> entries,
+    required double timelineWidth,
+  }) {
+    final theme = Theme.of(context);
+    final selected = sameDay(day, _selectedDay);
+    final dayLabel = MaterialLocalizations.of(
+      context,
+    ).narrowWeekdays[day.weekday % 7];
+    final dateLabel = '${day.month}/${day.day}';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '$dayLabel  $dateLabel',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: selected ? theme.colorScheme.primary : null,
+                    ),
+                  ),
+                ),
+                if (entries.isNotEmpty)
+                  _buildInfoChip(
+                    label: '${entries.length}',
+                    icon: Icons.view_timeline_outlined,
+                    background: Colors.black26,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (entries.isEmpty)
+              Text('暂无条目', style: TextStyle(color: theme.colorScheme.outline))
+            else
+              ...entries.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _buildGanttEntryRow(
+                    context,
+                    day: day,
+                    entry: entry,
+                    timelineWidth: timelineWidth,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGanttEntryRow(
+    BuildContext context, {
+    required DateTime day,
+    required ScheduleEntry entry,
+    required double timelineWidth,
+  }) {
+    final theme = Theme.of(context);
+    final status =
+        sameDay(day, _selectedDay) && entry.id != null && entry.id!.isNotEmpty
+        ? _statusByTaskId[entry.id!]
+        : null;
+    final left = (_entryStartMinutes(entry) / (24.0 * 60.0)) * timelineWidth;
+    final width =
+        (_entryDurationMinutes(entry) / (24.0 * 60.0)) * timelineWidth;
+    final barWidth = width < 72 ? 72.0 : width;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 160,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _scheduleTitleLabel(context, entry.title),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${entry.time.format(context)} · ${_entryDurationMinutes(entry)}m',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  if (_visibleFields.contains(_CalendarField.tag) &&
+                      entry.tag.isNotEmpty)
+                    _buildInfoChip(
+                      label: _tagLabel(context, entry.tag),
+                      icon: iconForTag(entry.tag),
+                    ),
+                  if (_visibleFields.contains(_CalendarField.reminder) &&
+                      entry.reminderMinutesBefore > 0)
+                    _buildInfoChip(
+                      label: '-${entry.reminderMinutesBefore}m',
+                      icon: Icons.notifications_none,
+                    ),
+                  if (_visibleFields.contains(_CalendarField.goal) &&
+                      _entryHasGoalLink(entry))
+                    _buildInfoChip(
+                      label: _fieldLabel(context, _CalendarField.goal),
+                      icon: Icons.flag_outlined,
+                    ),
+                  if (_visibleFields.contains(_CalendarField.status) &&
+                      status != null)
+                    _buildInfoChip(
+                      label: _statusLabel(status),
+                      icon: Icons.check_circle_outline,
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SizedBox(
+            height: 34,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _TimelineGridPainter(
+                      lineColor: theme.colorScheme.outlineVariant,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: left,
+                  top: 4,
+                  child: Container(
+                    width: barWidth,
+                    height: 26,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: entry.color.withAlpha(220),
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 3,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _scheduleTitleLabel(context, entry.title),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        if (_visibleFields.contains(_CalendarField.reminder) &&
+                            entry.reminderMinutesBefore > 0)
+                          Text(
+                            '-${entry.reminderMinutesBefore}m',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 10,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -825,7 +1867,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   DropdownButton<int>(
                     value: minutes,
                     items: const [10, 15, 25, 30, 45, 60]
-                        .map((v) => DropdownMenuItem(value: v, child: Text('$v')))
+                        .map(
+                          (v) => DropdownMenuItem(value: v, child: Text('$v')),
+                        )
                         .toList(),
                     onChanged: (v) {
                       if (v != null) setInner(() => minutes = v);
@@ -837,7 +1881,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   DropdownButton<int>(
                     value: priority,
                     items: const [1, 2, 3, 4, 5]
-                        .map((v) => DropdownMenuItem(value: v, child: Text('$v')))
+                        .map(
+                          (v) => DropdownMenuItem(value: v, child: Text('$v')),
+                        )
                         .toList(),
                     onChanged: (v) {
                       if (v != null) setInner(() => priority = v);
@@ -853,10 +1899,12 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   DropdownButton<CognitiveLoad>(
                     value: load,
                     items: CognitiveLoad.values
-                        .map((v) => DropdownMenuItem(
-                              value: v,
-                              child: Text(_cognitiveLoadLabel(ctx2, v)),
-                            ))
+                        .map(
+                          (v) => DropdownMenuItem(
+                            value: v,
+                            child: Text(_cognitiveLoadLabel(ctx2, v)),
+                          ),
+                        )
                         .toList(),
                     onChanged: (v) {
                       if (v != null) setInner(() => load = v);
@@ -889,20 +1937,27 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   priority: priority,
                   load: load,
                   tag: 'Urgent',
-                  due: DateTime(day.year, day.month, day.day, due.hour, due.minute),
+                  due: DateTime(
+                    day.year,
+                    day.month,
+                    day.day,
+                    due.hour,
+                    due.minute,
+                  ),
                 );
 
                 Navigator.of(ctx).pop();
                 await _loadSmartSchedule();
               },
-              child: Text(AppStrings.of(ctx2, 'calendar_insert_urgent_confirm')),
+              child: Text(
+                AppStrings.of(ctx2, 'calendar_insert_urgent_confirm'),
+              ),
             ),
           ],
         ),
       ),
     );
   }
-
 
   Future<void> _exportIcs() async {
     final d = dateOnly(_selectedDay);
@@ -993,7 +2048,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     }
   }
 
-
   Future<void> _importIcs() async {
     final ctrl = TextEditingController();
 
@@ -1047,7 +2101,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       final imported = IcsBridge.eventsToSchedule(day: d, events: events);
 
       // Sync strategy:
-      // - Each imported event has a stable id: `ics_<UID>` (see IcsBridge.eventsToSchedule).
+      // - Each imported event has a stable id derived from UID:
+      //   - If UID starts with "sxzppp-", restore the original entry id.
+      //   - Otherwise use `ics_<UID>` (see IcsBridge.eventsToSchedule).
       // - LocalDataService.addScheduleEntry performs an upsert by id.
       // - We count "updated" when the same id already exists but title/start/duration changed.
       final existing = await _dataService.getScheduleEntries();
@@ -1082,8 +2138,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
           if (a == null || b == null) return false;
           return a.year == b.year && a.month == b.month && a.day == b.day;
         }
+
         bool sameHeight(double a, double b) => (a - b).abs() <= 0.01;
-        final changed = prev.title != e.title ||
+        final changed =
+            prev.title != e.title ||
             !sameTime(prev.time, e.time) ||
             !sameHeight(prev.height, e.height) ||
             !sameDay(prev.day, e.day);
@@ -1107,7 +2165,11 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       AppServices.logStore.info(
         'ics',
         'import',
-        data: {'added': added, 'updated': updated, 'totalParsed': imported.length},
+        data: {
+          'added': added,
+          'updated': updated,
+          'totalParsed': imported.length,
+        },
       );
 
       if (!mounted) return;
@@ -1115,24 +2177,18 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       final msg = (updated > 0 && added > 0)
           ? '${AppStrings.of(context, 'calendar_ics_import_success', params: {'added': added.toString()})} ${AppStrings.of(context, 'calendar_ics_import_updated', params: {'updated': updated.toString()})}'
           : (updated > 0)
-              ? AppStrings.of(
-                  context,
-                  'calendar_ics_import_updated',
-                  params: {'updated': updated.toString()},
-                )
-              : AppStrings.of(
-                  context,
-                  'calendar_ics_import_success',
-                  params: {'added': added.toString()},
-                );
+          ? AppStrings.of(
+              context,
+              'calendar_ics_import_updated',
+              params: {'updated': updated.toString()},
+            )
+          : AppStrings.of(
+              context,
+              'calendar_ics_import_success',
+              params: {'added': added.toString()},
+            );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            msg,
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
       await _loadSchedule();
     } catch (e, st) {
@@ -1141,7 +2197,12 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         count: 0,
         error: e.toString(),
       );
-      AppServices.logStore.error('ics', 'import failed', error: e, stackTrace: st);
+      AppServices.logStore.error(
+        'ics',
+        'import failed',
+        error: e,
+        stackTrace: st,
+      );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1157,7 +2218,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       );
     }
   }
-
 
   void _showDeleteDialog(ScheduleEntry block) {
     showDialog(
@@ -1291,13 +2351,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                             AppStrings.of(context, 'calendar_reminder_none'),
                           ),
                         ),
-                        ...[5, 10, 15, 30, 60]
-                            .map(
-                              (v) => DropdownMenuItem(
-                                value: v,
-                                child: Text('$v'),
-                              ),
-                            ),
+                        ...[5, 10, 15, 30, 60].map(
+                          (v) => DropdownMenuItem(value: v, child: Text('$v')),
+                        ),
                       ],
                       onChanged: (v) {
                         if (v != null) {
@@ -1374,8 +2430,11 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                           );
                           if (picked == null) return;
                           setInner(() {
-                            repeatUntil =
-                                DateTime(picked.year, picked.month, picked.day);
+                            repeatUntil = DateTime(
+                              picked.year,
+                              picked.month,
+                              picked.day,
+                            );
                           });
                         },
                         child: Text(
@@ -1440,11 +2499,46 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     String tag, {
     _EntryStatus? status,
     TimeOfDay? time,
+    int? reminderMinutesBefore,
+    String? goalId,
+    String? goalTaskId,
     VoidCallback? onDelete,
   }) {
     final alphaColor = color.withAlpha((0.9 * 255).round());
     final displayTitle = _scheduleTitleLabel(context, title);
     final displayTag = _tagLabel(context, tag);
+    final hasGoal =
+        (goalId != null && goalId.isNotEmpty) ||
+        (goalTaskId != null && goalTaskId.isNotEmpty);
+    final chips = <Widget>[
+      if (_visibleFields.contains(_CalendarField.time) && time != null)
+        _buildInfoChip(
+          label: time.format(context),
+          icon: Icons.schedule,
+          background: Colors.white24,
+        ),
+      if (_visibleFields.contains(_CalendarField.tag))
+        _buildInfoChip(
+          label: displayTag,
+          icon: iconForTag(tag),
+          background: Colors.white24,
+        ),
+      if (status != null) _statusPill(status),
+      if (_visibleFields.contains(_CalendarField.reminder) &&
+          reminderMinutesBefore != null &&
+          reminderMinutesBefore > 0)
+        _buildInfoChip(
+          label: '-${reminderMinutesBefore}m',
+          icon: Icons.notifications_none,
+          background: Colors.white24,
+        ),
+      if (_visibleFields.contains(_CalendarField.goal) && hasGoal)
+        _buildInfoChip(
+          label: _fieldLabel(context, _CalendarField.goal),
+          icon: Icons.flag_outlined,
+          background: Colors.white24,
+        ),
+    ];
     return Stack(
       children: [
         Container(
@@ -1494,38 +2588,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white24,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            displayTag,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                            ),
-                          ),
-                        ),
-                        if (status != null) _statusPill(status),
-                        if (time != null)
-                          Text(
-                            time.format(context),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 11,
-                            ),
-                          ),
-                      ],
-                    ),
+                    if (chips.isNotEmpty) const SizedBox(height: 6),
+                    if (chips.isNotEmpty)
+                      Wrap(spacing: 6, runSpacing: 4, children: chips),
                   ],
                 ),
               ),
@@ -1551,27 +2616,13 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
   }
 
   Widget _statusPill(_EntryStatus s) {
-    String label;
-    Color bg;
-
-    switch (s) {
-      case _EntryStatus.notStarted:
-        label = AppStrings.of(context, 'calendar_status_not_started');
-        bg = Colors.white24;
-        break;
-      case _EntryStatus.inProgress:
-        label = AppStrings.of(context, 'calendar_status_in_progress');
-        bg = Colors.white30;
-        break;
-      case _EntryStatus.completed:
-        label = AppStrings.of(context, 'calendar_status_done');
-        bg = Colors.white30;
-        break;
-      case _EntryStatus.overdue:
-        label = AppStrings.of(context, 'calendar_status_overdue');
-        bg = Colors.red.withAlpha(110);
-        break;
-    }
+    final label = _statusLabel(s);
+    final bg = switch (s) {
+      _EntryStatus.notStarted => Colors.white24,
+      _EntryStatus.inProgress => Colors.white30,
+      _EntryStatus.completed => Colors.white30,
+      _EntryStatus.overdue => Colors.red.withAlpha(110),
+    };
 
     return Container(
       margin: const EdgeInsets.only(left: 6),
@@ -1586,9 +2637,40 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       ),
     );
   }
+
+  String _statusLabel(_EntryStatus s) {
+    switch (s) {
+      case _EntryStatus.notStarted:
+        return AppStrings.of(context, 'calendar_status_not_started');
+      case _EntryStatus.inProgress:
+        return AppStrings.of(context, 'calendar_status_in_progress');
+      case _EntryStatus.completed:
+        return AppStrings.of(context, 'calendar_status_done');
+      case _EntryStatus.overdue:
+        return AppStrings.of(context, 'calendar_status_overdue');
+    }
+  }
 }
 
+class _TimelineGridPainter extends CustomPainter {
+  final Color lineColor;
 
+  const _TimelineGridPainter({required this.lineColor});
 
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = lineColor
+      ..strokeWidth = 1;
 
+    for (var hour = 0; hour <= 24; hour += 2) {
+      final x = size.width * (hour / 24.0);
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+  }
 
+  @override
+  bool shouldRepaint(covariant _TimelineGridPainter oldDelegate) {
+    return oldDelegate.lineColor != lineColor;
+  }
+}

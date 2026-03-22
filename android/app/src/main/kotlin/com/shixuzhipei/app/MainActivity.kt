@@ -1,4 +1,4 @@
-package com.example.sxzppp
+package com.shixuzhipei.app
 
 import io.flutter.embedding.android.FlutterActivity
 

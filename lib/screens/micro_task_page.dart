@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../services/app_services.dart';
+import '../services/microtask_crystals/microtask_import_parser.dart';
 import '../utils/app_strings.dart';
 import '../utils/schedule_occurrence.dart';
 
@@ -91,12 +92,141 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     if (mounted) await _loadMicroTasks();
   }
 
+  int _pointsFor(MicroTask task) => MicroTaskImportParser.pointsForTask(task);
+
+  int _completedPoints() {
+    return _tasks.where((t) => t.done).fold<int>(
+      0,
+      (sum, task) => sum + _pointsFor(task),
+    );
+  }
+
+  int _pendingPoints() {
+    return _tasks.where((t) => !t.done).fold<int>(
+      0,
+      (sum, task) => sum + _pointsFor(task),
+    );
+  }
+
+  Future<void> _showImportMicroTasksDialog() async {
+    final rawCtrl = TextEditingController();
+    MicroTaskImportSummary? preview;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setInner) => AlertDialog(
+          title: const Text('导入清单'),
+          content: SizedBox(
+            width: 560,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('粘贴清单或场景文本以导入任务。'),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: rawCtrl,
+                    minLines: 8,
+                    maxLines: 14,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: '1. 回复邮件 10分钟 #收件箱\n- 修复登录 Bug 紧急 45分钟 #开发',
+                    ),
+                    onChanged: (_) => setInner(() => preview = null),
+                  ),
+                  const SizedBox(height: 12),
+                  if (preview != null) ...[
+                    Text(
+                      preview!.headline,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Chip(label: Text('${preview!.suggestions.length} 项')),
+                        Chip(label: Text('${preview!.totalMinutes} 分钟')),
+                        Chip(label: Text('+${preview!.totalPoints} 积分')),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 220,
+                      child: ListView.separated(
+                        itemCount: preview!.suggestions.length,
+                        separatorBuilder: (_, __) => const Divider(height: 8),
+                        itemBuilder: (context, index) {
+                          final s = preview!.suggestions[index];
+                          return ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(child: Text('${s.points}')),
+                            title: Text(s.task.title),
+                            subtitle: Text(
+                              '${s.task.minutes} 分钟 | ${s.task.tag} | P${s.task.priority}',
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx2).pop(false),
+              child: const Text('取消'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () {
+                final parsed = MicroTaskImportParser.parse(rawCtrl.text);
+                setInner(() => preview = parsed);
+              },
+              icon: const Icon(Icons.preview),
+              label: const Text('预览'),
+            ),
+            ElevatedButton.icon(
+              onPressed: preview == null || preview!.suggestions.isEmpty
+                  ? null
+                  : () => Navigator.of(ctx2).pop(true),
+              icon: const Icon(Icons.download_done),
+              label: const Text('导入'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    rawCtrl.dispose();
+
+    if (ok != true || preview == null || preview!.suggestions.isEmpty) return;
+
+    for (final suggestion in preview!.suggestions) {
+      await _dataService.addMicroTask(suggestion.task);
+    }
+
+    if (!mounted) return;
+    await _loadMicroTasks();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '已导入 ${preview!.suggestions.length} 项，潜在收益 +${preview!.totalPoints} 积分',
+        ),
+      ),
+    );
+  }
+
   Future<void> _logMicroTaskCompleted(MicroTask task) async {
     final taskId = _taskKey(task);
     final now = DateTime.now();
     final minutes = task.minutes.clamp(1, 24 * 60);
-    final tag = task.tag.trim().isEmpty ? 'Micro Task' : task.tag.trim();
-    final title = task.title.trim().isEmpty ? 'Micro Task' : task.title.trim();
+    final tag = task.tag.trim().isEmpty ? '微任务' : task.tag.trim();
+    final title = task.title.trim().isEmpty ? '微任务' : task.title.trim();
 
     await _dataService.logTaskEvent(
       TaskEvent(
@@ -131,6 +261,11 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     await _dataService.updateMicroTask(task);
     if (!wasDone && done) {
       await _logMicroTaskCompleted(task);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('已完成“${task.title}” +${_pointsFor(task)} 积分')),
+        );
+      }
     }
     if (mounted) await _loadMicroTasks();
   }
@@ -364,6 +499,10 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
 
     final toComplete = selectedTasks.where((t) => !t.done).toList();
     if (toComplete.isEmpty) return;
+    final earnedPoints = toComplete.fold<int>(
+      0,
+      (sum, task) => sum + _pointsFor(task),
+    );
 
     for (final t in toComplete) {
       t.done = true;
@@ -372,7 +511,11 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     }
 
     _selected.clear();
-    if (mounted) await _loadMicroTasks();
+    if (!mounted) return;
+    await _loadMicroTasks();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('批量完成 +$earnedPoints 积分')),
+    );
   }
 
   Future<void> _batchDelete() async {
@@ -671,9 +814,43 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     );
   }
 
+  Widget _buildMetricChip(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withAlpha(220),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.16),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16),
+          const SizedBox(width: 6),
+          Text('$label: $value'),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedCount = _selected.length;
+    final selectedPoints = _selectedTasks().where((t) => !t.done).fold<int>(
+          0,
+          (sum, task) => sum + _pointsFor(task),
+        );
+    final doneCount = _tasks.where((t) => t.done).length;
+    final totalPoints = _tasks.fold<int>(0, (sum, task) => sum + _pointsFor(task));
+    final completedPoints = _completedPoints();
+    final pendingPoints = _pendingPoints();
 
     return Scaffold(
       appBar: AppBar(
@@ -691,6 +868,11 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
             icon: Icon(_batchMode ? Icons.close : Icons.checklist),
             onPressed: () => _setBatchMode(!_batchMode),
           ),
+          IconButton(
+            tooltip: '导入清单',
+            icon: const Icon(Icons.upload_file),
+            onPressed: _showImportMicroTasksDialog,
+          ),
         ],
       ),
       body: _isLoading
@@ -698,19 +880,65 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           : Column(
               children: [
                 Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.all(20),
                   color: Theme.of(context).colorScheme.tertiaryContainer,
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          AppStrings.of(context, 'micro_ai_suggestion'),
-                          style: TextStyle(color: Theme.of(context).colorScheme.onTertiaryContainer),
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              AppStrings.of(context, 'micro_ai_suggestion'),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onTertiaryContainer,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: _fillQuickTasks,
+                            child: Text(AppStrings.of(context, 'micro_btn_fill')),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            onPressed: _showImportMicroTasksDialog,
+                            icon: const Icon(Icons.upload_file),
+                            label: const Text('导入'),
+                          ),
+                        ],
                       ),
-                      ElevatedButton(
-                        onPressed: _fillQuickTasks,
-                        child: Text(AppStrings.of(context, 'micro_btn_fill')),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildMetricChip(
+                            context,
+                            icon: Icons.check_circle_outline,
+                            label: '已完成',
+                            value: '$doneCount/${_tasks.length}',
+                          ),
+                          _buildMetricChip(
+                            context,
+                            icon: Icons.stars_outlined,
+                            label: '已获得积分',
+                            value: '$completedPoints',
+                          ),
+                          _buildMetricChip(
+                            context,
+                            icon: Icons.hourglass_bottom,
+                            label: '剩余积分',
+                            value: '$pendingPoints',
+                          ),
+                          _buildMetricChip(
+                            context,
+                            icon: Icons.bolt,
+                            label: '总积分',
+                            value: '$totalPoints',
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -743,6 +971,8 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                         ),
                       ),
                     ),
+                    Text('+${selectedPoints} 积分'),
+                    const SizedBox(width: 12),
                     TextButton(
                       onPressed: selectedCount == 0 ? null : _batchMarkComplete,
                       child: Text(AppStrings.of(context, 'btn_finish')),
@@ -766,6 +996,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
       floatingActionButton: _batchMode
           ? null
           : FloatingActionButton.extended(
+              heroTag: 'micro-task-add-fab',
               onPressed: () => _showAddMicroTaskDialog(context),
               label: Text(AppStrings.of(context, 'micro_btn_add')),
               icon: const Icon(Icons.add),
@@ -821,6 +1052,15 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                 style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '+${_pointsFor(task)} 积分',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.primary,
+            ),
           ),
           if (!_batchMode) ...[
             const SizedBox(height: 8),

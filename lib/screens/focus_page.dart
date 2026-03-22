@@ -347,6 +347,8 @@ class _FocusPageState extends State<FocusPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isWide = MediaQuery.of(context).size.width >= 1024;
+    final horizontalPadding = isWide ? 28.0 : 16.0;
     return Scaffold(
       appBar: AppBar(
         title: Text(AppStrings.of(context, 'focus_title')),
@@ -356,118 +358,156 @@ class _FocusPageState extends State<FocusPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildEnergyStatusCard(),
-                  const SizedBox(height: 24),
-                  Text(
-                    AppStrings.of(context, 'focus_header_current'),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildCurrentTaskCard(context),
-                  const SizedBox(height: 24),
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        Text(
-                          AppStrings.of(context, 'focus_header_next'),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (_nextTasks.isEmpty)
-                          Text(
-                            AppStrings.of(context, 'focus_empty_task'),
-                            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                          )
-                        else
-                          ..._nextTasks.map((task) {
-                            return _buildNextTaskItem(
-                              '${task.time.format(context)} ${task.title}',
-                              iconForTag(task.tag),
-                              task.color,
-                            );
-                          }),
-                        const SizedBox(height: 16),
-                        Text(
-                          AppStrings.of(context, 'focus_time_crystal_title'),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        if (_isRecsLoading)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(child: CircularProgressIndicator()),
-                          )
-                        else if (_crystalRecs.isEmpty)
-                          Text(
-                            AppStrings.of(context, 'focus_time_crystal_empty'),
-                            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                          )
-                        else
-                          ..._crystalRecs.map((r) {
-                            return Card(
-                              child: ListTile(
-                                leading: const Icon(Icons.bubble_chart_outlined),
-                                title: Text(r.task.title),
-                                subtitle: Text(
-                                  AppStrings.of(
-                                    context,
-                                    'focus_time_crystal_subtitle',
-                                    params: {
-                                      'start': r.crystal.start.format(context),
-                                      'minutes': r.crystal.minutes.toString(),
-                                      'bucket': r.crystal.bucket,
-                                      'taskMinutes': r.task.minutes.toString(),
-                                    },
+          : Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    theme.colorScheme.primary.withValues(alpha: 0.08),
+                    theme.colorScheme.surface,
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1320),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        12,
+                        horizontalPadding,
+                        16,
+                      ),
+                      child: isWide
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  flex: 11,
+                                  child: ListView(
+                                    children: [
+                                      _buildEnergyStatusCard(),
+                                      const SizedBox(height: 18),
+                                      _buildSectionTitle(
+                                        context,
+                                        AppStrings.of(context, 'focus_header_current'),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      _buildCurrentTaskCard(context),
+                                    ],
                                   ),
                                 ),
-                                trailing: ElevatedButton(
-                                  onPressed: () async {
-                                    final entry = ScheduleEntry(
-                                      day: dateOnly(DateTime.now()),
-                                      title: r.task.title,
-                                      tag: r.task.tag.isEmpty
-                                          ? 'Micro Task'
-                                          : r.task.tag,
-                                      height: (r.task.minutes / 60.0) * 80.0,
-                                      color: theme.colorScheme.tertiary,
-                                      time: r.crystal.start,
-                                    );
-                                    await _dataService.addScheduleEntry(entry);
-                                    await _dataService.removeMicroTask(r.task);
-                                    if (mounted) {
-                                      await _loadTasks();
-                                    }
-                                  },
-                                  child: Text(
-                                    AppStrings.of(
-                                      context,
-                                      'focus_btn_one_click_insert',
-                                    ),
-                                  ),
+                                const SizedBox(width: 18),
+                                Expanded(
+                                  flex: 10,
+                                  child: _buildPlanningPanel(theme),
                                 ),
-                              ),
-                            );
-                          }),
-                      ],
+                              ],
+                            )
+                          : ListView(
+                              children: [
+                                _buildEnergyStatusCard(),
+                                const SizedBox(height: 18),
+                                _buildSectionTitle(
+                                  context,
+                                  AppStrings.of(context, 'focus_header_current'),
+                                ),
+                                const SizedBox(height: 10),
+                                _buildCurrentTaskCard(context),
+                                const SizedBox(height: 18),
+                                _buildPlanningPanel(theme),
+                              ],
+                            ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
+    );
+  }
+
+  Widget _buildPlanningPanel(ThemeData theme) {
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSectionTitle(context, AppStrings.of(context, 'focus_header_next')),
+            const SizedBox(height: 8),
+            if (_nextTasks.isEmpty)
+              _buildHintText(AppStrings.of(context, 'focus_empty_task'))
+            else
+              ..._nextTasks.map((task) {
+                return _buildNextTaskItem(
+                  '${task.time.format(context)} ${task.title}',
+                  iconForTag(task.tag),
+                  task.color,
+                );
+              }),
+            const SizedBox(height: 16),
+            _buildSectionTitle(
+              context,
+              AppStrings.of(context, 'focus_time_crystal_title'),
+            ),
+            const SizedBox(height: 8),
+            if (_isRecsLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_crystalRecs.isEmpty)
+              _buildHintText(AppStrings.of(context, 'focus_time_crystal_empty'))
+            else
+              ..._crystalRecs.map((r) => _buildCrystalItem(r)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCrystalItem(TimeCrystalRecommendation r) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: const Icon(Icons.bubble_chart_outlined),
+        title: Text(r.task.title),
+        subtitle: Text(
+          AppStrings.of(
+            context,
+            'focus_time_crystal_subtitle',
+            params: {
+              'start': r.crystal.start.format(context),
+              'minutes': r.crystal.minutes.toString(),
+              'bucket': r.crystal.bucket,
+              'taskMinutes': r.task.minutes.toString(),
+            },
+          ),
+        ),
+        trailing: ElevatedButton(
+          onPressed: () async {
+            final entry = ScheduleEntry(
+              day: dateOnly(DateTime.now()),
+              title: r.task.title,
+              tag: r.task.tag.isEmpty ? '微任务' : r.task.tag,
+              height: (r.task.minutes / 60.0) * 80.0,
+              color: theme.colorScheme.tertiary,
+              time: r.crystal.start,
+            );
+            await _dataService.addScheduleEntry(entry);
+            await _dataService.removeMicroTask(r.task);
+            if (mounted) {
+              await _loadTasks();
+            }
+          },
+          child: Text(AppStrings.of(context, 'focus_btn_one_click_insert')),
+        ),
+      ),
     );
   }
 
@@ -477,7 +517,14 @@ class _FocusPageState extends State<FocusPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            theme.colorScheme.primaryContainer,
+            theme.colorScheme.tertiaryContainer.withValues(alpha: 0.6),
+          ],
+        ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: theme.colorScheme.primary),
       ),
@@ -492,13 +539,16 @@ class _FocusPageState extends State<FocusPage> {
                 "${AppStrings.of(context, 'focus_status_label')}${energy?.status ?? AppStrings.of(context, 'status_flow_value')}",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 17,
                   color: theme.colorScheme.onPrimaryContainer,
                 ),
               ),
               Text(
                 energy?.description ?? AppStrings.of(context, 'status_flow_desc'),
-                style: TextStyle(fontSize: 12, color: theme.colorScheme.onPrimaryContainer.withOpacity(0.7)),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.78),
+                ),
               ),
             ],
           ),
@@ -538,7 +588,7 @@ class _FocusPageState extends State<FocusPage> {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: theme.colorScheme.secondaryContainer,
+      color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.85),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -558,7 +608,7 @@ class _FocusPageState extends State<FocusPage> {
             Text(
               "${AppStrings.of(context, 'focus_time_remaining')}${_formatDuration(_remainingSeconds)}",
               style: TextStyle(
-                color: theme.colorScheme.onSecondaryContainer.withOpacity(0.7),
+                color: theme.colorScheme.onSecondaryContainer.withValues(alpha: 0.72),
                 fontSize: 16,
                 fontFamily: 'monospace',
               ),
@@ -603,10 +653,28 @@ class _FocusPageState extends State<FocusPage> {
 
   Widget _buildNextTaskItem(String title, IconData icon, Color color) {
     return Card(
+      margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: Icon(icon, color: color),
         title: Text(title),
       ),
+    );
+  }
+
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.3,
+          ),
+    );
+  }
+
+  Widget _buildHintText(String text) {
+    return Text(
+      text,
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
     );
   }
 }

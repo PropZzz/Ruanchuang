@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../main.dart';
@@ -14,125 +15,353 @@ import 'review_page.dart';
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
+  bool _supportsDeviceEntry() {
+    if (kIsWeb) return false;
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+      case TargetPlatform.windows:
+      case TargetPlatform.linux:
+        return true;
+      case TargetPlatform.fuchsia:
+        return false;
+    }
+  }
+
+  String? _deviceSubtitle() {
+    if (kIsWeb) {
+      return 'Web 预览：无法访问设备。';
+    }
+    if (!_supportsDeviceEntry()) {
+      return '当前平台不支持设备入口。';
+    }
+    return null;
+  }
+
+  void _openDeviceEntry(BuildContext context) {
+    if (!_supportsDeviceEntry()) {
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(AppStrings.of(ctx, 'profile_device')),
+          content: const Text(
+            '当前平台暂不支持设备功能。'
+            '请在支持蓝牙的移动端或桌面端设备上打开。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(AppStrings.of(ctx, 'btn_confirm')),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const BluetoothPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final deviceSubtitle = _deviceSubtitle();
     return Scaffold(
       appBar: AppBar(title: Text(AppStrings.of(context, 'profile_title'))),
-      body: ListView(
-        children: [
-          const SizedBox(height: 20),
-          const Center(
-            child: CircleAvatar(
-              radius: 40,
-              child: Icon(Icons.person, size: 40),
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              theme.colorScheme.primaryContainer.withValues(alpha: 0.22),
+              theme.colorScheme.surface,
+            ],
           ),
-          FutureBuilder<UserProfile>(
-            future: AppServices.dataService.getUserProfile(),
-            builder: (ctx, snap) {
-              final p = snap.data;
-              final name = p?.displayName ?? 'BattleMan User';
-              final status = p?.status ?? '';
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Text(
-                      name,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+        ),
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1120),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 900;
+                  return ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      FutureBuilder<UserProfile>(
+                        future: AppServices.dataService.getUserProfile(),
+                        builder: (ctx, snap) {
+                          final p = snap.data;
+                          final name = p?.displayName ?? '时序智配用户';
+                          final status = p?.status ?? '';
+                          return Card(
+                            elevation: 0,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  const CircleAvatar(
+                                    radius: 30,
+                                    child: Icon(Icons.person, size: 30),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        if (status.isNotEmpty)
+                                          Text(
+                                            status,
+                                            style: const TextStyle(color: Colors.grey),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  FilledButton.tonalIcon(
+                                    onPressed: () => _openSettingsPanel(context),
+                                    icon: const Icon(Icons.settings),
+                                    label: Text(
+                                      AppStrings.of(context, 'settings_title'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                  ),
-                  if (status.isNotEmpty)
-                    Text(status, style: const TextStyle(color: Colors.grey)),
-                ],
-              );
-            },
-          ),
-          const Divider(),
-          Container(
-            height: 200,
-            margin: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceVariant,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.radar,
-                      size: 60, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(height: 6),
-                  Text(
-                    AppStrings.of(context, 'profile_model_card'),
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  ),
-                ],
+                      const SizedBox(height: 12),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.radar,
+                                size: 36,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  AppStrings.of(context, 'profile_model_card'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (isWide)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _sectionCard(
+                                context,
+                                title: '日常操作',
+                                children: [
+                                  _profileActionTile(
+                                    context,
+                                    icon: Icons.watch,
+                                    title: AppStrings.of(context, 'profile_device'),
+                                    subtitle: deviceSubtitle,
+                                    onTap: () => _openDeviceEntry(context),
+                                  ),
+                                  _profileActionTile(
+                                    context,
+                                    icon: Icons.sync,
+                                    title: AppStrings.of(context, 'profile_auth'),
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => const IntegrationsPage(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  _profileActionTile(
+                                    context,
+                                    icon: Icons.flag_outlined,
+                                    title: AppStrings.of(context, 'goal_title'),
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => const GoalsPage(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _sectionCard(
+                                context,
+                                title: '洞察',
+                                children: [
+                                  _profileActionTile(
+                                    context,
+                                    icon: Icons.monitor_heart_outlined,
+                                    title: AppStrings.of(context, 'emo_title'),
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => const EmotionPage(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  _profileActionTile(
+                                    context,
+                                    icon: Icons.auto_graph,
+                                    title: AppStrings.of(context, 'review_title'),
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => const ReviewPage(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      else ...[
+                        _sectionCard(
+                          context,
+                          title: '日常操作',
+                          children: [
+                            _profileActionTile(
+                              context,
+                              icon: Icons.watch,
+                              title: AppStrings.of(context, 'profile_device'),
+                              subtitle: deviceSubtitle,
+                              onTap: () => _openDeviceEntry(context),
+                            ),
+                            _profileActionTile(
+                              context,
+                              icon: Icons.sync,
+                              title: AppStrings.of(context, 'profile_auth'),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const IntegrationsPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                            _profileActionTile(
+                              context,
+                              icon: Icons.flag_outlined,
+                              title: AppStrings.of(context, 'goal_title'),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const GoalsPage()),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _sectionCard(
+                          context,
+                          title: '洞察',
+                          children: [
+                            _profileActionTile(
+                              context,
+                              icon: Icons.monitor_heart_outlined,
+                              title: AppStrings.of(context, 'emo_title'),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const EmotionPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                            _profileActionTile(
+                              context,
+                              icon: Icons.auto_graph,
+                              title: AppStrings.of(context, 'review_title'),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const ReviewPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  );
+                },
               ),
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.watch),
-            title: Text(AppStrings.of(context, 'profile_device')),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const BluetoothPage()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.sync),
-            title: Text(AppStrings.of(context, 'profile_auth')),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const IntegrationsPage()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.flag_outlined),
-            title: Text(AppStrings.of(context, 'goal_title')),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const GoalsPage()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.monitor_heart_outlined),
-            title: Text(AppStrings.of(context, 'emo_title')),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const EmotionPage()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.auto_graph),
-            title: Text(AppStrings.of(context, 'review_title')),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ReviewPage()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: Text(AppStrings.of(context, 'settings_title')),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => _openSettingsPanel(context),
-          ),
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _sectionCard(
+    BuildContext context, {
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _profileActionTile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: subtitle == null ? null : Text(subtitle),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: onTap,
     );
   }
 
@@ -140,7 +369,7 @@ class ProfilePage extends StatelessWidget {
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
-      barrierLabel: 'Dismiss',
+      barrierLabel: '关闭',
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (ctx, anim1, anim2) {

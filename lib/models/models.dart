@@ -43,12 +43,7 @@ String? _dateToJson(DateTime? date) {
 /// Repeating rule for schedule entries.
 ///
 /// P0 supports: none/daily/weekly/monthly + optional until date.
-enum RepeatFrequency {
-  none,
-  daily,
-  weekly,
-  monthly,
-}
+enum RepeatFrequency { none, daily, weekly, monthly }
 
 /// Schedule block model.
 class ScheduleEntry {
@@ -175,8 +170,9 @@ class ScheduleEntry {
             orElse: () => RepeatFrequency.none,
           );
 
-    final repeatUntil =
-        repeat == RepeatFrequency.none ? null : _dateFromJson(json['repeatUntil']);
+    final repeatUntil = repeat == RepeatFrequency.none
+        ? null
+        : _dateFromJson(json['repeatUntil']);
 
     return ScheduleEntry(
       id: json['id'] as String?,
@@ -187,7 +183,9 @@ class ScheduleEntry {
       goalId: json['goalId'] as String?,
       goalTaskId: json['goalTaskId'] as String?,
       height: ((json['height'] as num?)?.toDouble()) ?? 60.0,
-      color: Color(((json['color'] as num?)?.toInt()) ?? Colors.teal.toARGB32()),
+      color: Color(
+        ((json['color'] as num?)?.toInt()) ?? Colors.teal.toARGB32(),
+      ),
       time: _timeFromJson(json['time']),
       reminderMinutesBefore:
           (json['reminderMinutesBefore'] as num?)?.toInt() ?? 10,
@@ -196,6 +194,7 @@ class ScheduleEntry {
     );
   }
 }
+
 /// Energy status snapshot.
 class EnergyStatus {
   final String status;
@@ -209,16 +208,16 @@ class EnergyStatus {
   });
 
   Map<String, Object?> toJson() => {
-        'status': status,
-        'description': description,
-        'batteryPercent': batteryPercent,
-      };
+    'status': status,
+    'description': description,
+    'batteryPercent': batteryPercent,
+  };
 
   static EnergyStatus fromJson(Map<String, Object?> json) => EnergyStatus(
-        status: (json['status'] as String?) ?? '',
-        description: (json['description'] as String?) ?? '',
-        batteryPercent: (json['batteryPercent'] as num?)?.toInt() ?? 0,
-      );
+    status: (json['status'] as String?) ?? '',
+    description: (json['description'] as String?) ?? '',
+    batteryPercent: (json['batteryPercent'] as num?)?.toInt() ?? 0,
+  );
 }
 
 /// Focus task (legacy).
@@ -236,18 +235,18 @@ class Task {
   });
 
   Map<String, Object?> toJson() => {
-        'title': title,
-        'description': description,
-        'remainingMinutes': remainingMinutes,
-        'progress': progress,
-      };
+    'title': title,
+    'description': description,
+    'remainingMinutes': remainingMinutes,
+    'progress': progress,
+  };
 
   static Task fromJson(Map<String, Object?> json) => Task(
-        title: (json['title'] as String?) ?? '',
-        description: (json['description'] as String?) ?? '',
-        remainingMinutes: (json['remainingMinutes'] as num?)?.toInt() ?? 0,
-        progress: ((json['progress'] as num?)?.toDouble()) ?? 0.0,
-      );
+    title: (json['title'] as String?) ?? '',
+    description: (json['description'] as String?) ?? '',
+    remainingMinutes: (json['remainingMinutes'] as num?)?.toInt() ?? 0,
+    progress: ((json['progress'] as num?)?.toDouble()) ?? 0.0,
+  );
 }
 
 /// Micro task model.
@@ -318,22 +317,24 @@ class TeamTask {
   });
 
   Map<String, Object?> toJson() => {
-        'name': name,
-        'role': role,
-        'task': task,
-        'progress': progress,
-        'isHighEnergy': isHighEnergy,
-        'due': due?.toIso8601String(),
-      };
+    'name': name,
+    'role': role,
+    'task': task,
+    'progress': progress,
+    'isHighEnergy': isHighEnergy,
+    'due': due?.toIso8601String(),
+  };
 
   static TeamTask fromJson(Map<String, Object?> json) => TeamTask(
-        name: (json['name'] as String?) ?? '',
-        role: (json['role'] as String?) ?? '',
-        task: (json['task'] as String?) ?? '',
-        progress: ((json['progress'] as num?)?.toDouble()) ?? 0.0,
-        isHighEnergy: (json['isHighEnergy'] as bool?) ?? false,
-        due: (json['due'] is String) ? DateTime.tryParse(json['due'] as String) : null,
-      );
+    name: (json['name'] as String?) ?? '',
+    role: (json['role'] as String?) ?? '',
+    task: (json['task'] as String?) ?? '',
+    progress: ((json['progress'] as num?)?.toDouble()) ?? 0.0,
+    isHighEnergy: (json['isHighEnergy'] as bool?) ?? false,
+    due: (json['due'] is String)
+        ? DateTime.tryParse(json['due'] as String)
+        : null,
+  );
 }
 
 /// Team member model (API-like response).
@@ -353,20 +354,24 @@ class TeamMember {
   });
 
   Map<String, Object?> toJson() => {
-        'name': name,
-        'task': task,
-        'progress': progress,
-        'isHighEnergy': isHighEnergy,
-        'busyTimes': busyTimes.map((t) => t.toJson()).toList(),
-      };
+    'name': name,
+    'task': task,
+    'progress': progress,
+    'isHighEnergy': isHighEnergy,
+    'busyTimes': busyTimes.map((t) => t.toJson()).toList(),
+  };
 
   static TeamMember fromJson(Map<String, Object?> json) => TeamMember(
-        name: (json['name'] as String?) ?? '',
-        task: (json['task'] as String?) ?? '',
-        progress: ((json['progress'] as num?)?.toDouble()) ?? 0.0,
-        isHighEnergy: (json['isHighEnergy'] as bool?) ?? false,
-        busyTimes: ((json['busyTimes'] as List?)?.map((t) => TimeRange.fromJson(t as Map<String, Object?>)).toList()) ?? [],
-      );
+    name: (json['name'] as String?) ?? '',
+    task: (json['task'] as String?) ?? '',
+    progress: ((json['progress'] as num?)?.toDouble()) ?? 0.0,
+    isHighEnergy: (json['isHighEnergy'] as bool?) ?? false,
+    busyTimes:
+        ((json['busyTimes'] as List?)
+            ?.map((t) => TimeRange.fromJson(t as Map<String, Object?>))
+            .toList()) ??
+        [],
+  );
 }
 
 /// User profile.
@@ -377,14 +382,14 @@ class UserProfile {
   const UserProfile({required this.displayName, required this.status});
 
   Map<String, Object?> toJson() => {
-        'displayName': displayName,
-        'status': status,
-      };
+    'displayName': displayName,
+    'status': status,
+  };
 
   static UserProfile fromJson(Map<String, Object?> json) => UserProfile(
-        displayName: (json['displayName'] as String?) ?? '',
-      status: (json['status'] as String?) ?? '',
-    );
+    displayName: (json['displayName'] as String?) ?? '',
+    status: (json['status'] as String?) ?? '',
+  );
 }
 
 // -----------------------------------------------------------------------------
@@ -394,12 +399,7 @@ class UserProfile {
 /// User self-reported emotion state.
 ///
 /// This matches the PRD labels: efficient / stable / tired / irritable.
-enum EmotionState {
-  efficient,
-  stable,
-  tired,
-  irritable,
-}
+enum EmotionState { efficient, stable, tired, irritable }
 
 class EmotionCheckIn {
   final String id;
@@ -415,11 +415,11 @@ class EmotionCheckIn {
   });
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'at': at.toIso8601String(),
-        'state': state.name,
-        'note': note,
-      };
+    'id': id,
+    'at': at.toIso8601String(),
+    'state': state.name,
+    'note': note,
+  };
 
   static EmotionCheckIn fromJson(Map<String, Object?> json) {
     final atStr = (json['at'] as String?) ?? '';
@@ -439,7 +439,8 @@ class EmotionCheckIn {
 }
 
 /// Human-readable time string, useful for storage or logs.
-String timeToString(TimeOfDay time) => '${_two(time.hour)}:${_two(time.minute)}';
+String timeToString(TimeOfDay time) =>
+    '${_two(time.hour)}:${_two(time.minute)}';
 // -----------------------------------------------------------------------------
 // Scheduling / Replanning (P0 heuristics)
 // -----------------------------------------------------------------------------
@@ -448,20 +449,10 @@ String timeToString(TimeOfDay time) => '${_two(time.hour)}:${_two(time.minute)}'
 ///
 /// This is intentionally simple and stable so we can later swap the scheduling
 /// implementation (e.g. Transformer+LSTM) without changing UI/service contracts.
-enum EnergyTier {
-  veryLow,
-  low,
-  medium,
-  high,
-  veryHigh,
-}
+enum EnergyTier { veryLow, low, medium, high, veryHigh }
 
 /// Cognitive load label for a task.
-enum CognitiveLoad {
-  low,
-  medium,
-  high,
-}
+enum CognitiveLoad { low, medium, high }
 
 // -----------------------------------------------------------------------------
 // Goals (Goal -> Tasks -> Schedule) - P0 local planning
@@ -474,6 +465,7 @@ class GoalTask {
   final CognitiveLoad load;
   final String tag;
   final bool done;
+  final List<String> dependsOn;
 
   const GoalTask({
     required this.id,
@@ -482,6 +474,7 @@ class GoalTask {
     required this.load,
     required this.tag,
     this.done = false,
+    this.dependsOn = const [],
   });
 
   GoalTask copyWith({
@@ -491,6 +484,7 @@ class GoalTask {
     CognitiveLoad? load,
     String? tag,
     bool? done,
+    List<String>? dependsOn,
   }) {
     return GoalTask(
       id: id ?? this.id,
@@ -499,17 +493,19 @@ class GoalTask {
       load: load ?? this.load,
       tag: tag ?? this.tag,
       done: done ?? this.done,
+      dependsOn: dependsOn ?? this.dependsOn,
     );
   }
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'title': title,
-        'durationMinutes': durationMinutes,
-        'load': load.name,
-        'tag': tag,
-        'done': done,
-      };
+    'id': id,
+    'title': title,
+    'durationMinutes': durationMinutes,
+    'load': load.name,
+    'tag': tag,
+    'done': done,
+    'dependsOn': dependsOn,
+  };
 
   static GoalTask fromJson(Map<String, Object?> json) {
     final loadStr = (json['load'] as String?) ?? CognitiveLoad.medium.name;
@@ -518,6 +514,11 @@ class GoalTask {
       orElse: () => CognitiveLoad.medium,
     );
 
+    final depsRaw = json['dependsOn'];
+    final deps = (depsRaw is List)
+        ? depsRaw.whereType<String>().where((s) => s.trim().isNotEmpty).toList()
+        : const <String>[];
+
     return GoalTask(
       id: (json['id'] as String?) ?? '',
       title: (json['title'] as String?) ?? '',
@@ -525,6 +526,7 @@ class GoalTask {
       load: load,
       tag: (json['tag'] as String?) ?? 'Goal',
       done: (json['done'] as bool?) ?? false,
+      dependsOn: deps,
     );
   }
 }
@@ -551,23 +553,25 @@ class Goal {
   }
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'title': title,
-        'due': due.toIso8601String(),
-        'priority': priority,
-        'tasks': tasks.map((t) => t.toJson()).toList(),
-      };
+    'id': id,
+    'title': title,
+    'due': due.toIso8601String(),
+    'priority': priority,
+    'tasks': tasks.map((t) => t.toJson()).toList(),
+  };
 
   static Goal fromJson(Map<String, Object?> json) {
     final dueStr = (json['due'] as String?) ?? '';
-    final due = DateTime.tryParse(dueStr) ?? DateTime.now().add(const Duration(days: 7));
+    final due =
+        DateTime.tryParse(dueStr) ??
+        DateTime.now().add(const Duration(days: 7));
 
     final tasksRaw = json['tasks'];
     final tasks = (tasksRaw is List)
         ? tasksRaw
-            .whereType<Map>()
-            .map((m) => GoalTask.fromJson(Map<String, Object?>.from(m)))
-            .toList()
+              .whereType<Map>()
+              .map((m) => GoalTask.fromJson(Map<String, Object?>.from(m)))
+              .toList()
         : <GoalTask>[];
 
     return Goal(
@@ -610,14 +614,14 @@ class PlanTask {
   });
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'title': title,
-        'durationMinutes': durationMinutes,
-        'priority': priority,
-        'due': due?.toIso8601String(),
-        'load': load.name,
-        'tag': tag,
-      };
+    'id': id,
+    'title': title,
+    'durationMinutes': durationMinutes,
+    'priority': priority,
+    'due': due?.toIso8601String(),
+    'load': load.name,
+    'tag': tag,
+  };
 
   static PlanTask fromJson(Map<String, Object?> json) {
     final loadStr = (json['load'] as String?) ?? CognitiveLoad.medium.name;
@@ -652,14 +656,14 @@ class TimeWindow {
   const TimeWindow({required this.start, required this.end});
 
   Map<String, Object?> toJson() => {
-        'start': _timeToJson(start),
-        'end': _timeToJson(end),
-      };
+    'start': _timeToJson(start),
+    'end': _timeToJson(end),
+  };
 
   static TimeWindow fromJson(Map<String, Object?> json) => TimeWindow(
-        start: _timeFromJson(json['start']),
-        end: _timeFromJson(json['end']),
-      );
+    start: _timeFromJson(json['start']),
+    end: _timeFromJson(json['end']),
+  );
 }
 
 class SchedulingRequest {
@@ -682,13 +686,13 @@ class SchedulingRequest {
   });
 
   Map<String, Object?> toJson() => {
-        'day': day.toIso8601String(),
-        'tasks': tasks.map((t) => t.toJson()).toList(),
-        'windows': windows.map((w) => w.toJson()).toList(),
-        'energy': energy.name,
-        'tuning': tuning.toJson(),
-        'fixed': fixed.map((e) => e.toJson()).toList(),
-      };
+    'day': day.toIso8601String(),
+    'tasks': tasks.map((t) => t.toJson()).toList(),
+    'windows': windows.map((w) => w.toJson()).toList(),
+    'energy': energy.name,
+    'tuning': tuning.toJson(),
+    'fixed': fixed.map((e) => e.toJson()).toList(),
+  };
 
   static SchedulingRequest fromJson(Map<String, Object?> json) {
     final dayStr = (json['day'] as String?) ?? DateTime.now().toIso8601String();
@@ -707,23 +711,23 @@ class SchedulingRequest {
 
     final tasks = (tasksRaw is List)
         ? tasksRaw
-            .whereType<Map>()
-            .map((m) => PlanTask.fromJson(Map<String, Object?>.from(m)))
-            .toList()
+              .whereType<Map>()
+              .map((m) => PlanTask.fromJson(Map<String, Object?>.from(m)))
+              .toList()
         : <PlanTask>[];
 
     final windows = (windowsRaw is List)
         ? windowsRaw
-            .whereType<Map>()
-            .map((m) => TimeWindow.fromJson(Map<String, Object?>.from(m)))
-            .toList()
+              .whereType<Map>()
+              .map((m) => TimeWindow.fromJson(Map<String, Object?>.from(m)))
+              .toList()
         : <TimeWindow>[];
 
     final fixed = (fixedRaw is List)
         ? fixedRaw
-            .whereType<Map>()
-            .map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m)))
-            .toList()
+              .whereType<Map>()
+              .map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m)))
+              .toList()
         : <ScheduleEntry>[];
 
     final tuning = (tuningRaw is Map)
@@ -746,19 +750,23 @@ class SchedulingIssue {
   final String message;
   final String? taskId;
 
-  const SchedulingIssue({required this.code, required this.message, this.taskId});
+  const SchedulingIssue({
+    required this.code,
+    required this.message,
+    this.taskId,
+  });
 
   Map<String, Object?> toJson() => {
-        'code': code,
-        'message': message,
-        'taskId': taskId,
-      };
+    'code': code,
+    'message': message,
+    'taskId': taskId,
+  };
 
   static SchedulingIssue fromJson(Map<String, Object?> json) => SchedulingIssue(
-        code: (json['code'] as String?) ?? '',
-        message: (json['message'] as String?) ?? '',
-        taskId: json['taskId'] as String?,
-      );
+    code: (json['code'] as String?) ?? '',
+    message: (json['message'] as String?) ?? '',
+    taskId: json['taskId'] as String?,
+  );
 }
 
 class SchedulingPlan {
@@ -768,9 +776,9 @@ class SchedulingPlan {
   const SchedulingPlan({required this.entries, this.issues = const []});
 
   Map<String, Object?> toJson() => {
-        'entries': entries.map((e) => e.toJson()).toList(),
-        'issues': issues.map((i) => i.toJson()).toList(),
-      };
+    'entries': entries.map((e) => e.toJson()).toList(),
+    'issues': issues.map((i) => i.toJson()).toList(),
+  };
 
   static SchedulingPlan fromJson(Map<String, Object?> json) {
     final entriesRaw = json['entries'];
@@ -778,16 +786,18 @@ class SchedulingPlan {
 
     final entries = (entriesRaw is List)
         ? entriesRaw
-            .whereType<Map>()
-            .map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m)))
-            .toList()
+              .whereType<Map>()
+              .map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m)))
+              .toList()
         : <ScheduleEntry>[];
 
     final issues = (issuesRaw is List)
         ? issuesRaw
-            .whereType<Map>()
-            .map((m) => SchedulingIssue.fromJson(Map<String, Object?>.from(m)))
-            .toList()
+              .whereType<Map>()
+              .map(
+                (m) => SchedulingIssue.fromJson(Map<String, Object?>.from(m)),
+              )
+              .toList()
         : <SchedulingIssue>[];
 
     return SchedulingPlan(entries: entries, issues: issues);
@@ -798,12 +808,7 @@ class SchedulingPlan {
 // Review Loop (Execution -> Analysis -> Optimization)
 // -----------------------------------------------------------------------------
 
-enum TaskEventType {
-  start,
-  complete,
-  postpone,
-  interrupt,
-}
+enum TaskEventType { start, complete, postpone, interrupt }
 
 class TaskEvent {
   final String id;
@@ -840,19 +845,19 @@ class TaskEvent {
   });
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'taskId': taskId,
-        'title': title,
-        'tag': tag,
-        'load': load?.name,
-        'at': at.toIso8601String(),
-        'type': type.name,
-        'plannedMinutes': plannedMinutes,
-        'energy': energy?.name,
-        'actualMinutes': actualMinutes,
-        'interruptions': interruptions,
-        'reason': reason,
-      };
+    'id': id,
+    'taskId': taskId,
+    'title': title,
+    'tag': tag,
+    'load': load?.name,
+    'at': at.toIso8601String(),
+    'type': type.name,
+    'plannedMinutes': plannedMinutes,
+    'energy': energy?.name,
+    'actualMinutes': actualMinutes,
+    'interruptions': interruptions,
+    'reason': reason,
+  };
 
   static TaskEvent fromJson(Map<String, Object?> json) {
     final typeStr = (json['type'] as String?) ?? TaskEventType.start.name;
@@ -915,10 +920,10 @@ class SchedulingTuning {
   }
 
   Map<String, Object?> toJson() => {
-        'defaultDurationMultiplier': defaultDurationMultiplier,
-        'tagDurationMultiplier': tagDurationMultiplier,
-        'highLoadPenaltyWhenLowEnergy': highLoadPenaltyWhenLowEnergy,
-      };
+    'defaultDurationMultiplier': defaultDurationMultiplier,
+    'tagDurationMultiplier': tagDurationMultiplier,
+    'highLoadPenaltyWhenLowEnergy': highLoadPenaltyWhenLowEnergy,
+  };
 
   static SchedulingTuning fromJson(Map<String, Object?> json) {
     final raw = json['tagDurationMultiplier'];
@@ -980,24 +985,25 @@ class ReviewReport {
   });
 
   Map<String, Object?> toJson() => {
-        'weekStart': weekStart.toIso8601String(),
-        'weekEnd': weekEnd.toIso8601String(),
-        'startedCount': startedCount,
-        'completedCount': completedCount,
-        'completionRate': completionRate,
-        'plannedMinutesTotal': plannedMinutesTotal,
-        'actualMinutesTotal': actualMinutesTotal,
-        'actualDurationBuckets': actualDurationBuckets,
-        'delayAttribution': delayAttribution,
-        'suggestions': suggestions,
-        'tuning': tuning.toJson(),
-      };
+    'weekStart': weekStart.toIso8601String(),
+    'weekEnd': weekEnd.toIso8601String(),
+    'startedCount': startedCount,
+    'completedCount': completedCount,
+    'completionRate': completionRate,
+    'plannedMinutesTotal': plannedMinutesTotal,
+    'actualMinutesTotal': actualMinutesTotal,
+    'actualDurationBuckets': actualDurationBuckets,
+    'delayAttribution': delayAttribution,
+    'suggestions': suggestions,
+    'tuning': tuning.toJson(),
+  };
 
   static ReviewReport fromJson(Map<String, Object?> json) {
-    final ws = DateTime.tryParse((json['weekStart'] as String?) ?? '') ??
+    final ws =
+        DateTime.tryParse((json['weekStart'] as String?) ?? '') ??
         DateTime.now();
-    final we = DateTime.tryParse((json['weekEnd'] as String?) ?? '') ??
-        DateTime.now();
+    final we =
+        DateTime.tryParse((json['weekEnd'] as String?) ?? '') ?? DateTime.now();
 
     Map<String, int> mapInt(Object? raw) {
       final out = <String, int>{};
@@ -1037,18 +1043,11 @@ class ReviewReport {
   }
 }
 
-
-
-
 // -----------------------------------------------------------------------------
 // Team Collaboration (Golden Window)
 // -----------------------------------------------------------------------------
 
-enum TeamSharePermission {
-  none,
-  freeBusy,
-  details,
-}
+enum TeamSharePermission { none, freeBusy, details }
 
 class TeamMemberCalendar {
   final String memberId;
@@ -1071,13 +1070,13 @@ class TeamMemberCalendar {
   });
 
   Map<String, Object?> toJson() => {
-        'memberId': memberId,
-        'displayName': displayName,
-        'role': role,
-        'energy': energy.name,
-        'permission': permission.name,
-        'busy': busy.map((e) => e.toJson()).toList(),
-      };
+    'memberId': memberId,
+    'displayName': displayName,
+    'role': role,
+    'energy': energy.name,
+    'permission': permission.name,
+    'busy': busy.map((e) => e.toJson()).toList(),
+  };
 
   static TeamMemberCalendar fromJson(Map<String, Object?> json) {
     final energyStr = (json['energy'] as String?) ?? EnergyTier.medium.name;
@@ -1096,9 +1095,9 @@ class TeamMemberCalendar {
     final busyRaw = json['busy'];
     final busy = (busyRaw is List)
         ? busyRaw
-            .whereType<Map>()
-            .map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m)))
-            .toList()
+              .whereType<Map>()
+              .map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m)))
+              .toList()
         : <ScheduleEntry>[];
 
     return TeamMemberCalendar(
@@ -1158,28 +1157,26 @@ class TimeRange {
   final TimeOfDay start;
   final TimeOfDay end;
 
-  const TimeRange({
-    required this.start,
-    required this.end,
-  });
+  const TimeRange({required this.start, required this.end});
 
   Map<String, Object?> toJson() => {
-        'start': {'hour': start.hour, 'minute': start.minute},
-        'end': {'hour': end.hour, 'minute': end.minute},
-      };
+    'start': {'hour': start.hour, 'minute': start.minute},
+    'end': {'hour': end.hour, 'minute': end.minute},
+  };
 
   static TimeRange fromJson(Map<String, Object?> json) => TimeRange(
-        start: TimeOfDay(
-          hour: ((json['start'] as Map?)?['hour'] as int?) ?? 0,
-          minute: ((json['start'] as Map?)?['minute'] as int?) ?? 0,
-        ),
-        end: TimeOfDay(
-          hour: ((json['end'] as Map?)?['hour'] as int?) ?? 0,
-          minute: ((json['end'] as Map?)?['minute'] as int?) ?? 0,
-        ),
-      );
+    start: TimeOfDay(
+      hour: ((json['start'] as Map?)?['hour'] as int?) ?? 0,
+      minute: ((json['start'] as Map?)?['minute'] as int?) ?? 0,
+    ),
+    end: TimeOfDay(
+      hour: ((json['end'] as Map?)?['hour'] as int?) ?? 0,
+      minute: ((json['end'] as Map?)?['minute'] as int?) ?? 0,
+    ),
+  );
 
-  int get durationMinutes => (end.hour * 60 + end.minute) - (start.hour * 60 + start.minute);
+  int get durationMinutes =>
+      (end.hour * 60 + end.minute) - (start.hour * 60 + start.minute);
 
   bool contains(TimeOfDay time) {
     final timeMinutes = time.hour * 60 + time.minute;

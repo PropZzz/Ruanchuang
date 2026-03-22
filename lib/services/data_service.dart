@@ -1,4 +1,4 @@
-﻿import '../models/models.dart';
+import '../models/models.dart';
 
 /// Data service interface.
 ///
@@ -50,6 +50,11 @@ abstract class DataService {
   // ---------------------------------------------------------------------------
 
   Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day);
+
+  Future<void> updateTeamSharePermission(
+    String memberId,
+    TeamSharePermission permission,
+  );
 
   Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request);
 }

@@ -19,12 +19,19 @@ import 'debug/storage_info.dart';
 /// Privacy boundary: no HRV/sleep/device data is collected. This stores only
 /// user-entered schedule, micro-task data, and local execution logs.
 class LocalDataService implements DataService {
-  LocalDataService._();
+  LocalDataService._({LocalPersistence? persistence})
+    : _persistence = persistence ?? createLocalPersistence();
+
   static final LocalDataService instance = LocalDataService._();
+
+  @visibleForTesting
+  factory LocalDataService.forPersistence(LocalPersistence persistence) {
+    return LocalDataService._(persistence: persistence);
+  }
 
   static const int _schemaVersion = 4;
 
-  final LocalPersistence _persistence = createLocalPersistence();
+  final LocalPersistence _persistence;
 
   bool _loaded = false;
 
@@ -43,127 +50,199 @@ class LocalDataService implements DataService {
     return '$prefix$ts';
   }
 
+  String _normalizeJsonText(String raw) {
+    if (raw.isEmpty) return raw;
+    // Defensively strip UTF-8 BOM so jsonDecode stays stable across platforms.
+    if (raw.codeUnitAt(0) == 0xFEFF) {
+      return raw.substring(1);
+    }
+    return raw;
+  }
+
+  Map<String, Object?>? _decodeRootObject(String? raw) {
+    if (raw == null) return null;
+    final normalized = _normalizeJsonText(raw).trim();
+    if (normalized.isEmpty) return null;
+    final decoded = jsonDecode(normalized);
+    if (decoded is! Map) return null;
+    return Map<String, Object?>.from(decoded);
+  }
+
+  dynamic _firstPresent(Map<String, Object?> root, List<String> keys) {
+    for (final k in keys) {
+      if (root.containsKey(k)) return root[k];
+    }
+    return null;
+  }
+
+  bool _hasLegacyAlias(Map<String, Object?> root, List<String> keys) {
+    if (keys.isEmpty) return false;
+    for (var i = 1; i < keys.length; i++) {
+      if (root.containsKey(keys[i])) return true;
+    }
+    return false;
+  }
+
+  List<Map<String, Object?>> _asMapList(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((m) => Map<String, Object?>.from(m))
+        .toList();
+  }
+
+  Map<String, Object?>? _asMap(dynamic raw) {
+    if (raw is! Map) return null;
+    return Map<String, Object?>.from(raw);
+  }
+
+  String? _asTrimmedString(dynamic raw) {
+    if (raw is! String) return null;
+    final out = raw.trim();
+    return out.isEmpty ? null : out;
+  }
+
   Future<void> _ensureLoaded() async {
     if (_loaded) return;
 
+    var shouldSave = false;
     final raw = await _persistence.read();
-    if (raw != null && raw.trim().isNotEmpty) {
-      try {
-        final decoded = jsonDecode(raw);
-        if (decoded is Map) {
-          final scheduleJson = decoded['schedule'];
-          final microJson = decoded['microTasks'];
-          final eventsJson = decoded['taskEvents'];
-          final teamJson = decoded['teamCalendars'];
-          final tuningJson = decoded['schedulingTuning'];
-          final emotionJson = decoded['emotionCheckIns'];
-          final goalsJson = decoded['goals'];
-          final favoriteDeviceIdJson = decoded['favoriteDeviceId'];
-
-          if (scheduleJson is List) {
-            _schedule
-              ..clear()
-              ..addAll(scheduleJson
-                  .whereType<Map>()
-                  .map((m) => ScheduleEntry.fromJson(
-                        Map<String, Object?>.from(m),
-                      )));
-          }
-
-          if (microJson is List) {
-            _microTasks
-              ..clear()
-              ..addAll(microJson
-                  .whereType<Map>()
-                  .map((m) => MicroTask.fromJson(
-                        Map<String, Object?>.from(m),
-                      )));
-          }
-
-          if (eventsJson is List) {
-            _events
-              ..clear()
-              ..addAll(eventsJson
-                  .whereType<Map>()
-                  .map((m) => TaskEvent.fromJson(
-                        Map<String, Object?>.from(m),
-                      )));
-          }
-
-          if (teamJson is List) {
-            _teamCalendars
-              ..clear()
-              ..addAll(teamJson
-                  .whereType<Map>()
-                  .map((m) => TeamMemberCalendar.fromJson(
-                        Map<String, Object?>.from(m),
-                      )));
-          }
-
-          if (tuningJson is Map) {
-            _tuning = SchedulingTuning.fromJson(
-              Map<String, Object?>.from(tuningJson),
-            );
-          }
-
-          if (emotionJson is List) {
-            _emotion
-              ..clear()
-              ..addAll(emotionJson
-                  .whereType<Map>()
-                  .map((m) => EmotionCheckIn.fromJson(
-                        Map<String, Object?>.from(m),
-                      )));
-          }
-
-          if (goalsJson is List) {
-            _goals
-              ..clear()
-              ..addAll(goalsJson
-                  .whereType<Map>()
-                  .map((m) => Goal.fromJson(
-                        Map<String, Object?>.from(m),
-                      )));
-          }
-          if (favoriteDeviceIdJson is String) {
-            _favoriteDeviceId = favoriteDeviceIdJson;
-          }
+    try {
+      final decoded = _decodeRootObject(raw);
+      if (decoded != null) {
+        final version = (decoded['version'] as num?)?.toInt();
+        if (version == null || version < _schemaVersion) {
+          shouldSave = true;
         }
-      } catch (_) {
-        // Ignore corrupted storage and fall back to seed.
+
+        final scheduleKeys = ['schedule', 'scheduleEntries'];
+        final microKeys = ['microTasks', 'microtasks'];
+        final eventsKeys = ['taskEvents', 'events'];
+        final teamKeys = ['teamCalendars', 'teamMemberCalendars'];
+        final tuningKeys = ['schedulingTuning', 'tuning'];
+        final emotionKeys = ['emotionCheckIns', 'emotion'];
+        final goalsKeys = ['goals', 'goalList'];
+        final favoriteDeviceKeys = ['favoriteDeviceId', 'preferredDeviceId'];
+
+        if (_hasLegacyAlias(decoded, scheduleKeys) ||
+            _hasLegacyAlias(decoded, microKeys) ||
+            _hasLegacyAlias(decoded, eventsKeys) ||
+            _hasLegacyAlias(decoded, teamKeys) ||
+            _hasLegacyAlias(decoded, tuningKeys) ||
+            _hasLegacyAlias(decoded, emotionKeys) ||
+            _hasLegacyAlias(decoded, goalsKeys) ||
+            _hasLegacyAlias(decoded, favoriteDeviceKeys)) {
+          shouldSave = true;
+        }
+
+        final scheduleJson = _firstPresent(decoded, scheduleKeys);
+        final microJson = _firstPresent(decoded, microKeys);
+        final eventsJson = _firstPresent(decoded, eventsKeys);
+        final teamJson = _firstPresent(decoded, teamKeys);
+        final tuningJson = _firstPresent(decoded, tuningKeys);
+        final emotionJson = _firstPresent(decoded, emotionKeys);
+        final goalsJson = _firstPresent(decoded, goalsKeys);
+        final favoriteDeviceIdJson = _firstPresent(decoded, favoriteDeviceKeys);
+
+        final scheduleMapList = _asMapList(scheduleJson);
+        if (scheduleMapList.isNotEmpty) {
+          _schedule
+            ..clear()
+            ..addAll(scheduleMapList.map(ScheduleEntry.fromJson));
+        }
+
+        final microMapList = _asMapList(microJson);
+        if (microMapList.isNotEmpty) {
+          _microTasks
+            ..clear()
+            ..addAll(microMapList.map(MicroTask.fromJson));
+        }
+
+        final eventsMapList = _asMapList(eventsJson);
+        if (eventsMapList.isNotEmpty) {
+          _events
+            ..clear()
+            ..addAll(eventsMapList.map(TaskEvent.fromJson));
+        }
+
+        final teamMapList = _asMapList(teamJson);
+        if (teamMapList.isNotEmpty) {
+          _teamCalendars
+            ..clear()
+            ..addAll(teamMapList.map(TeamMemberCalendar.fromJson));
+        }
+
+        final tuningMap = _asMap(tuningJson);
+        if (tuningMap != null) {
+          _tuning = SchedulingTuning.fromJson(tuningMap);
+        }
+
+        final emotionMapList = _asMapList(emotionJson);
+        if (emotionMapList.isNotEmpty) {
+          _emotion
+            ..clear()
+            ..addAll(emotionMapList.map(EmotionCheckIn.fromJson));
+        }
+
+        final goalsMapList = _asMapList(goalsJson);
+        if (goalsMapList.isNotEmpty) {
+          _goals
+            ..clear()
+            ..addAll(goalsMapList.map(Goal.fromJson));
+        }
+
+        _favoriteDeviceId = _asTrimmedString(favoriteDeviceIdJson);
       }
+    } catch (_) {
+      // Ignore corrupted storage and fall back to seed.
     }
 
     // Migration strategy:
     // - Missing ids: generate stable ids.
     // - Missing fields: handled by model defaults in fromJson.
+    final scheduleSeenIds = <String>{};
     for (var i = 0; i < _schedule.length; i++) {
       final e = _schedule[i];
-      if (e.id == null || e.id!.isEmpty) {
+      final id = e.id?.trim();
+      if (id == null || id.isEmpty || scheduleSeenIds.contains(id)) {
         _schedule[i] = e.copyWith(id: _newId('sch_'));
+        shouldSave = true;
+      } else {
+        scheduleSeenIds.add(id);
       }
     }
 
+    final microSeenIds = <String>{};
     for (final t in _microTasks) {
-      if (t.id == null || t.id!.isEmpty) {
+      final id = t.id?.trim();
+      if (id == null || id.isEmpty || microSeenIds.contains(id)) {
         t.id = _newId('mt_');
+        shouldSave = true;
+      } else {
+        microSeenIds.add(id);
       }
     }
 
+    final emotionSeenIds = <String>{};
     for (var i = 0; i < _emotion.length; i++) {
       final e = _emotion[i];
-      if (e.id.isEmpty) {
+      final id = e.id.trim();
+      if (id.isEmpty || emotionSeenIds.contains(id)) {
         _emotion[i] = EmotionCheckIn(
           id: _newId('emo_'),
           at: e.at,
           state: e.state,
           note: e.note,
         );
+        shouldSave = true;
+      } else {
+        emotionSeenIds.add(id);
       }
     }
 
     // Daily quick check-in migration: keep only the latest record per day.
     if (_emotion.length > 1) {
+      final oldLength = _emotion.length;
       final sorted = List<EmotionCheckIn>.from(_emotion)
         ..sort((a, b) => a.at.compareTo(b.at));
       final byDay = <String, EmotionCheckIn>{};
@@ -174,13 +253,17 @@ class LocalDataService implements DataService {
       }
       _emotion
         ..clear()
-        ..addAll(byDay.values.toList()
-          ..sort((a, b) => a.at.compareTo(b.at)));
+        ..addAll(byDay.values.toList()..sort((a, b) => a.at.compareTo(b.at)));
+      if (_emotion.length != oldLength) {
+        shouldSave = true;
+      }
     }
 
+    final goalSeenIds = <String>{};
     for (var i = 0; i < _goals.length; i++) {
       final g = _goals[i];
-      if (g.id.isEmpty) {
+      final id = g.id.trim();
+      if (id.isEmpty || goalSeenIds.contains(id)) {
         _goals[i] = Goal(
           id: _newId('goal_'),
           title: g.title,
@@ -188,19 +271,26 @@ class LocalDataService implements DataService {
           priority: g.priority,
           tasks: g.tasks,
         );
+        shouldSave = true;
+      } else {
+        goalSeenIds.add(id);
       }
     }
 
     if (_schedule.isEmpty && _microTasks.isEmpty) {
       _seed();
+      shouldSave = true;
     }
 
     if (_teamCalendars.isEmpty) {
       _seedTeam();
+      shouldSave = true;
     }
 
     _loaded = true;
-    await _save();
+    if (shouldSave) {
+      await _save();
+    }
   }
 
   void _seed() {
@@ -209,7 +299,7 @@ class LocalDataService implements DataService {
       ..addAll([
         ScheduleEntry(
           id: _newId('sch_'),
-          title: 'Deep work: architecture',
+          title: '深度工作：架构设计',
           tag: 'Deep Work',
           height: 120,
           color: Colors.teal,
@@ -217,7 +307,7 @@ class LocalDataService implements DataService {
         ),
         ScheduleEntry(
           id: _newId('sch_'),
-          title: 'Email triage (micro)',
+          title: '邮件清理（微任务）',
           tag: 'Micro Task',
           height: 40,
           color: Colors.orange,
@@ -230,10 +320,10 @@ class LocalDataService implements DataService {
       ..addAll([
         MicroTask(
           id: _newId('mt_'),
-          title: 'Reply to HR email',
+          title: '回复人事邮件',
           tag: 'Micro Task',
           minutes: 5,
-          requirement: 'Laptop',
+          requirement: '笔记本电脑',
         ),
       ]);
   }
@@ -244,14 +334,14 @@ class LocalDataService implements DataService {
       ..addAll([
         const TeamMemberCalendar(
           memberId: 'm_li',
-          displayName: 'Li',
-          role: 'PM',
+          displayName: '李明',
+          role: '项目经理',
           energy: EnergyTier.high,
           permission: TeamSharePermission.details,
           busy: [
             ScheduleEntry(
               id: 'li_1',
-              title: 'Product sync',
+              title: '产品同步',
               tag: 'Meeting',
               height: 80.0,
               color: Colors.blue,
@@ -261,14 +351,14 @@ class LocalDataService implements DataService {
         ),
         const TeamMemberCalendar(
           memberId: 'm_song',
-          displayName: 'Song',
-          role: 'Dev',
+          displayName: '宋杰',
+          role: '开发',
           energy: EnergyTier.medium,
           permission: TeamSharePermission.freeBusy,
           busy: [
             ScheduleEntry(
               id: 'song_1',
-              title: 'Deep work',
+              title: '深度工作',
               tag: 'Core',
               height: 120.0,
               color: Colors.teal,
@@ -278,14 +368,14 @@ class LocalDataService implements DataService {
         ),
         const TeamMemberCalendar(
           memberId: 'm_yang',
-          displayName: 'Yang',
-          role: 'Dev',
+          displayName: '杨帆',
+          role: '开发',
           energy: EnergyTier.low,
           permission: TeamSharePermission.freeBusy,
           busy: [
             ScheduleEntry(
               id: 'yang_1',
-              title: 'API alignment',
+              title: '接口对齐',
               tag: 'Meeting',
               height: 80.0,
               color: Colors.blue,
@@ -313,6 +403,7 @@ class LocalDataService implements DataService {
     final jsonText = const JsonEncoder.withIndent('  ').convert(obj);
     await _persistence.write(jsonText);
   }
+
   Future<StorageInfo> debugStorageInfo() async {
     final exists = await _persistence.exists();
     final raw = await _persistence.read();
@@ -328,8 +419,8 @@ class LocalDataService implements DataService {
   Future<EnergyStatus> getEnergyStatus() async {
     await _ensureLoaded();
     return const EnergyStatus(
-      status: 'Flow',
-      description: 'Local-only mock. No biometrics collected.',
+      status: '心流',
+      description: '仅本地模拟，不采集生理数据。',
       batteryPercent: 85,
     );
   }
@@ -399,7 +490,7 @@ class LocalDataService implements DataService {
       id: id,
       title: goal.title,
       due: goal.due,
-      priority: goal.priority.clamp(1, 5),
+      priority: goal.priority.clamp(1, 5).toInt(),
       tasks: goal.tasks,
     );
     final idx = _goals.indexWhere((x) => x.id == id);
@@ -422,8 +513,8 @@ class LocalDataService implements DataService {
   Future<Task> getCurrentTask() async {
     await _ensureLoaded();
     return const Task(
-      title: 'Build scheduling MVP',
-      description: 'Local-first scheduling with extensible data layer.',
+      title: '构建调度 MVP',
+      description: '本地优先的调度能力，支持可扩展数据层。',
       remainingMinutes: 45,
       progress: 0.3,
     );
@@ -472,7 +563,9 @@ class LocalDataService implements DataService {
     if (entry.id != null && entry.id!.isNotEmpty) {
       _schedule.removeWhere((e) => e.id == entry.id);
     } else {
-      _schedule.removeWhere((e) => e.title == entry.title && e.time == entry.time);
+      _schedule.removeWhere(
+        (e) => e.title == entry.title && e.time == entry.time,
+      );
     }
     await _save();
   }
@@ -498,7 +591,9 @@ class LocalDataService implements DataService {
     if (task.id != null && task.id!.isNotEmpty) {
       _microTasks.removeWhere((t) => t.id == task.id);
     } else {
-      _microTasks.removeWhere((t) => t.title == task.title && t.tag == task.tag);
+      _microTasks.removeWhere(
+        (t) => t.title == task.title && t.tag == task.tag,
+      );
     }
     await _save();
   }
@@ -524,17 +619,39 @@ class LocalDataService implements DataService {
   @override
   Future<List<TeamMember>> getTeamMembers() async {
     await _ensureLoaded();
-    // Legacy API not used by TeamPage anymore.
-    return const [];
+    return _teamCalendars
+        .map((c) {
+          final busyMinutes = c.busy.fold<int>(
+            0,
+            (sum, entry) => sum + _durationFromHeight(entry.height),
+          );
+          final progress =
+              (busyMinutes / 240.0).clamp(0.0, 1.0).toDouble();
+          final task = c.busy.isEmpty
+              ? '${c.role}规划中'
+              : c.busy.first.title;
+          return TeamMember(
+            name: c.displayName,
+            task: task,
+            progress: progress,
+            isHighEnergy: c.energy.index >= EnergyTier.high.index,
+            busyTimes: c.busy
+                .map(
+                  (entry) => TimeRange(
+                    start: entry.time,
+                    end: _endTime(entry),
+                  ),
+                )
+                .toList(growable: false),
+          );
+        })
+        .toList(growable: false);
   }
 
   @override
   Future<UserProfile> getUserProfile() async {
     await _ensureLoaded();
-    return const UserProfile(
-      displayName: 'BattleMan User',
-      status: 'Local storage',
-    );
+    return const UserProfile(displayName: '时序智配用户', status: '本地存储');
   }
 
   @override
@@ -548,6 +665,19 @@ class LocalDataService implements DataService {
   Future<String?> getFavoriteDevice() async {
     await _ensureLoaded();
     return _favoriteDeviceId;
+  }
+
+  int _durationFromHeight(double height) {
+    return ((height / 80.0) * 60.0).round().clamp(1, 24 * 60).toInt();
+  }
+
+  TimeOfDay _endTime(ScheduleEntry entry) {
+    final totalMinutes =
+        entry.time.hour * 60 + entry.time.minute + _durationFromHeight(entry.height);
+    return TimeOfDay(
+      hour: (totalMinutes ~/ 60) % 24,
+      minute: totalMinutes % 60,
+    );
   }
 
   void _markGoalTaskDoneFromScheduleCompletion(String scheduleTaskId) {
@@ -660,15 +790,38 @@ class LocalDataService implements DataService {
   Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day) async {
     await _ensureLoaded();
     return _teamCalendars
-        .map((c) => TeamMemberCalendar(
-              memberId: c.memberId,
-              displayName: c.displayName,
-              role: c.role,
-              energy: c.energy,
-              permission: c.permission,
-              busy: List<ScheduleEntry>.from(c.busy),
-            ))
+        .map(
+          (c) => TeamMemberCalendar(
+            memberId: c.memberId,
+            displayName: c.displayName,
+            role: c.role,
+            energy: c.energy,
+            permission: c.permission,
+            busy: List<ScheduleEntry>.from(c.busy),
+          ),
+        )
         .toList(growable: false);
+  }
+
+  @override
+  Future<void> updateTeamSharePermission(
+    String memberId,
+    TeamSharePermission permission,
+  ) async {
+    await _ensureLoaded();
+    final idx = _teamCalendars.indexWhere((c) => c.memberId == memberId);
+    if (idx == -1) return;
+    final current = _teamCalendars[idx];
+    if (current.permission == permission) return;
+    _teamCalendars[idx] = TeamMemberCalendar(
+      memberId: current.memberId,
+      displayName: current.displayName,
+      role: current.role,
+      energy: current.energy,
+      permission: permission,
+      busy: List<ScheduleEntry>.from(current.busy),
+    );
+    await _save();
   }
 
   @override

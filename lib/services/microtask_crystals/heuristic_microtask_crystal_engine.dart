@@ -15,13 +15,13 @@ class _Interval {
 int _todToMin(TimeOfDay t) => t.hour * 60 + t.minute;
 
 TimeOfDay _minToTod(int minutes) {
-  final m = minutes.clamp(0, 24 * 60 - 1);
+  final m = minutes.clamp(0, 24 * 60 - 1).toInt();
   return TimeOfDay(hour: m ~/ 60, minute: m % 60);
 }
 
 int _durationFromHeight(double height) {
   final mins = (height / 80.0) * 60.0;
-  return mins.round().clamp(1, 24 * 60);
+  return mins.round().clamp(1, 24 * 60).toInt();
 }
 
 List<_Interval> _mergeBusy(List<_Interval> busy) {
@@ -77,7 +77,7 @@ List<TimeCrystal> computeTimeCrystals({
   for (final e in schedule) {
     final s = _todToMin(e.time);
     final d = _durationFromHeight(e.height);
-    final end = (s + d).clamp(0, 24 * 60);
+    final end = (s + d).clamp(0, 24 * 60).toInt();
     busy.add(_Interval(s, end));
   }
 
@@ -170,7 +170,7 @@ class HeuristicMicroTaskCrystalEngine implements MicroTaskCrystalEngine {
     var score = fit * 10.0 - waste * 0.05;
 
     // Priority: keep it a soft preference so "fit" still dominates.
-    score += (t.priority.clamp(1, 5) - 3) * 0.6;
+    score += (t.priority.clamp(1, 5).toInt() - 3) * 0.6;
 
     if (energy == EnergyTier.veryLow || energy == EnergyTier.low) {
       if (t.minutes <= 15) score += 2.0;

@@ -1,4 +1,4 @@
-﻿import '../models/models.dart';
+import '../models/models.dart';
 import 'data_service.dart';
 
 class RemoteDataException implements Exception {
@@ -18,7 +18,7 @@ class RemoteDataService implements DataService {
   static final RemoteDataService instance = RemoteDataService._();
 
   Never _unavailable() {
-    throw RemoteDataException('Remote data service is not configured.');
+    throw RemoteDataException('远端数据服务尚未配置。');
   }
 
   @override
@@ -66,7 +66,8 @@ class RemoteDataService implements DataService {
   Future<List<MicroTask>> getMicroTasks() async => Future.error(_unavailable());
 
   @override
-  Future<void> addMicroTask(MicroTask task) async => Future.error(_unavailable());
+  Future<void> addMicroTask(MicroTask task) async =>
+      Future.error(_unavailable());
 
   @override
   Future<void> removeMicroTask(MicroTask task) async =>
@@ -77,13 +78,15 @@ class RemoteDataService implements DataService {
       Future.error(_unavailable());
 
   @override
-  Future<List<TeamMember>> getTeamMembers() async => Future.error(_unavailable());
+  Future<List<TeamMember>> getTeamMembers() async =>
+      Future.error(_unavailable());
 
   @override
   Future<UserProfile> getUserProfile() async => Future.error(_unavailable());
 
   @override
-  Future<void> logTaskEvent(TaskEvent event) async => Future.error(_unavailable());
+  Future<void> logTaskEvent(TaskEvent event) async =>
+      Future.error(_unavailable());
 
   @override
   Future<List<TaskEvent>> getTaskEvents(DateTime from, DateTime to) async =>
@@ -109,8 +112,16 @@ class RemoteDataService implements DataService {
       Future.error(_unavailable());
 
   @override
-  Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request) async =>
-      Future.error(_unavailable());
+  Future<void> updateTeamSharePermission(
+    String memberId,
+    TeamSharePermission permission,
+  ) async => Future.error(_unavailable());
+
+  @override
+  Future<void> bookTeamMeeting(
+    DateTime day,
+    TeamMeetingRequest request,
+  ) async => Future.error(_unavailable());
 
   @override
   Future<void> setSchedulingTuning(SchedulingTuning tuning) async =>

@@ -17,6 +17,7 @@ class _TeamPageState extends State<TeamPage> {
   bool _loading = true;
 
   List<TeamMemberCalendar> _calendars = [];
+  List<TeamMember> _members = [];
   List<GoldenWindow> _golden = [];
   List<TeamConflict> _conflicts = [];
 
@@ -75,6 +76,19 @@ class _TeamPageState extends State<TeamPage> {
     }
   }
 
+  TeamMember? _memberForCalendar(TeamMemberCalendar calendar) {
+    for (final member in _members) {
+      if (member.name == calendar.displayName) return member;
+    }
+    return null;
+  }
+
+  double _averageProgress() {
+    if (_members.isEmpty) return 0.0;
+    final total = _members.fold<double>(0.0, (sum, member) => sum + member.progress);
+    return (total / _members.length).clamp(0.0, 1.0).toDouble();
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -83,7 +97,10 @@ class _TeamPageState extends State<TeamPage> {
     final sw = Stopwatch()..start();
 
     final day = DateTime.now();
-    final calendars = await _dataService.getTeamCalendars(day);
+    final calendarsFuture = _dataService.getTeamCalendars(day);
+    final membersFuture = _dataService.getTeamMembers();
+    final calendars = await calendarsFuture;
+    final members = await membersFuture;
 
     final result = AppServices.teamCollabEngine.compute(
       day: DateTime(day.year, day.month, day.day),
@@ -110,10 +127,20 @@ class _TeamPageState extends State<TeamPage> {
 
     setState(() {
       _calendars = calendars;
+      _members = members;
       _golden = result.goldenWindows;
       _conflicts = result.busyOverlaps;
       _loading = false;
     });
+  }
+
+  Future<void> _updatePermission(
+    TeamMemberCalendar member,
+    TeamSharePermission permission,
+  ) async {
+    await _dataService.updateTeamSharePermission(member.memberId, permission);
+    if (!mounted) return;
+    await _load();
   }
 
   Future<void> _book(GoldenWindow w) async {
@@ -275,6 +302,7 @@ class _TeamPageState extends State<TeamPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: Text(AppStrings.of(context, 'team_title')),
@@ -287,20 +315,142 @@ class _TeamPageState extends State<TeamPage> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Text(
-                  AppStrings.of(context, 'team_rec_title'),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+          ? const _TeamLoadingState()
+          : Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    theme.colorScheme.secondaryContainer.withValues(
+                      alpha: 0.26,
+                    ),
+                    theme.colorScheme.surface,
+                  ],
+                ),
+              ),
+              child: SafeArea(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1400),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isWide = constraints.maxWidth >= 1100;
+                        return ListView(
+                          padding: const EdgeInsets.all(16),
+                          children: [
+                            Card(
+                              elevation: 0,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Wrap(
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: [
+                                    _TeamKpiChip(
+                                      icon: Icons.people_outline,
+                                      label: 'Members',
+                                      value: _calendars.length.toString(),
+                                    ),
+                                    _TeamKpiChip(
+                                      icon: Icons.stars_outlined,
+                                      label: 'Golden',
+                                      value: _golden.length.toString(),
+                                    ),
+                                    _TeamKpiChip(
+                                      icon: Icons.warning_amber_outlined,
+                                      label: 'Conflicts',
+                                      value: _conflicts.length.toString(),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildProgressPanel(context),
+                            const SizedBox(height: 12),
+                            if (isWide)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: 5,
+                                    child: _buildRecommendationPanel(context),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 7,
+                                    child: _buildMergedSchedulePanel(context),
+                                  ),
+                                ],
+                              )
+                            else ...[
+                              _buildRecommendationPanel(context),
+                              const SizedBox(height: 12),
+                              _buildMergedSchedulePanel(context),
+                            ],
+                            const SizedBox(height: 12),
+                            if (isWide)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: _buildConflictPanel(context)),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: _buildMemberPanel(context)),
+                                ],
+                              )
+                            else ...[
+                              _buildConflictPanel(context),
+                              const SizedBox(height: 12),
+                              _buildMemberPanel(context),
+                            ],
+                          ],
+                        );
+                      },
+                    ),
                   ),
                 ),
-                const SizedBox(height: 10),
-                Card(
-                  color: Theme.of(context).colorScheme.secondaryContainer,
+              ),
+            ),
+    );
+  }
+
+  Widget _buildProgressPanel(BuildContext context) {
+    final avgProgress = _averageProgress();
+
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionTitle(context, AppStrings.of(context, 'team_track_title')),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    AppStrings.of(context, 'team_label_progress'),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Text('${(avgProgress * 100).round()}%'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(value: avgProgress),
+            const SizedBox(height: 12),
+            if (_members.isEmpty)
+              Text(AppStrings.of(context, 'team_no_members'))
+            else
+              ..._members.map((member) {
+                final percent = (member.progress * 100).round();
+                final taskLabel = member.task.isEmpty
+                    ? AppStrings.of(context, 'team_label_task')
+                    : member.task;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
@@ -308,154 +458,359 @@ class _TeamPageState extends State<TeamPage> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.stars, color: Theme.of(context).colorScheme.primary),
-                            const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                AppStrings.of(
-                                  context,
-                                  'team_golden_windows_header',
-                                  params: {
-                                    'participants': _minParticipants.toString(),
-                                    'energy': _energyTierLabel(context, _minEnergy),
-                                  },
-                                ),
+                                member.name,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Chip(label: Text('$percent%')),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(taskLabel),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(value: member.progress),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecommendationPanel(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: Theme.of(
+        context,
+      ).colorScheme.secondaryContainer.withValues(alpha: 0.5),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionTitle(context, AppStrings.of(context, 'team_rec_title')),
+            const SizedBox(height: 8),
+            Text(
+              AppStrings.of(
+                context,
+                'team_golden_windows_header',
+                params: {
+                  'participants': _minParticipants.toString(),
+                  'energy': _energyTierLabel(context, _minEnergy),
+                },
+              ),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 10),
+            if (_golden.isEmpty)
+              Text(
+                AppStrings.of(context, 'team_golden_windows_empty'),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              ..._golden.map((w) {
+                final endMin =
+                    w.start.hour * 60 + w.start.minute + _meetingMinutes;
+                final end = TimeOfDay(
+                  hour: (endMin ~/ 60) % 24,
+                  minute: endMin % 60,
+                );
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    dense: true,
+                    title: Text(
+                      '${w.start.format(context)} - ${end.format(context)}',
+                    ),
+                    subtitle: Text(
+                      AppStrings.of(
+                        context,
+                        'team_free_members',
+                        params: {'count': w.participantIds.length.toString()},
+                      ),
+                    ),
+                    trailing: ElevatedButton(
+                      onPressed: () => _book(w),
+                      child: Text(AppStrings.of(context, 'team_btn_book')),
+                    ),
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMergedSchedulePanel(BuildContext context) {
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionTitle(
+              context,
+              AppStrings.of(context, 'team_merged_schedule_today'),
+            ),
+            const SizedBox(height: 8),
+            TeamMergedScheduleView(
+              calendars: _calendars,
+              golden: _golden,
+              meetingMinutes: _meetingMinutes,
+              minParticipants: _minParticipants,
+              probeStart: _probeStart,
+              probeMinutes: _probeMinutes,
+              probeConflicts: _probeConflicts,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConflictPanel(BuildContext context) {
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionTitle(
+              context,
+              AppStrings.of(context, 'team_busy_overlap_title'),
+            ),
+            const SizedBox(height: 8),
+            if (_conflicts.isEmpty)
+              Text(
+                AppStrings.of(context, 'team_busy_overlap_empty'),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              ..._conflicts.map(
+                (c) => Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    title: Text('${c.memberA} vs ${c.memberB}'),
+                    subtitle: Text(
+                      '${c.start.format(context)} - ${c.end.format(context)}',
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMemberPanel(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+    final title = locale.languageCode.startsWith('zh')
+        ? '成员权限'
+        : 'Members & access';
+
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionTitle(context, title),
+            const SizedBox(height: 8),
+            ..._calendars.map((m) {
+              final energyColor = (m.energy.index >= EnergyTier.high.index)
+                  ? Colors.green
+                  : Colors.grey;
+              final perm = _sharePermissionLabel(context, m.permission);
+              final energy = _energyTierLabel(context, m.energy);
+              final member = _memberForCalendar(m);
+              final progress = member == null
+                  ? '--'
+                  : '${(member.progress * 100).round()}%';
+              final theme = Theme.of(context);
+              final progressValue =
+                  (member?.progress ?? 0.0).clamp(0.0, 1.0).toDouble();
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            child: Text(
+                              m.displayName.isNotEmpty ? m.displayName[0] : '?',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${m.displayName} (${m.role})',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  AppStrings.of(
+                                    context,
+                                    'team_member_subtitle',
+                                    params: {
+                                      'energy': energy,
+                                      'perm': perm,
+                                      'count': '${m.busy.length}',
+                                    },
+                                  ),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(Icons.bolt, color: energyColor, size: 18),
+                        ],
+                      ),
+                      if (member != null) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Text(
+                              '${AppStrings.of(context, 'team_label_progress')}: $progress',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(999),
+                                child: LinearProgressIndicator(
+                                  minHeight: 8,
+                                  value: progressValue,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        if (_golden.isEmpty)
-                          Text(
-                            AppStrings.of(context, 'team_golden_windows_empty'),
-                            style: const TextStyle(color: Colors.grey),
-                          )
-                        else
-                          ..._golden.map((w) {
-                            final endMin =
-                                w.start.hour * 60 +
-                                w.start.minute +
-                                _meetingMinutes;
-                            final end = TimeOfDay(
-                              hour: (endMin ~/ 60) % 24,
-                              minute: endMin % 60,
-                            );
-                            return ListTile(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(
-                                '${w.start.format(context)} - ${end.format(context)}',
-                              ),
-                              subtitle: Text(
-                                AppStrings.of(
-                                  context,
-                                  'team_free_members',
-                                  params: {'count': w.participantIds.length.toString()},
-                                ),
-                              ),
-                              trailing: ElevatedButton(
-                                onPressed: () => _book(w),
-                                child: Text(
-                                  AppStrings.of(context, 'team_btn_book'),
-                                ),
-                              ),
-                            );
-                          }),
                       ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  AppStrings.of(context, 'team_merged_schedule_today'),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: TeamMergedScheduleView(
-                      calendars: _calendars,
-                      golden: _golden,
-                      meetingMinutes: _meetingMinutes,
-                      minParticipants: _minParticipants,
-                      probeStart: _probeStart,
-                      probeMinutes: _probeMinutes,
-                      probeConflicts: _probeConflicts,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  AppStrings.of(context, 'team_busy_overlap_title'),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (_conflicts.isEmpty)
-                  Text(
-                    AppStrings.of(context, 'team_busy_overlap_empty'),
-                    style: const TextStyle(color: Colors.grey),
-                  )
-                else
-                  ..._conflicts.map(
-                    (c) => Card(
-                      child: ListTile(
-                        title: Text('${c.memberA} vs ${c.memberB}'),
-                        subtitle: Text(
-                          '${c.start.format(context)} - ${c.end.format(context)}',
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<TeamSharePermission>(
+                            value: m.permission,
+                            isDense: true,
+                            iconSize: 18,
+                            style: theme.textTheme.bodySmall,
+                            items: TeamSharePermission.values
+                                .map(
+                                  (p) => DropdownMenuItem(
+                                    value: p,
+                                    child: Text(_sharePermissionLabel(context, p)),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) {
+                              if (value == null) return;
+                              _updatePermission(m, value);
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                Text(
-                  AppStrings.of(context, 'team_track_title'),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                ..._calendars.map((m) {
-                  final energyColor = (m.energy.index >= EnergyTier.high.index)
-                      ? Colors.green
-                      : Colors.grey;
-                  final perm = _sharePermissionLabel(context, m.permission);
-                  final energy = _energyTierLabel(context, m.energy);
-                  return Card(
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        child: Text(
-                          m.displayName.isNotEmpty ? m.displayName[0] : '?',
-                        ),
-                      ),
-                      title: Text('${m.displayName} (${m.role})'),
-                      subtitle: Text(
-                        AppStrings.of(
-                          context,
-                          'team_member_subtitle',
-                          params: {
-                            'energy': energy,
-                            'perm': perm,
-                            'count': m.busy.length.toString(),
-                          },
-                        ),
-                      ),
-                      trailing: Icon(Icons.bolt, color: energyColor),
-                    ),
-                  );
-                }),
-              ],
-            ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(BuildContext context, String title) {
+    return Text(
+      title,
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+    );
+  }
+}
+
+class _TeamLoadingState extends StatelessWidget {
+  const _TeamLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 12),
+            Text('正在加载团队看板...'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TeamKpiChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _TeamKpiChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.42),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16),
+          const SizedBox(width: 6),
+          Text('$label: $value'),
+        ],
+      ),
     );
   }
 }
@@ -474,9 +829,9 @@ class _TimeSegment {
 int _m(TimeOfDay t) => t.hour * 60 + t.minute;
 
 int _durFromHeight(double height) =>
-    ((height / 80.0) * 60.0).round().clamp(1, 24 * 60);
+    ((height / 80.0) * 60.0).round().clamp(1, 24 * 60).toInt();
 
-class TeamMergedScheduleView extends StatelessWidget {
+class TeamMergedScheduleView extends StatefulWidget {
   final List<TeamMemberCalendar> calendars;
   final List<GoldenWindow> golden;
   final int meetingMinutes;
@@ -495,6 +850,35 @@ class TeamMergedScheduleView extends StatelessWidget {
     required this.probeMinutes,
     required this.probeConflicts,
   });
+
+  @override
+  State<TeamMergedScheduleView> createState() => _TeamMergedScheduleViewState();
+}
+
+class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
+  late final ScrollController _horizontalController;
+  late final ScrollController _verticalController;
+
+  List<TeamMemberCalendar> get calendars => widget.calendars;
+  List<GoldenWindow> get golden => widget.golden;
+  int get meetingMinutes => widget.meetingMinutes;
+  TimeOfDay? get probeStart => widget.probeStart;
+  int get probeMinutes => widget.probeMinutes;
+  List<String> get probeConflicts => widget.probeConflicts;
+
+  @override
+  void initState() {
+    super.initState();
+    _horizontalController = ScrollController();
+    _verticalController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    _verticalController.dispose();
+    super.dispose();
+  }
 
   static const double _hourHeight = 80.0;
   static const int _startHour = 8;
@@ -601,8 +985,9 @@ class TeamMergedScheduleView extends StatelessWidget {
         SizedBox(
           height: 420,
           child: Scrollbar(
-            thumbVisibility: true,
+            controller: _horizontalController,
             child: SingleChildScrollView(
+              controller: _horizontalController,
               scrollDirection: Axis.horizontal,
               child: SizedBox(
                 width: contentWidth,
@@ -633,8 +1018,9 @@ class TeamMergedScheduleView extends StatelessWidget {
                     const Divider(height: 1),
                     Expanded(
                       child: Scrollbar(
-                        thumbVisibility: true,
+                        controller: _verticalController,
                         child: SingleChildScrollView(
+                          controller: _verticalController,
                           primary: false,
                           child: SizedBox(
                             height: height,
@@ -690,7 +1076,8 @@ class TeamMergedScheduleView extends StatelessWidget {
                                       color: Colors.red.withValues(
                                         alpha:
                                             (0.05 + (seg.busyCount - 2) * 0.03)
-                                                .clamp(0.05, 0.16),
+                                                .clamp(0.05, 0.16)
+                                                .toDouble(),
                                       ),
                                     ),
                                   ),
@@ -719,7 +1106,10 @@ class TeamMergedScheduleView extends StatelessWidget {
                                         child: Padding(
                                           padding: const EdgeInsets.all(6),
                                           child: Text(
-                                            AppStrings.of(context, 'team_recommended'),
+                                            AppStrings.of(
+                                              context,
+                                              'team_recommended',
+                                            ),
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.green.shade900,
@@ -920,7 +1310,9 @@ class _BusyBlock extends StatelessWidget {
                     AppStrings.of(
                       ctx,
                       'team_dialog_duration',
-                      params: {'minutes': _durFromHeight(entry.height).toString()},
+                      params: {
+                        'minutes': _durFromHeight(entry.height).toString(),
+                      },
                     ),
                   ),
                   if (showDetails)

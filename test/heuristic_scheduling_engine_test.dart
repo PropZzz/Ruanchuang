@@ -1,7 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sxzppp/models/models.dart';
-import 'package:sxzppp/services/scheduling/heuristic_scheduling_engine.dart';
+import 'package:shixuzhipei/models/models.dart';
+import 'package:shixuzhipei/services/scheduling/heuristic_scheduling_engine.dart';
 
 int _startMin(ScheduleEntry e) => e.time.hour * 60 + e.time.minute;
 int _durMin(ScheduleEntry e) => ((e.height / 80.0) * 60.0).round();

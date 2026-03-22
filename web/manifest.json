@@ -1,11 +1,11 @@
 {
-    "name": "sxzppp",
-    "short_name": "sxzppp",
+    "name": "时序智配",
+    "short_name": "时序智配",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "时序智配",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

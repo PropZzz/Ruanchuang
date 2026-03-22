@@ -15,19 +15,19 @@ class _Interval {
 int _todToMin(TimeOfDay t) => t.hour * 60 + t.minute;
 
 TimeOfDay _minToTod(int minutes) {
-  final m = minutes.clamp(0, 24 * 60 - 1);
+  final m = minutes.clamp(0, 24 * 60 - 1).toInt();
   return TimeOfDay(hour: m ~/ 60, minute: m % 60);
 }
 
 int _durationFromHeight(double height) {
   // 80.0 ~= 60 minutes
   final mins = (height / 80.0) * 60.0;
-  return mins.round().clamp(1, 24 * 60);
+  return mins.round().clamp(1, 24 * 60).toInt();
 }
 
 double _heightFromDuration(int minutes) {
   final h = (minutes / 60.0) * 80.0;
-  return h.clamp(20.0, 24 * 60 * 80.0);
+  return h.clamp(20.0, 24 * 60 * 80.0).toDouble();
 }
 
 Color _colorForLoad(CognitiveLoad load) {
@@ -75,7 +75,7 @@ class HeuristicSchedulingEngine implements SchedulingEngine {
     for (final f in fixed) {
       final s = _todToMin(f.time);
       final d = _durationFromHeight(f.height);
-      final e = (s + d).clamp(0, 24 * 60);
+      final e = (s + d).clamp(0, 24 * 60).toInt();
       _subtractInterval(free, _Interval(s, e));
     }
 
@@ -248,8 +248,8 @@ class HeuristicSchedulingEngine implements SchedulingEngine {
       case EnergyTier.veryLow:
         // Tuning: when a user consistently struggles with high-load tasks while
         // low-energy, we amplify the penalty and bias away from mornings.
-        final p = tuning.highLoadPenaltyWhenLowEnergy.clamp(1.0, 3.0);
-        final extra = (p - 1.0).clamp(0.0, 10.0);
+        final p = tuning.highLoadPenaltyWhenLowEnergy.clamp(1.0, 3.0).toDouble();
+        final extra = (p - 1.0).clamp(0.0, 10.0).toDouble();
         if (load == CognitiveLoad.high) {
           score -= 5 * p;
           if (isMorning) score -= 2.0 * extra;

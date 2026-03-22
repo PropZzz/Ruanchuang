@@ -1,4 +1,4 @@
-﻿import '../models/models.dart';
+import '../models/models.dart';
 import 'data_service.dart';
 
 /// Local-first composite.
@@ -89,8 +89,7 @@ class CompositeDataService implements DataService {
   Future<void> updateMicroTask(MicroTask task) => local.updateMicroTask(task);
 
   @override
-  Future<List<TeamMember>> getTeamMembers() =>
-      _read((s) => s.getTeamMembers());
+  Future<List<TeamMember>> getTeamMembers() => _read((s) => s.getTeamMembers());
 
   @override
   Future<UserProfile> getUserProfile() => _read((s) => s.getUserProfile());
@@ -124,6 +123,12 @@ class CompositeDataService implements DataService {
   @override
   Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day) =>
       _read((s) => s.getTeamCalendars(day));
+
+  @override
+  Future<void> updateTeamSharePermission(
+    String memberId,
+    TeamSharePermission permission,
+  ) => local.updateTeamSharePermission(memberId, permission);
 
   @override
   Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request) =>

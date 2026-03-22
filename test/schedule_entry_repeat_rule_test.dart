@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:sxzppp/models/models.dart';
+import 'package:shixuzhipei/models/models.dart';
 
 void main() {
   test('ScheduleEntry repeat rule serializes and parses', () {

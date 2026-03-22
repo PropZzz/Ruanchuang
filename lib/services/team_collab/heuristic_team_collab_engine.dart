@@ -10,7 +10,7 @@ int _m(TimeOfDay t) => t.hour * 60 + t.minute;
 TimeOfDay _tod(int m) => TimeOfDay(hour: (m ~/ 60) % 24, minute: m % 60);
 
 int _durFromHeight(double height) =>
-    ((height / 80.0) * 60.0).round().clamp(1, 24 * 60);
+    ((height / 80.0) * 60.0).round().clamp(1, 24 * 60).toInt();
 
 bool _energyOk(EnergyTier v, EnergyTier min) => v.index >= min.index;
 

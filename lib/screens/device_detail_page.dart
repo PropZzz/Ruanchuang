@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
@@ -12,14 +13,18 @@ class DeviceDetailPage extends StatefulWidget {
 
 class _DeviceDetailPageState extends State<DeviceDetailPage> {
   List<BluetoothService> _services = [];
+  final bool _supportsBluetooth = !kIsWeb;
 
   @override
   void initState() {
     super.initState();
-    _discoverServices();
+    if (_supportsBluetooth) {
+      _discoverServices();
+    }
   }
 
   Future<void> _discoverServices() async {
+    if (!_supportsBluetooth) return;
     // Make sure we are connected before discovering services
     // if (widget.device.connectionState != BluetoothConnectionState.connected) {
     //   await widget.device.connect(timeout: const Duration(seconds: 10), license: '');
@@ -33,7 +38,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   Widget _buildCharacteristicTile(BluetoothCharacteristic c) {
     return ListTile(
       title: Text(c.uuid.toString()),
-      subtitle: Text('Properties: ${c.properties}'),
+      subtitle: Text('属性：${c.properties}'),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -46,11 +51,11 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Characteristic Value'),
+                    title: const Text('特征值'),
                     content: Text(value.toString()),
                     actions: [
                       TextButton(
-                        child: const Text('OK'),
+                        child: const Text('确定'),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
@@ -66,20 +71,20 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('Write to Characteristic'),
+                    title: const Text('向特征值写入'),
                     content: TextField(
                       controller: textController,
                       decoration: const InputDecoration(
-                        hintText: 'Enter hex value (e.g., 0A, 1F)',
+                        hintText: '请输入十六进制值（例如 0A, 1F）',
                       ),
                     ),
                     actions: [
                       TextButton(
-                        child: const Text('CANCEL'),
+                        child: const Text('取消'),
                         onPressed: () => Navigator.of(context).pop(false),
                       ),
                       TextButton(
-                        child: const Text('WRITE'),
+                        child: const Text('写入'),
                         onPressed: () => Navigator.of(context).pop(true),
                       ),
                     ],
@@ -93,11 +98,11 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                         .toList();
                     await c.write(value);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Write successful')),
+                      const SnackBar(content: Text('写入成功')),
                     );
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Write failed: $e')),
+                      SnackBar(content: Text('写入失败：$e')),
                     );
                   }
                 }
@@ -120,38 +125,65 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.device.platformName.isNotEmpty ? widget.device.platformName : 'Unknown Device'),
+        title: Text(widget.device.platformName.isNotEmpty ? widget.device.platformName : '未知设备'),
         actions: [
-          StreamBuilder<BluetoothConnectionState>(
-            stream: widget.device.connectionState,
-            initialData: BluetoothConnectionState.connecting,
-            builder: (c, snapshot) {
-              final state = snapshot.data;
-              if (state == BluetoothConnectionState.connected) {
-                return TextButton(onPressed: _discoverServices, child: const Text('REFRESH'));
-              }
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(state.toString().toUpperCase().split('.')[1]),
-              );
-            },
-          )
+          if (_supportsBluetooth)
+            StreamBuilder<BluetoothConnectionState>(
+              stream: widget.device.connectionState,
+              initialData: BluetoothConnectionState.connecting,
+              builder: (c, snapshot) {
+                final state = snapshot.data;
+                if (state == BluetoothConnectionState.connected) {
+                  return TextButton(onPressed: _discoverServices, child: const Text('刷新'));
+                }
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(state.toString().toUpperCase().split('.')[1]),
+                );
+              },
+            ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: _services
-              .map(
-                (s) => Card(
-                  child: ExpansionTile(
-                    title: Text('Service: ${s.uuid}'),
-                    children: s.characteristics.map(_buildCharacteristicTile).toList(),
+      body: _supportsBluetooth
+          ? SingleChildScrollView(
+              child: Column(
+                children: _services
+                    .map(
+                      (s) => Card(
+                        child: ExpansionTile(
+                          title: Text('服务：${s.uuid}'),
+                          children: s.characteristics.map(_buildCharacteristicTile).toList(),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            )
+          : Center(
+              child: Card(
+                margin: const EdgeInsets.symmetric(horizontal: 32),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.bluetooth_disabled, size: 48, color: Colors.grey),
+                      SizedBox(height: 8),
+                      Text(
+                        '当前目标平台不支持蓝牙服务。',
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '请在支持该功能的设备上打开此页面。',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
                   ),
                 ),
-              )
-              .toList(),
-        ),
-      ),
+              ),
+            ),
     );
   }
 }

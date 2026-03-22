@@ -5,7 +5,7 @@ import 'ics_codec.dart';
 
 int _durationFromHeight(double height) {
   final mins = (height / 80.0) * 60.0;
-  return mins.round().clamp(1, 24 * 60);
+  return mins.round().clamp(1, 24 * 60).toInt();
 }
 
 double _heightFromMinutes(int minutes) {
@@ -27,9 +27,7 @@ class IcsBridge {
       final start = _atDay(day, e.time);
       final minutes = _durationFromHeight(e.height);
       final end = start.add(Duration(minutes: minutes));
-      final uid = (e.id != null && e.id!.isNotEmpty)
-          ? 'sxzppp-${e.id}'
-          : 'sxzppp-${day.microsecondsSinceEpoch}-${start.microsecondsSinceEpoch}';
+      final uid = _uidForEntry(e: e, day: day, start: start);
 
       final desc = e.tag.isEmpty ? '' : 'tag: ${e.tag}';
       out.add(
@@ -64,14 +62,18 @@ class IcsBridge {
         continue;
       }
 
-      final minutes = ev.end.difference(ev.start).inMinutes.clamp(1, 24 * 60);
+      var minutes = ev.end.difference(ev.start).inMinutes;
+      if (minutes <= 0) minutes = 60;
+      minutes = minutes.clamp(1, 24 * 60).toInt();
+      final tag = _tagFromDescription(ev.description) ?? 'Imported';
+      final id = _entryIdFromUid(ev.uid);
 
       out.add(
         ScheduleEntry(
-          id: 'ics_${ev.uid}',
+          id: id,
           day: d,
           title: ev.summary,
-          tag: 'Imported',
+          tag: tag,
           height: _heightFromMinutes(minutes),
           color: Colors.purple,
           time: TimeOfDay(hour: s.hour, minute: s.minute),
@@ -80,5 +82,39 @@ class IcsBridge {
     }
 
     return out;
+  }
+
+  static String _uidForEntry({
+    required ScheduleEntry e,
+    required DateTime day,
+    required DateTime start,
+  }) {
+    final id = e.id;
+    if (id != null && id.isNotEmpty) {
+      if (id.startsWith('ics_')) return id.substring(4);
+      if (id.startsWith('sxzppp-')) return id;
+      return 'sxzppp-$id';
+    }
+    return 'sxzppp-${day.microsecondsSinceEpoch}-${start.microsecondsSinceEpoch}';
+  }
+
+  static String? _entryIdFromUid(String uid) {
+    final trimmed = uid.trim();
+    if (trimmed.isEmpty) return null;
+    if (trimmed.startsWith('sxzppp-')) {
+      return trimmed.substring('sxzppp-'.length);
+    }
+    return 'ics_$trimmed';
+  }
+
+  static String? _tagFromDescription(String description) {
+    final re = RegExp(
+      r'\btag\s*[:=]\s*([^\n\r]+)',
+      caseSensitive: false,
+    );
+    final m = re.firstMatch(description);
+    if (m == null) return null;
+    final tag = (m.group(1) ?? '').trim();
+    return tag.isEmpty ? null : tag;
   }
 }
