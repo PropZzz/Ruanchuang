@@ -63,13 +63,6 @@ class _BluetoothPageState extends State<BluetoothPage> {
         final state = snapshot.data ?? BluetoothConnectionState.disconnected;
 
         final trailing = switch (state) {
-          BluetoothConnectionState.connecting ||
-          BluetoothConnectionState.disconnecting =>
-            const SizedBox(
-              height: 24,
-              width: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
           BluetoothConnectionState.connected => ElevatedButton(
               onPressed: () async {
                 try {

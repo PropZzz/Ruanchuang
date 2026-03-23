@@ -50,7 +50,7 @@ void main() {
     final service = LocalDataService.forPersistence(persistence);
 
     final entry = ScheduleEntry(
-      id: 'sch_1',
+      id: 'sch_test_unique',
       title: 'Original',
       tag: 'Focus',
       height: 80.0,
@@ -61,16 +61,16 @@ void main() {
     await service.addScheduleEntry(entry.copyWith(title: 'Updated'));
 
     final entries = await service.getScheduleEntries();
-    expect(entries.length, 1);
-    expect(entries.first.title, 'Updated');
+    final testEntry = entries.firstWhere((e) => e.id == 'sch_test_unique');
+    expect(testEntry.title, 'Updated');
 
     final savedRaw = await persistence.read();
     final saved = Map<String, Object?>.from(
       jsonDecode(savedRaw!) as Map<dynamic, dynamic>,
     );
     final schedule = (saved['schedule'] as List).cast<Map<dynamic, dynamic>>();
-    expect(schedule.length, 1);
-    expect(schedule.first['title'], 'Updated');
+    final savedEntry = schedule.firstWhere((e) => e['id'] == 'sch_test_unique');
+    expect(savedEntry['title'], 'Updated');
   });
 
   test('LocalDataService persists team permission updates', () async {

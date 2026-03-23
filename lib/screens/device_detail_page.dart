@@ -130,7 +130,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           if (_supportsBluetooth)
             StreamBuilder<BluetoothConnectionState>(
               stream: widget.device.connectionState,
-              initialData: BluetoothConnectionState.connecting,
+              initialData: BluetoothConnectionState.disconnected,
               builder: (c, snapshot) {
                 final state = snapshot.data;
                 if (state == BluetoothConnectionState.connected) {

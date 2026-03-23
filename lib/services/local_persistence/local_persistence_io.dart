@@ -1,5 +1,7 @@
 ﻿import 'dart:io';
 
+import 'package:path_provider/path_provider.dart';
+
 import 'local_persistence.dart';
 
 class IoLocalPersistence implements LocalPersistence {
@@ -7,27 +9,47 @@ class IoLocalPersistence implements LocalPersistence {
   static const _fileName = 'sxzppp_data_v1.json';
   static const _backupFileName = 'sxzppp_data_v1.bak.json';
 
-  String _baseDirPath() {
-    final env = Platform.environment;
+  String? _cachedBaseDir;
 
-    if (Platform.isWindows) {
+  Future<String> _baseDirPath() async {
+    if (_cachedBaseDir != null) return _cachedBaseDir!;
+
+    String basePath;
+
+    if (Platform.isAndroid || Platform.isIOS) {
+      final appDir = await getApplicationDocumentsDirectory();
+      basePath = appDir.path;
+    } else if (Platform.isWindows) {
+      final env = Platform.environment;
       final appData = env['APPDATA'];
-      if (appData != null && appData.isNotEmpty) return appData;
-      final userProfile = env['USERPROFILE'];
-      if (userProfile != null && userProfile.isNotEmpty) {
-        return '$userProfile\\AppData\\Roaming';
+      if (appData != null && appData.isNotEmpty) {
+        basePath = appData;
+      } else {
+        final userProfile = env['USERPROFILE'];
+        if (userProfile != null && userProfile.isNotEmpty) {
+          basePath = '$userProfile\\AppData\\Roaming';
+        } else {
+          basePath = Directory.current.path;
+        }
       }
+    } else if (Platform.isMacOS || Platform.isLinux) {
+      final env = Platform.environment;
+      final home = env['HOME'];
+      if (home != null && home.isNotEmpty) {
+        basePath = home;
+      } else {
+        basePath = Directory.current.path;
+      }
+    } else {
+      basePath = Directory.current.path;
     }
 
-    final home = env['HOME'];
-    if (home != null && home.isNotEmpty) return home;
-
-    // Last-resort fallback: still deterministic for the current working dir.
-    return Directory.current.path;
+    _cachedBaseDir = basePath;
+    return basePath;
   }
 
   Future<File> _file() async {
-    final base = _baseDirPath();
+    final base = await _baseDirPath();
     final dir = Directory('$base${Platform.pathSeparator}$_dirName');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
@@ -69,7 +91,6 @@ class IoLocalPersistence implements LocalPersistence {
     final backup = await _backupFile();
     final tmp = File('${f.path}.tmp');
 
-    // Write to a temp file first so crashes do not corrupt the primary file.
     await tmp.writeAsString(content, flush: true);
 
     if (await f.exists()) {
@@ -83,7 +104,6 @@ class IoLocalPersistence implements LocalPersistence {
     try {
       await tmp.rename(f.path);
     } catch (_) {
-      // Fallback for platforms that cannot rename over an existing target.
       if (await f.exists()) {
         await f.delete();
       }

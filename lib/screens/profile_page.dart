@@ -448,35 +448,29 @@ class ProfilePage extends StatelessWidget {
                       },
                     ),
                     children: [
-                      RadioListTile<ThemeMode>(
-                        title: Text(AppStrings.of(context, 'theme_system')),
-                        value: ThemeMode.system,
+                      RadioGroup<ThemeMode>(
                         groupValue: _getCurrentThemeMode(context),
                         onChanged: (value) {
                           if (value != null) {
                             BattleManApp.setThemeMode(context, value);
                           }
                         },
-                      ),
-                      RadioListTile<ThemeMode>(
-                        title: Text(AppStrings.of(context, 'theme_light')),
-                        value: ThemeMode.light,
-                        groupValue: _getCurrentThemeMode(context),
-                        onChanged: (value) {
-                          if (value != null) {
-                            BattleManApp.setThemeMode(context, value);
-                          }
-                        },
-                      ),
-                      RadioListTile<ThemeMode>(
-                        title: Text(AppStrings.of(context, 'theme_dark')),
-                        value: ThemeMode.dark,
-                        groupValue: _getCurrentThemeMode(context),
-                        onChanged: (value) {
-                          if (value != null) {
-                            BattleManApp.setThemeMode(context, value);
-                          }
-                        },
+                        child: Column(
+                          children: [
+                            RadioListTile<ThemeMode>(
+                              title: Text(AppStrings.of(context, 'theme_system')),
+                              value: ThemeMode.system,
+                            ),
+                            RadioListTile<ThemeMode>(
+                              title: Text(AppStrings.of(context, 'theme_light')),
+                              value: ThemeMode.light,
+                            ),
+                            RadioListTile<ThemeMode>(
+                              title: Text(AppStrings.of(context, 'theme_dark')),
+                              value: ThemeMode.dark,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),

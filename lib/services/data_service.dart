@@ -36,6 +36,15 @@ abstract class DataService {
   Future<String?> getFavoriteDevice();
 
   // ---------------------------------------------------------------------------
+  // App settings persistence
+  // ---------------------------------------------------------------------------
+
+  Future<String> getThemeMode();
+  Future<void> setThemeMode(String themeMode);
+  Future<String> getLocale();
+  Future<void> setLocale(String locale);
+
+  // ---------------------------------------------------------------------------
   // Review loop & tuning
   // ---------------------------------------------------------------------------
 

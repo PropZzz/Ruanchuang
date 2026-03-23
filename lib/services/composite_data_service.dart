@@ -133,4 +133,16 @@ class CompositeDataService implements DataService {
   @override
   Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request) =>
       local.bookTeamMeeting(day, request);
+
+  @override
+  Future<String> getThemeMode() => local.getThemeMode();
+
+  @override
+  Future<void> setThemeMode(String themeMode) => local.setThemeMode(themeMode);
+
+  @override
+  Future<String> getLocale() => local.getLocale();
+
+  @override
+  Future<void> setLocale(String locale) => local.setLocale(locale);
 }

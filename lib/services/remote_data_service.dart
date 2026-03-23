@@ -126,4 +126,17 @@ class RemoteDataService implements DataService {
   @override
   Future<void> setSchedulingTuning(SchedulingTuning tuning) async =>
       Future.error(_unavailable());
+
+  @override
+  Future<String> getThemeMode() async => Future.error(_unavailable());
+
+  @override
+  Future<void> setThemeMode(String themeMode) async =>
+      Future.error(_unavailable());
+
+  @override
+  Future<String> getLocale() async => Future.error(_unavailable());
+
+  @override
+  Future<void> setLocale(String locale) async => Future.error(_unavailable());
 }

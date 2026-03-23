@@ -29,7 +29,7 @@ class LocalDataService implements DataService {
     return LocalDataService._(persistence: persistence);
   }
 
-  static const int _schemaVersion = 4;
+  static const int _schemaVersion = 5;
 
   final LocalPersistence _persistence;
 
@@ -42,6 +42,8 @@ class LocalDataService implements DataService {
   final List<EmotionCheckIn> _emotion = [];
   final List<Goal> _goals = [];
   String? _favoriteDeviceId;
+  String _themeMode = 'system';
+  String _locale = 'zh_CN';
 
   SchedulingTuning _tuning = const SchedulingTuning();
 
@@ -192,6 +194,16 @@ class LocalDataService implements DataService {
         }
 
         _favoriteDeviceId = _asTrimmedString(favoriteDeviceIdJson);
+
+        final themeModeJson = decoded['themeMode'];
+        if (themeModeJson is String && themeModeJson.isNotEmpty) {
+          _themeMode = themeModeJson;
+        }
+
+        final localeJson = decoded['locale'];
+        if (localeJson is String && localeJson.isNotEmpty) {
+          _locale = localeJson;
+        }
       }
     } catch (_) {
       // Ignore corrupted storage and fall back to seed.
@@ -398,6 +410,8 @@ class LocalDataService implements DataService {
       'emotionCheckIns': _emotion.map((e) => e.toJson()).toList(),
       'goals': _goals.map((g) => g.toJson()).toList(),
       'favoriteDeviceId': _favoriteDeviceId,
+      'themeMode': _themeMode,
+      'locale': _locale,
     };
 
     final jsonText = const JsonEncoder.withIndent('  ').convert(obj);
@@ -625,11 +639,8 @@ class LocalDataService implements DataService {
             0,
             (sum, entry) => sum + _durationFromHeight(entry.height),
           );
-          final progress =
-              (busyMinutes / 240.0).clamp(0.0, 1.0).toDouble();
-          final task = c.busy.isEmpty
-              ? '${c.role}规划中'
-              : c.busy.first.title;
+          final progress = (busyMinutes / 240.0).clamp(0.0, 1.0).toDouble();
+          final task = c.busy.isEmpty ? '${c.role}规划中' : c.busy.first.title;
           return TeamMember(
             name: c.displayName,
             task: task,
@@ -637,10 +648,7 @@ class LocalDataService implements DataService {
             isHighEnergy: c.energy.index >= EnergyTier.high.index,
             busyTimes: c.busy
                 .map(
-                  (entry) => TimeRange(
-                    start: entry.time,
-                    end: _endTime(entry),
-                  ),
+                  (entry) => TimeRange(start: entry.time, end: _endTime(entry)),
                 )
                 .toList(growable: false),
           );
@@ -667,13 +675,41 @@ class LocalDataService implements DataService {
     return _favoriteDeviceId;
   }
 
+  @override
+  Future<String> getThemeMode() async {
+    await _ensureLoaded();
+    return _themeMode;
+  }
+
+  @override
+  Future<void> setThemeMode(String themeMode) async {
+    await _ensureLoaded();
+    _themeMode = themeMode;
+    await _save();
+  }
+
+  @override
+  Future<String> getLocale() async {
+    await _ensureLoaded();
+    return _locale;
+  }
+
+  @override
+  Future<void> setLocale(String locale) async {
+    await _ensureLoaded();
+    _locale = locale;
+    await _save();
+  }
+
   int _durationFromHeight(double height) {
     return ((height / 80.0) * 60.0).round().clamp(1, 24 * 60).toInt();
   }
 
   TimeOfDay _endTime(ScheduleEntry entry) {
     final totalMinutes =
-        entry.time.hour * 60 + entry.time.minute + _durationFromHeight(entry.height);
+        entry.time.hour * 60 +
+        entry.time.minute +
+        _durationFromHeight(entry.height);
     return TimeOfDay(
       hour: (totalMinutes ~/ 60) % 24,
       minute: totalMinutes % 60,

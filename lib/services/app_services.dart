@@ -19,7 +19,8 @@ import 'telemetry/diagnostics_service.dart';
 class AppServices {
   static final DataService _defaultDataService = LocalDataService.instance;
   static DataService? _dataServiceOverride;
-  static DataService get dataService => _dataServiceOverride ?? _defaultDataService;
+  static DataService get dataService =>
+      _dataServiceOverride ?? _defaultDataService;
 
   static final SchedulingEngine schedulingEngine = HeuristicSchedulingEngine();
 
@@ -33,8 +34,9 @@ class AppServices {
   static ReminderService get reminderService =>
       _reminderServiceOverride ?? _defaultReminderService;
 
-  static final BluetoothService bluetoothService =
-      BluetoothService(dataService);
+  static final BluetoothService bluetoothService = BluetoothService(
+    dataService,
+  );
 
   static final AppLogStore logStore = AppLogStore();
   static final AppDiagnostics diagnostics = AppDiagnostics();
@@ -57,7 +59,8 @@ class AppServices {
   }
 
   /// Optional warm-up (loads local storage early).
-  static Future<void> prewarm() async {
+  /// Returns true if successful, false otherwise.
+  static Future<bool> prewarm() async {
     final sw = Stopwatch()..start();
     logStore.info('app', 'prewarm start');
     try {
@@ -65,12 +68,14 @@ class AppServices {
       final now = DateTime.now();
       final day = DateTime(now.year, now.month, now.day);
       await reminderService.rescheduleDay(day: day, entries: entries);
+      await bluetoothService.initialize();
       sw.stop();
       logStore.info(
         'app',
         'prewarm done',
         data: {'ms': sw.elapsedMilliseconds, 'entries': entries.length},
       );
+      return true;
     } catch (e, st) {
       sw.stop();
       logStore.error(
@@ -80,7 +85,7 @@ class AppServices {
         stackTrace: st,
         data: {'ms': sw.elapsedMilliseconds},
       );
-      rethrow;
+      return false;
     }
   }
 }

@@ -1012,7 +1012,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     final card = Container(
       decoration: BoxDecoration(
         color: task.done 
-          ? Theme.of(context).colorScheme.surfaceVariant 
+          ? Theme.of(context).colorScheme.surfaceContainerHighest 
           : Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Theme.of(context).colorScheme.outline),

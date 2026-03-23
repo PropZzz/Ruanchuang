@@ -167,25 +167,14 @@ class BluetoothManager {
 
   /// 格式化设备名称
   String getDeviceDisplayName(BluetoothDevice device) {
-    if (device.name.isNotEmpty) {
-      return device.name;
+    if (device.platformName.isNotEmpty) {
+      return device.platformName;
     }
     return '未知设备 (${device.remoteId})';
   }
 
   /// 检查设备是否是智能穿戴设备（根据服务UUID）
   bool isWearableDevice(BluetoothDevice device) {
-    // 常见的智能穿戴设备服务UUID
-    final wearableServiceUuids = [
-      '180f', // Battery Service
-      '180a', // Device Information
-      '1811', // Alert Notification Service
-      '180d', // Heart Rate
-      '1810', // Blood Pressure
-    ];
-
-    // 这里可以根据实际扫描结果中的服务来判断
-    // 暂时返回true，实际使用时需要根据具体设备调整
     return true;
   }
 
@@ -207,6 +196,6 @@ class BluetoothDeviceInfo {
     required this.advertisementData,
   });
 
-  String get displayName => device.name.isNotEmpty ? device.name : '未知设备';
+  String get displayName => device.platformName.isNotEmpty ? device.platformName : '未知设备';
   String get deviceId => device.remoteId.toString();
 }

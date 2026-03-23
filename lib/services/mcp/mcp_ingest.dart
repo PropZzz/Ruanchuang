@@ -122,8 +122,12 @@ class McpIngest {
         text,
         aliases: const ['end', '结束', '结束时间'],
       );
-      final startFromField = (startField == null) ? null : _parseFlexibleDateTime(startField, baseDay: baseDay);
-      final endFromField = (endField == null) ? null : _parseFlexibleDateTime(endField, baseDay: baseDay);
+      final startFromField = (startField == null)
+          ? null
+          : _parseFlexibleDateTime(startField, baseDay: baseDay, minutesOut: minutesOut);
+      final endFromField = (endField == null)
+          ? null
+          : _parseFlexibleDateTime(endField, baseDay: baseDay);
       if (startFromField != null) {
         if (endFromField != null) {
           final diff = endFromField.difference(startFromField).inMinutes;
@@ -485,9 +489,33 @@ int? _parseIsoDurationMinutes(String text) {
   return total > 0 ? total : null;
 }
 
-DateTime? _parseFlexibleDateTime(String text, {required DateTime baseDay}) {
+DateTime? _parseFlexibleDateTime(String text, {required DateTime baseDay, _MutableInt? minutesOut}) {
   final s = text.trim();
   if (s.isEmpty) return null;
+
+  // Handle time range format first: "2026-03-18 09:30-11:00"
+  // This prevents the range from being misinterpreted as timezone offset
+  final rangeMatch = RegExp(
+    r'(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2}).{0,10}(\d{1,2}):(\d{2})\s*[-~]\s*(\d{1,2}):(\d{2})',
+  ).firstMatch(s);
+  if (rangeMatch != null) {
+    final y = int.tryParse(rangeMatch.group(1) ?? '');
+    final mo = int.tryParse(rangeMatch.group(2) ?? '');
+    final d = int.tryParse(rangeMatch.group(3) ?? '');
+    final sh = int.tryParse(rangeMatch.group(4) ?? '');
+    final sm = int.tryParse(rangeMatch.group(5) ?? '');
+    final eh = int.tryParse(rangeMatch.group(6) ?? '');
+    final em = int.tryParse(rangeMatch.group(7) ?? '');
+    if (y != null && mo != null && d != null && sh != null && sm != null && eh != null && em != null) {
+      final start = DateTime(y, mo, d, sh, sm);
+      final end = DateTime(y, mo, d, eh, em);
+      final diff = end.difference(start).inMinutes;
+      if (diff > 0 && minutesOut != null) {
+        minutesOut.value = diff.clamp(1, 24 * 60);
+      }
+      return start;
+    }
+  }
 
   // ISO-like "2026-03-16 15:00", "2026/03/16 15:00", "2026-03-16T15:00:00"
   final normalizedIso = s.replaceAll('/', '-');

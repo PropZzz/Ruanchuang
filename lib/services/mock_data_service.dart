@@ -286,6 +286,27 @@ class MockDataService implements DataService {
   @override
   Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request) async {
     await _delay();
-    // Mock implementation - do nothing
+  }
+
+  @override
+  Future<String> getThemeMode() async {
+    await _delay();
+    return 'system';
+  }
+
+  @override
+  Future<void> setThemeMode(String themeMode) async {
+    await _delay();
+  }
+
+  @override
+  Future<String> getLocale() async {
+    await _delay();
+    return 'zh_CN';
+  }
+
+  @override
+  Future<void> setLocale(String locale) async {
+    await _delay();
   }
 }

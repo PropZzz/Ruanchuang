@@ -8,12 +8,9 @@ import 'data_service.dart';
 class BluetoothService {
   final DataService _dataService;
   final bool _supportsBluetooth = !kIsWeb;
+  bool _initialized = false;
 
-  BluetoothService(this._dataService) {
-    if (_supportsBluetooth) {
-      _init();
-    }
-  }
+  BluetoothService(this._dataService);
 
   bool get supportsBluetooth => _supportsBluetooth;
 
@@ -32,13 +29,21 @@ class BluetoothService {
 
   String? _favoriteDeviceId;
   StreamSubscription? _faveStateSubscription;
+  Timer? _initTimer;
 
-  void _init() async {
+  Future<void> initialize() async {
+    if (_initialized || !_supportsBluetooth) return;
+    _initialized = true;
+    await _init();
+  }
+
+  Future<void> _init() async {
     _favoriteDeviceId = await _dataService.getFavoriteDevice();
     if (_favoriteDeviceId == null) return;
 
-    Timer.periodic(const Duration(seconds: 2), (timer) async {
-      final connected = FlutterBluePlus.connectedDevices;
+    _initTimer?.cancel();
+    _initTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+      final connected = await FlutterBluePlus.connectedDevices;
       BluetoothDevice? fave;
       for (final d in connected) {
         if (d.remoteId.toString() == _favoriteDeviceId) {
@@ -49,6 +54,7 @@ class BluetoothService {
       if (fave != null) {
         _setFavoriteDevice(fave);
         timer.cancel();
+        _initTimer = null;
       }
     });
   }
@@ -61,7 +67,9 @@ class BluetoothService {
           ? BluetoothConnectionState.connected
           : BluetoothConnectionState.disconnected,
     );
-    _faveStateSubscription = device.connectionState.listen(_favoriteDeviceState.add);
+    _faveStateSubscription = device.connectionState.listen(
+      _favoriteDeviceState.add,
+    );
   }
 
   Future<void> setFavoriteDevice(BluetoothDevice device) async {
@@ -89,5 +97,12 @@ class BluetoothService {
     if (!_supportsBluetooth) return;
     await device.disconnect();
   }
-}
 
+  void dispose() {
+    _initTimer?.cancel();
+    _initTimer = null;
+    _faveStateSubscription?.cancel();
+    _faveStateSubscription = null;
+    _favoriteDeviceState.close();
+  }
+}
