@@ -729,8 +729,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
   Widget _buildDayView(BuildContext context, List<ScheduleEntry> dayEntries) {
     final theme = Theme.of(context);
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 100;
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
+      padding: EdgeInsets.only(bottom: bottomPadding),
       child: SizedBox(
         width: MediaQuery.of(context).size.width,
         height: _totalHeight,
@@ -833,9 +835,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
   Widget _buildWeekView(BuildContext context, List<ScheduleEntry> allEntries) {
     final weekStart = startOfWeek(_selectedDay);
     final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 100;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: bottomPadding),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1252,8 +1255,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       ml.narrowWeekdays[0],
     ];
 
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 100;
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      padding: EdgeInsets.fromLTRB(12, 8, 12, bottomPadding),
       children: [
         _buildMonthOverviewCard(context, monthEntries),
         const SizedBox(height: 12),
@@ -1568,9 +1573,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
     final availableWidth = MediaQuery.of(context).size.width - 168;
     final timelineWidth = availableWidth > 720 ? availableWidth : 720.0;
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 100;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      padding: EdgeInsets.fromLTRB(12, 8, 12, bottomPadding),
       children: [
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,

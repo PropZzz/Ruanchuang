@@ -7,8 +7,9 @@ import '../utils/app_strings.dart';
 
 class EmotionQuickCheckInCard extends StatefulWidget {
   final VoidCallback? onChanged;
+  final bool initiallyExpanded;
 
-  const EmotionQuickCheckInCard({super.key, this.onChanged});
+  const EmotionQuickCheckInCard({super.key, this.onChanged, this.initiallyExpanded = false});
 
   @override
   State<EmotionQuickCheckInCard> createState() =>
@@ -22,10 +23,12 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
   EmotionState _current = EmotionState.stable;
   EmotionCheckIn? _today;
   String? _careHint;
+  late bool _isExpanded;
 
   @override
   void initState() {
     super.initState();
+    _isExpanded = widget.initiallyExpanded;
     _load();
   }
 
@@ -78,17 +81,16 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
     }
   }
 
-  // 采用莫兰迪色系（低饱和、高级灰），呈现宁静感
   Color _color(EmotionState s) {
     switch (s) {
       case EmotionState.efficient:
-        return const Color(0xFF81B29A); // 柔和的鼠尾草绿
+        return const Color(0xFF81B29A);
       case EmotionState.stable:
-        return const Color(0xFF8D99AE); // 灰蓝色
+        return const Color(0xFF8D99AE);
       case EmotionState.tired:
-        return const Color(0xFFE07A5F); // 柔和的陶土/沙色
+        return const Color(0xFFE07A5F);
       case EmotionState.irritable:
-        return const Color(0xFFD68C89); // 褪色的玫瑰红
+        return const Color(0xFFD68C89);
     }
   }
 
@@ -99,7 +101,6 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
 
     if (!mounted) return;
 
-    // 极简风格的 Snackbar 提示
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -148,12 +149,16 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 40),
+      return const SizedBox(
+        height: 48,
         child: Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Color(0xFFE5E5EA),
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Color(0xFFE5E5EA),
+            ),
           ),
         ),
       );
@@ -161,8 +166,79 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    return AnimatedCrossFade(
+      duration: const Duration(milliseconds: 250),
+      crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+      firstChild: _buildCollapsedCard(context, isDark),
+      secondChild: _buildExpandedCard(context, isDark),
+    );
+  }
+
+  Widget _buildCollapsedCard(BuildContext context, bool isDark) {
+    return GestureDetector(
+      onTap: () => setState(() => _isExpanded = true),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.12),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _color(_current).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.monitor_heart_outlined,
+                color: _color(_current),
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _label(context, _current),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (_today != null)
+                    Text(
+                      '${AppStrings.of(context, 'emo_current')} · ${_today!.at.toLocal().toString().substring(11, 16)}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8E8E93),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpandedCard(BuildContext context, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -196,32 +272,26 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
           ],
 
-          // 主卡片，使用极简微阴影
           Container(
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.02),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.12),
+              ),
             ),
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 顶部状态栏
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: _color(_current).withOpacity(0.1),
                         shape: BoxShape.circle,
@@ -229,10 +299,10 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                       child: Icon(
                         Icons.monitor_heart_outlined,
                         color: _color(_current),
-                        size: 20,
+                        size: 18,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,16 +310,16 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                           Text(
                             AppStrings.of(context, 'emo_current'),
                             style: const TextStyle(
-                              fontSize: 12,
+                              fontSize: 11,
                               color: Color(0xFF8E8E93),
                               letterSpacing: 0.5,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 2),
                           Text(
                             _label(context, _current),
                             style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.3,
                             ),
@@ -262,30 +332,37 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                         _today!.at.toLocal().toString().substring(11, 16),
                         style: const TextStyle(
                           color: Color(0xFFC7C7CC),
-                          fontSize: 13,
+                          fontSize: 12,
                         ),
                       ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => setState(() => _isExpanded = false),
+                      child: Icon(
+                        Icons.keyboard_arrow_up,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
+                    ),
                   ],
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
 
-                // 操作区标题
                 Text(
                   AppStrings.of(context, 'emo_quick'),
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF8E8E93),
                     letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
-                // 呼吸感排列的操作按钮
                 Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     _minimalButton(context, EmotionState.efficient),
                     _minimalButton(context, EmotionState.stable),
@@ -301,7 +378,6 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
     );
   }
 
-  // 自定义极简选项按钮，替代原生 ChoiceChip
   Widget _minimalButton(BuildContext context, EmotionState s) {
     final isSelected = _current == s;
     final baseColor = _color(s);
@@ -313,19 +389,19 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
               ? baseColor.withOpacity(0.12)
               : (isDark ? const Color(0xFF3A3A3C) : const Color(0xFFF7F7F6)),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Text(
           _label(context, s),
           style: TextStyle(
             color: isSelected ? baseColor : theme.colorScheme.onSurface,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            fontSize: 14,
+            fontSize: 13,
             letterSpacing: 0.5,
           ),
         ),

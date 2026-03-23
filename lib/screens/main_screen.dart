@@ -150,25 +150,20 @@ class _NarrowShell extends StatelessWidget {
                 ),
                 child: SafeArea(
                   top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0,
-                      vertical: 4.0,
-                    ),
-                    child: NavigationBar(
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      selectedIndex: selectedIndex,
-                      onDestinationSelected: onSelect,
-                      destinations: [
-                        for (final d in destinations)
-                          NavigationDestination(
-                            icon: Icon(d.icon),
-                            selectedIcon: Icon(d.selectedIcon),
-                            label: d.label,
-                          ),
-                      ],
-                    ),
+                  child: NavigationBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    height: 56,
+                    selectedIndex: selectedIndex,
+                    onDestinationSelected: onSelect,
+                    destinations: [
+                      for (final d in destinations)
+                        NavigationDestination(
+                          icon: Icon(d.icon, size: 22),
+                          selectedIcon: Icon(d.selectedIcon, size: 22),
+                          label: d.label,
+                        ),
+                    ],
                   ),
                 ),
               ),

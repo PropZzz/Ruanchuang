@@ -72,13 +72,13 @@ class _EmotionPageState extends State<EmotionPage> {
   Color _color(EmotionState s) {
     switch (s) {
       case EmotionState.efficient:
-        return Colors.green;
+        return const Color(0xFF81B29A);
       case EmotionState.stable:
-        return Colors.blueGrey;
+        return const Color(0xFF8D99AE);
       case EmotionState.tired:
-        return Colors.orange;
+        return const Color(0xFFE07A5F);
       case EmotionState.irritable:
-        return Colors.redAccent;
+        return const Color(0xFFD68C89);
     }
   }
 
@@ -136,12 +136,17 @@ class _EmotionPageState extends State<EmotionPage> {
               children: [
                 if (_careHint != null) ...[
                   Card(
-                    color: Colors.red.shade50,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF3A3A3C)
+                        : const Color(0xFFF7F7F6),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
-                          const Icon(Icons.favorite, color: Colors.redAccent),
+                          const Icon(
+                            Icons.favorite_rounded,
+                            color: Color(0xFFD68C89),
+                          ),
                           const SizedBox(width: 10),
                           Expanded(child: Text(_careHint!)),
                         ],

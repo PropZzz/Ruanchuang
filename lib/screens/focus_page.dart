@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -387,6 +387,9 @@ class _FocusPageState extends State<FocusPage> {
                                 Expanded(
                                   flex: 11,
                                   child: ListView(
+                                    padding: EdgeInsets.only(
+                                      bottom: MediaQuery.of(context).padding.bottom + 100,
+                                    ),
                                     children: [
                                       _buildEnergyStatusCard(),
                                       const SizedBox(height: 18),
@@ -407,6 +410,9 @@ class _FocusPageState extends State<FocusPage> {
                               ],
                             )
                           : ListView(
+                              padding: EdgeInsets.only(
+                                bottom: MediaQuery.of(context).padding.bottom + 100,
+                              ),
                               children: [
                                 _buildEnergyStatusCard(),
                                 const SizedBox(height: 18),
@@ -530,37 +536,50 @@ class _FocusPageState extends State<FocusPage> {
       ),
       child: Row(
         children: [
-          Icon(Icons.monitor_heart, color: theme.colorScheme.primary, size: 32),
+          Icon(Icons.monitor_heart, color: theme.colorScheme.primary, size: 28),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "${AppStrings.of(context, 'focus_status_label')}${energy?.status ?? AppStrings.of(context, 'status_flow_value')}",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 17,
-                  color: theme.colorScheme.onPrimaryContainer,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "${AppStrings.of(context, 'focus_status_label')}${energy?.status ?? AppStrings.of(context, 'status_flow_value')}",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Text(
-                energy?.description ?? AppStrings.of(context, 'status_flow_desc'),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.78),
+                Text(
+                  energy?.description ?? AppStrings.of(context, 'status_flow_desc'),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.78),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const Spacer(),
-          Chip(
-            backgroundColor: theme.colorScheme.surface,
-            label: Row(
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.battery_full, size: 16, color: theme.colorScheme.primary),
-                const SizedBox(width: 6),
-                Text("${energy?.batteryPercent ?? 85}%"),
+                Icon(Icons.battery_full, size: 14, color: theme.colorScheme.primary),
+                const SizedBox(width: 4),
+                Text(
+                  "${energy?.batteryPercent ?? 85}%",
+                  style: const TextStyle(fontSize: 12),
+                ),
               ],
             ),
           ),

@@ -694,7 +694,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
       title: title,
       tag: tag,
       height: (dur / 60.0) * 80.0,
-      color: Colors.orange,
+      color: Theme.of(context).colorScheme.tertiary,
       time: time,
     );
 
@@ -1023,77 +1023,101 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            task.done ? Icons.check_circle : Icons.task_alt,
-            color: task.done 
-              ? Theme.of(context).colorScheme.primary 
-              : Theme.of(context).colorScheme.tertiary,
-            size: 32,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            task.title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              decoration: task.done ? TextDecoration.lineThrough : null,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              task.done ? Icons.check_circle : Icons.task_alt,
+              color: task.done 
+                ? Theme.of(context).colorScheme.primary 
+                : Theme.of(context).colorScheme.tertiary,
+              size: 28,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.access_time, size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
-              Text(
-                ' ${task.minutes} ${AppStrings.of(context, 'micro_card_min')} | $safeTag',
-                style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            const SizedBox(height: 6),
+            Text(
+              task.title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                decoration: task.done ? TextDecoration.lineThrough : null,
               ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '+${_pointsFor(task)} 积分',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.primary,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          if (!_batchMode) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                TextButton(
-                  onPressed: () async {
-                    if (task.done) {
-                      await _setDone(task, false);
-                    } else {
-                      await _setDone(task, true);
-                    }
-                  },
+                Icon(Icons.access_time, size: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                Flexible(
                   child: Text(
-                    task.done
-                        ? AppStrings.of(context, 'btn_incomplete')
-                        : AppStrings.of(context, 'btn_finish'),
+                    ' ${task.minutes} ${AppStrings.of(context, 'micro_card_min')} | $safeTag',
+                    style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => _showEditMicroTaskDialog(context, task),
-                  icon: const Icon(Icons.edit, size: 18),
-                ),
-                IconButton(
-                  onPressed: () => _confirmDeleteOne(task),
-                  icon: const Icon(Icons.delete, size: 18),
                 ),
               ],
             ),
+            const SizedBox(height: 4),
+            Text(
+              '+${_pointsFor(task)} 积分',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            if (!_batchMode) ...[
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: TextButton(
+                      onPressed: () async {
+                        if (task.done) {
+                          await _setDone(task, false);
+                        } else {
+                          await _setDone(task, true);
+                        }
+                      },
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        task.done
+                            ? AppStrings.of(context, 'btn_incomplete')
+                            : AppStrings.of(context, 'btn_finish'),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _showEditMicroTaskDialog(context, task),
+                    icon: const Icon(Icons.edit, size: 16),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
+                  IconButton(
+                    onPressed: () => _confirmDeleteOne(task),
+                    icon: const Icon(Icons.delete, size: 16),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
+                ],
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
 

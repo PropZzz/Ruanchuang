@@ -89,8 +89,9 @@ class ProfilePage extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final isWide = constraints.maxWidth >= 900;
+                  final bottomPadding = MediaQuery.of(context).padding.bottom + 100;
                   return ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
                     children: [
                       FutureBuilder<UserProfile>(
                         future: AppServices.dataService.getUserProfile(),

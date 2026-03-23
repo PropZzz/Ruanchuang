@@ -61,6 +61,7 @@ key.properties
 .idea/
 *.ipr
 *.iws
+.trae/
 
 # VS Code (建议忽略，除非团队强制统一配置)
 .vscode/

@@ -336,8 +336,9 @@ class _TeamPageState extends State<TeamPage> {
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final isWide = constraints.maxWidth >= 1100;
+                        final bottomPadding = MediaQuery.of(context).padding.bottom + 100;
                         return ListView(
-                          padding: const EdgeInsets.all(16),
+                          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
                           children: [
                             Card(
                               elevation: 0,
@@ -358,7 +359,7 @@ class _TeamPageState extends State<TeamPage> {
                                       value: _golden.length.toString(),
                                     ),
                                     _TeamKpiChip(
-                                      icon: Icons.warning_amber_outlined,
+                                      icon: Icons.error_outline,
                                       label: 'Conflicts',
                                       value: _conflicts.length.toString(),
                                     ),
@@ -972,7 +973,7 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
               label: AppStrings.of(context, 'team_legend_golden'),
             ),
             _LegendChip(
-              color: Colors.red.withValues(alpha: 0.12),
+              color: const Color(0xFFD68C89).withValues(alpha: 0.12),
               label: AppStrings.of(context, 'team_legend_busy_overlap'),
             ),
             _LegendChip(
@@ -1073,7 +1074,7 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                         _topForMinute(seg.endMin) -
                                         _topForMinute(seg.startMin),
                                     child: Container(
-                                      color: Colors.red.withValues(
+                                      color: const Color(0xFFD68C89).withValues(
                                         alpha:
                                             (0.05 + (seg.busyCount - 2) * 0.03)
                                                 .clamp(0.05, 0.16)
