@@ -5,6 +5,7 @@ import '../main.dart';
 import '../models/models.dart';
 import '../services/app_services.dart';
 import '../utils/app_strings.dart';
+import '../utils/mobile_feedback.dart';
 import 'bluetooth_page.dart';
 import 'debug/diagnostics_page.dart';
 import 'emotion_page.dart';
@@ -103,16 +104,23 @@ class ProfilePage extends StatelessWidget {
                             elevation: 0,
                             child: Padding(
                               padding: const EdgeInsets.all(16),
-                              child: Row(
+                              child: Wrap(
+                                spacing: 12,
+                                runSpacing: 12,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   const CircleAvatar(
                                     radius: 30,
                                     child: Icon(Icons.person, size: 30),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      minWidth: 180,
+                                      maxWidth: 420,
+                                    ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           name,
@@ -367,6 +375,21 @@ class ProfilePage extends StatelessWidget {
   }
 
   void _openSettingsPanel(BuildContext context) {
+    if (MobileFeedback.isNarrow(context, breakpoint: 760)) {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (ctx) => SafeArea(
+          child: FractionallySizedBox(
+            heightFactor: 0.92,
+            child: _buildSettingsPanelBody(ctx, onClose: () => Navigator.of(ctx).pop()),
+          ),
+        ),
+      );
+      return;
+    }
+
     showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -382,7 +405,7 @@ class ProfilePage extends StatelessWidget {
               left: Radius.circular(16),
             ),
             child: Container(
-              width: MediaQuery.of(context).size.width * 0.75,
+              width: MediaQuery.of(context).size.width.clamp(360.0, 460.0),
               height: double.infinity,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
@@ -390,92 +413,9 @@ class ProfilePage extends StatelessWidget {
                   left: Radius.circular(16),
                 ),
               ),
-              child: Column(
-                children: [
-                  AppBar(
-                    title: Text(AppStrings.of(context, 'settings_title')),
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    foregroundColor: Theme.of(context).colorScheme.onSurface,
-                    automaticallyImplyLeading: false,
-                    actions: [
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(ctx).pop(),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.language),
-                    title: Text(AppStrings.of(context, 'settings_language')),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () => _showLanguageDialog(ctx),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.notifications_outlined),
-                    title: Text(AppStrings.of(context, 'settings_notify')),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.bug_report_outlined),
-                    title: Text(AppStrings.of(context, 'diag_title')),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const DiagnosticsPage()),
-                      );
-                    },
-                  ),
-                  ExpansionTile(
-                    leading: const Icon(Icons.dark_mode_outlined),
-                    title: Builder(
-                      builder: (context) {
-                        final currentThemeMode = _getCurrentThemeMode(context);
-                        String themeModeName;
-                        switch (currentThemeMode) {
-                          case ThemeMode.system:
-                            themeModeName = AppStrings.of(context, 'theme_system');
-                            break;
-                          case ThemeMode.light:
-                            themeModeName = AppStrings.of(context, 'theme_light');
-                            break;
-                          case ThemeMode.dark:
-                            themeModeName = AppStrings.of(context, 'theme_dark');
-                            break;
-                        }
-                        return Text(
-                            '${AppStrings.of(context, 'settings_dark')}: $themeModeName');
-                      },
-                    ),
-                    children: [
-                      RadioGroup<ThemeMode>(
-                        groupValue: _getCurrentThemeMode(context),
-                        onChanged: (value) {
-                          if (value != null) {
-                            BattleManApp.setThemeMode(context, value);
-                          }
-                        },
-                        child: Column(
-                          children: [
-                            RadioListTile<ThemeMode>(
-                              title: Text(AppStrings.of(context, 'theme_system')),
-                              value: ThemeMode.system,
-                            ),
-                            RadioListTile<ThemeMode>(
-                              title: Text(AppStrings.of(context, 'theme_light')),
-                              value: ThemeMode.light,
-                            ),
-                            RadioListTile<ThemeMode>(
-                              title: Text(AppStrings.of(context, 'theme_dark')),
-                              value: ThemeMode.dark,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              child: _buildSettingsPanelBody(
+                ctx,
+                onClose: () => Navigator.of(ctx).pop(),
               ),
             ),
           ),
@@ -494,6 +434,106 @@ class ProfilePage extends StatelessWidget {
 
   ThemeMode _getCurrentThemeMode(BuildContext context) {
     return BattleManApp.getThemeMode(context);
+  }
+
+  Widget _buildSettingsPanelBody(
+    BuildContext context, {
+    required VoidCallback onClose,
+  }) {
+    return Column(
+      children: [
+        AppBar(
+          title: Text(AppStrings.of(context, 'settings_title')),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
+          automaticallyImplyLeading: false,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: onClose,
+            ),
+          ],
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: ListView(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.language),
+                title: Text(AppStrings.of(context, 'settings_language')),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () => _showLanguageDialog(context),
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_outlined),
+                title: Text(AppStrings.of(context, 'settings_notify')),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              ),
+              ListTile(
+                leading: const Icon(Icons.bug_report_outlined),
+                title: Text(AppStrings.of(context, 'diag_title')),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const DiagnosticsPage()),
+                  );
+                },
+              ),
+              ExpansionTile(
+                leading: const Icon(Icons.dark_mode_outlined),
+                title: Builder(
+                  builder: (context) {
+                    final currentThemeMode = _getCurrentThemeMode(context);
+                    String themeModeName;
+                    switch (currentThemeMode) {
+                      case ThemeMode.system:
+                        themeModeName = AppStrings.of(context, 'theme_system');
+                        break;
+                      case ThemeMode.light:
+                        themeModeName = AppStrings.of(context, 'theme_light');
+                        break;
+                      case ThemeMode.dark:
+                        themeModeName = AppStrings.of(context, 'theme_dark');
+                        break;
+                    }
+                    return Text(
+                      '${AppStrings.of(context, 'settings_dark')}: $themeModeName',
+                    );
+                  },
+                ),
+                children: [
+                  RadioGroup<ThemeMode>(
+                    groupValue: _getCurrentThemeMode(context),
+                    onChanged: (value) {
+                      if (value != null) {
+                        BattleManApp.setThemeMode(context, value);
+                      }
+                    },
+                    child: Column(
+                      children: [
+                        RadioListTile<ThemeMode>(
+                          title: Text(AppStrings.of(context, 'theme_system')),
+                          value: ThemeMode.system,
+                        ),
+                        RadioListTile<ThemeMode>(
+                          title: Text(AppStrings.of(context, 'theme_light')),
+                          value: ThemeMode.light,
+                        ),
+                        RadioListTile<ThemeMode>(
+                          title: Text(AppStrings.of(context, 'theme_dark')),
+                          value: ThemeMode.dark,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   void _showLanguageDialog(BuildContext context) {

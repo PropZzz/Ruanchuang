@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/app_services.dart';
 import '../utils/app_strings.dart';
+import '../utils/mobile_feedback.dart';
 
 class TeamPage extends StatefulWidget {
   const TeamPage({super.key});
@@ -94,102 +95,146 @@ class _TeamPageState extends State<TeamPage> {
       _loading = true;
     });
 
-    final sw = Stopwatch()..start();
+    try {
+      final sw = Stopwatch()..start();
 
-    final day = DateTime.now();
-    final calendarsFuture = _dataService.getTeamCalendars(day);
-    final membersFuture = _dataService.getTeamMembers();
-    final calendars = await calendarsFuture;
-    final members = await membersFuture;
+      final day = DateTime.now();
+      final calendarsFuture = _dataService.getTeamCalendars(day);
+      final membersFuture = _dataService.getTeamMembers();
+      final calendars = await calendarsFuture;
+      final members = await membersFuture;
 
-    final result = AppServices.teamCollabEngine.compute(
-      day: DateTime(day.year, day.month, day.day),
-      windows: _defaultWindows(),
-      calendars: calendars,
-      minParticipants: _minParticipants,
-      meetingMinutes: _meetingMinutes,
-      minEnergy: _minEnergy,
-    );
+      final result = AppServices.teamCollabEngine.compute(
+        day: DateTime(day.year, day.month, day.day),
+        windows: _defaultWindows(),
+        calendars: calendars,
+        minParticipants: _minParticipants,
+        meetingMinutes: _meetingMinutes,
+        minEnergy: _minEnergy,
+      );
 
-    sw.stop();
-    AppServices.logStore.info(
-      'team',
-      'compute golden windows',
-      data: {
-        'ms': sw.elapsedMilliseconds,
-        'members': calendars.length,
-        'golden': result.goldenWindows.length,
-        'conflicts': result.busyOverlaps.length,
-      },
-    );
+      sw.stop();
+      AppServices.logStore.info(
+        'team',
+        'compute golden windows',
+        data: {
+          'ms': sw.elapsedMilliseconds,
+          'members': calendars.length,
+          'golden': result.goldenWindows.length,
+          'conflicts': result.busyOverlaps.length,
+        },
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _calendars = calendars;
-      _members = members;
-      _golden = result.goldenWindows;
-      _conflicts = result.busyOverlaps;
-      _loading = false;
-    });
+      setState(() {
+        _calendars = calendars;
+        _members = members;
+        _golden = result.goldenWindows;
+        _conflicts = result.busyOverlaps;
+        _loading = false;
+      });
+    } catch (e, st) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+      });
+      MobileFeedback.showError(
+        context,
+        category: 'team',
+        message: 'load team data failed',
+        zhMessage: '暂时无法加载团队数据，请稍后重试。',
+        enMessage: 'Unable to load team data right now.',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   Future<void> _updatePermission(
     TeamMemberCalendar member,
     TeamSharePermission permission,
   ) async {
-    await _dataService.updateTeamSharePermission(member.memberId, permission);
-    if (!mounted) return;
-    await _load();
+    try {
+      await _dataService.updateTeamSharePermission(member.memberId, permission);
+      if (!mounted) return;
+      await _load();
+    } catch (e, st) {
+      if (!mounted) return;
+      MobileFeedback.showError(
+        context,
+        category: 'team',
+        message: 'update team permission failed',
+        zhMessage: '暂时无法更新共享权限，请稍后重试。',
+        enMessage: 'Unable to update the sharing permission.',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   Future<void> _book(GoldenWindow w) async {
-    final sw = Stopwatch()..start();
+    try {
+      final sw = Stopwatch()..start();
 
-    final day = DateTime.now();
-    await _dataService.bookTeamMeeting(
-      DateTime(day.year, day.month, day.day),
-      TeamMeetingRequest(
-        title: AppStrings.of(context, 'team_meeting_title'),
-        start: w.start,
-        minutes: _meetingMinutes,
-        participantIds: w.participantIds,
-      ),
-    );
-
-    sw.stop();
-    AppServices.logStore.info(
-      'team',
-      'book meeting',
-      data: {
-        'ms': sw.elapsedMilliseconds,
-        'start': '${w.start.hour}:${w.start.minute}',
-        'minutes': _meetingMinutes,
-        'participants': w.participantIds.length,
-      },
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      _probeStart = w.start;
-      _probeMinutes = _meetingMinutes;
-      _probeConflicts = const [];
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          AppStrings.of(
-            context,
-            'team_snack_booked_meeting',
-            params: {'time': w.start.format(context)},
-          ),
+      final day = DateTime.now();
+      await _dataService.bookTeamMeeting(
+        DateTime(day.year, day.month, day.day),
+        TeamMeetingRequest(
+          title: AppStrings.of(context, 'team_meeting_title'),
+          start: w.start,
+          minutes: _meetingMinutes,
+          participantIds: w.participantIds,
         ),
-      ),
-    );
+      );
 
-    await _load();
+      sw.stop();
+      AppServices.logStore.info(
+        'team',
+        'book meeting',
+        data: {
+          'ms': sw.elapsedMilliseconds,
+          'start': '${w.start.hour}:${w.start.minute}',
+          'minutes': _meetingMinutes,
+          'participants': w.participantIds.length,
+        },
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _probeStart = w.start;
+        _probeMinutes = _meetingMinutes;
+        _probeConflicts = const [];
+      });
+
+      MobileFeedback.showInfo(
+        context,
+        zhMessage: AppStrings.of(
+          context,
+          'team_snack_booked_meeting',
+          params: {'time': w.start.format(context)},
+        ),
+        enMessage: AppStrings.of(
+          context,
+          'team_snack_booked_meeting',
+          params: {'time': w.start.format(context)},
+        ),
+      );
+
+      await _load();
+    } catch (e, st) {
+      if (!mounted) return;
+      MobileFeedback.showError(
+        context,
+        category: 'team',
+        message: 'book meeting failed',
+        zhMessage: '暂时无法预约会议，请稍后重试。',
+        enMessage: 'Unable to book the meeting right now.',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   void _showConflictCheck() {
@@ -201,43 +246,52 @@ class _TeamPageState extends State<TeamPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setInner) => AlertDialog(
           title: Text(AppStrings.of(ctx2, 'team_conflict_check_title')),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Text(AppStrings.of(ctx2, 'label_start')),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: () async {
-                      final t = await showTimePicker(
-                        context: ctx2,
-                        initialTime: start,
-                      );
-                      if (t != null) setInner(() => start = t);
-                    },
-                    child: Text(start.format(ctx2)),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  Text(AppStrings.of(ctx2, 'label_minutes')),
-                  const SizedBox(width: 8),
-                  DropdownButton<int>(
-                    value: minutes,
-                    items: const [15, 30, 45, 60, 90]
-                        .map(
-                          (v) => DropdownMenuItem(value: v, child: Text('$v')),
-                        )
-                        .toList(),
-                    onChanged: (v) {
-                      if (v != null) setInner(() => minutes = v);
-                    },
-                  ),
-                ],
-              ),
-            ],
+          content: ConstrainedBox(
+            constraints: MobileFeedback.dialogConstraints(ctx2, maxWidth: 380),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(AppStrings.of(ctx2, 'label_start')),
+                    TextButton(
+                      onPressed: () async {
+                        final t = await showTimePicker(
+                          context: ctx2,
+                          initialTime: start,
+                        );
+                        if (t != null) setInner(() => start = t);
+                      },
+                      child: Text(start.format(ctx2)),
+                    ),
+                  ],
+                ),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(AppStrings.of(ctx2, 'label_minutes')),
+                    DropdownButton<int>(
+                      value: minutes,
+                      items: const [15, 30, 45, 60, 90]
+                          .map(
+                            (v) =>
+                                DropdownMenuItem(value: v, child: Text('$v')),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) setInner(() => minutes = v);
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -303,15 +357,31 @@ class _TeamPageState extends State<TeamPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isCompactAppBar = MobileFeedback.isNarrow(context, breakpoint: 760);
     return Scaffold(
       appBar: AppBar(
         title: Text(AppStrings.of(context, 'team_title')),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: _showConflictCheck,
-          ),
+          if (!isCompactAppBar)
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: _showConflictCheck,
+            ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+          if (isCompactAppBar)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'conflict') {
+                  _showConflictCheck();
+                }
+              },
+              itemBuilder: (ctx) => [
+                PopupMenuItem(
+                  value: 'conflict',
+                  child: Text(AppStrings.of(ctx, 'team_conflict_check_title')),
+                ),
+              ],
+            ),
         ],
       ),
       body: _loading
@@ -486,6 +556,7 @@ class _TeamPageState extends State<TeamPage> {
   }
 
   Widget _buildRecommendationPanel(BuildContext context) {
+    final compact = MobileFeedback.isNarrow(context, breakpoint: 760);
     return Card(
       elevation: 0,
       color: Theme.of(
@@ -527,23 +598,54 @@ class _TeamPageState extends State<TeamPage> {
                 );
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    dense: true,
-                    title: Text(
-                      '${w.start.format(context)} - ${end.format(context)}',
-                    ),
-                    subtitle: Text(
-                      AppStrings.of(
-                        context,
-                        'team_free_members',
-                        params: {'count': w.participantIds.length.toString()},
-                      ),
-                    ),
-                    trailing: ElevatedButton(
-                      onPressed: () => _book(w),
-                      child: Text(AppStrings.of(context, 'team_btn_book')),
-                    ),
-                  ),
+                  child: compact
+                      ? Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${w.start.format(context)} - ${end.format(context)}',
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                AppStrings.of(
+                                  context,
+                                  'team_free_members',
+                                  params: {
+                                    'count': w.participantIds.length.toString(),
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: () => _book(w),
+                                child: Text(
+                                  AppStrings.of(context, 'team_btn_book'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListTile(
+                          dense: true,
+                          title: Text(
+                            '${w.start.format(context)} - ${end.format(context)}',
+                          ),
+                          subtitle: Text(
+                            AppStrings.of(
+                              context,
+                              'team_free_members',
+                              params: {
+                                'count': w.participantIds.length.toString(),
+                              },
+                            ),
+                          ),
+                          trailing: ElevatedButton(
+                            onPressed: () => _book(w),
+                            child: Text(AppStrings.of(context, 'team_btn_book')),
+                          ),
+                        ),
                 );
               }),
           ],
@@ -634,6 +736,7 @@ class _TeamPageState extends State<TeamPage> {
             _sectionTitle(context, title),
             const SizedBox(height: 8),
             ..._calendars.map((m) {
+              final compact = MobileFeedback.isNarrow(context, breakpoint: 760);
               final energyColor = (m.energy.index >= EnergyTier.high.index)
                   ? Colors.green
                   : Colors.grey;
@@ -653,16 +756,20 @@ class _TeamPageState extends State<TeamPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 10,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           CircleAvatar(
                             child: Text(
                               m.displayName.isNotEmpty ? m.displayName[0] : '?',
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: compact ? 240 : 420,
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -690,7 +797,6 @@ class _TeamPageState extends State<TeamPage> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 12),
                           Icon(Icons.bolt, color: energyColor, size: 18),
                         ],
                       ),

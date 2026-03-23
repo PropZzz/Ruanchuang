@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../services/app_services.dart';
 import '../services/microtask_crystals/microtask_import_parser.dart';
 import '../utils/app_strings.dart';
+import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 
 class MicroTaskPage extends StatefulWidget {
@@ -60,36 +61,64 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
 
   Future<void> _loadMicroTasks() async {
     setState(() => _isLoading = true);
-    final tasks = await _dataService.getMicroTasks();
-    if (!mounted) return;
+    try {
+      final tasks = await _dataService.getMicroTasks();
+      if (!mounted) return;
 
-    tasks.sort((a, b) {
-      if (a.done != b.done) return a.done ? 1 : -1;
-      final p = b.priority.compareTo(a.priority);
-      if (p != 0) return p;
-      final tag = a.tag.compareTo(b.tag);
-      if (tag != 0) return tag;
-      final m = a.minutes.compareTo(b.minutes);
-      if (m != 0) return m;
-      return a.title.compareTo(b.title);
-    });
+      tasks.sort((a, b) {
+        if (a.done != b.done) return a.done ? 1 : -1;
+        final p = b.priority.compareTo(a.priority);
+        if (p != 0) return p;
+        final tag = a.tag.compareTo(b.tag);
+        if (tag != 0) return tag;
+        final m = a.minutes.compareTo(b.minutes);
+        if (m != 0) return m;
+        return a.title.compareTo(b.title);
+      });
 
-    setState(() {
-      _tasks = tasks;
-      _isLoading = false;
-    });
+      setState(() {
+        _tasks = tasks;
+        _isLoading = false;
+      });
+    } catch (e, st) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      MobileFeedback.showError(
+        context,
+        category: 'microtask',
+        message: 'load micro tasks failed',
+        zhMessage: '暂时无法加载微任务，请稍后重试。',
+        enMessage: 'Unable to load micro tasks right now.',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   Future<void> _fillQuickTasks() async {
     final toAdd = [
       MicroTask(title: '整理笔记', tag: '低脑力', minutes: 12, priority: 2),
-      MicroTask(title: '回复客户简短问题', tag: '任意', minutes: 7, priority: 3),
+      MicroTask(title: '回复客户短消息', tag: '任意', minutes: 7, priority: 3),
     ];
-
-    for (final t in toAdd) {
-      await _dataService.addMicroTask(t);
+    try {
+      for (final t in toAdd) {
+        await _dataService.addMicroTask(t);
+      }
+      if (mounted) await _loadMicroTasks();
+    } catch (e, st) {
+      if (!mounted) return;
+      MobileFeedback.showError(
+        context,
+        category: 'microtask',
+        message: 'fill quick tasks failed',
+        zhMessage: '暂时无法添加推荐任务，请稍后重试。',
+        enMessage: 'Unable to add the suggested tasks.',
+        error: e,
+        stackTrace: st,
+      );
     }
-    if (mounted) await _loadMicroTasks();
   }
 
   int _pointsFor(MicroTask task) => MicroTaskImportParser.pointsForTask(task);
@@ -107,7 +136,36 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
       (sum, task) => sum + _pointsFor(task),
     );
   }
+  bool _isEnglish(BuildContext context) {
+    return Localizations.localeOf(context).languageCode == 'en';
+  }
 
+  String _pointsUnit(BuildContext context) {
+    return _isEnglish(context) ? 'pts' : '积分';
+  }
+
+  String _metricLabel(
+    BuildContext context, {
+    required String zh,
+    required String en,
+  }) {
+    return _isEnglish(context) ? en : zh;
+  }
+
+  String _taskCompletedMessage(BuildContext context, MicroTask task) {
+    final points = _pointsFor(task);
+    if (_isEnglish(context)) {
+      return 'Completed "${task.title}" · +$points pts';
+    }
+    return '已完成“${task.title}”，+$points 积分';
+  }
+
+  String _batchCompletedMessage(BuildContext context, int points) {
+    if (_isEnglish(context)) {
+      return 'Batch completed · +$points pts';
+    }
+    return '批量完成，+$points 积分';
+  }
   Future<void> _showImportMicroTasksDialog() async {
     final rawCtrl = TextEditingController();
     MicroTaskImportSummary? preview;
@@ -117,8 +175,8 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setInner) => AlertDialog(
           title: const Text('导入清单'),
-          content: SizedBox(
-            width: 560,
+          content: ConstrainedBox(
+            constraints: MobileFeedback.dialogConstraints(ctx2, maxWidth: 560),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -147,7 +205,9 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        Chip(label: Text('${preview!.suggestions.length} 项')),
+                        Chip(
+                          label: Text('${preview!.suggestions.length} 项'),
+                        ),
                         Chip(label: Text('${preview!.totalMinutes} 分钟')),
                         Chip(label: Text('+${preview!.totalPoints} 积分')),
                       ],
@@ -163,9 +223,9 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                           return ListTile(
                             dense: true,
                             contentPadding: EdgeInsets.zero,
-                            leading: CircleAvatar(child: Text('${s.points}')),
-                            title: Text(s.task.title),
-                            subtitle: Text(
+                          leading: CircleAvatar(child: Text('${s.points}')),
+                          title: Text(s.task.title),
+                          subtitle: Text(
                               '${s.task.minutes} 分钟 | ${s.task.tag} | P${s.task.priority}',
                             ),
                           );
@@ -206,27 +266,38 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
 
     if (ok != true || preview == null || preview!.suggestions.isEmpty) return;
 
-    for (final suggestion in preview!.suggestions) {
-      await _dataService.addMicroTask(suggestion.task);
-    }
+    try {
+      for (final suggestion in preview!.suggestions) {
+        await _dataService.addMicroTask(suggestion.task);
+      }
 
-    if (!mounted) return;
-    await _loadMicroTasks();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '已导入 ${preview!.suggestions.length} 项，潜在收益 +${preview!.totalPoints} 积分',
-        ),
-      ),
-    );
+      if (!mounted) return;
+      await _loadMicroTasks();
+      MobileFeedback.showInfo(
+        context,
+        zhMessage: '导入完成。',
+        enMessage: 'Micro tasks imported successfully.',
+      );
+    } catch (e, st) {
+      if (!mounted) return;
+      MobileFeedback.showError(
+        context,
+        category: 'microtask',
+        message: 'import micro tasks failed',
+        zhMessage: '导入失败，请检查内容后重试。',
+        enMessage: 'Unable to import the micro tasks.',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   Future<void> _logMicroTaskCompleted(MicroTask task) async {
     final taskId = _taskKey(task);
     final now = DateTime.now();
     final minutes = task.minutes.clamp(1, 24 * 60);
-    final tag = task.tag.trim().isEmpty ? '微任务' : task.tag.trim();
-    final title = task.title.trim().isEmpty ? '微任务' : task.title.trim();
+    final tag = task.tag.trim().isEmpty ? '未分类' : task.tag.trim();
+    final title = task.title.trim().isEmpty ? '未命名任务' : task.title.trim();
 
     await _dataService.logTaskEvent(
       TaskEvent(
@@ -263,7 +334,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
       await _logMicroTaskCompleted(task);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已完成“${task.title}” +${_pointsFor(task)} 积分')),
+          SnackBar(content: Text(_taskCompletedMessage(context, task))),
         );
       }
     }
@@ -349,7 +420,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
 
                 final newTask = MicroTask(
                   title: t,
-                  tag: tg.isEmpty ? '任意' : tg,
+                  tag: tg.isEmpty ? '未分类' : tg,
                   minutes: minutes,
                   priority: priority,
                 );
@@ -444,7 +515,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                 if (t.isEmpty) return;
 
                 task.title = t;
-                task.tag = tg.isEmpty ? '任意' : tg;
+                task.tag = tg.isEmpty ? '未分类' : tg;
                 task.minutes = minutes;
                 task.priority = priority;
 
@@ -514,7 +585,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     if (!mounted) return;
     await _loadMicroTasks();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('批量完成 +$earnedPoints 积分')),
+      SnackBar(content: Text(_batchCompletedMessage(context, earnedPoints))),
     );
   }
 
@@ -820,7 +891,12 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     required String label,
     required String value,
   }) {
+    final maxWidth = MobileFeedback.isNarrow(context, breakpoint: 420)
+        ? 168.0
+        : 240.0;
+
     return Container(
+      constraints: BoxConstraints(maxWidth: maxWidth),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface.withAlpha(220),
@@ -834,7 +910,13 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
         children: [
           Icon(icon, size: 16),
           const SizedBox(width: 6),
-          Text('$label: $value'),
+          Flexible(
+            child: Text(
+              '$label: $value',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
@@ -842,6 +924,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MobileFeedback.isNarrow(context, breakpoint: 700);
     final selectedCount = _selected.length;
     final selectedPoints = _selectedTasks().where((t) => !t.done).fold<int>(
           0,
@@ -886,13 +969,21 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Expanded(
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: compact ? 320 : 520,
+                            ),
                             child: Text(
                               AppStrings.of(context, 'micro_ai_suggestion'),
                               style: TextStyle(
-                                color: Theme.of(context).colorScheme.onTertiaryContainer,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onTertiaryContainer,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -917,25 +1008,41 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                           _buildMetricChip(
                             context,
                             icon: Icons.check_circle_outline,
-                            label: '已完成',
+                            label: _metricLabel(
+                              context,
+                              zh: '已完成',
+                              en: 'Done',
+                            ),
                             value: '$doneCount/${_tasks.length}',
                           ),
                           _buildMetricChip(
                             context,
                             icon: Icons.stars_outlined,
-                            label: '已获得积分',
+                            label: _metricLabel(
+                              context,
+                              zh: '已获积分',
+                              en: 'Earned',
+                            ),
                             value: '$completedPoints',
                           ),
                           _buildMetricChip(
                             context,
                             icon: Icons.hourglass_bottom,
-                            label: '剩余积分',
+                            label: _metricLabel(
+                              context,
+                              zh: '剩余积分',
+                              en: 'Remaining',
+                            ),
                             value: '$pendingPoints',
                           ),
                           _buildMetricChip(
                             context,
                             icon: Icons.bolt,
-                            label: '总积分',
+                            label: _metricLabel(
+                              context,
+                              zh: '总积分',
+                              en: 'Total',
+                            ),
                             value: '$totalPoints',
                           ),
                         ],
@@ -945,12 +1052,29 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                 ),
                 if (_batchMode) _buildTagQuickSelect(),
                 Expanded(
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    padding: const EdgeInsets.all(16),
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    children: _tasks.map(_buildMicroTaskBubble).toList(),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final width = constraints.maxWidth;
+                      final crossAxisCount = width < 640
+                          ? 1
+                          : width < 980
+                              ? 2
+                              : 3;
+                      final mainExtent = crossAxisCount == 1 ? 220.0 : 240.0;
+                      return GridView.builder(
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          mainAxisExtent: mainExtent,
+                        ),
+                        itemCount: _tasks.length,
+                        itemBuilder: (context, index) {
+                          return _buildMicroTaskBubble(_tasks[index]);
+                        },
+                      );
+                    },
                   ),
                 ),
               ],
@@ -960,29 +1084,27 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Row(
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Expanded(
-                      child: Text(
-                        AppStrings.of(
-                          context,
-                          'micro_batch_selected',
-                          params: {'count': selectedCount.toString()},
-                        ),
+                    Text(
+                      AppStrings.of(
+                        context,
+                        'micro_batch_selected',
+                        params: {'count': selectedCount.toString()},
                       ),
                     ),
-                    Text('+${selectedPoints} 积分'),
-                    const SizedBox(width: 12),
+                    Text('+${selectedPoints} ${_pointsUnit(context)}'),
                     TextButton(
                       onPressed: selectedCount == 0 ? null : _batchMarkComplete,
                       child: Text(AppStrings.of(context, 'btn_finish')),
                     ),
-                    const SizedBox(width: 8),
                     TextButton(
                       onPressed: selectedCount == 0 ? null : _batchDelete,
                       child: Text(AppStrings.of(context, 'btn_delete')),
                     ),
-                    const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: selectedCount == 0 ? null : _batchSchedule,
                       child:
@@ -1031,9 +1153,9 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           children: [
             Icon(
               task.done ? Icons.check_circle : Icons.task_alt,
-              color: task.done 
-                ? Theme.of(context).colorScheme.primary 
-                : Theme.of(context).colorScheme.tertiary,
+              color: task.done
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.tertiary,
               size: 28,
             ),
             const SizedBox(height: 6),
@@ -1049,29 +1171,37 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 4,
+              runSpacing: 4,
               children: [
-                Icon(Icons.access_time, size: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                Flexible(
-                  child: Text(
-                    ' ${task.minutes} ${AppStrings.of(context, 'micro_card_min')} | $safeTag',
-                    style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                Icon(
+                  Icons.access_time,
+                  size: 10,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                Text(
+                  '${task.minutes} ${AppStrings.of(context, 'micro_card_min')} | $safeTag',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
-              '+${_pointsFor(task)} 积分',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              '+${_pointsFor(task)} ${_pointsUnit(context)}',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             ),
             if (!_batchMode) ...[
               const SizedBox(height: 6),
@@ -1160,4 +1290,5 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     );
   }
 }
+
 

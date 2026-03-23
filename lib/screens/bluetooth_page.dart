@@ -3,6 +3,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import 'package:shixuzhipei/services/app_services.dart';
 
+import '../utils/mobile_feedback.dart';
 import 'device_detail_page.dart';
 
 class BluetoothPage extends StatefulWidget {
@@ -53,6 +54,52 @@ class _BluetoothPageState extends State<BluetoothPage> {
     );
   }
 
+  Future<void> _handleDisconnect(BluetoothDevice device) async {
+    try {
+      await _bluetoothService.disconnect(device);
+      if (!mounted) return;
+      MobileFeedback.showInfo(
+        context,
+        zhMessage: '设备已断开连接。',
+        enMessage: 'Device disconnected.',
+      );
+    } catch (e, st) {
+      if (!mounted) return;
+      MobileFeedback.showError(
+        context,
+        category: 'bluetooth',
+        message: 'disconnect failed',
+        zhMessage: '暂时无法断开设备连接。',
+        enMessage: 'Unable to disconnect from the device.',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  Future<void> _handleConnect(BluetoothDevice device) async {
+    try {
+      await _bluetoothService.connect(device);
+      if (!mounted) return;
+      MobileFeedback.showInfo(
+        context,
+        zhMessage: '设备已连接。',
+        enMessage: 'Device connected.',
+      );
+    } catch (e, st) {
+      if (!mounted) return;
+      MobileFeedback.showError(
+        context,
+        category: 'bluetooth',
+        message: 'connect failed',
+        zhMessage: '暂时无法连接设备。',
+        enMessage: 'Unable to connect to the device.',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
   Widget _buildScanResultTile(ScanResult result) {
     return StreamBuilder<BluetoothConnectionState>(
       stream: result.device.connectionState,
@@ -64,47 +111,11 @@ class _BluetoothPageState extends State<BluetoothPage> {
 
         final trailing = switch (state) {
           BluetoothConnectionState.connected => ElevatedButton(
-              onPressed: () async {
-                try {
-                  await _bluetoothService.disconnect(result.device);
-                } catch (e) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('蓝牙错误：$e')),
-                  );
-                  return;
-                }
-
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('已断开与 ${result.device.platformName} 的连接'),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
+              onPressed: () => _handleDisconnect(result.device),
               child: const Text('断开连接'),
             ),
           _ => ElevatedButton(
-              onPressed: () async {
-                try {
-                  await _bluetoothService.connect(result.device);
-                } catch (e) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('蓝牙错误：$e')),
-                  );
-                  return;
-                }
-
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('已连接到 ${result.device.platformName}'),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
+              onPressed: () => _handleConnect(result.device),
               child: const Text('连接'),
             ),
         };

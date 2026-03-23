@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
+import '../utils/mobile_feedback.dart';
+
 class DeviceDetailPage extends StatefulWidget {
   final BluetoothDevice device;
 
@@ -25,45 +27,41 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
   Future<void> _discoverServices() async {
     if (!_supportsBluetooth) return;
-    // Make sure we are connected before discovering services
-    // if (widget.device.connectionState != BluetoothConnectionState.connected) {
-    //   await widget.device.connect(timeout: const Duration(seconds: 10), license: '');
-    // }
     final services = await widget.device.discoverServices();
     setState(() {
       _services = services;
     });
   }
 
-  Widget _buildCharacteristicTile(BluetoothCharacteristic c) {
+  Widget _buildCharacteristicTile(BluetoothCharacteristic characteristic) {
     return ListTile(
-      title: Text(c.uuid.toString()),
-      subtitle: Text('属性：${c.properties}'),
+      title: Text(characteristic.uuid.toString()),
+      subtitle: Text('属性: ${characteristic.properties}'),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (c.properties.read)
+          if (characteristic.properties.read)
             IconButton(
               icon: const Icon(Icons.file_download),
               onPressed: () async {
-                final value = await c.read();
-                // Show value in a dialog
-                showDialog(
+                final value = await characteristic.read();
+                if (!mounted) return;
+                showDialog<void>(
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('特征值'),
                     content: Text(value.toString()),
                     actions: [
                       TextButton(
-                        child: const Text('确定'),
                         onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('确定'),
                       ),
                     ],
                   ),
                 );
               },
             ),
-          if (c.properties.write)
+          if (characteristic.properties.write)
             IconButton(
               icon: const Icon(Icons.file_upload),
               onPressed: () async {
@@ -75,45 +73,63 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     content: TextField(
                       controller: textController,
                       decoration: const InputDecoration(
-                        hintText: '请输入十六进制值（例如 0A, 1F）',
+                        hintText: '请输入十六进制值，例如 0A, 1F',
                       ),
                     ),
                     actions: [
                       TextButton(
-                        child: const Text('取消'),
                         onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('取消'),
                       ),
                       TextButton(
-                        child: const Text('写入'),
                         onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('写入'),
                       ),
                     ],
                   ),
                 );
-                if (confirmed ?? false) {
-                  try {
-                    final value = textController.text
-                        .split(',')
-                        .map((e) => int.parse(e.trim(), radix: 16))
-                        .toList();
-                    await c.write(value);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('写入成功')),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('写入失败：$e')),
-                    );
-                  }
+                if (confirmed != true) return;
+
+                try {
+                  final value = textController.text
+                      .split(',')
+                      .where((item) => item.trim().isNotEmpty)
+                      .map((item) => int.parse(item.trim(), radix: 16))
+                      .toList();
+                  await characteristic.write(value);
+                  if (!mounted) return;
+                  MobileFeedback.showInfo(
+                    context,
+                    zhMessage: '写入成功。',
+                    enMessage: 'Write completed.',
+                  );
+                } catch (e, st) {
+                  if (!mounted) return;
+                  MobileFeedback.showError(
+                    context,
+                    category: 'bluetooth',
+                    message: 'write characteristic failed',
+                    zhMessage: '写入失败，请检查输入格式后重试。',
+                    enMessage:
+                        'Unable to write the value. Please check the input.',
+                    error: e,
+                    stackTrace: st,
+                  );
                 }
               },
             ),
-          if (c.properties.notify)
+          if (characteristic.properties.notify)
             IconButton(
-              icon: Icon(c.isNotifying ? Icons.notifications_active : Icons.notifications_none),
+              icon: Icon(
+                characteristic.isNotifying
+                    ? Icons.notifications_active
+                    : Icons.notifications_none,
+              ),
               onPressed: () async {
-                await c.setNotifyValue(!c.isNotifying);
-                setState(() {});
+                await characteristic.setNotifyValue(!characteristic.isNotifying);
+                if (mounted) {
+                  setState(() {});
+                }
               },
             ),
         ],
@@ -125,16 +141,23 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.device.platformName.isNotEmpty ? widget.device.platformName : '未知设备'),
+        title: Text(
+          widget.device.platformName.isNotEmpty
+              ? widget.device.platformName
+              : '未知设备',
+        ),
         actions: [
           if (_supportsBluetooth)
             StreamBuilder<BluetoothConnectionState>(
               stream: widget.device.connectionState,
               initialData: BluetoothConnectionState.disconnected,
-              builder: (c, snapshot) {
+              builder: (context, snapshot) {
                 final state = snapshot.data;
                 if (state == BluetoothConnectionState.connected) {
-                  return TextButton(onPressed: _discoverServices, child: const Text('刷新'));
+                  return TextButton(
+                    onPressed: _discoverServices,
+                    child: const Text('刷新'),
+                  );
                 }
                 return Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -149,10 +172,12 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               child: Column(
                 children: _services
                     .map(
-                      (s) => Card(
+                      (service) => Card(
                         child: ExpansionTile(
-                          title: Text('服务：${s.uuid}'),
-                          children: s.characteristics.map(_buildCharacteristicTile).toList(),
+                          title: Text('服务: ${service.uuid}'),
+                          children: service.characteristics
+                              .map(_buildCharacteristicTile)
+                              .toList(),
                         ),
                       ),
                     )

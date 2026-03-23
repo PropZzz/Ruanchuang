@@ -7,6 +7,7 @@ import '../services/app_services.dart';
 import '../services/microtask_crystals/microtask_crystal_engine.dart';
 import '../utils/app_strings.dart';
 import '../utils/helpers.dart';
+import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 
 class FocusPage extends StatefulWidget {
@@ -155,56 +156,72 @@ class _FocusPageState extends State<FocusPage> {
       _isLoading = true;
     });
 
-    final energyFuture = _dataService.getEnergyStatus();
-    final now = TimeOfDay.now();
-    final nowMinutes = now.hour * 60 + now.minute;
-    final entriesFuture = _dataService.getScheduleEntries();
+    try {
+      final energyFuture = _dataService.getEnergyStatus();
+      final now = TimeOfDay.now();
+      final nowMinutes = now.hour * 60 + now.minute;
+      final entriesFuture = _dataService.getScheduleEntries();
 
-    final energy = await energyFuture;
-    final allEntries = await entriesFuture;
+      final energy = await energyFuture;
+      final allEntries = await entriesFuture;
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    final today = dateOnly(DateTime.now());
-    final entries = entriesForDay(day: today, allEntries: allEntries);
+      final today = dateOnly(DateTime.now());
+      final entries = entriesForDay(day: today, allEntries: allEntries);
 
-    entries.sort((a, b) {
-      final aMin = a.time.hour * 60 + a.time.minute;
-      final bMin = b.time.hour * 60 + b.time.minute;
-      return aMin.compareTo(bMin);
-    });
+      entries.sort((a, b) {
+        final aMin = a.time.hour * 60 + a.time.minute;
+        final bMin = b.time.hour * 60 + b.time.minute;
+        return aMin.compareTo(bMin);
+      });
 
-    ScheduleEntry? current;
-    final List<ScheduleEntry> upcoming = [];
+      ScheduleEntry? current;
+      final List<ScheduleEntry> upcoming = [];
 
-    for (final e in entries) {
-      final start = e.time.hour * 60 + e.time.minute;
-      final duration = (e.height / 80.0) * 60.0;
-      final end = (start + duration).toInt();
-      if (start <= nowMinutes && nowMinutes < end) {
-        current = e;
-      } else if (start > nowMinutes) {
-        upcoming.add(e);
-      }
-    }
-
-    setState(() {
-      _energyStatus = energy;
-      _currentTask = current;
-      if (current != null) {
-        final start = current.time.hour * 60 + current.time.minute;
-        final duration = (current.height / 80.0) * 60.0;
+      for (final e in entries) {
+        final start = e.time.hour * 60 + e.time.minute;
+        final duration = (e.height / 80.0) * 60.0;
         final end = (start + duration).toInt();
-        _remainingSeconds = (end - nowMinutes) * 60;
-        _nextTasks = upcoming;
-      } else {
-        _remainingSeconds = 0;
-        _nextTasks = upcoming;
+        if (start <= nowMinutes && nowMinutes < end) {
+          current = e;
+        } else if (start > nowMinutes) {
+          upcoming.add(e);
+        }
       }
-      _isLoading = false;
-    });
 
-    unawaited(_loadCrystalRecommendations(entries, energy));
+      setState(() {
+        _energyStatus = energy;
+        _currentTask = current;
+        if (current != null) {
+          final start = current.time.hour * 60 + current.time.minute;
+          final duration = (current.height / 80.0) * 60.0;
+          final end = (start + duration).toInt();
+          _remainingSeconds = (end - nowMinutes) * 60;
+          _nextTasks = upcoming;
+        } else {
+          _remainingSeconds = 0;
+          _nextTasks = upcoming;
+        }
+        _isLoading = false;
+      });
+
+      unawaited(_loadCrystalRecommendations(entries, energy));
+    } catch (e, st) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      MobileFeedback.showError(
+        context,
+        category: 'focus',
+        message: 'load focus tasks failed',
+        zhMessage: '暂时无法加载专注面板，请稍后重试。',
+        enMessage: 'Unable to load the focus dashboard right now.',
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   void _startTimer() {
@@ -478,41 +495,98 @@ class _FocusPageState extends State<FocusPage> {
 
   Widget _buildCrystalItem(TimeCrystalRecommendation r) {
     final theme = Theme.of(context);
+    final compact = MobileFeedback.isNarrow(context, breakpoint: 680);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: const Icon(Icons.bubble_chart_outlined),
-        title: Text(r.task.title),
-        subtitle: Text(
-          AppStrings.of(
-            context,
-            'focus_time_crystal_subtitle',
-            params: {
-              'start': r.crystal.start.format(context),
-              'minutes': r.crystal.minutes.toString(),
-              'bucket': r.crystal.bucket,
-              'taskMinutes': r.task.minutes.toString(),
-            },
-          ),
-        ),
-        trailing: ElevatedButton(
-          onPressed: () async {
-            final entry = ScheduleEntry(
-              day: dateOnly(DateTime.now()),
-              title: r.task.title,
-              tag: r.task.tag.isEmpty ? '微任务' : r.task.tag,
-              height: (r.task.minutes / 60.0) * 80.0,
-              color: theme.colorScheme.tertiary,
-              time: r.crystal.start,
-            );
-            await _dataService.addScheduleEntry(entry);
-            await _dataService.removeMicroTask(r.task);
-            if (mounted) {
-              await _loadTasks();
-            }
-          },
-          child: Text(AppStrings.of(context, 'focus_btn_one_click_insert')),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: compact
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.bubble_chart_outlined),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(r.task.title),
+                  const SizedBox(height: 4),
+                  Text(
+                    AppStrings.of(
+                      context,
+                      'focus_time_crystal_subtitle',
+                      params: {
+                        'start': r.crystal.start.format(context),
+                        'minutes': r.crystal.minutes.toString(),
+                        'bucket': r.crystal.bucket,
+                        'taskMinutes': r.task.minutes.toString(),
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final entry = ScheduleEntry(
+                          day: dateOnly(DateTime.now()),
+                          title: r.task.title,
+                          tag: r.task.tag.isEmpty ? 'micro' : r.task.tag,
+                          height: (r.task.minutes / 60.0) * 80.0,
+                          color: theme.colorScheme.tertiary,
+                          time: r.crystal.start,
+                        );
+                        await _dataService.addScheduleEntry(entry);
+                        await _dataService.removeMicroTask(r.task);
+                        if (mounted) {
+                          await _loadTasks();
+                        }
+                      },
+                      child: Text(
+                        AppStrings.of(context, 'focus_btn_one_click_insert'),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : ListTile(
+                leading: const Icon(Icons.bubble_chart_outlined),
+                contentPadding: EdgeInsets.zero,
+                title: Text(r.task.title),
+                subtitle: Text(
+                  AppStrings.of(
+                    context,
+                    'focus_time_crystal_subtitle',
+                    params: {
+                      'start': r.crystal.start.format(context),
+                      'minutes': r.crystal.minutes.toString(),
+                      'bucket': r.crystal.bucket,
+                      'taskMinutes': r.task.minutes.toString(),
+                    },
+                  ),
+                ),
+                trailing: ElevatedButton(
+                  onPressed: () async {
+                    final entry = ScheduleEntry(
+                      day: dateOnly(DateTime.now()),
+                      title: r.task.title,
+                      tag: r.task.tag.isEmpty ? 'micro' : r.task.tag,
+                      height: (r.task.minutes / 60.0) * 80.0,
+                      color: theme.colorScheme.tertiary,
+                      time: r.crystal.start,
+                    );
+                    await _dataService.addScheduleEntry(entry);
+                    await _dataService.removeMicroTask(r.task);
+                    if (mounted) {
+                      await _loadTasks();
+                    }
+                  },
+                  child: Text(
+                    AppStrings.of(context, 'focus_btn_one_click_insert'),
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -534,11 +608,14 @@ class _FocusPageState extends State<FocusPage> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: theme.colorScheme.primary),
       ),
-      child: Row(
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Icon(Icons.monitor_heart, color: theme.colorScheme.primary, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
+          Icon(Icons.monitor_heart, color: theme.colorScheme.primary, size: 32),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 180, maxWidth: 420),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -546,32 +623,30 @@ class _FocusPageState extends State<FocusPage> {
                   "${AppStrings.of(context, 'focus_status_label')}${energy?.status ?? AppStrings.of(context, 'status_flow_value')}",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                    fontSize: 17,
                     color: theme.colorScheme.onPrimaryContainer,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  energy?.description ?? AppStrings.of(context, 'status_flow_desc'),
+                  energy?.description ??
+                      AppStrings.of(context, 'status_flow_desc'),
                   style: TextStyle(
                     fontSize: 12,
-                    color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.78),
+                    color: theme.colorScheme.onPrimaryContainer.withValues(
+                      alpha: 0.78,
+                    ),
                   ),
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
+          Chip(
+            backgroundColor: theme.colorScheme.surface,
+            label: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.battery_full, size: 14, color: theme.colorScheme.primary),
@@ -633,8 +708,10 @@ class _FocusPageState extends State<FocusPage> {
               ),
             ),
             const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              alignment: WrapAlignment.center,
               children: [
                 if (!_isTimerRunning)
                   ElevatedButton.icon(

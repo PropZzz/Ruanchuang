@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../services/app_services.dart';
@@ -8,6 +8,7 @@ import '../services/ics/ics_file_saver.dart';
 import '../services/emotion/emotion_policy.dart';
 import '../utils/helpers.dart';
 import '../utils/app_strings.dart';
+import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 import '../widgets/emotion_quick_checkin_card.dart';
 import 'emotion_page.dart';
@@ -22,7 +23,7 @@ enum _CalendarField { time, tag, status, reminder, goal }
 
 enum _EntryStatus { notStarted, inProgress, completed, overdue }
 
-/// 智能日程页面
+/// Smart calendar page
 class SmartCalendarPage extends StatefulWidget {
   const SmartCalendarPage({super.key});
 
@@ -69,38 +70,54 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       _isLoading = true;
     });
 
-    if (_mode == _CalendarMode.manual) {
-      final entries = await _dataService.getScheduleEntries();
-      final now = DateTime.now();
-      final viewDay = dateOnly(_selectedDay);
-      final events = await _dataService.getTaskEvents(
-        viewDay,
-        viewDay.add(const Duration(days: 1)),
-      );
+    try {
+      if (_mode == _CalendarMode.manual) {
+        final entries = await _dataService.getScheduleEntries();
+        final now = DateTime.now();
+        final viewDay = dateOnly(_selectedDay);
+        final events = await _dataService.getTaskEvents(
+          viewDay,
+          viewDay.add(const Duration(days: 1)),
+        );
 
-      final visible = entriesForDay(day: viewDay, allEntries: entries);
+        final visible = entriesForDay(day: viewDay, allEntries: entries);
 
-      final today = dateOnly(now);
-      final isToday = sameDay(viewDay, today);
-      final status = isToday
-          ? _computeStatus(entries: visible, events: events, now: now)
-          : const <String, _EntryStatus>{};
+        final today = dateOnly(now);
+        final isToday = sameDay(viewDay, today);
+        final status = isToday
+            ? _computeStatus(entries: visible, events: events, now: now)
+            : const <String, _EntryStatus>{};
+        if (!mounted) return;
+        setState(() {
+          _blocks = entries;
+          _statusByTaskId = status;
+          _isLoading = false;
+        });
+        final todayEntries = entriesForDay(day: today, allEntries: entries);
+        await AppServices.reminderService.rescheduleDay(
+          day: today,
+          entries: todayEntries,
+        );
+
+        return;
+      }
+
+      await _loadSmartSchedule();
+    } catch (e, st) {
       if (!mounted) return;
       setState(() {
-        _blocks = entries;
-        _statusByTaskId = status;
         _isLoading = false;
       });
-      final todayEntries = entriesForDay(day: today, allEntries: entries);
-      await AppServices.reminderService.rescheduleDay(
-        day: today,
-        entries: todayEntries,
+      MobileFeedback.showError(
+        context,
+        category: 'schedule',
+        message: 'load schedule failed',
+        zhMessage: '\u6682\u65f6\u65e0\u6cd5\u52a0\u8f7d\u65e5\u7a0b\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
+        enMessage: 'Unable to load the schedule right now.',
+        error: e,
+        stackTrace: st,
       );
-
-      return;
     }
-
-    await _loadSmartSchedule();
   }
 
   EnergyTier _tierFromBattery(int batteryPercent) {
@@ -224,99 +241,120 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       _isLoading = true;
     });
 
-    final energyStatus = await _dataService.getEnergyStatus();
-    final emotion = await _dataService.getEmotionState();
-    final day = dateOnly(_selectedDay);
+    try {
+      final energyStatus = await _dataService.getEnergyStatus();
+      final emotion = await _dataService.getEmotionState();
+      final day = dateOnly(_selectedDay);
 
-    _smartTasks = _smartTasks.isEmpty ? _seedTasks(day) : _smartTasks;
+      _smartTasks = _smartTasks.isEmpty ? _seedTasks(day) : _smartTasks;
 
-    final tasks = <PlanTask>[
-      ..._smartTasks,
-      if (_urgentInserted != null) _urgentInserted!,
-    ];
+      final tasks = <PlanTask>[
+        ..._smartTasks,
+        if (_urgentInserted != null) _urgentInserted!,
+      ];
 
-    final tuning = await _dataService.getSchedulingTuning();
-    final shapedTasks = EmotionPolicy.adaptTasks(
-      tasks: tasks,
-      emotion: emotion,
-    );
-    final tunedTasks = shapedTasks.map((t) {
-      final mult = tuning.durationMultiplierForTag(t.tag);
-      final tunedMinutes = (t.durationMinutes * mult).round().clamp(1, 24 * 60);
-      final emotionMinutes = EmotionPolicy.applyDurationMultiplier(
-        minutes: tunedMinutes,
+      final tuning = await _dataService.getSchedulingTuning();
+      final shapedTasks = EmotionPolicy.adaptTasks(
+        tasks: tasks,
         emotion: emotion,
       );
-      return PlanTask(
-        id: t.id,
-        title: t.title,
-        durationMinutes: emotionMinutes,
-        priority: t.priority,
-        load: t.load,
-        tag: t.tag,
-        due: t.due,
+      final tunedTasks = shapedTasks.map((t) {
+        final mult = tuning.durationMultiplierForTag(t.tag);
+        final tunedMinutes =
+            (t.durationMinutes * mult).round().clamp(1, 24 * 60);
+        final emotionMinutes = EmotionPolicy.applyDurationMultiplier(
+          minutes: tunedMinutes,
+          emotion: emotion,
+        );
+        return PlanTask(
+          id: t.id,
+          title: t.title,
+          durationMinutes: emotionMinutes,
+          priority: t.priority,
+          load: t.load,
+          tag: t.tag,
+          due: t.due,
+        );
+      }).toList();
+
+      final fixed = EmotionPolicy.fixedRestBlocks(day: day, emotion: emotion);
+
+      final req = SchedulingRequest(
+        day: day,
+        tasks: tunedTasks,
+        windows: _defaultWindows(),
+        energy: EmotionPolicy.adjustEnergy(
+          base: _tierFromBattery(energyStatus.batteryPercent),
+          emotion: emotion,
+        ),
+        tuning: tuning,
+        fixed: fixed,
       );
-    }).toList();
 
-    final fixed = EmotionPolicy.fixedRestBlocks(day: day, emotion: emotion);
+      AppServices.diagnostics.bumpReplan(reason: 'smart_plan');
 
-    final req = SchedulingRequest(
-      day: day,
-      tasks: tunedTasks,
-      windows: _defaultWindows(),
-      energy: EmotionPolicy.adjustEnergy(
-        base: _tierFromBattery(energyStatus.batteryPercent),
-        emotion: emotion,
-      ),
-      tuning: tuning,
-      fixed: fixed,
-    );
+      final sw = Stopwatch()..start();
+      final plan = AppServices.schedulingEngine.plan(req);
+      sw.stop();
 
-    AppServices.diagnostics.bumpReplan(reason: 'smart_plan');
-
-    final sw = Stopwatch()..start();
-    final plan = AppServices.schedulingEngine.plan(req);
-    sw.stop();
-
-    AppServices.diagnostics.recordPlan(cost: sw.elapsed, reason: 'smart_plan');
-    AppServices.logStore.info(
-      'schedule',
-      'plan smart schedule',
-      data: {
-        'ms': sw.elapsedMilliseconds,
-        'tasks': tunedTasks.length,
-        'windows': req.windows.length,
-      },
-    );
-
-    if (!mounted) return;
-
-    final planned = plan.entries
-        .map((e) => e.copyWith(day: req.day))
-        .toList(growable: false);
-
-    setState(() {
-      _blocks = planned;
-      _isLoading = false;
-    });
-
-    final today = dateOnly(DateTime.now());
-    if (sameDay(req.day, today)) {
-      await AppServices.reminderService.rescheduleDay(
-        day: req.day,
-        entries: planned,
+      AppServices.diagnostics.recordPlan(cost: sw.elapsed, reason: 'smart_plan');
+      AppServices.logStore.info(
+        'schedule',
+        'plan smart schedule',
+        data: {
+          'ms': sw.elapsedMilliseconds,
+          'tasks': tunedTasks.length,
+          'windows': req.windows.length,
+        },
       );
-    }
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (plan.issues.isNotEmpty) {
-      final msg = AppStrings.of(
+      final planned = plan.entries
+          .map((e) => e.copyWith(day: req.day))
+          .toList(growable: false);
+
+      setState(() {
+        _blocks = planned;
+        _isLoading = false;
+      });
+
+      final today = dateOnly(DateTime.now());
+      if (sameDay(req.day, today)) {
+        await AppServices.reminderService.rescheduleDay(
+          day: req.day,
+          entries: planned,
+        );
+      }
+
+      if (!mounted) return;
+
+      if (plan.issues.isNotEmpty) {
+        final msg = AppStrings.of(
+          context,
+          'calendar_planner_issues',
+          params: {'count': plan.issues.length.toString()},
+        );
+        MobileFeedback.showInfo(
+          context,
+          zhMessage: msg,
+          enMessage: msg,
+        );
+      }
+    } catch (e, st) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      MobileFeedback.showError(
         context,
-        'calendar_planner_issues',
-        params: {'count': plan.issues.length.toString()},
+        category: 'schedule',
+        message: 'load smart schedule failed',
+        zhMessage: '\u6682\u65f6\u65e0\u6cd5\u751f\u6210\u667a\u80fd\u89c4\u5212\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
+        enMessage: 'Smart planning is unavailable right now.',
+        error: e,
+        stackTrace: st,
       );
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
@@ -360,6 +398,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isCompactAppBar = MobileFeedback.isNarrow(
+      context,
+      breakpoint: 760,
+    );
     final allEntries = List<ScheduleEntry>.from(_blocks)
       ..sort((a, b) {
         final aMinutes = a.time.hour * 60 + a.time.minute;
@@ -379,15 +421,16 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       appBar: AppBar(
         title: Text(AppStrings.of(context, 'calendar_title')),
         actions: [
-          IconButton(
-            tooltip: AppStrings.of(context, 'goal_title'),
-            icon: const Icon(Icons.flag_outlined),
-            onPressed: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const GoalsPage()));
-            },
-          ),
+          if (!isCompactAppBar)
+            IconButton(
+              tooltip: AppStrings.of(context, 'goal_title'),
+              icon: const Icon(Icons.flag_outlined),
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const GoalsPage()));
+              },
+            ),
           IconButton(
             tooltip: _mode == _CalendarMode.manual
                 ? AppStrings.of(context, 'calendar_tooltip_switch_to_smart')
@@ -404,14 +447,15 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               await _loadSchedule();
             },
           ),
-          if (_mode == _CalendarMode.smart)
+          if (!isCompactAppBar && _mode == _CalendarMode.smart)
             IconButton(
               tooltip: AppStrings.of(context, 'calendar_tooltip_insert_urgent'),
               icon: const Icon(Icons.add_alert),
               onPressed: _showInsertUrgentDialog,
             ),
-          PopupMenuButton<_CalendarField>(
-            tooltip: '显示字段',
+          if (!isCompactAppBar)
+            PopupMenuButton<_CalendarField>(
+              tooltip: '\u663e\u793a\u5b57\u6bb5',
             icon: const Icon(Icons.tune),
             onSelected: _toggleField,
             itemBuilder: (ctx) => [
@@ -442,20 +486,22 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               ),
             ],
           ),
-          IconButton(
-            tooltip: AppStrings.of(context, 'calendar_tooltip_export_ics'),
-            icon: const Icon(Icons.upload_file),
-            onPressed: _exportIcs,
-          ),
-          IconButton(
-            tooltip: AppStrings.of(context, 'calendar_tooltip_import_ics'),
-            icon: const Icon(Icons.download),
-            onPressed: _importIcs,
-          ),
+          if (!isCompactAppBar)
+            IconButton(
+              tooltip: AppStrings.of(context, 'calendar_tooltip_export_ics'),
+              icon: const Icon(Icons.upload_file),
+              onPressed: _exportIcs,
+            ),
+          if (!isCompactAppBar)
+            IconButton(
+              tooltip: AppStrings.of(context, 'calendar_tooltip_import_ics'),
+              icon: const Icon(Icons.download),
+              onPressed: _importIcs,
+            ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _loadSchedule),
           PopupMenuButton<String>(
             tooltip: AppStrings.of(context, 'tooltip_more'),
-            onSelected: (v) {
+            onSelected: (v) async {
               if (v == 'emotion') {
                 Navigator.of(
                   context,
@@ -468,17 +514,90 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const IntegrationsPage()),
                 );
+              } else if (v == 'urgent') {
+                _showInsertUrgentDialog();
+              } else if (v == 'export') {
+                await _exportIcs();
+              } else if (v == 'import') {
+                await _importIcs();
+              } else if (v == 'field_time') {
+                _toggleField(_CalendarField.time);
+              } else if (v == 'field_tag') {
+                _toggleField(_CalendarField.tag);
+              } else if (v == 'field_status') {
+                _toggleField(_CalendarField.status);
+              } else if (v == 'field_reminder') {
+                _toggleField(_CalendarField.reminder);
+              } else if (v == 'field_goal') {
+                _toggleField(_CalendarField.goal);
               }
             },
             itemBuilder: (ctx) => [
+              if (isCompactAppBar)
+                PopupMenuItem(
+                  value: 'goals',
+                  child: Text(AppStrings.of(ctx, 'goal_title')),
+                ),
+              if (isCompactAppBar && _mode == _CalendarMode.smart)
+                PopupMenuItem(
+                  value: 'urgent',
+                  child: Text(
+                    AppStrings.of(ctx, 'calendar_tooltip_insert_urgent'),
+                  ),
+                ),
+              if (isCompactAppBar)
+                CheckedPopupMenuItem(
+                  value: 'field_time',
+                  checked: _visibleFields.contains(_CalendarField.time),
+                  child: Text(_fieldLabel(ctx, _CalendarField.time)),
+                ),
+              if (isCompactAppBar)
+                CheckedPopupMenuItem(
+                  value: 'field_tag',
+                  checked: _visibleFields.contains(_CalendarField.tag),
+                  child: Text(_fieldLabel(ctx, _CalendarField.tag)),
+                ),
+              if (isCompactAppBar)
+                CheckedPopupMenuItem(
+                  value: 'field_status',
+                  checked: _visibleFields.contains(_CalendarField.status),
+                  child: Text(_fieldLabel(ctx, _CalendarField.status)),
+                ),
+              if (isCompactAppBar)
+                CheckedPopupMenuItem(
+                  value: 'field_reminder',
+                  checked: _visibleFields.contains(_CalendarField.reminder),
+                  child: Text(_fieldLabel(ctx, _CalendarField.reminder)),
+                ),
+              if (isCompactAppBar)
+                CheckedPopupMenuItem(
+                  value: 'field_goal',
+                  checked: _visibleFields.contains(_CalendarField.goal),
+                  child: Text(_fieldLabel(ctx, _CalendarField.goal)),
+                ),
+              if (isCompactAppBar)
+                PopupMenuItem(
+                  value: 'export',
+                  child: Text(
+                    AppStrings.of(ctx, 'calendar_tooltip_export_ics'),
+                  ),
+                ),
+              if (isCompactAppBar)
+                PopupMenuItem(
+                  value: 'import',
+                  child: Text(
+                    AppStrings.of(ctx, 'calendar_tooltip_import_ics'),
+                  ),
+                ),
               PopupMenuItem(
                 value: 'emotion',
                 child: Text(AppStrings.of(ctx, 'emo_title')),
               ),
-              PopupMenuItem(
-                value: 'goals',
-                child: Text(AppStrings.of(ctx, 'goal_title')),
-              ),
+              if (!isCompactAppBar)
+                PopupMenuItem(
+                  value: 'goals',
+                  child: Text(AppStrings.of(ctx, 'goal_title')),
+                ),
               PopupMenuItem(
                 value: 'mcp',
                 child: Text(AppStrings.of(ctx, 'mcp_title')),
@@ -996,13 +1115,13 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     final isEn = Localizations.localeOf(context).languageCode == 'en';
     switch (view) {
       case _CalendarView.day:
-        return isEn ? 'Day' : '日';
+        return isEn ? 'Day' : '\u65e5';
       case _CalendarView.week:
-        return isEn ? 'Week' : '周';
+        return isEn ? 'Week' : '\u5468';
       case _CalendarView.month:
-        return isEn ? 'Month' : '月';
+        return isEn ? 'Month' : '\u6708';
       case _CalendarView.gantt:
-        return isEn ? 'Gantt' : '甘特';
+        return isEn ? 'Gantt' : '\u7518\u7279';
     }
   }
 
@@ -1010,17 +1129,18 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     final isEn = Localizations.localeOf(context).languageCode == 'en';
     switch (field) {
       case _CalendarField.time:
-        return isEn ? 'Time' : '时间';
+        return isEn ? 'Time' : '\u65f6\u95f4';
       case _CalendarField.tag:
-        return isEn ? 'Tag' : '标签';
+        return isEn ? 'Tag' : '\u6807\u7b7e';
       case _CalendarField.status:
-        return isEn ? 'Status' : '状态';
+        return isEn ? 'Status' : '\u72b6\u6001';
       case _CalendarField.reminder:
-        return isEn ? 'Reminder' : '提醒';
+        return isEn ? 'Reminder' : '\u63d0\u9192';
       case _CalendarField.goal:
-        return isEn ? 'Goal' : '目标';
+        return isEn ? 'Goal' : '\u76ee\u6807';
     }
   }
+
 
   int _entryDurationMinutes(ScheduleEntry entry) {
     return ((entry.height / 80.0) * 60.0).round().clamp(1, 24 * 60);
@@ -1687,7 +1807,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             ),
             const SizedBox(height: 8),
             if (entries.isEmpty)
-              Text('暂无条目', style: TextStyle(color: theme.colorScheme.outline))
+              Text('\u6682\u65e0\u65e5\u7a0b\u6761\u76ee', style: TextStyle(color: theme.colorScheme.outline))
             else
               ...entries.map(
                 (entry) => Padding(
@@ -1738,7 +1858,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               ),
               const SizedBox(height: 2),
               Text(
-                '${entry.time.format(context)} · ${_entryDurationMinutes(entry)}m',
+                '${entry.time.format(context)} 璺?${_entryDurationMinutes(entry)}m',
                 style: TextStyle(
                   fontSize: 10,
                   color: theme.colorScheme.outline,
@@ -1856,69 +1976,79 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setInner) => AlertDialog(
           title: Text(AppStrings.of(ctx2, 'calendar_insert_urgent_title')),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleCtrl,
-                decoration: InputDecoration(
-                  labelText: AppStrings.of(ctx2, 'label_title'),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
+          content: ConstrainedBox(
+            constraints: MobileFeedback.dialogConstraints(ctx2, maxWidth: 420),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(AppStrings.of(ctx2, 'label_minutes')),
-                  const SizedBox(width: 8),
-                  DropdownButton<int>(
-                    value: minutes,
-                    items: const [10, 15, 25, 30, 45, 60]
-                        .map(
-                          (v) => DropdownMenuItem(value: v, child: Text('$v')),
-                        )
-                        .toList(),
-                    onChanged: (v) {
-                      if (v != null) setInner(() => minutes = v);
-                    },
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: InputDecoration(
+                      labelText: AppStrings.of(ctx2, 'label_title'),
+                    ),
                   ),
-                  const Spacer(),
-                  Text(AppStrings.of(ctx2, 'label_priority')),
-                  const SizedBox(width: 6),
-                  DropdownButton<int>(
-                    value: priority,
-                    items: const [1, 2, 3, 4, 5]
-                        .map(
-                          (v) => DropdownMenuItem(value: v, child: Text('$v')),
-                        )
-                        .toList(),
-                    onChanged: (v) {
-                      if (v != null) setInner(() => priority = v);
-                    },
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(AppStrings.of(ctx2, 'label_minutes')),
+                      DropdownButton<int>(
+                        value: minutes,
+                        items: const [10, 15, 25, 30, 45, 60]
+                            .map(
+                              (v) =>
+                                  DropdownMenuItem(value: v, child: Text('$v')),
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setInner(() => minutes = v);
+                        },
+                      ),
+                      Text(AppStrings.of(ctx2, 'label_priority')),
+                      DropdownButton<int>(
+                        value: priority,
+                        items: const [1, 2, 3, 4, 5]
+                            .map(
+                              (v) =>
+                                  DropdownMenuItem(value: v, child: Text('$v')),
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setInner(() => priority = v);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(AppStrings.of(ctx2, 'label_cognitive_load')),
+                      DropdownButton<CognitiveLoad>(
+                        value: load,
+                        items: CognitiveLoad.values
+                            .map(
+                              (v) => DropdownMenuItem(
+                                value: v,
+                                child: Text(_cognitiveLoadLabel(ctx2, v)),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setInner(() => load = v);
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Text(AppStrings.of(ctx2, 'label_cognitive_load')),
-                  const SizedBox(width: 8),
-                  DropdownButton<CognitiveLoad>(
-                    value: load,
-                    items: CognitiveLoad.values
-                        .map(
-                          (v) => DropdownMenuItem(
-                            value: v,
-                            child: Text(_cognitiveLoadLabel(ctx2, v)),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) {
-                      if (v != null) setInner(() => load = v);
-                    },
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
           actions: [
             TextButton(
@@ -2013,18 +2143,28 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
       if (!mounted) return;
 
-      final msg = res.path != null
-          ? AppStrings.of(
+      final msg = MobileFeedback.isMobilePhone(context)
+          ? MobileFeedback.localized(
               context,
-              'calendar_ics_exported_path',
-              params: {'path': res.path ?? ''},
+              zh: '\u0049\u0043\u0053 \u6587\u4ef6\u5df2\u4fdd\u5b58\u5230\u5e94\u7528\u76ee\u5f55\u3002',
+              en: 'The ICS file was saved to app storage.',
             )
-          : AppStrings.of(
-              context,
-              'calendar_ics_exported_download',
-              params: {'fileName': fileName},
-            );
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+          : (res.path != null
+              ? AppStrings.of(
+                  context,
+                  'calendar_ics_exported_path',
+                  params: {'path': res.path ?? ''},
+                )
+              : AppStrings.of(
+                  context,
+                  'calendar_ics_exported_download',
+                  params: {'fileName': fileName},
+                ));
+      MobileFeedback.showInfo(
+        context,
+        zhMessage: msg,
+        enMessage: msg,
+      );
     } catch (e, st) {
       sw.stop();
       AppServices.diagnostics.recordIcsExport(
@@ -2040,16 +2180,14 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         data: {'ms': sw.elapsedMilliseconds},
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppStrings.of(
-              context,
-              'calendar_ics_export_failed',
-              params: {'error': e.toString()},
-            ),
-          ),
-        ),
+      MobileFeedback.showError(
+        context,
+        category: 'ics',
+        message: 'export failed',
+        zhMessage: '\u6682\u65f6\u65e0\u6cd5\u5bfc\u51fa ICS\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
+        enMessage: 'Unable to export ICS right now.',
+        error: e,
+        stackTrace: st,
       );
     }
   }
@@ -2061,17 +2199,17 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(AppStrings.of(ctx, 'calendar_ics_import_title')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              AppStrings.of(ctx, 'calendar_ics_import_help'),
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: 520,
-              child: TextField(
+        content: ConstrainedBox(
+          constraints: MobileFeedback.dialogConstraints(ctx, maxWidth: 520),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                AppStrings.of(ctx, 'calendar_ics_import_help'),
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 8),
+              TextField(
                 controller: ctrl,
                 minLines: 6,
                 maxLines: 12,
@@ -2080,8 +2218,8 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   hintText: AppStrings.of(ctx, 'calendar_ics_import_hint'),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -2194,7 +2332,11 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               params: {'added': added.toString()},
             );
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      MobileFeedback.showInfo(
+        context,
+        zhMessage: msg,
+        enMessage: msg,
+      );
 
       await _loadSchedule();
     } catch (e, st) {
@@ -2211,16 +2353,14 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       );
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppStrings.of(
-              context,
-              'calendar_ics_import_failed',
-              params: {'error': e.toString()},
-            ),
-          ),
-        ),
+      MobileFeedback.showError(
+        context,
+        category: 'ics',
+        message: 'import failed',
+        zhMessage: '\u6682\u65f6\u65e0\u6cd5\u5bfc\u5165 ICS \u5185\u5bb9\uff0c\u8bf7\u68c0\u67e5\u540e\u91cd\u8bd5\u3002',
+        enMessage: 'Unable to import the ICS content.',
+        error: e,
+        stackTrace: st,
       );
     }
   }
@@ -2268,9 +2408,12 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setInner) => AlertDialog(
           title: Text(AppStrings.of(context, 'dialog_add_title')),
-          content: SingleChildScrollView(
-            child: Column(
+          content: ConstrainedBox(
+            constraints: MobileFeedback.dialogConstraints(ctx2, maxWidth: 460),
+            child: SingleChildScrollView(
+              child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 TextField(
                   controller: titleCtrl,
@@ -2285,10 +2428,12 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(AppStrings.of(context, 'label_duration')),
-                    const SizedBox(width: 8),
                     DropdownButton<double>(
                       value: height,
                       items: const [
@@ -2301,7 +2446,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                         if (v != null) setInner(() => height = v);
                       },
                     ),
-                    const Spacer(),
                     DropdownButton<Color>(
                       value: color,
                       items: [
@@ -2325,10 +2469,12 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(AppStrings.of(context, 'label_start_time')),
-                    const SizedBox(width: 8),
                     TextButton(
                       onPressed: () async {
                         final t = await showTimePicker(
@@ -2344,10 +2490,12 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(AppStrings.of(context, 'calendar_reminder_label')),
-                    const SizedBox(width: 8),
                     DropdownButton<int>(
                       value: reminderMinutesBefore,
                       items: [
@@ -2367,16 +2515,17 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                         }
                       },
                     ),
-                    const SizedBox(width: 6),
                     if (reminderMinutesBefore > 0)
                       Text(AppStrings.of(context, 'calendar_reminder_suffix')),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Text(AppStrings.of(context, 'calendar_repeat_label')),
-                    const SizedBox(width: 8),
                     DropdownButton<RepeatFrequency>(
                       value: repeat,
                       items: [
@@ -2419,10 +2568,12 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 ),
                 if (repeat != RepeatFrequency.none) ...[
                   const SizedBox(height: 8),
-                  Row(
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(AppStrings.of(context, 'calendar_repeat_until')),
-                      const SizedBox(width: 8),
                       TextButton(
                         onPressed: () async {
                           final now = DateTime.now();
@@ -2463,6 +2614,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 ],
               ],
             ),
+          ),
           ),
           actions: [
             TextButton(

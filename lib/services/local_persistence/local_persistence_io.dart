@@ -1,6 +1,4 @@
-﻿import 'dart:io';
-
-import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 import 'local_persistence.dart';
 
@@ -17,8 +15,11 @@ class IoLocalPersistence implements LocalPersistence {
     String basePath;
 
     if (Platform.isAndroid || Platform.isIOS) {
-      final appDir = await getApplicationDocumentsDirectory();
-      basePath = appDir.path;
+      try {
+        basePath = Directory.systemTemp.parent.path;
+      } catch (_) {
+        basePath = Directory.systemTemp.path;
+      }
     } else if (Platform.isWindows) {
       final env = Platform.environment;
       final appData = env['APPDATA'];

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../utils/app_strings.dart';
+import '../utils/mobile_feedback.dart';
 import 'focus_page.dart';
 import 'micro_task_page.dart';
 import 'profile_page.dart';
@@ -122,6 +123,7 @@ class _NarrowShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final compactLabels = MobileFeedback.isNarrow(context, breakpoint: 420);
 
     return Stack(
       children: [
@@ -150,20 +152,32 @@ class _NarrowShell extends StatelessWidget {
                 ),
                 child: SafeArea(
                   top: false,
-                  child: NavigationBar(
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    height: 56,
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: onSelect,
-                    destinations: [
-                      for (final d in destinations)
-                        NavigationDestination(
-                          icon: Icon(d.icon, size: 22),
-                          selectedIcon: Icon(d.selectedIcon, size: 22),
-                          label: d.label,
-                        ),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0,
+                      vertical: 4.0,
+                    ),
+                    child: NavigationBar(
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      height: compactLabels ? 68 : null,
+                      labelBehavior: compactLabels
+                          ? NavigationDestinationLabelBehavior.onlyShowSelected
+                          : NavigationDestinationLabelBehavior.alwaysShow,
+                      selectedIndex: selectedIndex,
+                      onDestinationSelected: onSelect,
+                      destinations: [
+                        for (final d in destinations)
+                          NavigationDestination(
+                            icon: Icon(d.icon, size: compactLabels ? 20 : 22),
+                            selectedIcon: Icon(
+                              d.selectedIcon,
+                              size: compactLabels ? 20 : 22,
+                            ),
+                            label: d.label,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),

@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
@@ -10,22 +10,16 @@ class IcsSaveResult {
 }
 
 class IcsFileSaver {
-  static Future<IcsSaveResult> save(String ics, {required String fileName}) async {
+  static Future<IcsSaveResult> save(
+    String ics, {
+    required String fileName,
+  }) async {
     if (kIsWeb) {
-      // Should be handled by web implementation.
       return const IcsSaveResult(label: 'web');
     }
 
-    final env = Platform.environment;
-
-    String baseDir;
-    if (Platform.isWindows) {
-      baseDir = env['APPDATA'] ?? env['USERPROFILE'] ?? Directory.current.path;
-    } else {
-      baseDir = env['HOME'] ?? Directory.current.path;
-    }
-
-    final dir = Directory('$baseDir${Platform.pathSeparator}sxzppp${Platform.pathSeparator}exports');
+    final baseDir = _resolveBaseDir();
+    final dir = Directory('$baseDir${Platform.pathSeparator}exports');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
@@ -34,5 +28,29 @@ class IcsFileSaver {
     await file.writeAsString(ics, flush: true);
 
     return IcsSaveResult(label: 'saved', path: file.path);
+  }
+
+  static String _resolveBaseDir() {
+    if (Platform.isAndroid || Platform.isIOS) {
+      try {
+        return Directory.systemTemp.parent.path;
+      } catch (_) {
+        return Directory.systemTemp.path;
+      }
+    }
+
+    if (Platform.isWindows) {
+      final env = Platform.environment;
+      return env['APPDATA'] ??
+          env['USERPROFILE'] ??
+          Directory.current.path;
+    }
+
+    if (Platform.isMacOS || Platform.isLinux) {
+      final env = Platform.environment;
+      return env['HOME'] ?? Directory.current.path;
+    }
+
+    return Directory.systemTemp.path;
   }
 }

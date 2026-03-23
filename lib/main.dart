@@ -7,6 +7,7 @@ import 'app_globals.dart';
 import 'screens/main_screen.dart';
 import 'services/app_services.dart';
 import 'utils/app_strings.dart';
+import 'utils/mobile_feedback.dart';
 
 Future<void> main() async {
   await runZonedGuarded(
@@ -63,51 +64,52 @@ Future<void> main() async {
 void _showFatalError(Object error, StackTrace stack) {
   WidgetsBinding.instance.addPostFrameCallback((_) {
     final context = appNavigatorKey.currentContext;
-    if (context != null && context.mounted) {
-      showDialog(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          backgroundColor: const Color(0xFFFFFFFF),
-          title: const Text(
-            '发生错误',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  '应用程序遇到了一个错误：',
-                  style: TextStyle(color: Color(0xFF8E8E93)),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  error.toString(),
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    color: Color(0xFF2D2D2D),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text(
-                '关闭',
-                style: TextStyle(color: Color(0xFF2D2D2D)),
-              ),
-            ),
-          ],
-        ),
+    if (context == null || !context.mounted) return;
+
+    if (MobileFeedback.isMobilePhone(context)) {
+      MobileFeedback.showInfo(
+        context,
+        zhMessage: '\u5f53\u524d\u64cd\u4f5c\u6682\u65f6\u65e0\u6cd5\u5b8c\u6210\uff0c\u5df2\u81ea\u52a8\u8bb0\u5f55\u5f02\u5e38\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
+        enMessage:
+            'This action could not be completed. The error was logged, please try again later.',
       );
+      return;
     }
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        backgroundColor: const Color(0xFFFFFFFF),
+        title: const Text(
+          '\u64cd\u4f5c\u672a\u5b8c\u6210',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '\u5e94\u7528\u9047\u5230\u5f02\u5e38\uff0c\u5df2\u81ea\u52a8\u8bb0\u5f55\u3002\u8bf7\u8fd4\u56de\u540e\u91cd\u8bd5\uff1b\u5982\u679c\u95ee\u9898\u6301\u7eed\uff0c\u8bf7\u5230\u201c\u6211\u7684 > \u8bca\u65ad\u201d\u67e5\u770b\u65e5\u5fd7\u3002',
+                style: TextStyle(color: Color(0xFF8E8E93)),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text(
+              '\u5173\u95ed',
+              style: TextStyle(color: Color(0xFF2D2D2D)),
+            ),
+          ),
+        ],
+      ),
+    );
   });
 }
 
@@ -228,7 +230,7 @@ class _BattleManAppState extends State<BattleManApp> {
     return MaterialApp(
       navigatorKey: appNavigatorKey,
       scaffoldMessengerKey: appScaffoldMessengerKey,
-      title: '时序智配',
+      title: '\u65f6\u5e8f\u667a\u914d',
       onGenerateTitle: (context) => AppStrings.of(context, 'app_title'),
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
@@ -240,6 +242,18 @@ class _BattleManAppState extends State<BattleManApp> {
       ],
       supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],
       locale: _locale,
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        final width = mediaQuery.size.width;
+        final currentScale = mediaQuery.textScaler.scale(1);
+        final maxScale = width < 420 ? 1.08 : 1.16;
+        final clampedScale = currentScale.clamp(0.95, maxScale);
+
+        return MediaQuery(
+          data: mediaQuery.copyWith(textScaler: TextScaler.linear(clampedScale)),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: const MainScreen(),
     );
   }

@@ -72,3 +72,4 @@ key.properties
 # -----------------------
 doc/api/
 coverage/
+android/gradle/wrapper/gradle-8.14-all.zip

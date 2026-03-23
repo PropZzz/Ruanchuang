@@ -19,24 +19,41 @@ class TextFileSaver {
     }
 
     try {
-      final env = Platform.environment;
-      String baseDir = Directory.current.path;
-      if (Platform.isWindows) {
-        baseDir = env['TEMP'] ?? env['TMP'] ?? baseDir;
-      } else {
-        baseDir = env['TMPDIR'] ?? '/tmp';
-      }
-
-      final dir = Directory('$baseDir${Platform.pathSeparator}sxzppp${Platform.pathSeparator}exports');
+      final baseDir = _resolveBaseDir();
+      final dir = Directory('$baseDir${Platform.pathSeparator}exports');
       if (!await dir.exists()) {
         await dir.create(recursive: true);
       }
 
-      final f = File('${dir.path}${Platform.pathSeparator}$fileName');
-      await f.writeAsString(content, flush: true);
-      return SaveTextResult(path: f.path);
+      final file = File('${dir.path}${Platform.pathSeparator}$fileName');
+      await file.writeAsString(content, flush: true);
+      return SaveTextResult(path: file.path);
     } catch (e) {
       return SaveTextResult(error: e.toString());
     }
+  }
+
+  static String _resolveBaseDir() {
+    if (Platform.isAndroid || Platform.isIOS) {
+      try {
+        return Directory.systemTemp.parent.path;
+      } catch (_) {
+        return Directory.systemTemp.path;
+      }
+    }
+
+    if (Platform.isWindows) {
+      final env = Platform.environment;
+      return env['APPDATA'] ??
+          env['USERPROFILE'] ??
+          Directory.current.path;
+    }
+
+    if (Platform.isMacOS || Platform.isLinux) {
+      final env = Platform.environment;
+      return env['HOME'] ?? Directory.current.path;
+    }
+
+    return Directory.systemTemp.path;
   }
 }
