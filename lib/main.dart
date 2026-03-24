@@ -274,6 +274,7 @@ class _BattleManAppState extends State<BattleManApp> {
     final base = ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      fontFamily: 'NotoSerifSC',
       scaffoldBackgroundColor: bgColor,
       colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFF8E8E93), // 中性基础色
