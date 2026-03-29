@@ -6,9 +6,21 @@ import 'data_service.dart';
 
 /// In-memory mock implementation of [DataService].
 class MockDataService implements DataService {
-  MockDataService._();
+  static final MockDataService _instance = MockDataService._internal();
+  factory MockDataService() => _instance;
+  MockDataService._internal() {
+    // 模拟网络延迟
+    Future.delayed(const Duration(milliseconds: 80));
+  }
 
-  static final MockDataService instance = MockDataService._();
+  @override
+  Future<EmotionType> getCurrentEmotion() async {
+    await Future.delayed(const Duration(milliseconds: 60)); // 模拟感知延迟
+    // Mock 数据：随机但可控（实际项目中可替换为传感器数据）
+    final rand = DateTime.now().millisecond % 4;
+    return EmotionType.values[rand];
+  }
+  
 
   final _rand = Random();
   final List<ScheduleEntry> _schedule = [];
@@ -33,6 +45,7 @@ class MockDataService implements DataService {
   Future<EnergyStatus> getEnergyStatus() async {
     await _delay();
     return const EnergyStatus(
+      level: "medium",
       status: '心流',
       description: '模拟数据',
       batteryPercent: 85,
@@ -309,4 +322,5 @@ class MockDataService implements DataService {
   Future<void> setLocale(String locale) async {
     await _delay();
   }
+  
 }
