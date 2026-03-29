@@ -433,6 +433,7 @@ class LocalDataService implements DataService {
   Future<EnergyStatus> getEnergyStatus() async {
     await _ensureLoaded();
     return const EnergyStatus(
+      level: "medium",
       status: '心流',
       description: '仅本地模拟，不采集生理数据。',
       batteryPercent: 85,
@@ -895,4 +896,14 @@ class LocalDataService implements DataService {
 
     await _save();
   }
+  @override
+  Future<EmotionType> getCurrentEmotion() async {
+    // 模拟真实感知延迟（实际项目可接可穿戴设备）
+    await Future.delayed(const Duration(milliseconds: 60));
+    
+    // 随机返回一种情绪（测试用，后面可换成真实 HRV/传感器数据）
+    final rand = DateTime.now().millisecond % 4;
+    return EmotionType.values[rand];
+  }
+  
 }
