@@ -1,5 +1,28 @@
 import 'package:flutter/material.dart';
-
+  enum EmotionType {
+  highEfficiency,   // 高效
+  stable,           // 平稳
+  fatigue,          // 疲惫
+  irritable,        // 烦躁
+}
+extension EmotionTypeExtension on EmotionType {
+  String get label {
+    switch (this) {
+      case EmotionType.highEfficiency: return '高效';
+      case EmotionType.stable: return '平稳';
+      case EmotionType.fatigue: return '疲惫';
+      case EmotionType.irritable: return '烦躁';
+    }
+  }
+  Color get color {
+    switch (this) {
+      case EmotionType.highEfficiency: return Colors.green;
+      case EmotionType.stable: return Colors.blue;
+      case EmotionType.fatigue: return Colors.orange;
+      case EmotionType.irritable: return Colors.red;
+    }
+  }
+}
 String _two(int v) => v.toString().padLeft(2, '0');
 
 TimeOfDay _timeFromJson(Object? json) {
@@ -200,11 +223,16 @@ class EnergyStatus {
   final String status;
   final String description;
   final int batteryPercent;
-
+  final String level; // "high"/"medium"/"low"
+  final EmotionType emotion;
+  final String flowState; // "flow"/"normal"/"blocked"
   const EnergyStatus({
     required this.status,
     required this.description,
     required this.batteryPercent,
+    required this.level,
+    this.emotion = EmotionType.stable,
+    this.flowState = "normal",
   });
 
   Map<String, Object?> toJson() => {
@@ -213,10 +241,13 @@ class EnergyStatus {
     'batteryPercent': batteryPercent,
   };
 
-  static EnergyStatus fromJson(Map<String, Object?> json) => EnergyStatus(
+ static EnergyStatus fromJson(Map<String, Object?> json) => EnergyStatus(
+    level: (json['level'] as String?) ?? 'medium',           // ← 必须加上这一行
+    emotion: EmotionType.stable,                             // 默认值，避免 json 里没有 emotion 时崩溃
+    flowState: (json['flowState'] as String?) ?? 'normal',
     status: (json['status'] as String?) ?? '',
     description: (json['description'] as String?) ?? '',
-    batteryPercent: (json['batteryPercent'] as num?)?.toInt() ?? 0,
+    batteryPercent: (json['batteryPercent'] as num?)?.toInt() ?? 85,
   );
 }
 
@@ -413,6 +444,7 @@ class EmotionCheckIn {
     required this.state,
     this.note,
   });
+
 
   Map<String, Object?> toJson() => {
     'id': id,
