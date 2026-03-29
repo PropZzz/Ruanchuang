@@ -11,6 +11,7 @@ import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 
 class FocusPage extends StatefulWidget {
+  
   const FocusPage({super.key});
 
   @override
@@ -18,9 +19,10 @@ class FocusPage extends StatefulWidget {
 }
 
 class _FocusPageState extends State<FocusPage> {
+  EmotionType? _currentEmotion;
+  EnergyStatus? _energyStatus;
   final _dataService = AppServices.dataService;
 
-  EnergyStatus? _energyStatus;
   ScheduleEntry? _currentTask;
   List<ScheduleEntry> _nextTasks = [];
 
@@ -163,6 +165,13 @@ class _FocusPageState extends State<FocusPage> {
       final entriesFuture = _dataService.getScheduleEntries();
 
       final energy = await energyFuture;
+      final emotion = await _dataService.getCurrentEmotion();
+      _currentEmotion = emotion;
+
+      // 情绪预警与关怀机制（疲惫/烦躁时弹出）
+      if (emotion == EmotionType.fatigue || emotion == EmotionType.irritable) {
+        _showCareDialog();
+      }
       final allEntries = await entriesFuture;
 
       if (!mounted) return;
@@ -594,6 +603,7 @@ class _FocusPageState extends State<FocusPage> {
   Widget _buildEnergyStatusCard() {
     final theme = Theme.of(context);
     final energy = _energyStatus;
+    final emotion = _currentEmotion;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -629,6 +639,15 @@ class _FocusPageState extends State<FocusPage> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (emotion != null)
+                Text(
+                    '当前情绪：${emotion.label}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: emotion.color,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 Text(
                   energy?.description ??
                       AppStrings.of(context, 'status_flow_desc'),
@@ -771,6 +790,38 @@ class _FocusPageState extends State<FocusPage> {
     return Text(
       text,
       style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+    );
+  }
+  void _showCareDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('🛡️ 情绪关怀提醒'),
+        content: Text(
+          '检测到您当前${_currentEmotion?.label ?? "未知"}状态。\n'
+          '建议切换为低压力任务或插入 5 分钟休息。\n'
+          '您今天已经很棒了，继续保持！',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('我知道了'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('已为您推荐 3 个微任务（5-10分钟）'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              // 以后可以在这里跳转 MicroTaskPage
+            },
+            child: const Text('切换微任务'),
+          ),
+        ],
+      ),
     );
   }
 }
