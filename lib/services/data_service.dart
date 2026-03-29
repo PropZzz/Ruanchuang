@@ -7,6 +7,7 @@ import '../models/models.dart';
 /// - Swappable implementations (local/remote/mock)
 /// - Stable contract for UI (screens)
 abstract class DataService {
+  Future<EmotionType> getCurrentEmotion();
   Future<EnergyStatus> getEnergyStatus();
   Future<EmotionState> getEmotionState();
   Future<void> addEmotionCheckIn(EmotionCheckIn checkIn);
