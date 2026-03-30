@@ -36,6 +36,10 @@ class CompositeDataService implements DataService {
   }
 
   @override
+  Future<EmotionType> getCurrentEmotion() =>
+      _read((s) => s.getCurrentEmotion());
+
+  @override
   Future<EnergyStatus> getEnergyStatus() => _read((s) => s.getEnergyStatus());
 
   @override
