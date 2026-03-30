@@ -67,4 +67,20 @@ abstract class DataService {
   );
 
   Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request);
+
+  // ---------------------------------------------------------------------------
+  // Authentication (账号及登录系统)
+  // ---------------------------------------------------------------------------
+
+  /// 获取当前登录的用户
+  Future<UserAccount?> getCurrentUser();
+
+  /// 账号密码登录
+  Future<bool> login(String account, String password);
+
+  /// 注册并自动登录
+  Future<bool> registerAccount({required String username, required String password});
+
+  /// 退出登录
+  Future<void> logout();
 }
