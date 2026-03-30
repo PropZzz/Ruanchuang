@@ -125,59 +125,55 @@ class _NarrowShell extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final compactLabels = MobileFeedback.isNarrow(context, breakpoint: 420);
 
-    return Stack(
+    // 优化：将 Stack 替换为 Column，避免底部导航栏遮挡页面内容及各页面的悬浮按钮(FAB)
+    return Column(
       children: [
         // 主内容区
-        Positioned.fill(child: child),
+        Expanded(child: ClipRRect(child: child)),
         // 底部悬浮导航栏
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: ClipRRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface.withOpacity(
-                    isDark ? 0.75 : 0.85,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
-                      blurRadius: 30,
-                      offset: const Offset(0, -10),
-                    ),
-                  ],
+        ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withOpacity(
+                  isDark ? 0.75 : 0.85,
                 ),
-                child: SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0,
-                      vertical: 4.0,
-                    ),
-                    child: NavigationBar(
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      height: compactLabels ? 68 : null,
-                      labelBehavior: compactLabels
-                          ? NavigationDestinationLabelBehavior.onlyShowSelected
-                          : NavigationDestinationLabelBehavior.alwaysShow,
-                      selectedIndex: selectedIndex,
-                      onDestinationSelected: onSelect,
-                      destinations: [
-                        for (final d in destinations)
-                          NavigationDestination(
-                            icon: Icon(d.icon, size: compactLabels ? 20 : 22),
-                            selectedIcon: Icon(
-                              d.selectedIcon,
-                              size: compactLabels ? 20 : 22,
-                            ),
-                            label: d.label,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+                    blurRadius: 30,
+                    offset: const Offset(0, -10),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8.0,
+                    vertical: 4.0,
+                  ),
+                  child: NavigationBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    height: compactLabels ? 68 : null,
+                    labelBehavior: compactLabels
+                        ? NavigationDestinationLabelBehavior.onlyShowSelected
+                        : NavigationDestinationLabelBehavior.alwaysShow,
+                    selectedIndex: selectedIndex,
+                    onDestinationSelected: onSelect,
+                    destinations: [
+                      for (final d in destinations)
+                        NavigationDestination(
+                          icon: Icon(d.icon, size: compactLabels ? 20 : 22),
+                          selectedIcon: Icon(
+                            d.selectedIcon,
+                            size: compactLabels ? 20 : 22,
                           ),
-                      ],
-                    ),
+                          label: d.label,
+                        ),
+                    ],
                   ),
                 ),
               ),
