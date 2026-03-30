@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../services/app_services.dart';
@@ -48,7 +48,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
   final _dataService = AppServices.dataService;
 
-  // For demo: keep an in-memory task list for the smart planner.
   List<PlanTask> _smartTasks = const [];
   PlanTask? _urgentInserted;
 
@@ -112,7 +111,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         context,
         category: 'schedule',
         message: 'load schedule failed',
-        zhMessage: '\u6682\u65f6\u65e0\u6cd5\u52a0\u8f7d\u65e5\u7a0b\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
+        zhMessage: '暂时无法加载日程，请稍后重试。',
         enMessage: 'Unable to load the schedule right now.',
         error: e,
         stackTrace: st,
@@ -180,7 +179,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
   }
 
   List<TimeWindow> _defaultWindows() {
-    // Simple working windows: 08:00-12:00 and 13:30-18:30.
     return const [
       TimeWindow(
         start: TimeOfDay(hour: 8, minute: 0),
@@ -194,7 +192,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
   }
 
   List<PlanTask> _seedTasks(DateTime day) {
-    // 3+ reproducible tasks for demo.
     final d = DateTime(day.year, day.month, day.day);
     return [
       PlanTask(
@@ -204,7 +201,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         priority: 4,
         load: CognitiveLoad.high,
         tag: 'Deep Work',
-        due: d.add(const Duration(hours: 12)), // 12:00
+        due: d.add(const Duration(hours: 12)),
       ),
       PlanTask(
         id: 't_email',
@@ -350,7 +347,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         context,
         category: 'schedule',
         message: 'load smart schedule failed',
-        zhMessage: '\u6682\u65f6\u65e0\u6cd5\u751f\u6210\u667a\u80fd\u89c4\u5212\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
+        zhMessage: '暂时无法生成智能规划，请稍后重试。',
         enMessage: 'Smart planning is unavailable right now.',
         error: e,
         stackTrace: st,
@@ -455,37 +452,37 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             ),
           if (!isCompactAppBar)
             PopupMenuButton<_CalendarField>(
-              tooltip: '\u663e\u793a\u5b57\u6bb5',
-            icon: const Icon(Icons.tune),
-            onSelected: _toggleField,
-            itemBuilder: (ctx) => [
-              CheckedPopupMenuItem(
-                value: _CalendarField.time,
-                checked: _visibleFields.contains(_CalendarField.time),
-                child: Text(_fieldLabel(ctx, _CalendarField.time)),
-              ),
-              CheckedPopupMenuItem(
-                value: _CalendarField.tag,
-                checked: _visibleFields.contains(_CalendarField.tag),
-                child: Text(_fieldLabel(ctx, _CalendarField.tag)),
-              ),
-              CheckedPopupMenuItem(
-                value: _CalendarField.status,
-                checked: _visibleFields.contains(_CalendarField.status),
-                child: Text(_fieldLabel(ctx, _CalendarField.status)),
-              ),
-              CheckedPopupMenuItem(
-                value: _CalendarField.reminder,
-                checked: _visibleFields.contains(_CalendarField.reminder),
-                child: Text(_fieldLabel(ctx, _CalendarField.reminder)),
-              ),
-              CheckedPopupMenuItem(
-                value: _CalendarField.goal,
-                checked: _visibleFields.contains(_CalendarField.goal),
-                child: Text(_fieldLabel(ctx, _CalendarField.goal)),
-              ),
-            ],
-          ),
+              tooltip: '显示字段',
+              icon: const Icon(Icons.tune),
+              onSelected: _toggleField,
+              itemBuilder: (ctx) => [
+                CheckedPopupMenuItem(
+                  value: _CalendarField.time,
+                  checked: _visibleFields.contains(_CalendarField.time),
+                  child: Text(_fieldLabel(ctx, _CalendarField.time)),
+                ),
+                CheckedPopupMenuItem(
+                  value: _CalendarField.tag,
+                  checked: _visibleFields.contains(_CalendarField.tag),
+                  child: Text(_fieldLabel(ctx, _CalendarField.tag)),
+                ),
+                CheckedPopupMenuItem(
+                  value: _CalendarField.status,
+                  checked: _visibleFields.contains(_CalendarField.status),
+                  child: Text(_fieldLabel(ctx, _CalendarField.status)),
+                ),
+                CheckedPopupMenuItem(
+                  value: _CalendarField.reminder,
+                  checked: _visibleFields.contains(_CalendarField.reminder),
+                  child: Text(_fieldLabel(ctx, _CalendarField.reminder)),
+                ),
+                CheckedPopupMenuItem(
+                  value: _CalendarField.goal,
+                  checked: _visibleFields.contains(_CalendarField.goal),
+                  child: Text(_fieldLabel(ctx, _CalendarField.goal)),
+                ),
+              ],
+            ),
           if (!isCompactAppBar)
             IconButton(
               tooltip: AppStrings.of(context, 'calendar_tooltip_export_ics'),
@@ -612,7 +609,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               children: [
                 EmotionQuickCheckInCard(
                   onChanged: () async {
-                    // In smart mode, emotion is a direct scheduling input, so replan.
                     if (_mode == _CalendarMode.smart) {
                       await _loadSmartSchedule();
                     }
@@ -675,50 +671,54 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             children: [
               Align(
                 alignment: Alignment.topCenter,
-                child: SegmentedButton<_CalendarView>(
-                  style: ButtonStyle(
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
-                      segmentPadding,
+                // 修复极窄屏幕下选项卡互相遮挡导致溢出报错的问题
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SegmentedButton<_CalendarView>(
+                    style: ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+                        segmentPadding,
+                      ),
                     ),
+                    segments: [
+                      _viewSegment(
+                        context,
+                        view: _CalendarView.day,
+                        icon: Icons.view_day_outlined,
+                        showIcon: showSegmentIcons,
+                        minLabelWidth: showSegmentIcons ? 28 : 30,
+                      ),
+                      _viewSegment(
+                        context,
+                        view: _CalendarView.week,
+                        icon: Icons.view_week_outlined,
+                        showIcon: showSegmentIcons,
+                        minLabelWidth: showSegmentIcons ? 28 : 30,
+                      ),
+                      _viewSegment(
+                        context,
+                        view: _CalendarView.month,
+                        icon: Icons.calendar_month_outlined,
+                        showIcon: showSegmentIcons,
+                        minLabelWidth: showSegmentIcons ? 28 : 30,
+                      ),
+                      _viewSegment(
+                        context,
+                        view: _CalendarView.gantt,
+                        icon: Icons.timeline_outlined,
+                        showIcon: showSegmentIcons,
+                        minLabelWidth: showSegmentIcons ? 40 : 44,
+                      ),
+                    ],
+                    selected: {_view},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (s) {
+                      if (s.isEmpty) return;
+                      setState(() => _view = s.first);
+                    },
                   ),
-                  segments: [
-                    _viewSegment(
-                      context,
-                      view: _CalendarView.day,
-                      icon: Icons.view_day_outlined,
-                      showIcon: showSegmentIcons,
-                      minLabelWidth: showSegmentIcons ? 28 : 30,
-                    ),
-                    _viewSegment(
-                      context,
-                      view: _CalendarView.week,
-                      icon: Icons.view_week_outlined,
-                      showIcon: showSegmentIcons,
-                      minLabelWidth: showSegmentIcons ? 28 : 30,
-                    ),
-                    _viewSegment(
-                      context,
-                      view: _CalendarView.month,
-                      icon: Icons.calendar_month_outlined,
-                      showIcon: showSegmentIcons,
-                      minLabelWidth: showSegmentIcons ? 28 : 30,
-                    ),
-                    _viewSegment(
-                      context,
-                      view: _CalendarView.gantt,
-                      icon: Icons.timeline_outlined,
-                      showIcon: showSegmentIcons,
-                      minLabelWidth: showSegmentIcons ? 40 : 44,
-                    ),
-                  ],
-                  selected: {_view},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (s) {
-                    if (s.isEmpty) return;
-                    setState(() => _view = s.first);
-                  },
                 ),
               ),
               const SizedBox(height: 6),
@@ -875,6 +875,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               child: SizedBox(
                 height: _totalHeight,
                 child: Stack(
+                  clipBehavior: Clip.none, // 防止删除按钮等悬浮部件在边界被截断
                   children: [
                     ...List.generate(
                       _totalHours,
@@ -1115,13 +1116,13 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     final isEn = Localizations.localeOf(context).languageCode == 'en';
     switch (view) {
       case _CalendarView.day:
-        return isEn ? 'Day' : '\u65e5';
+        return isEn ? 'Day' : '日';
       case _CalendarView.week:
-        return isEn ? 'Week' : '\u5468';
+        return isEn ? 'Week' : '周';
       case _CalendarView.month:
-        return isEn ? 'Month' : '\u6708';
+        return isEn ? 'Month' : '月';
       case _CalendarView.gantt:
-        return isEn ? 'Gantt' : '\u7518\u7279';
+        return isEn ? 'Gantt' : '甘特';
     }
   }
 
@@ -1129,15 +1130,15 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     final isEn = Localizations.localeOf(context).languageCode == 'en';
     switch (field) {
       case _CalendarField.time:
-        return isEn ? 'Time' : '\u65f6\u95f4';
+        return isEn ? 'Time' : '时间';
       case _CalendarField.tag:
-        return isEn ? 'Tag' : '\u6807\u7b7e';
+        return isEn ? 'Tag' : '标签';
       case _CalendarField.status:
-        return isEn ? 'Status' : '\u72b6\u6001';
+        return isEn ? 'Status' : '状态';
       case _CalendarField.reminder:
-        return isEn ? 'Reminder' : '\u63d0\u9192';
+        return isEn ? 'Reminder' : '提醒';
       case _CalendarField.goal:
-        return isEn ? 'Goal' : '\u76ee\u6807';
+        return isEn ? 'Goal' : '目标';
     }
   }
 
@@ -1807,7 +1808,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             ),
             const SizedBox(height: 8),
             if (entries.isEmpty)
-              Text('\u6682\u65e0\u65e5\u7a0b\u6761\u76ee', style: TextStyle(color: theme.colorScheme.outline))
+              Text('暂无日程条目', style: TextStyle(color: theme.colorScheme.outline))
             else
               ...entries.map(
                 (entry) => Padding(
@@ -1858,7 +1859,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               ),
               const SizedBox(height: 2),
               Text(
-                '${entry.time.format(context)} 璺?${_entryDurationMinutes(entry)}m',
+                '${entry.time.format(context)} · ${_entryDurationMinutes(entry)}m',
                 style: TextStyle(
                   fontSize: 10,
                   color: theme.colorScheme.outline,
@@ -2063,7 +2064,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 final now = DateTime.now();
                 final day = dateOnly(_selectedDay);
 
-                // Due in 2 hours: encourages queue-jump.
                 final due = now.add(const Duration(hours: 2));
 
                 _urgentInserted = PlanTask(
@@ -2146,7 +2146,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       final msg = MobileFeedback.isMobilePhone(context)
           ? MobileFeedback.localized(
               context,
-              zh: '\u0049\u0043\u0053 \u6587\u4ef6\u5df2\u4fdd\u5b58\u5230\u5e94\u7528\u76ee\u5f55\u3002',
+              zh: 'ICS 文件已保存到应用目录。',
               en: 'The ICS file was saved to app storage.',
             )
           : (res.path != null
@@ -2184,7 +2184,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         context,
         category: 'ics',
         message: 'export failed',
-        zhMessage: '\u6682\u65f6\u65e0\u6cd5\u5bfc\u51fa ICS\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
+        zhMessage: '暂时无法导出 ICS，请稍后重试。',
         enMessage: 'Unable to export ICS right now.',
         error: e,
         stackTrace: st,
@@ -2206,7 +2206,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             children: [
               Text(
                 AppStrings.of(ctx, 'calendar_ics_import_help'),
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -2214,7 +2214,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 minLines: 6,
                 maxLines: 12,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                   hintText: AppStrings.of(ctx, 'calendar_ics_import_hint'),
                 ),
               ),
@@ -2244,12 +2244,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       final d = dateOnly(_selectedDay);
       final imported = IcsBridge.eventsToSchedule(day: d, events: events);
 
-      // Sync strategy:
-      // - Each imported event has a stable id derived from UID:
-      //   - If UID starts with "sxzppp-", restore the original entry id.
-      //   - Otherwise use `ics_<UID>` (see IcsBridge.eventsToSchedule).
-      // - LocalDataService.addScheduleEntry performs an upsert by id.
-      // - We count "updated" when the same id already exists but title/start/duration changed.
       final existing = await _dataService.getScheduleEntries();
       final existingById = <String, ScheduleEntry>{
         for (final e in existing)
@@ -2261,7 +2255,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       for (final e in imported) {
         final id = e.id;
         if (id == null || id.isEmpty) {
-          // Shouldn't happen for ICS import, but keep it safe.
           await _dataService.addScheduleEntry(e);
           added++;
           continue;
@@ -2292,8 +2285,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
         if (!changed) continue;
 
-        // Preserve user-controlled fields that ICS doesn't carry (tag, color, reminders, etc.)
-        // while syncing the fields we consider authoritative from ICS.
         final merged = prev.copyWith(
           title: e.title,
           day: e.day,
@@ -2357,7 +2348,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         context,
         category: 'ics',
         message: 'import failed',
-        zhMessage: '\u6682\u65f6\u65e0\u6cd5\u5bfc\u5165 ICS \u5185\u5bb9\uff0c\u8bf7\u68c0\u67e5\u540e\u91cd\u8bd5\u3002',
+        zhMessage: '暂时无法导入 ICS 内容，请检查后重试。',
         enMessage: 'Unable to import the ICS content.',
         error: e,
         stackTrace: st,
@@ -2697,7 +2688,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
           background: Colors.white24,
         ),
     ];
+    // 修复：添加 clipBehavior 防止关闭按钮被裁剪
     return Stack(
+      clipBehavior: Clip.none, 
       children: [
         Container(
           constraints: BoxConstraints(minHeight: height),
@@ -2755,16 +2748,17 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             ],
           ),
         ),
+        // 修复：修正删除按钮位置防止在边界被裁切
         if (onDelete != null)
           Positioned(
-            right: -8,
-            top: -8,
+            right: 4,
+            top: 4,
             child: SizedBox(
-              width: 32,
-              height: 32,
+              width: 28,
+              height: 28,
               child: IconButton(
                 padding: EdgeInsets.zero,
-                icon: const Icon(Icons.close, size: 16, color: Colors.white70),
+                icon: const Icon(Icons.cancel, size: 20, color: Colors.white70),
                 onPressed: onDelete,
               ),
             ),
