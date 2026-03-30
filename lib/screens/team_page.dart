@@ -22,12 +22,10 @@ class _TeamPageState extends State<TeamPage> {
   List<GoldenWindow> _golden = [];
   List<TeamConflict> _conflicts = [];
 
-  // Conflict probe (manual check) for visual highlight in merged view.
   TimeOfDay? _probeStart;
   int _probeMinutes = 60;
   List<String> _probeConflicts = const [];
 
-  // P0 knobs.
   static const int _meetingMinutes = 60;
   static const int _minParticipants = 2;
   static const EnergyTier _minEnergy = EnergyTier.medium;
@@ -90,6 +88,23 @@ class _TeamPageState extends State<TeamPage> {
     return (total / _members.length).clamp(0.0, 1.0).toDouble();
   }
 
+  void _recomputeCollab() {
+    final day = DateTime.now();
+    final result = AppServices.teamCollabEngine.compute(
+      day: DateTime(day.year, day.month, day.day),
+      windows: _defaultWindows(),
+      calendars: _calendars,
+      minParticipants: _minParticipants,
+      meetingMinutes: _meetingMinutes,
+      minEnergy: _minEnergy,
+    );
+
+    setState(() {
+      _golden = result.goldenWindows;
+      _conflicts = result.busyOverlaps;
+    });
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -101,17 +116,14 @@ class _TeamPageState extends State<TeamPage> {
       final day = DateTime.now();
       final calendarsFuture = _dataService.getTeamCalendars(day);
       final membersFuture = _dataService.getTeamMembers();
-      final calendars = await calendarsFuture;
-      final members = await membersFuture;
+      
+      final cals = await calendarsFuture;
+      final mems = await membersFuture;
 
-      final result = AppServices.teamCollabEngine.compute(
-        day: DateTime(day.year, day.month, day.day),
-        windows: _defaultWindows(),
-        calendars: calendars,
-        minParticipants: _minParticipants,
-        meetingMinutes: _meetingMinutes,
-        minEnergy: _minEnergy,
-      );
+      _calendars = List<TeamMemberCalendar>.from(cals);
+      _members = List<TeamMember>.from(mems);
+
+      _recomputeCollab();
 
       sw.stop();
       AppServices.logStore.info(
@@ -119,26 +131,17 @@ class _TeamPageState extends State<TeamPage> {
         'compute golden windows',
         data: {
           'ms': sw.elapsedMilliseconds,
-          'members': calendars.length,
-          'golden': result.goldenWindows.length,
-          'conflicts': result.busyOverlaps.length,
+          'members': _calendars.length,
+          'golden': _golden.length,
+          'conflicts': _conflicts.length,
         },
       );
 
       if (!mounted) return;
-
-      setState(() {
-        _calendars = calendars;
-        _members = members;
-        _golden = result.goldenWindows;
-        _conflicts = result.busyOverlaps;
-        _loading = false;
-      });
+      setState(() => _loading = false);
     } catch (e, st) {
       if (!mounted) return;
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _loading = false);
       MobileFeedback.showError(
         context,
         category: 'team',
@@ -156,20 +159,24 @@ class _TeamPageState extends State<TeamPage> {
     TeamSharePermission permission,
   ) async {
     try {
+      final index = _calendars.indexWhere((c) => c.memberId == member.memberId);
+      if (index != -1) {
+        setState(() {
+          _calendars[index] = TeamMemberCalendar(
+            memberId: member.memberId,
+            displayName: member.displayName,
+            role: member.role,
+            permission: permission,
+            energy: member.energy,
+            busy: member.busy,
+          );
+        });
+        _recomputeCollab(); 
+      }
+      
       await _dataService.updateTeamSharePermission(member.memberId, permission);
-      if (!mounted) return;
-      await _load();
     } catch (e, st) {
-      if (!mounted) return;
-      MobileFeedback.showError(
-        context,
-        category: 'team',
-        message: 'update team permission failed',
-        zhMessage: '暂时无法更新共享权限，请稍后重试。',
-        enMessage: 'Unable to update the sharing permission.',
-        error: e,
-        stackTrace: st,
-      );
+      debugPrint('Update permission: $e');
     }
   }
 
@@ -210,16 +217,8 @@ class _TeamPageState extends State<TeamPage> {
 
       MobileFeedback.showInfo(
         context,
-        zhMessage: AppStrings.of(
-          context,
-          'team_snack_booked_meeting',
-          params: {'time': w.start.format(context)},
-        ),
-        enMessage: AppStrings.of(
-          context,
-          'team_snack_booked_meeting',
-          params: {'time': w.start.format(context)},
-        ),
+        zhMessage: AppStrings.of(context, 'team_snack_booked_meeting', params: {'time': w.start.format(context)}),
+        enMessage: AppStrings.of(context, 'team_snack_booked_meeting', params: {'time': w.start.format(context)}),
       );
 
       await _load();
@@ -240,64 +239,61 @@ class _TeamPageState extends State<TeamPage> {
   void _showConflictCheck() {
     TimeOfDay start = const TimeOfDay(hour: 15, minute: 0);
     int minutes = _meetingMinutes;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setInner) => AlertDialog(
-          title: Text(AppStrings.of(ctx2, 'team_conflict_check_title')),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text(AppStrings.of(ctx2, 'team_conflict_check_title'), style: const TextStyle(fontWeight: FontWeight.bold)),
           content: ConstrainedBox(
             constraints: MobileFeedback.dialogConstraints(ctx2, maxWidth: 380),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(AppStrings.of(ctx2, 'label_start')),
-                    TextButton(
-                      onPressed: () async {
-                        final t = await showTimePicker(
-                          context: ctx2,
-                          initialTime: start,
-                        );
-                        if (t != null) setInner(() => start = t);
-                      },
-                      child: Text(start.format(ctx2)),
-                    ),
-                  ],
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(AppStrings.of(ctx2, 'label_start'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                      TextButton(
+                        onPressed: () async {
+                          final t = await showTimePicker(context: ctx2, initialTime: start);
+                          if (t != null) setInner(() => start = t);
+                        },
+                        child: Text(start.format(ctx2), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
                 ),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(AppStrings.of(ctx2, 'label_minutes')),
-                    DropdownButton<int>(
-                      value: minutes,
-                      items: const [15, 30, 45, 60, 90]
-                          .map(
-                            (v) =>
-                                DropdownMenuItem(value: v, child: Text('$v')),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        if (v != null) setInner(() => minutes = v);
-                      },
-                    ),
-                  ],
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(AppStrings.of(ctx2, 'label_minutes'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                      DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: minutes,
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).colorScheme.primary),
+                          items: const [15, 30, 45, 60, 90].map((v) => DropdownMenuItem(value: v, child: Text('$v min'))).toList(),
+                          onChanged: (v) { if (v != null) setInner(() => minutes = v); },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(AppStrings.of(ctx2, 'btn_cancel')),
-            ),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(AppStrings.of(ctx2, 'btn_cancel'))),
             ElevatedButton(
               onPressed: () {
                 final day = DateTime.now();
@@ -306,15 +302,6 @@ class _TeamPageState extends State<TeamPage> {
                   start: start,
                   minutes: minutes,
                   calendars: _calendars,
-                );
-                AppServices.logStore.info(
-                  'team',
-                  'conflict check',
-                  data: {
-                    'start': '${start.hour}:${start.minute}',
-                    'minutes': minutes,
-                    'conflicts': conflicts.length,
-                  },
                 );
 
                 setState(() {
@@ -327,21 +314,15 @@ class _TeamPageState extends State<TeamPage> {
                 showDialog(
                   context: context,
                   builder: (ctx3) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     title: Text(AppStrings.of(ctx3, 'team_conflicts_title')),
                     content: Text(
                       conflicts.isEmpty
                           ? AppStrings.of(ctx3, 'team_no_conflicts')
-                          : AppStrings.of(
-                              ctx3,
-                              'team_busy_members',
-                              params: {'members': conflicts.join(', ')},
-                            ),
+                          : AppStrings.of(ctx3, 'team_busy_members', params: {'members': conflicts.join(', ')}),
                     ),
                     actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx3).pop(),
-                        child: Text(AppStrings.of(ctx3, 'btn_ok')),
-                      ),
+                      TextButton(onPressed: () => Navigator.of(ctx3).pop(), child: Text(AppStrings.of(ctx3, 'btn_ok'))),
                     ],
                   ),
                 );
@@ -354,34 +335,180 @@ class _TeamPageState extends State<TeamPage> {
     );
   }
 
+  void _showAddMemberDialog() {
+    final nameCtrl = TextEditingController();
+    final roleCtrl = TextEditingController();
+    final taskCtrl = TextEditingController();
+    final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text(isZh ? '添加团队成员' : 'Add Team Member', style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl, 
+              decoration: InputDecoration(labelText: isZh ? '成员姓名' : 'Member Name', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: roleCtrl, 
+              decoration: InputDecoration(labelText: isZh ? '职位 / 角色' : 'Role / Position', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: taskCtrl, 
+              decoration: InputDecoration(labelText: isZh ? '当前任务' : 'Current Task', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(AppStrings.of(context, 'btn_cancel'))),
+          ElevatedButton(
+            onPressed: () {
+              final name = nameCtrl.text.trim();
+              if (name.isEmpty) return;
+              
+              final role = roleCtrl.text.trim();
+              final task = taskCtrl.text.trim();
+              
+              setState(() {
+                _members.add(TeamMember(
+                  name: name,
+                  task: task,
+                  progress: 0.0,
+                  isHighEnergy: false,
+                  busyTimes: const [],
+                ));
+
+                _calendars.add(TeamMemberCalendar(
+                  memberId: 'm_${DateTime.now().millisecondsSinceEpoch}',
+                  displayName: name,
+                  role: role.isEmpty ? (isZh ? '成员' : 'Member') : role,
+                  permission: TeamSharePermission.details,
+                  energy: EnergyTier.medium,
+                  busy: const [],
+                ));
+              });
+              
+              _recomputeCollab();
+
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isZh ? '成员已添加到团队' : 'Member added successfully')));
+            },
+            child: Text(isZh ? '添加' : 'Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUpdateProgressDialog(TeamMember member) {
+    double currentProgress = member.progress;
+    final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setInner) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text(isZh ? '修改进度: ${member.name}' : 'Update Progress: ${member.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('${(currentProgress * 100).round()}%', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Slider(
+                value: currentProgress,
+                min: 0.0,
+                max: 1.0,
+                divisions: 20,
+                onChanged: (val) => setInner(() => currentProgress = val),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(AppStrings.of(context, 'btn_cancel'))),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  final idx = _members.indexOf(member);
+                  if (idx != -1) {
+                    _members[idx] = TeamMember(
+                      name: member.name,
+                      task: member.task,
+                      progress: currentProgress,
+                      isHighEnergy: member.isHighEnergy,
+                      busyTimes: member.busyTimes,
+                    );
+                  }
+                });
+                Navigator.pop(ctx);
+              },
+              child: Text(AppStrings.of(context, 'btn_save')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isCompactAppBar = MobileFeedback.isNarrow(context, breakpoint: 760);
+    final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
+
+    final kpiMembersLabel = isZh ? '成员数' : 'Members';
+    final kpiGoldenLabel = isZh ? '黄金窗口' : 'Golden';
+    final kpiConflictsLabel = isZh ? '冲突数' : 'Conflicts';
+
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF2F2F7),
       appBar: AppBar(
-        title: Text(AppStrings.of(context, 'team_title')),
+        title: Text(AppStrings.of(context, 'team_title'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
-          if (!isCompactAppBar)
+          if (!isCompactAppBar) ...[
             IconButton(
-              icon: const Icon(Icons.search),
+              icon: const Icon(Icons.person_add_rounded),
+              tooltip: isZh ? '添加成员' : 'Add Member',
+              onPressed: _showAddMemberDialog,
+            ),
+            IconButton(
+              icon: const Icon(Icons.plagiarism_rounded),
+              tooltip: isZh ? '冲突检查' : 'Check Conflict',
               onPressed: _showConflictCheck,
             ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+          ],
+          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _load),
           if (isCompactAppBar)
             PopupMenuButton<String>(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               onSelected: (value) {
                 if (value == 'conflict') {
                   _showConflictCheck();
+                } else if (value == 'add') {
+                  _showAddMemberDialog();
                 }
               },
               itemBuilder: (ctx) => [
                 PopupMenuItem(
+                  value: 'add',
+                  child: Row(children: [const Icon(Icons.person_add_rounded, size: 20), const SizedBox(width: 8), Text(isZh ? '添加成员' : 'Add Member')]),
+                ),
+                PopupMenuItem(
                   value: 'conflict',
-                  child: Text(AppStrings.of(ctx, 'team_conflict_check_title')),
+                  child: Row(children: [const Icon(Icons.plagiarism_rounded, size: 20), const SizedBox(width: 8), Text(AppStrings.of(ctx, 'team_conflict_check_title'))]),
                 ),
               ],
             ),
+          const SizedBox(width: 8),
         ],
       ),
       body: _loading
@@ -392,9 +519,7 @@ class _TeamPageState extends State<TeamPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    theme.colorScheme.secondaryContainer.withValues(
-                      alpha: 0.26,
-                    ),
+                    theme.colorScheme.secondaryContainer.withOpacity(0.26),
                     theme.colorScheme.surface,
                   ],
                 ),
@@ -408,10 +533,12 @@ class _TeamPageState extends State<TeamPage> {
                         final isWide = constraints.maxWidth >= 1100;
                         final bottomPadding = MediaQuery.of(context).padding.bottom + 100;
                         return ListView(
+                          physics: const BouncingScrollPhysics(),
                           padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
                           children: [
                             Card(
                               elevation: 0,
+                              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Wrap(
@@ -420,17 +547,17 @@ class _TeamPageState extends State<TeamPage> {
                                   children: [
                                     _TeamKpiChip(
                                       icon: Icons.people_outline,
-                                      label: 'Members',
+                                      label: kpiMembersLabel,
                                       value: _calendars.length.toString(),
                                     ),
                                     _TeamKpiChip(
                                       icon: Icons.stars_outlined,
-                                      label: 'Golden',
+                                      label: kpiGoldenLabel,
                                       value: _golden.length.toString(),
                                     ),
                                     _TeamKpiChip(
                                       icon: Icons.error_outline,
-                                      label: 'Conflicts',
+                                      label: kpiConflictsLabel,
                                       value: _conflicts.length.toString(),
                                     ),
                                   ],
@@ -438,7 +565,7 @@ class _TeamPageState extends State<TeamPage> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            _buildProgressPanel(context),
+                            _buildProgressPanel(context, isDark),
                             const SizedBox(height: 12),
                             if (isWide)
                               Row(
@@ -446,34 +573,34 @@ class _TeamPageState extends State<TeamPage> {
                                 children: [
                                   Expanded(
                                     flex: 5,
-                                    child: _buildRecommendationPanel(context),
+                                    child: _buildRecommendationPanel(context, isDark),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     flex: 7,
-                                    child: _buildMergedSchedulePanel(context),
+                                    child: _buildMergedSchedulePanel(context, isDark),
                                   ),
                                 ],
                               )
                             else ...[
-                              _buildRecommendationPanel(context),
+                              _buildRecommendationPanel(context, isDark),
                               const SizedBox(height: 12),
-                              _buildMergedSchedulePanel(context),
+                              _buildMergedSchedulePanel(context, isDark),
                             ],
                             const SizedBox(height: 12),
                             if (isWide)
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(child: _buildConflictPanel(context)),
+                                  Expanded(child: _buildConflictPanel(context, isDark)),
                                   const SizedBox(width: 12),
-                                  Expanded(child: _buildMemberPanel(context)),
+                                  Expanded(child: _buildMemberPanel(context, isDark)),
                                 ],
                               )
                             else ...[
-                              _buildConflictPanel(context),
+                              _buildConflictPanel(context, isDark),
                               const SizedBox(height: 12),
-                              _buildMemberPanel(context),
+                              _buildMemberPanel(context, isDark),
                             ],
                           ],
                         );
@@ -486,13 +613,16 @@ class _TeamPageState extends State<TeamPage> {
     );
   }
 
-  Widget _buildProgressPanel(BuildContext context) {
+  Widget _buildProgressPanel(BuildContext context, bool isDark) {
     final avgProgress = _averageProgress();
+    final cardColor = isDark ? const Color(0xFF1C1C1E) : Colors.white;
 
     return Card(
       elevation: 0,
+      color: cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -510,8 +640,11 @@ class _TeamPageState extends State<TeamPage> {
               ],
             ),
             const SizedBox(height: 8),
-            LinearProgressIndicator(value: avgProgress),
-            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(value: avgProgress, minHeight: 8),
+            ),
+            const SizedBox(height: 16),
             if (_members.isEmpty)
               Text(AppStrings.of(context, 'team_no_members'))
             else
@@ -520,30 +653,78 @@ class _TeamPageState extends State<TeamPage> {
                 final taskLabel = member.task.isEmpty
                     ? AppStrings.of(context, 'team_label_task')
                     : member.task;
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: Padding(
+                
+                final memberCal = _calendars.where((c) => c.displayName == member.name).firstOrNull;
+                final roleLabel = memberCal?.role ?? '';
+
+                return GestureDetector(
+                  onTap: () => _showUpdateProgressDialog(member),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
                             Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    member.name,
+                                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                                  ),
+                                  if (roleLabel.isNotEmpty)
+                                    Text(
+                                      roleLabel,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                               child: Text(
-                                member.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
+                                '$percent%',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                            Chip(label: Text('$percent%')),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(taskLabel),
+                        const SizedBox(height: 6),
+                        Text(
+                          taskLabel,
+                          style: TextStyle(
+                            color: isDark ? Colors.white70 : Colors.black87,
+                            fontSize: 13,
+                          ),
+                        ),
                         const SizedBox(height: 8),
-                        LinearProgressIndicator(value: member.progress),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value: member.progress,
+                            minHeight: 6,
+                            backgroundColor: isDark ? Colors.white10 : Colors.black12,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -555,15 +736,14 @@ class _TeamPageState extends State<TeamPage> {
     );
   }
 
-  Widget _buildRecommendationPanel(BuildContext context) {
+  Widget _buildRecommendationPanel(BuildContext context, bool isDark) {
     final compact = MobileFeedback.isNarrow(context, breakpoint: 760);
     return Card(
       elevation: 0,
-      color: Theme.of(
-        context,
-      ).colorScheme.secondaryContainer.withValues(alpha: 0.5),
+      color: Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -597,6 +777,12 @@ class _TeamPageState extends State<TeamPage> {
                   minute: endMin % 60,
                 );
                 return Card(
+                  elevation: 0,
+                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.green.withOpacity(0.3)),
+                  ),
                   margin: const EdgeInsets.only(bottom: 8),
                   child: compact
                       ? Padding(
@@ -606,6 +792,7 @@ class _TeamPageState extends State<TeamPage> {
                             children: [
                               Text(
                                 '${w.start.format(context)} - ${end.format(context)}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 4),
                               Text(
@@ -620,6 +807,10 @@ class _TeamPageState extends State<TeamPage> {
                               const SizedBox(height: 12),
                               ElevatedButton(
                                 onPressed: () => _book(w),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green.shade600,
+                                  foregroundColor: Colors.white,
+                                ),
                                 child: Text(
                                   AppStrings.of(context, 'team_btn_book'),
                                 ),
@@ -631,6 +822,7 @@ class _TeamPageState extends State<TeamPage> {
                           dense: true,
                           title: Text(
                             '${w.start.format(context)} - ${end.format(context)}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
                             AppStrings.of(
@@ -643,6 +835,10 @@ class _TeamPageState extends State<TeamPage> {
                           ),
                           trailing: ElevatedButton(
                             onPressed: () => _book(w),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green.shade600,
+                              foregroundColor: Colors.white,
+                            ),
                             child: Text(AppStrings.of(context, 'team_btn_book')),
                           ),
                         ),
@@ -654,11 +850,13 @@ class _TeamPageState extends State<TeamPage> {
     );
   }
 
-  Widget _buildMergedSchedulePanel(BuildContext context) {
+  Widget _buildMergedSchedulePanel(BuildContext context, bool isDark) {
     return Card(
       elevation: 0,
+      color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -682,11 +880,13 @@ class _TeamPageState extends State<TeamPage> {
     );
   }
 
-  Widget _buildConflictPanel(BuildContext context) {
+  Widget _buildConflictPanel(BuildContext context, bool isDark) {
     return Card(
       elevation: 0,
+      color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -705,9 +905,16 @@ class _TeamPageState extends State<TeamPage> {
             else
               ..._conflicts.map(
                 (c) => Card(
+                  elevation: 0,
+                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    title: Text('${c.memberA} vs ${c.memberB}'),
+                    leading: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                    title: Text(
+                      '${c.memberA} vs ${c.memberB}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                     subtitle: Text(
                       '${c.start.format(context)} - ${c.end.format(context)}',
                     ),
@@ -720,135 +927,149 @@ class _TeamPageState extends State<TeamPage> {
     );
   }
 
-  Widget _buildMemberPanel(BuildContext context) {
+  Widget _buildMemberPanel(BuildContext context, bool isDark) {
     final locale = Localizations.localeOf(context);
     final title = locale.languageCode.startsWith('zh')
         ? '成员权限'
         : 'Members & access';
+    final theme = Theme.of(context);
 
     return Card(
       elevation: 0,
+      color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _sectionTitle(context, title),
             const SizedBox(height: 8),
             ..._calendars.map((m) {
-              final compact = MobileFeedback.isNarrow(context, breakpoint: 760);
               final energyColor = (m.energy.index >= EnergyTier.high.index)
                   ? Colors.green
                   : Colors.grey;
               final perm = _sharePermissionLabel(context, m.permission);
               final energy = _energyTierLabel(context, m.energy);
               final member = _memberForCalendar(m);
-              final progress = member == null
-                  ? '--'
-                  : '${(member.progress * 100).round()}%';
-              final theme = Theme.of(context);
               final progressValue =
                   (member?.progress ?? 0.0).clamp(0.0, 1.0).toDouble();
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 10,
-                        crossAxisAlignment: WrapCrossAlignment.center,
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                          child: Text(
+                            m.displayName.isNotEmpty ? m.displayName[0] : '?',
+                            style: TextStyle(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${m.displayName} (${m.role})',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                AppStrings.of(
+                                  context,
+                                  'team_member_subtitle',
+                                  params: {
+                                    'energy': energy,
+                                    'perm': perm,
+                                    'count': '${m.busy.length}',
+                                  },
+                                ),
+                                style: TextStyle(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.bolt, color: energyColor, size: 24),
+                      ],
+                    ),
+                    if (member != null) ...[
+                      const SizedBox(height: 16),
+                      Row(
                         children: [
-                          CircleAvatar(
-                            child: Text(
-                              m.displayName.isNotEmpty ? m.displayName[0] : '?',
+                          const Icon(Icons.check_circle_outline, size: 16, color: Colors.grey),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: LinearProgressIndicator(
+                                value: progressValue,
+                                minHeight: 6,
+                                backgroundColor: isDark ? Colors.white10 : Colors.black12,
+                              ),
                             ),
                           ),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: compact ? 240 : 420,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${m.displayName} (${m.role})',
-                                  style: theme.textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  AppStrings.of(
-                                    context,
-                                    'team_member_subtitle',
-                                    params: {
-                                      'energy': energy,
-                                      'perm': perm,
-                                      'count': '${m.busy.length}',
-                                    },
-                                  ),
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(width: 12),
+                          Text(
+                            '${(progressValue * 100).round()}%',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
                             ),
                           ),
-                          Icon(Icons.bolt, color: energyColor, size: 18),
                         ],
                       ),
-                      if (member != null) ...[
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Text(
-                              '${AppStrings.of(context, 'team_label_progress')}: $progress',
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(999),
-                                child: LinearProgressIndicator(
-                                  minHeight: 8,
-                                  value: progressValue,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 10),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<TeamSharePermission>(
-                            value: m.permission,
-                            isDense: true,
-                            iconSize: 18,
-                            style: theme.textTheme.bodySmall,
-                            items: TeamSharePermission.values
-                                .map(
-                                  (p) => DropdownMenuItem(
-                                    value: p,
-                                    child: Text(_sharePermissionLabel(context, p)),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (value) {
-                              if (value == null) return;
-                              _updatePermission(m, value);
-                            },
+                    ],
+                    const SizedBox(height: 8),
+                    const Divider(),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<TeamSharePermission>(
+                          value: m.permission,
+                          isDense: true,
+                          iconSize: 20,
+                          style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
                           ),
+                          items: TeamSharePermission.values
+                              .map(
+                                (p) => DropdownMenuItem(
+                                  value: p,
+                                  child: Text(_sharePermissionLabel(context, p)),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            _updatePermission(m, value);
+                          },
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             }),
@@ -861,9 +1082,11 @@ class _TeamPageState extends State<TeamPage> {
   Widget _sectionTitle(BuildContext context, String title) {
     return Text(
       title,
-      style: Theme.of(
-        context,
-      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.5,
+      ),
     );
   }
 }
@@ -873,15 +1096,19 @@ class _TeamLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
+    return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 48),
+        padding: const EdgeInsets.symmetric(vertical: 48),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 12),
-            Text('正在加载团队看板...'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              isZh ? '正在加载团队数据...' : 'Loading team data...',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
           ],
         ),
       ),
@@ -902,20 +1129,35 @@ class _TeamKpiChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: Theme.of(
-          context,
-        ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.42),
+        borderRadius: BorderRadius.circular(12),
+        color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.04),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 6),
-          Text('$label: $value'),
+          Icon(icon, size: 18, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Text(
+            '$label:',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              color: theme.colorScheme.primary,
+            ),
+          ),
         ],
       ),
     );
@@ -1049,14 +1291,20 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
   @override
   Widget build(BuildContext context) {
     if (calendars.isEmpty) {
-      return Text(
-        AppStrings.of(context, 'team_no_members'),
-        style: const TextStyle(color: Colors.grey),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: Text(
+            AppStrings.of(context, 'team_no_members'),
+            style: const TextStyle(color: Colors.grey),
+          ),
+        ),
       );
     }
 
     final height = (_endHour - _startHour) * _hourHeight;
     final now = TimeOfDay.fromDateTime(DateTime.now());
+    final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
 
     final laneCount = calendars.length;
     final contentWidth = _timeLabelWidth + _laneWidth * laneCount;
@@ -1075,15 +1323,15 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
           runSpacing: 8,
           children: [
             _LegendChip(
-              color: Colors.green.withValues(alpha: 0.18),
+              color: Colors.green.withOpacity(0.18),
               label: AppStrings.of(context, 'team_legend_golden'),
             ),
             _LegendChip(
-              color: const Color(0xFFD68C89).withValues(alpha: 0.12),
+              color: const Color(0xFFD68C89).withOpacity(0.12),
               label: AppStrings.of(context, 'team_legend_busy_overlap'),
             ),
             _LegendChip(
-              color: Colors.blue.withValues(alpha: 0.14),
+              color: Colors.blue.withOpacity(0.14),
               label: AppStrings.of(context, 'team_legend_conflict_probe'),
             ),
           ],
@@ -1161,9 +1409,7 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                         Expanded(
                                           child: Container(
                                             height: 1,
-                                            color: Colors.grey.withValues(
-                                              alpha: 0.2,
-                                            ),
+                                            color: Colors.grey.withOpacity(0.2),
                                           ),
                                         ),
                                       ],
@@ -1180,11 +1426,10 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                         _topForMinute(seg.endMin) -
                                         _topForMinute(seg.startMin),
                                     child: Container(
-                                      color: const Color(0xFFD68C89).withValues(
-                                        alpha:
-                                            (0.05 + (seg.busyCount - 2) * 0.03)
-                                                .clamp(0.05, 0.16)
-                                                .toDouble(),
+                                      color: const Color(0xFFD68C89).withOpacity(
+                                        (0.05 + (seg.busyCount - 2) * 0.03)
+                                            .clamp(0.05, 0.16)
+                                            .toDouble(),
                                       ),
                                     ),
                                   ),
@@ -1199,13 +1444,9 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                         (meetingMinutes / 60.0) * _hourHeight,
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: Colors.green.withValues(
-                                          alpha: 0.12,
-                                        ),
+                                        color: Colors.green.withOpacity(0.12),
                                         border: Border.all(
-                                          color: Colors.green.withValues(
-                                            alpha: 0.35,
-                                          ),
+                                          color: Colors.green.withOpacity(0.35),
                                         ),
                                       ),
                                       child: Align(
@@ -1241,12 +1482,8 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                     child: Container(
                                       decoration: BoxDecoration(
                                         color: probeConflicts.isEmpty
-                                            ? Colors.green.withValues(
-                                                alpha: 0.10,
-                                              )
-                                            : Colors.blue.withValues(
-                                                alpha: 0.10,
-                                              ),
+                                            ? Colors.green.withOpacity(0.10)
+                                            : Colors.blue.withOpacity(0.10),
                                         border: Border.all(
                                           color: probeConflicts.isEmpty
                                               ? Colors.green
@@ -1288,9 +1525,7 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                       Expanded(
                                         child: Container(
                                           height: 1.5,
-                                          color: Colors.blue.withValues(
-                                            alpha: 0.6,
-                                          ),
+                                          color: Colors.blue.withOpacity(0.6),
                                         ),
                                       ),
                                     ],
@@ -1355,7 +1590,7 @@ class _LegendChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        border: Border.all(color: Colors.black.withOpacity(0.06)),
       ),
       child: Text(
         label,
@@ -1384,8 +1619,8 @@ class _BusyBlock extends StatelessWidget {
     final subtitle = showDetails ? entry.tag : '';
 
     final bg = showDetails
-        ? entry.color.withValues(alpha: 0.85)
-        : Colors.grey.withValues(alpha: 0.75);
+        ? entry.color.withOpacity(0.85)
+        : Colors.grey.withOpacity(0.75);
 
     return Material(
       color: Colors.transparent,
@@ -1447,7 +1682,7 @@ class _BusyBlock extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
+                color: Colors.black.withOpacity(0.06),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1476,7 +1711,7 @@ class _BusyBlock extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: Colors.white.withOpacity(0.9),
                     ),
                   ),
                 ],

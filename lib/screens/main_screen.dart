@@ -9,6 +9,7 @@ import 'micro_task_page.dart';
 import 'profile_page.dart';
 import 'smart_calendar_page.dart';
 import 'team_page.dart';
+import 'auth_dialog.dart'; // 引入 AuthDialog
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -28,6 +29,45 @@ class _MainScreenState extends State<MainScreen> {
     TeamPage(),
     ProfilePage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // 页面首帧渲染完毕后，立即检查并弹出登录框
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showAuthDialogIfNeeded();
+    });
+  }
+
+  void _showAuthDialogIfNeeded() {
+    // 这里的逻辑用于判断用户是否已登录。
+    // 在真实生产中，你可以替换为读取本地 Token： 
+    // bool hasLogin = AppServices.dataService.hasToken();
+    
+    // 【修复这里】：使用新版的 globalNameNotifier.value 进行判断
+    bool hasLogin = ProfilePage.globalNameNotifier.value != null;
+
+    if (!hasLogin) {
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: false, 
+        barrierLabel: 'Auth',
+        barrierColor: Colors.transparent, 
+        transitionDuration: const Duration(milliseconds: 300),
+        pageBuilder: (ctx, anim1, anim2) {
+          return AuthDialog(
+            onAuthSuccess: () {
+              Navigator.of(ctx).pop();
+              setState(() {}); 
+            },
+          );
+        },
+        transitionBuilder: (ctx, anim1, anim2, child) {
+          return FadeTransition(opacity: anim1, child: child);
+        },
+      );
+    }
+  }
 
   List<_ShellDestination> _destinations(BuildContext context) {
     return [

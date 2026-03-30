@@ -183,6 +183,7 @@ class AppStrings {
       'profile_device': '设备连接',
       'profile_connected': '已连接',
       'profile_auth': '第三方授权（MCP）',
+      'profile_switch_account': '切换账户',
       'profile_model_card': 'AI 认知效率画像（每周更新）',
       'settings_title': '设置',
       'settings_language': '语言',
@@ -298,6 +299,18 @@ class AppStrings {
       'cognitive_load_low': '低',
       'cognitive_load_medium': '中',
       'cognitive_load_high': '高',
+
+      // --- 认证相关 ---
+      'auth_title': '账户通行证',
+      'auth_tab_login': '登录',
+      'auth_tab_register': '注册',
+      'auth_label_contact': '手机号 / 邮箱',
+      'auth_label_name': '昵称',
+      'auth_btn_login': '登录',
+      'auth_btn_register': '注册',
+      'auth_error_empty': '账号不能为空',
+      'auth_error_invalid_phone': '请输入有效的手机号或邮箱',
+      'auth_success_register': '注册成功，已为您自动登录',
     },
     'en': {
       'app_title': 'ShiXuZhiPei',
@@ -485,6 +498,7 @@ class AppStrings {
       'profile_device': 'Device Connection',
       'profile_connected': 'Connected',
       'profile_auth': 'Third-Party Auth (MCP)',
+      'profile_switch_account': 'Switch Account',
       'profile_model_card': 'Cognitive Profile Model (Weekly)',
       'settings_title': 'Settings',
       'settings_language': 'Language',
@@ -606,6 +620,18 @@ class AppStrings {
       'cognitive_load_low': 'Low',
       'cognitive_load_medium': 'Medium',
       'cognitive_load_high': 'High',
+
+      // --- Auth Strings ---
+      'auth_title': 'Account Pass',
+      'auth_tab_login': 'Login',
+      'auth_tab_register': 'Register',
+      'auth_label_contact': 'Phone / Email',
+      'auth_label_name': 'Nickname',
+      'auth_btn_login': 'Login',
+      'auth_btn_register': 'Register',
+      'auth_error_empty': 'Account cannot be empty',
+      'auth_error_invalid_phone': 'Please enter a valid phone or email',
+      'auth_success_register': 'Registered and logged in successfully',
     },
   };
 
