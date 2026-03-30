@@ -455,13 +455,17 @@ class _GoalsPageState extends State<GoalsPage> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 1240),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: _loading
                     ? const _GoalsLoadingState()
                     : LayoutBuilder(
                         builder: (context, constraints) {
                           final isWide = constraints.maxWidth >= 940;
                           return ListView(
+                            // 修复：添加列表底部安全距，避免 FAB(悬浮窗) 永远挡住最后一张卡片
+                            padding: EdgeInsets.only(
+                              bottom: MediaQuery.of(context).padding.bottom + 100,
+                            ),
                             children: [
                               _GoalsOverviewCard(
                                 goalCount: _goals.length,
@@ -477,8 +481,9 @@ class _GoalsPageState extends State<GoalsPage> {
                                   spacing: 12,
                                   runSpacing: 12,
                                   children: _goals.map((g) {
+                                    // 使用 floorToDouble 安全防止像素误差导致的换行溢出
                                     final cardWidth = isWide
-                                        ? (constraints.maxWidth - 12) / 2
+                                        ? ((constraints.maxWidth - 13) / 2).floorToDouble()
                                         : constraints.maxWidth;
                                     return SizedBox(
                                       width: cardWidth,
