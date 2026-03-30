@@ -32,6 +32,10 @@ class MockDataService implements DataService {
   String? _favoriteDeviceId;
   SchedulingTuning _tuning = const SchedulingTuning();
 
+  // --- Auth Mock Data ---
+  UserAccount? _currentUser;
+  final Map<String, String> _userDb = {}; // 账号 -> 密码映射
+
   String _newId(String prefix) {
     final ts = DateTime.now().microsecondsSinceEpoch;
     final r = _rand.nextInt(1 << 32);
@@ -323,4 +327,47 @@ class MockDataService implements DataService {
     await _delay();
   }
   
+  // ---------------------------------------------------------------------------
+  // Authentication Implementation
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<UserAccount?> getCurrentUser() async {
+    await _delay(50);
+    return _currentUser;
+  }
+
+  @override
+  Future<bool> login(String account, String password) async {
+    await _delay(300); // 模拟网络校验
+    if (_userDb.containsKey(account) && _userDb[account] == password) {
+      _currentUser = UserAccount(
+        contactAddress: account,
+        displayName: '用户_${account.substring(0, min(account.length, 4))}',
+      );
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  Future<bool> registerAccount({required String username, required String password}) async {
+    await _delay(300); // 模拟网络校验
+    if (_userDb.containsKey(username)) {
+      return false; // 用户已存在
+    }
+    _userDb[username] = password;
+    // 注册成功后自动登录
+    _currentUser = UserAccount(
+      contactAddress: username,
+      displayName: '新注册用户', 
+    );
+    return true;
+  }
+
+  @override
+  Future<void> logout() async {
+    await _delay(100);
+    _currentUser = null;
+  }
 }
