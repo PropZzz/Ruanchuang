@@ -168,7 +168,6 @@ class _FocusPageState extends State<FocusPage> {
       final emotion = await _dataService.getCurrentEmotion();
       _currentEmotion = emotion;
 
-      // 情绪预警与关怀机制（疲惫/烦躁时弹出）
       if (emotion == EmotionType.fatigue || emotion == EmotionType.irritable) {
         _showCareDialog();
       }
@@ -407,8 +406,9 @@ class _FocusPageState extends State<FocusPage> {
                         16,
                       ),
                       child: isWide
+                          // 修复：添加 crossAxisAlignment.stretch 给双列表提供安全边界高度，防止 Web 抛出无限高度异常
                           ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Expanded(
                                   flex: 11,
@@ -431,7 +431,14 @@ class _FocusPageState extends State<FocusPage> {
                                 const SizedBox(width: 18),
                                 Expanded(
                                   flex: 10,
-                                  child: _buildPlanningPanel(theme),
+                                  child: ListView(
+                                    padding: EdgeInsets.only(
+                                      bottom: MediaQuery.of(context).padding.bottom + 100,
+                                    ),
+                                    children: [
+                                      _buildPlanningPanel(theme),
+                                    ],
+                                  ),
                                 ),
                               ],
                             )
@@ -816,7 +823,6 @@ class _FocusPageState extends State<FocusPage> {
                   backgroundColor: Colors.orange,
                 ),
               );
-              // 以后可以在这里跳转 MicroTaskPage
             },
             child: const Text('切换微任务'),
           ),
