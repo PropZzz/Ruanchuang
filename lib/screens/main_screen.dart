@@ -69,7 +69,7 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        top: false, // 让内容可以延伸至顶部
+        top: false, 
         bottom: false,
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
@@ -125,55 +125,56 @@ class _NarrowShell extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
     final compactLabels = MobileFeedback.isNarrow(context, breakpoint: 420);
 
-    // 优化：将 Stack 替换为 Column，避免底部导航栏遮挡页面内容及各页面的悬浮按钮(FAB)
     return Column(
       children: [
         // 主内容区
         Expanded(child: ClipRRect(child: child)),
-        // 底部悬浮导航栏
-        ClipRRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              decoration: BoxDecoration(
+        // 底部悬浮导航栏 - 修复阴影被 ClipRRect 裁剪的 UI Bug
+        Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.25 : 0.04),
+                blurRadius: 20,
+                offset: const Offset(0, -6),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
                 color: theme.colorScheme.surface.withOpacity(
                   isDark ? 0.75 : 0.85,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
-                    blurRadius: 30,
-                    offset: const Offset(0, -10),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8.0,
-                    vertical: 4.0,
-                  ),
-                  child: NavigationBar(
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    height: compactLabels ? 68 : null,
-                    labelBehavior: compactLabels
-                        ? NavigationDestinationLabelBehavior.onlyShowSelected
-                        : NavigationDestinationLabelBehavior.alwaysShow,
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: onSelect,
-                    destinations: [
-                      for (final d in destinations)
-                        NavigationDestination(
-                          icon: Icon(d.icon, size: compactLabels ? 20 : 22),
-                          selectedIcon: Icon(
-                            d.selectedIcon,
-                            size: compactLabels ? 20 : 22,
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0,
+                      vertical: 4.0,
+                    ),
+                    child: NavigationBar(
+                      backgroundColor: Colors.transparent,
+                      elevation: 0,
+                      height: compactLabels ? 68 : null,
+                      labelBehavior: compactLabels
+                          ? NavigationDestinationLabelBehavior.onlyShowSelected
+                          : NavigationDestinationLabelBehavior.alwaysShow,
+                      selectedIndex: selectedIndex,
+                      onDestinationSelected: onSelect,
+                      destinations: [
+                        for (final d in destinations)
+                          NavigationDestination(
+                            icon: Icon(d.icon, size: compactLabels ? 20 : 22),
+                            selectedIcon: Icon(
+                              d.selectedIcon,
+                              size: compactLabels ? 20 : 22,
+                            ),
+                            label: d.label,
                           ),
-                          label: d.label,
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -212,7 +213,6 @@ class _WideShell extends StatelessWidget {
 
     return Row(
       children: [
-        // 左侧侧边栏 (极其干净，无边框)
         Container(
           width: railExtended ? 260 : 100,
           decoration: BoxDecoration(
@@ -291,7 +291,6 @@ class _WideShell extends StatelessWidget {
             ),
           ),
         ),
-        // 右侧主内容区
         Expanded(
           child: SafeArea(
             left: false,
@@ -299,7 +298,6 @@ class _WideShell extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 顶部状态提示
                 Padding(
                   padding: const EdgeInsets.fromLTRB(40, 40, 40, 20),
                   child: Text(
