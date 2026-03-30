@@ -409,7 +409,7 @@ class ProfilePage extends StatelessWidget {
               height: double.infinity,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.horizontal(
+                borderRadius: const BorderRadius.horizontal(
                   left: Radius.circular(16),
                 ),
               ),
@@ -569,4 +569,3 @@ class ProfilePage extends StatelessWidget {
     );
   }
 }
-
