@@ -149,4 +149,19 @@ class CompositeDataService implements DataService {
 
   @override
   Future<void> setLocale(String locale) => local.setLocale(locale);
+
+  // --- 重点：新增的认证相关路由 ---
+
+  @override
+  Future<UserAccount?> getCurrentUser() => local.getCurrentUser();
+
+  @override
+  Future<bool> login(String account, String password) => local.login(account, password);
+
+  @override
+  Future<bool> registerAccount({required String username, required String password}) =>
+      local.registerAccount(username: username, password: password);
+
+  @override
+  Future<void> logout() => local.logout();
 }

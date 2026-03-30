@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
@@ -10,14 +9,6 @@ import 'local_persistence/local_persistence_io.dart'
 import 'review/review_rules.dart';
 import 'debug/storage_info.dart';
 
-/// Local-first persistent data service.
-///
-/// Storage:
-/// - IO: JSON file under user roaming data directory.
-/// - Web: localStorage.
-///
-/// Privacy boundary: no HRV/sleep/device data is collected. This stores only
-/// user-entered schedule, micro-task data, and local execution logs.
 class LocalDataService implements DataService {
   LocalDataService._({LocalPersistence? persistence})
     : _persistence = persistence ?? createLocalPersistence();
@@ -44,6 +35,9 @@ class LocalDataService implements DataService {
   String? _favoriteDeviceId;
   String _themeMode = 'system';
   String _locale = 'zh_CN';
+  
+  // 新增：用于存储当前登录用户
+  UserAccount? _currentUser;
 
   SchedulingTuning _tuning = const SchedulingTuning();
 
@@ -54,7 +48,6 @@ class LocalDataService implements DataService {
 
   String _normalizeJsonText(String raw) {
     if (raw.isEmpty) return raw;
-    // Defensively strip UTF-8 BOM so jsonDecode stays stable across platforms.
     if (raw.codeUnitAt(0) == 0xFEFF) {
       return raw.substring(1);
     }
@@ -146,6 +139,12 @@ class LocalDataService implements DataService {
         final goalsJson = _firstPresent(decoded, goalsKeys);
         final favoriteDeviceIdJson = _firstPresent(decoded, favoriteDeviceKeys);
 
+        // 新增解析当前用户
+        final currentUserJson = decoded['currentUser'];
+        if (currentUserJson is Map) {
+          _currentUser = UserAccount.fromJson(Map<String, Object?>.from(currentUserJson));
+        }
+
         final scheduleMapList = _asMapList(scheduleJson);
         if (scheduleMapList.isNotEmpty) {
           _schedule
@@ -206,12 +205,8 @@ class LocalDataService implements DataService {
         }
       }
     } catch (_) {
-      // Ignore corrupted storage and fall back to seed.
     }
 
-    // Migration strategy:
-    // - Missing ids: generate stable ids.
-    // - Missing fields: handled by model defaults in fromJson.
     final scheduleSeenIds = <String>{};
     for (var i = 0; i < _schedule.length; i++) {
       final e = _schedule[i];
@@ -252,7 +247,6 @@ class LocalDataService implements DataService {
       }
     }
 
-    // Daily quick check-in migration: keep only the latest record per day.
     if (_emotion.length > 1) {
       final oldLength = _emotion.length;
       final sorted = List<EmotionCheckIn>.from(_emotion)
@@ -261,7 +255,7 @@ class LocalDataService implements DataService {
       for (final e in sorted) {
         final k =
             '${e.at.year.toString().padLeft(4, '0')}-${e.at.month.toString().padLeft(2, '0')}-${e.at.day.toString().padLeft(2, '0')}';
-        byDay[k] = e; // last write wins due to sorted order
+        byDay[k] = e;
       }
       _emotion
         ..clear()
@@ -361,40 +355,6 @@ class LocalDataService implements DataService {
             ),
           ],
         ),
-        const TeamMemberCalendar(
-          memberId: 'm_song',
-          displayName: '宋杰',
-          role: '开发',
-          energy: EnergyTier.medium,
-          permission: TeamSharePermission.freeBusy,
-          busy: [
-            ScheduleEntry(
-              id: 'song_1',
-              title: '深度工作',
-              tag: 'Core',
-              height: 120.0,
-              color: Colors.teal,
-              time: TimeOfDay(hour: 9, minute: 0),
-            ),
-          ],
-        ),
-        const TeamMemberCalendar(
-          memberId: 'm_yang',
-          displayName: '杨帆',
-          role: '开发',
-          energy: EnergyTier.low,
-          permission: TeamSharePermission.freeBusy,
-          busy: [
-            ScheduleEntry(
-              id: 'yang_1',
-              title: '接口对齐',
-              tag: 'Meeting',
-              height: 80.0,
-              color: Colors.blue,
-              time: TimeOfDay(hour: 15, minute: 0),
-            ),
-          ],
-        ),
       ]);
   }
 
@@ -412,6 +372,7 @@ class LocalDataService implements DataService {
       'favoriteDeviceId': _favoriteDeviceId,
       'themeMode': _themeMode,
       'locale': _locale,
+      'currentUser': _currentUser?.toJson(), // 将当前用户数据存入本地存储
     };
 
     final jsonText = const JsonEncoder.withIndent('  ').convert(obj);
@@ -435,7 +396,7 @@ class LocalDataService implements DataService {
     return const EnergyStatus(
       level: "medium",
       status: '心流',
-      description: '仅本地模拟，不采集生理数据。',
+      description: '仅本地模拟',
       batteryPercent: 85,
     );
   }
@@ -462,7 +423,6 @@ class LocalDataService implements DataService {
   Future<void> addEmotionCheckIn(EmotionCheckIn checkIn) async {
     await _ensureLoaded();
     final id = checkIn.id.isEmpty ? _newId('emo_') : checkIn.id;
-    // Daily quick check-in: keep at most one record per day (overwrite).
     final day = DateTime(checkIn.at.year, checkIn.at.month, checkIn.at.day);
     _emotion.removeWhere((e) => _sameDay(e.at, day));
     final c = EmotionCheckIn(
@@ -489,7 +449,6 @@ class LocalDataService implements DataService {
     await _ensureLoaded();
     final out = List<Goal>.from(_goals)
       ..sort((a, b) {
-        // Higher priority first, then due sooner.
         final p = b.priority.compareTo(a.priority);
         if (p != 0) return p;
         return a.due.compareTo(b.due);
@@ -558,7 +517,6 @@ class LocalDataService implements DataService {
     final withId = (entry.id == null || entry.id!.isEmpty)
         ? entry.copyWith(id: _newId('sch_'))
         : entry;
-    // Upsert by id to support external sync/import flows.
     final id = withId.id;
     if (id != null && id.isNotEmpty) {
       final idx = _schedule.indexWhere((e) => e.id == id);
@@ -720,7 +678,6 @@ class LocalDataService implements DataService {
   void _markGoalTaskDoneFromScheduleCompletion(String scheduleTaskId) {
     if (scheduleTaskId.isEmpty) return;
 
-    // Prefer explicit linkage from ScheduleEntry.
     final schIdx = _schedule.indexWhere((e) => e.id == scheduleTaskId);
     if (schIdx != -1) {
       final e = _schedule[schIdx];
@@ -750,30 +707,6 @@ class LocalDataService implements DataService {
         return;
       }
     }
-
-    // Fallback: older goal schedule entries encoded ids as `goal_<goalId>_<goalTaskId>`.
-    for (var gIdx = 0; gIdx < _goals.length; gIdx++) {
-      final g = _goals[gIdx];
-      var changed = false;
-      final tasks = g.tasks
-          .map((t) {
-            final expected = 'goal_${g.id}_${t.id}';
-            if (scheduleTaskId != expected) return t;
-            if (t.done) return t;
-            changed = true;
-            return t.copyWith(done: true);
-          })
-          .toList(growable: false);
-      if (!changed) continue;
-      _goals[gIdx] = Goal(
-        id: g.id,
-        title: g.title,
-        due: g.due,
-        priority: g.priority,
-        tasks: tasks,
-      );
-      return;
-    }
   }
 
   @override
@@ -797,16 +730,13 @@ class LocalDataService implements DataService {
   @override
   Future<ReviewReport> getWeeklyReport(DateTime weekStart) async {
     await _ensureLoaded();
-
     final report = ReviewRules.weeklyReport(
       weekStart: weekStart,
       events: _events,
       currentTuning: _tuning,
     );
-
     _tuning = report.tuning;
     await _save();
-
     return report;
   }
 
@@ -864,7 +794,6 @@ class LocalDataService implements DataService {
   @override
   Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request) async {
     await _ensureLoaded();
-
     final entry = ScheduleEntry(
       id: _newId('meet_'),
       day: DateTime(day.year, day.month, day.day),
@@ -874,36 +803,53 @@ class LocalDataService implements DataService {
       color: Colors.blue,
       time: request.start,
     );
-
-    // Write to local user's schedule.
     _schedule.add(entry);
-
-    // Simulate shared meeting by adding it to each participant's busy list.
-    for (var i = 0; i < _teamCalendars.length; i++) {
-      final c = _teamCalendars[i];
-      if (!request.participantIds.contains(c.memberId)) continue;
-
-      final updatedBusy = List<ScheduleEntry>.from(c.busy)..add(entry);
-      _teamCalendars[i] = TeamMemberCalendar(
-        memberId: c.memberId,
-        displayName: c.displayName,
-        role: c.role,
-        energy: c.energy,
-        permission: c.permission,
-        busy: updatedBusy,
-      );
-    }
-
     await _save();
   }
+
   @override
   Future<EmotionType> getCurrentEmotion() async {
-    // 模拟真实感知延迟（实际项目可接可穿戴设备）
     await Future.delayed(const Duration(milliseconds: 60));
-    
-    // 随机返回一种情绪（测试用，后面可换成真实 HRV/传感器数据）
     final rand = DateTime.now().millisecond % 4;
     return EmotionType.values[rand];
   }
-  
+
+  // --- 重点：新增的认证相关实现 ---
+
+  @override
+  Future<UserAccount?> getCurrentUser() async {
+    await _ensureLoaded();
+    return _currentUser;
+  }
+
+  @override
+  Future<bool> login(String account, String password) async {
+    await _ensureLoaded();
+    // 本地存储简单校验，只要账号密码有效就准入（因为没有服务器）
+    if (account.isNotEmpty && password.length >= 6) {
+      _currentUser = UserAccount(contactAddress: account, displayName: '用户_${account.substring(0, account.length > 4 ? 4 : account.length)}');
+      await _save();
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  Future<bool> registerAccount({required String username, required String password}) async {
+    await _ensureLoaded();
+    if (username.isNotEmpty && password.length >= 6) {
+      // 注册完毕直接成为当前用户
+      _currentUser = UserAccount(contactAddress: username, displayName: '新用户_$username');
+      await _save();
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  Future<void> logout() async {
+    await _ensureLoaded();
+    _currentUser = null;
+    await _save();
+  }
 }
