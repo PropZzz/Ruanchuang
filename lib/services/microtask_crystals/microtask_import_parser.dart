@@ -84,16 +84,19 @@ class MicroTaskImportParser {
     final durationBonus = minutes <= 10
         ? 5
         : minutes <= 20
-            ? 4
-            : minutes <= 40
-                ? 2
-                : 1;
+        ? 4
+        : minutes <= 40
+        ? 2
+        : 1;
     final tagBonus = _bonusForTag(task.tag);
 
     return (priority * 2 + durationBonus + tagBonus).clamp(1, 20).toInt();
   }
 
-  static MicroTaskImportSuggestion? _parseLine(String line, {required int index}) {
+  static MicroTaskImportSuggestion? _parseLine(
+    String line, {
+    required int index,
+  }) {
     var cleaned = line.replaceFirst(_bulletPrefix, '').trim();
     cleaned = cleaned.replaceAll(_multiSpace, ' ');
     if (cleaned.isEmpty) return null;
@@ -141,23 +144,43 @@ class MicroTaskImportParser {
 
   static String _inferTag(String line) {
     final lower = line.toLowerCase();
-    if (line.contains('邮件') || line.contains('邮箱') || line.contains('收件箱') ||
-        lower.contains('email') || lower.contains('mail') || lower.contains('inbox')) {
+    if (line.contains('邮件') ||
+        line.contains('邮箱') ||
+        line.contains('收件箱') ||
+        lower.contains('email') ||
+        lower.contains('mail') ||
+        lower.contains('inbox')) {
       return '收件箱';
     }
-    if (line.contains('电话') || line.contains('通话') || lower.contains('call') || lower.contains('phone')) {
+    if (line.contains('电话') ||
+        line.contains('通话') ||
+        lower.contains('call') ||
+        lower.contains('phone')) {
       return '通话';
     }
-    if (line.contains('复盘') || line.contains('评审') || line.contains('检查') || lower.contains('review')) {
+    if (line.contains('复盘') ||
+        line.contains('评审') ||
+        line.contains('检查') ||
+        lower.contains('review')) {
       return '复盘';
     }
-    if (line.contains('设计') || line.contains('需求') || line.contains('方案') || lower.contains('design') || lower.contains('spec')) {
+    if (line.contains('设计') ||
+        line.contains('需求') ||
+        line.contains('方案') ||
+        lower.contains('design') ||
+        lower.contains('spec')) {
       return '设计';
     }
-    if (line.contains('修复') || line.contains('bug') || line.contains('故障') || lower.contains('fix')) {
+    if (line.contains('修复') ||
+        line.contains('bug') ||
+        line.contains('故障') ||
+        lower.contains('fix')) {
       return '修复';
     }
-    if (line.contains('学习') || line.contains('阅读') || lower.contains('study') || lower.contains('read')) {
+    if (line.contains('学习') ||
+        line.contains('阅读') ||
+        lower.contains('study') ||
+        lower.contains('read')) {
       return '学习';
     }
     if (line.contains('整理') || line.contains('归档')) {
@@ -236,16 +259,23 @@ class MicroTaskImportParser {
         lower.contains('plan')) {
       return 45;
     }
-    if (line.contains('复盘') || line.contains('检查') ||
-        lower.contains('review') || lower.contains('check')) {
+    if (line.contains('复盘') ||
+        line.contains('检查') ||
+        lower.contains('review') ||
+        lower.contains('check')) {
       return 20;
     }
-    if (line.contains('邮件') || line.contains('收件箱') ||
-        lower.contains('email') || lower.contains('mail') || lower.contains('inbox')) {
+    if (line.contains('邮件') ||
+        line.contains('收件箱') ||
+        lower.contains('email') ||
+        lower.contains('mail') ||
+        lower.contains('inbox')) {
       return 10;
     }
-    if (line.contains('电话') || line.contains('通话') ||
-        lower.contains('call') || lower.contains('phone')) {
+    if (line.contains('电话') ||
+        line.contains('通话') ||
+        lower.contains('call') ||
+        lower.contains('phone')) {
       return 15;
     }
     final hourMatch = _hourPattern.firstMatch(line);
@@ -263,7 +293,8 @@ class MicroTaskImportParser {
 
   static int _bonusForTag(String tag) {
     final lower = tag.toLowerCase();
-    if (tag.contains('收件箱') || tag.contains('邮件') || lower.contains('inbox')) return 2;
+    if (tag.contains('收件箱') || tag.contains('邮件') || lower.contains('inbox'))
+      return 2;
     if (tag.contains('复盘') || lower.contains('review')) return 2;
     if (tag.contains('修复') || lower.contains('fix')) return 2;
     if (tag.contains('设计') || lower.contains('design')) return 1;
