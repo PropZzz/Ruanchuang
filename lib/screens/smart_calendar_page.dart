@@ -1,3 +1,4 @@
+// lib/screens/smart_calendar_page.dart
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
@@ -23,7 +24,6 @@ enum _CalendarField { time, tag, status, reminder, goal }
 
 enum _EntryStatus { notStarted, inProgress, completed, overdue }
 
-/// Smart calendar page
 class SmartCalendarPage extends StatefulWidget {
   const SmartCalendarPage({super.key});
 
@@ -671,7 +671,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             children: [
               Align(
                 alignment: Alignment.topCenter,
-                // 修复极窄屏幕下选项卡互相遮挡导致溢出报错的问题
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: SegmentedButton<_CalendarView>(
@@ -875,7 +874,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               child: SizedBox(
                 height: _totalHeight,
                 child: Stack(
-                  clipBehavior: Clip.none, // 防止删除按钮等悬浮部件在边界被截断
+                  clipBehavior: Clip.none, 
                   children: [
                     ...List.generate(
                       _totalHours,
@@ -1021,6 +1020,8 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                       Expanded(
                         child: Text(
                           '$weekdayLabel  $dateLabel',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: selected ? Colors.teal.shade700 : null,
@@ -1141,7 +1142,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         return isEn ? 'Goal' : '目标';
     }
   }
-
 
   int _entryDurationMinutes(ScheduleEntry entry) {
     return ((entry.height / 80.0) * 60.0).round().clamp(1, 24 * 60);
@@ -1310,14 +1310,18 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 color: theme.colorScheme.primary,
               ),
               const SizedBox(width: 8),
-              Text(
-                _viewLabel(context, _CalendarView.month),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  _viewLabel(context, _CalendarView.month),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
                 MaterialLocalizations.of(context).formatMonthYear(_selectedDay),
                 style: TextStyle(color: theme.colorScheme.outline),
@@ -1792,6 +1796,8 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 Expanded(
                   child: Text(
                     '$dayLabel  $dateLabel',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: selected ? theme.colorScheme.primary : null,
@@ -1860,6 +1866,8 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               const SizedBox(height: 2),
               Text(
                 '${entry.time.format(context)} · ${_entryDurationMinutes(entry)}m',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 10,
                   color: theme.colorScheme.outline,
@@ -2688,7 +2696,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
           background: Colors.white24,
         ),
     ];
-    // 修复：添加 clipBehavior 防止关闭按钮被裁剪
     return Stack(
       clipBehavior: Clip.none, 
       children: [
@@ -2748,7 +2755,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             ],
           ),
         ),
-        // 修复：修正删除按钮位置防止在边界被裁切
         if (onDelete != null)
           Positioned(
             right: 4,

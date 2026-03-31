@@ -1,3 +1,4 @@
+// lib/screens/profile_page.dart
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -19,9 +20,7 @@ import 'auth_dialog.dart';
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
-  // 使用 ValueNotifier 实现更优雅的无刷新状态更新
   static final ValueNotifier<String?> globalNameNotifier = ValueNotifier<String?>(null);
-  // 新增：用于全局响应式管理用户头像
   static final ValueNotifier<Uint8List?> globalAvatarNotifier = ValueNotifier<Uint8List?>(null);
 
   @override
@@ -77,7 +76,6 @@ class _ProfilePageState extends State<ProfilePage> {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BluetoothPage()));
   }
 
-  // 唤起毛玻璃登录注册弹窗
   void _showAuthPopup(BuildContext context) {
     showGeneralDialog(
       context: context,
@@ -98,7 +96,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // 新增：更改头像逻辑
   Future<void> _pickAvatar() async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -119,7 +116,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  // 新增：更改昵称逻辑
   void _showEditNameDialog() {
     final ctrl = TextEditingController(text: ProfilePage.globalNameNotifier.value ?? '时序智配用户');
     showDialog(
@@ -159,7 +155,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final deviceSubtitle = _deviceSubtitle();
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF2F2F7), // Apple 风格底层背景
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF2F2F7),
       appBar: AppBar(
         title: Text(AppStrings.of(context, 'profile_title'), style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
@@ -181,11 +177,9 @@ class _ProfilePageState extends State<ProfilePage> {
               physics: const BouncingScrollPhysics(),
               padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 100),
               children: [
-                // 顶部用户信息区
                 _buildUserProfileCard(context),
                 const SizedBox(height: 24),
                 
-                // AI 效率画像模块
                 _buildActionGroup(context, children: [
                   _profileActionTile(
                     context,
@@ -198,7 +192,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 ]),
                 const SizedBox(height: 24),
 
-                // 核心功能区
                 Padding(
                   padding: const EdgeInsets.only(left: 16, bottom: 8),
                   child: Text('核心操作', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withOpacity(0.5))),
@@ -231,7 +224,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 ]),
                 const SizedBox(height: 24),
 
-                // 洞察数据区
                 Padding(
                   padding: const EdgeInsets.only(left: 16, bottom: 8),
                   child: Text('洞察分析', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withOpacity(0.5))),
@@ -261,7 +253,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // 构建优雅的用户信息卡片
   Widget _buildUserProfileCard(BuildContext context) {
     return FutureBuilder<UserProfile>(
       future: AppServices.dataService.getUserProfile(),
@@ -271,7 +262,6 @@ class _ProfilePageState extends State<ProfilePage> {
         return Column(
           children: [
             const SizedBox(height: 16),
-            // 头像区域：添加了可点击更改和右下角的编辑角标
             GestureDetector(
               onTap: _pickAvatar,
               child: Container(
@@ -302,7 +292,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         );
                       },
                     ),
-                    // 右下角编辑小图标
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
@@ -317,21 +306,24 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
             const SizedBox(height: 16),
-            // 用户名区域：添加了可点击更改的交互
             GestureDetector(
               onTap: _showEditNameDialog,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  ValueListenableBuilder<String?>(
-                    valueListenable: ProfilePage.globalNameNotifier,
-                    builder: (context, overrideName, child) {
-                      final name = overrideName ?? p?.displayName ?? '时序智配用户';
-                      return Text(
-                        name,
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                      );
-                    },
+                  Flexible(
+                    child: ValueListenableBuilder<String?>(
+                      valueListenable: ProfilePage.globalNameNotifier,
+                      builder: (context, overrideName, child) {
+                        final name = overrideName ?? p?.displayName ?? '时序智配用户';
+                        return Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                        );
+                      },
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Icon(Icons.edit_outlined, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
@@ -340,7 +332,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             if (status.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(status, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 15)),
+              Text(status, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 15)),
             ],
             const SizedBox(height: 8),
           ],
@@ -349,7 +341,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // 构建分组卡片（类 iOS 风格的圆角块）
   Widget _buildActionGroup(BuildContext context, {required List<Widget> children}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
@@ -364,7 +355,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // 构建优雅的列表项
   Widget _profileActionTile(
     BuildContext context, {
     required IconData icon,
@@ -394,10 +384,10 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
-                    Text(subtitle, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
+                    Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
                   ],
                 ],
               ),
@@ -412,7 +402,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildDivider(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 60), // 对齐文字左边缘
+      padding: const EdgeInsets.only(left: 60),
       child: Divider(height: 1, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05)),
     );
   }
@@ -479,7 +469,6 @@ class _ProfilePageState extends State<ProfilePage> {
     return BattleManApp.getThemeMode(context);
   }
 
-  // 设置面板内容
   Widget _buildSettingsPanelBody(BuildContext context, {required VoidCallback onClose, required VoidCallback onSwitchAccount}) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -500,8 +489,16 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const SizedBox(width: 48), // 占位保持标题居中
-                Text(AppStrings.of(context, 'settings_title'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 48), 
+                Expanded(
+                  child: Text(
+                    AppStrings.of(context, 'settings_title'), 
+                    textAlign: TextAlign.center,
+                    maxLines: 1, 
+                    overflow: TextOverflow.ellipsis, 
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+                  )
+                ),
                 IconButton(
                   icon: Container(
                     padding: const EdgeInsets.all(4),
@@ -537,7 +534,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       builder: (context) {
                         final currentThemeMode = _getCurrentThemeMode(context);
                         String themeModeName = currentThemeMode == ThemeMode.system ? AppStrings.of(context, 'theme_system') : currentThemeMode == ThemeMode.light ? AppStrings.of(context, 'theme_light') : AppStrings.of(context, 'theme_dark');
-                        return Text('${AppStrings.of(context, 'settings_dark')}: $themeModeName', style: const TextStyle(fontWeight: FontWeight.w500));
+                        return Text('${AppStrings.of(context, 'settings_dark')}: $themeModeName', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500));
                       },
                     ),
                     shape: const Border(),

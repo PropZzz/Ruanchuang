@@ -1,3 +1,4 @@
+// lib/screens/main_screen.dart
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -9,7 +10,7 @@ import 'micro_task_page.dart';
 import 'profile_page.dart';
 import 'smart_calendar_page.dart';
 import 'team_page.dart';
-import 'auth_dialog.dart'; // 引入 AuthDialog
+import 'auth_dialog.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -33,18 +34,12 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    // 页面首帧渲染完毕后，立即检查并弹出登录框
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showAuthDialogIfNeeded();
     });
   }
 
   void _showAuthDialogIfNeeded() {
-    // 这里的逻辑用于判断用户是否已登录。
-    // 在真实生产中，你可以替换为读取本地 Token： 
-    // bool hasLogin = AppServices.dataService.hasToken();
-    
-    // 【修复这里】：使用新版的 globalNameNotifier.value 进行判断
     bool hasLogin = ProfilePage.globalNameNotifier.value != null;
 
     if (!hasLogin) {
@@ -167,9 +162,7 @@ class _NarrowShell extends StatelessWidget {
 
     return Column(
       children: [
-        // 主内容区
         Expanded(child: ClipRRect(child: child)),
-        // 底部悬浮导航栏 - 修复阴影被 ClipRRect 裁剪的 UI Bug
         Container(
           decoration: BoxDecoration(
             boxShadow: [
@@ -342,6 +335,8 @@ class _WideShell extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(40, 40, 40, 20),
                   child: Text(
                     activeLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: text.headlineMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       fontSize: 28,

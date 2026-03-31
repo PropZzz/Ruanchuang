@@ -1,3 +1,4 @@
+// lib/screens/goals_page.dart
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
@@ -126,10 +127,11 @@ class _GoalsPageState extends State<GoalsPage> {
                   ),
                 ],
               ),
-              Row(
+              Wrap(
+                spacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(AppStrings.of(ctx2, 'goal_priority')),
-                  const SizedBox(width: 8),
                   DropdownButton<int>(
                     value: priority,
                     items: const [1, 2, 3, 4, 5]
@@ -462,7 +464,6 @@ class _GoalsPageState extends State<GoalsPage> {
                         builder: (context, constraints) {
                           final isWide = constraints.maxWidth >= 940;
                           return ListView(
-                            // 修复：添加列表底部安全距，避免 FAB(悬浮窗) 永远挡住最后一张卡片
                             padding: EdgeInsets.only(
                               bottom: MediaQuery.of(context).padding.bottom + 100,
                             ),
@@ -481,7 +482,6 @@ class _GoalsPageState extends State<GoalsPage> {
                                   spacing: 12,
                                   runSpacing: 12,
                                   children: _goals.map((g) {
-                                    // 使用 floorToDouble 安全防止像素误差导致的换行溢出
                                     final cardWidth = isWide
                                         ? ((constraints.maxWidth - 13) / 2).floorToDouble()
                                         : constraints.maxWidth;
@@ -605,9 +605,11 @@ class _MetricTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: theme.textTheme.bodySmall),
+                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall),
                 Text(
                   value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),

@@ -1,3 +1,4 @@
+// lib/widgets/emotion_quick_checkin_card.dart
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
@@ -209,6 +210,8 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                 children: [
                   Text(
                     _label(context, _current),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -217,6 +220,8 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                   if (_today != null)
                     Text(
                       '${AppStrings.of(context, 'emo_current')} · ${_today!.at.toLocal().toString().substring(11, 16)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 11,
                         color: Color(0xFF8E8E93),
@@ -309,6 +314,8 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                         children: [
                           Text(
                             AppStrings.of(context, 'emo_current'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 11,
                               color: Color(0xFF8E8E93),
@@ -318,6 +325,8 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                           const SizedBox(height: 2),
                           Text(
                             _label(context, _current),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,

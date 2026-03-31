@@ -1,3 +1,4 @@
+// lib/screens/emotion_page.dart
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
@@ -169,6 +170,8 @@ class _EmotionPageState extends State<EmotionPage> {
                         Expanded(
                           child: Text(
                             '${AppStrings.of(context, 'emo_current')}: ${_label(context, _state)}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ),
