@@ -15,12 +15,10 @@ class MockDataService implements DataService {
 
   @override
   Future<EmotionType> getCurrentEmotion() async {
-    await Future.delayed(const Duration(milliseconds: 60)); // 模拟感知延迟
-    // Mock 数据：随机但可控（实际项目中可替换为传感器数据）
+    // Mock data remains deterministic enough for tests.
     final rand = DateTime.now().millisecond % 4;
     return EmotionType.values[rand];
   }
-  
 
   final _rand = Random();
   final List<ScheduleEntry> _schedule = [];
@@ -44,6 +42,26 @@ class MockDataService implements DataService {
 
   Future<void> _delay([int ms = 20]) =>
       Future.delayed(Duration(milliseconds: ms));
+
+  List<TaskEvent> _taskEventCandidate(List<TaskEvent> events) {
+    final replacements = <String, TaskEvent>{
+      for (final event in events) event.id: event,
+    };
+    final seenIds = <String>{};
+    final candidate = <TaskEvent>[];
+
+    for (final event in _events) {
+      if (!seenIds.add(event.id)) continue;
+      candidate.add(replacements[event.id] ?? event);
+    }
+    for (final event in events) {
+      if (seenIds.add(event.id)) {
+        candidate.add(replacements[event.id]!);
+      }
+    }
+
+    return candidate;
+  }
 
   @override
   Future<EnergyStatus> getEnergyStatus() async {
@@ -210,8 +228,17 @@ class MockDataService implements DataService {
 
   @override
   Future<void> logTaskEvent(TaskEvent event) async {
+    await upsertTaskEvents([event]);
+  }
+
+  @override
+  Future<void> upsertTaskEvents(List<TaskEvent> events) async {
+    if (events.isEmpty) return;
     await _delay();
-    _events.add(event);
+    final candidate = _taskEventCandidate(events);
+    _events
+      ..clear()
+      ..addAll(candidate);
   }
 
   @override
@@ -326,7 +353,7 @@ class MockDataService implements DataService {
   Future<void> setLocale(String locale) async {
     await _delay();
   }
-  
+
   // ---------------------------------------------------------------------------
   // Authentication Implementation
   // ---------------------------------------------------------------------------
@@ -351,17 +378,17 @@ class MockDataService implements DataService {
   }
 
   @override
-  Future<bool> registerAccount({required String username, required String password}) async {
+  Future<bool> registerAccount({
+    required String username,
+    required String password,
+  }) async {
     await _delay(300); // 模拟网络校验
     if (_userDb.containsKey(username)) {
       return false; // 用户已存在
     }
     _userDb[username] = password;
     // 注册成功后自动登录
-    _currentUser = UserAccount(
-      contactAddress: username,
-      displayName: '新注册用户', 
-    );
+    _currentUser = UserAccount(contactAddress: username, displayName: '新注册用户');
     return true;
   }
 

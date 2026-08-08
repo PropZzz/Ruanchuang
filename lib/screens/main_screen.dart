@@ -3,14 +3,15 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../services/app_services.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
+import 'auth_dialog.dart';
 import 'focus_page.dart';
 import 'micro_task_page.dart';
 import 'profile_page.dart';
 import 'smart_calendar_page.dart';
 import 'team_page.dart';
-import 'auth_dialog.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -22,6 +23,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   static const double _wideBreakpoint = 1024;
   int _selectedIndex = 0;
+  bool _startupAuthPromptShown = false;
 
   final List<Widget> _pages = const [
     FocusPage(),
@@ -34,26 +36,45 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showAuthDialogIfNeeded();
-    });
+    _hydrateCurrentUser();
   }
 
-  void _showAuthDialogIfNeeded() {
-    bool hasLogin = ProfilePage.globalNameNotifier.value != null;
+  Future<void> _hydrateCurrentUser() async {
+    if (ProfilePage.globalNameNotifier.value != null) return;
+    try {
+      final user = await AppServices.dataService.getCurrentUser();
+      if (!mounted) return;
+      if (user == null) {
+        _showStartupAuthPopup();
+        return;
+      }
+      ProfilePage.globalNameNotifier.value = user.displayName;
+    } catch (_) {
+      // Remote auth may be unavailable during local-first use; keep the shell usable.
+      if (mounted) {
+        _showStartupAuthPopup();
+      }
+    }
+  }
 
-    if (!hasLogin) {
+  void _showStartupAuthPopup() {
+    if (_startupAuthPromptShown ||
+        ProfilePage.globalNameNotifier.value != null) {
+      return;
+    }
+    _startupAuthPromptShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || ProfilePage.globalNameNotifier.value != null) return;
       showGeneralDialog(
         context: context,
-        barrierDismissible: false, 
-        barrierLabel: 'Auth',
-        barrierColor: Colors.transparent, 
+        barrierDismissible: true,
+        barrierLabel: '关闭登录',
+        barrierColor: Colors.transparent,
         transitionDuration: const Duration(milliseconds: 300),
         pageBuilder: (ctx, anim1, anim2) {
           return AuthDialog(
             onAuthSuccess: () {
               Navigator.of(ctx).pop();
-              setState(() {}); 
             },
           );
         },
@@ -61,32 +82,37 @@ class _MainScreenState extends State<MainScreen> {
           return FadeTransition(opacity: anim1, child: child);
         },
       );
-    }
+    });
   }
 
   List<_ShellDestination> _destinations(BuildContext context) {
     return [
       _ShellDestination(
+        id: 'focus',
         icon: Icons.timer_outlined,
         selectedIcon: Icons.timer,
         label: AppStrings.of(context, 'nav_focus'),
       ),
       _ShellDestination(
+        id: 'schedule',
         icon: Icons.calendar_month_outlined,
         selectedIcon: Icons.calendar_month,
         label: AppStrings.of(context, 'nav_schedule'),
       ),
       _ShellDestination(
+        id: 'micro',
         icon: Icons.bubble_chart_outlined,
         selectedIcon: Icons.bubble_chart,
         label: AppStrings.of(context, 'nav_micro'),
       ),
       _ShellDestination(
+        id: 'team',
         icon: Icons.group_outlined,
         selectedIcon: Icons.group,
         label: AppStrings.of(context, 'nav_team'),
       ),
       _ShellDestination(
+        id: 'profile',
         icon: Icons.person_outline,
         selectedIcon: Icons.person,
         label: AppStrings.of(context, 'nav_profile'),
@@ -104,7 +130,7 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        top: false, 
+        top: false,
         bottom: false,
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
@@ -167,7 +193,7 @@ class _NarrowShell extends StatelessWidget {
           decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.25 : 0.04),
+                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
                 blurRadius: 20,
                 offset: const Offset(0, -6),
               ),
@@ -177,8 +203,8 @@ class _NarrowShell extends StatelessWidget {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
               child: Container(
-                color: theme.colorScheme.surface.withOpacity(
-                  isDark ? 0.75 : 0.85,
+                color: theme.colorScheme.surface.withValues(
+                  alpha: isDark ? 0.75 : 0.85,
                 ),
                 child: SafeArea(
                   top: false,
@@ -199,6 +225,7 @@ class _NarrowShell extends StatelessWidget {
                       destinations: [
                         for (final d in destinations)
                           NavigationDestination(
+                            key: ValueKey('shell-nav-${d.id}'),
                             icon: Icon(d.icon, size: compactLabels ? 20 : 22),
                             selectedIcon: Icon(
                               d.selectedIcon,
@@ -252,7 +279,7 @@ class _WideShell extends StatelessWidget {
             color: theme.colorScheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.2 : 0.02),
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
                 blurRadius: 40,
                 offset: const Offset(10, 0),
               ),
@@ -313,8 +340,14 @@ class _WideShell extends StatelessWidget {
                     destinations: [
                       for (final d in destinations)
                         NavigationRailDestination(
-                          icon: Icon(d.icon),
-                          selectedIcon: Icon(d.selectedIcon),
+                          icon: Icon(
+                            d.icon,
+                            key: ValueKey('shell-rail-${d.id}-icon'),
+                          ),
+                          selectedIcon: Icon(
+                            d.selectedIcon,
+                            key: ValueKey('shell-rail-${d.id}-selected-icon'),
+                          ),
                           label: Text(d.label),
                         ),
                     ],
@@ -367,11 +400,13 @@ class _WideShell extends StatelessWidget {
 
 class _ShellDestination {
   const _ShellDestination({
+    required this.id,
     required this.icon,
     required this.selectedIcon,
     required this.label,
   });
 
+  final String id;
   final IconData icon;
   final IconData selectedIcon;
   final String label;

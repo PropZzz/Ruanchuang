@@ -84,7 +84,10 @@ class _TeamPageState extends State<TeamPage> {
 
   double _averageProgress() {
     if (_members.isEmpty) return 0.0;
-    final total = _members.fold<double>(0.0, (sum, member) => sum + member.progress);
+    final total = _members.fold<double>(
+      0.0,
+      (sum, member) => sum + member.progress,
+    );
     return (total / _members.length).clamp(0.0, 1.0).toDouble();
   }
 
@@ -116,7 +119,7 @@ class _TeamPageState extends State<TeamPage> {
       final day = DateTime.now();
       final calendarsFuture = _dataService.getTeamCalendars(day);
       final membersFuture = _dataService.getTeamMembers();
-      
+
       final cals = await calendarsFuture;
       final mems = await membersFuture;
 
@@ -171,11 +174,11 @@ class _TeamPageState extends State<TeamPage> {
             busy: member.busy,
           );
         });
-        _recomputeCollab(); 
+        _recomputeCollab();
       }
-      
+
       await _dataService.updateTeamSharePermission(member.memberId, permission);
-    } catch (e, st) {
+    } catch (e) {
       debugPrint('Update permission: $e');
     }
   }
@@ -217,8 +220,16 @@ class _TeamPageState extends State<TeamPage> {
 
       MobileFeedback.showInfo(
         context,
-        zhMessage: AppStrings.of(context, 'team_snack_booked_meeting', params: {'time': w.start.format(context)}),
-        enMessage: AppStrings.of(context, 'team_snack_booked_meeting', params: {'time': w.start.format(context)}),
+        zhMessage: AppStrings.of(
+          context,
+          'team_snack_booked_meeting',
+          params: {'time': w.start.format(context)},
+        ),
+        enMessage: AppStrings.of(
+          context,
+          'team_snack_booked_meeting',
+          params: {'time': w.start.format(context)},
+        ),
       );
 
       await _load();
@@ -245,8 +256,13 @@ class _TeamPageState extends State<TeamPage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setInner) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text(AppStrings.of(ctx2, 'team_conflict_check_title'), style: const TextStyle(fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          title: Text(
+            AppStrings.of(ctx2, 'team_conflict_check_title'),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           content: ConstrainedBox(
             constraints: MobileFeedback.dialogConstraints(ctx2, maxWidth: 380),
             child: Column(
@@ -254,36 +270,80 @@ class _TeamPageState extends State<TeamPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white10
+                        : Colors.black.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(AppStrings.of(ctx2, 'label_start'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Text(
+                        AppStrings.of(ctx2, 'label_start'),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
                       TextButton(
                         onPressed: () async {
-                          final t = await showTimePicker(context: ctx2, initialTime: start);
+                          final t = await showTimePicker(
+                            context: ctx2,
+                            initialTime: start,
+                          );
                           if (t != null) setInner(() => start = t);
                         },
-                        child: Text(start.format(ctx2), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          start.format(ctx2),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white10
+                        : Colors.black.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(AppStrings.of(ctx2, 'label_minutes'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Text(
+                        AppStrings.of(ctx2, 'label_minutes'),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
                       DropdownButtonHideUnderline(
                         child: DropdownButton<int>(
                           value: minutes,
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Theme.of(context).colorScheme.primary),
-                          items: const [15, 30, 45, 60, 90].map((v) => DropdownMenuItem(value: v, child: Text('$v min'))).toList(),
-                          onChanged: (v) { if (v != null) setInner(() => minutes = v); },
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          items: const [15, 30, 45, 60, 90]
+                              .map(
+                                (v) => DropdownMenuItem(
+                                  value: v,
+                                  child: Text('$v min'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) setInner(() => minutes = v);
+                          },
                         ),
                       ),
                     ],
@@ -293,7 +353,10 @@ class _TeamPageState extends State<TeamPage> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(AppStrings.of(ctx2, 'btn_cancel'))),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(AppStrings.of(ctx2, 'btn_cancel')),
+            ),
             ElevatedButton(
               onPressed: () {
                 final day = DateTime.now();
@@ -314,15 +377,24 @@ class _TeamPageState extends State<TeamPage> {
                 showDialog(
                   context: context,
                   builder: (ctx3) => AlertDialog(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     title: Text(AppStrings.of(ctx3, 'team_conflicts_title')),
                     content: Text(
                       conflicts.isEmpty
                           ? AppStrings.of(ctx3, 'team_no_conflicts')
-                          : AppStrings.of(ctx3, 'team_busy_members', params: {'members': conflicts.join(', ')}),
+                          : AppStrings.of(
+                              ctx3,
+                              'team_busy_members',
+                              params: {'members': conflicts.join(', ')},
+                            ),
                     ),
                     actions: [
-                      TextButton(onPressed: () => Navigator.of(ctx3).pop(), child: Text(AppStrings.of(ctx3, 'btn_ok'))),
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx3).pop(),
+                        child: Text(AppStrings.of(ctx3, 'btn_ok')),
+                      ),
                     ],
                   ),
                 );
@@ -345,59 +417,90 @@ class _TeamPageState extends State<TeamPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text(isZh ? '添加团队成员' : 'Add Team Member', style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          isZh ? '添加团队成员' : 'Add Team Member',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              controller: nameCtrl, 
-              decoration: InputDecoration(labelText: isZh ? '成员姓名' : 'Member Name', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+              controller: nameCtrl,
+              decoration: InputDecoration(
+                labelText: isZh ? '成员姓名' : 'Member Name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: roleCtrl, 
-              decoration: InputDecoration(labelText: isZh ? '职位 / 角色' : 'Role / Position', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+              controller: roleCtrl,
+              decoration: InputDecoration(
+                labelText: isZh ? '职位 / 角色' : 'Role / Position',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: taskCtrl, 
-              decoration: InputDecoration(labelText: isZh ? '当前任务' : 'Current Task', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+              controller: taskCtrl,
+              decoration: InputDecoration(
+                labelText: isZh ? '当前任务' : 'Current Task',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(AppStrings.of(context, 'btn_cancel'))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppStrings.of(context, 'btn_cancel')),
+          ),
           ElevatedButton(
             onPressed: () {
               final name = nameCtrl.text.trim();
               if (name.isEmpty) return;
-              
+
               final role = roleCtrl.text.trim();
               final task = taskCtrl.text.trim();
-              
-              setState(() {
-                _members.add(TeamMember(
-                  name: name,
-                  task: task,
-                  progress: 0.0,
-                  isHighEnergy: false,
-                  busyTimes: const [],
-                ));
 
-                _calendars.add(TeamMemberCalendar(
-                  memberId: 'm_${DateTime.now().millisecondsSinceEpoch}',
-                  displayName: name,
-                  role: role.isEmpty ? (isZh ? '成员' : 'Member') : role,
-                  permission: TeamSharePermission.details,
-                  energy: EnergyTier.medium,
-                  busy: const [],
-                ));
+              setState(() {
+                _members.add(
+                  TeamMember(
+                    name: name,
+                    task: task,
+                    progress: 0.0,
+                    isHighEnergy: false,
+                    busyTimes: const [],
+                  ),
+                );
+
+                _calendars.add(
+                  TeamMemberCalendar(
+                    memberId: 'm_${DateTime.now().millisecondsSinceEpoch}',
+                    displayName: name,
+                    role: role.isEmpty ? (isZh ? '成员' : 'Member') : role,
+                    permission: TeamSharePermission.details,
+                    energy: EnergyTier.medium,
+                    busy: const [],
+                  ),
+                );
               });
-              
+
               _recomputeCollab();
 
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isZh ? '成员已添加到团队' : 'Member added successfully')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    isZh ? '成员已添加到团队' : 'Member added successfully',
+                  ),
+                ),
+              );
             },
             child: Text(isZh ? '添加' : 'Add'),
           ),
@@ -414,12 +517,23 @@ class _TeamPageState extends State<TeamPage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setInner) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text(isZh ? '修改进度: ${member.name}' : 'Update Progress: ${member.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          title: Text(
+            isZh ? '修改进度: ${member.name}' : 'Update Progress: ${member.name}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('${(currentProgress * 100).round()}%', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+              Text(
+                '${(currentProgress * 100).round()}%',
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 16),
               Slider(
                 value: currentProgress,
@@ -431,7 +545,10 @@ class _TeamPageState extends State<TeamPage> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(AppStrings.of(context, 'btn_cancel'))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(AppStrings.of(context, 'btn_cancel')),
+            ),
             ElevatedButton(
               onPressed: () {
                 setState(() {
@@ -468,9 +585,14 @@ class _TeamPageState extends State<TeamPage> {
     final kpiConflictsLabel = isZh ? '冲突数' : 'Conflicts';
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF2F2F7),
+      backgroundColor: isDark
+          ? const Color(0xFF121212)
+          : const Color(0xFFF2F2F7),
       appBar: AppBar(
-        title: Text(AppStrings.of(context, 'team_title'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          AppStrings.of(context, 'team_title'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
@@ -489,7 +611,9 @@ class _TeamPageState extends State<TeamPage> {
           IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _load),
           if (isCompactAppBar)
             PopupMenuButton<String>(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               onSelected: (value) {
                 if (value == 'conflict') {
                   _showConflictCheck();
@@ -500,11 +624,23 @@ class _TeamPageState extends State<TeamPage> {
               itemBuilder: (ctx) => [
                 PopupMenuItem(
                   value: 'add',
-                  child: Row(children: [const Icon(Icons.person_add_rounded, size: 20), const SizedBox(width: 8), Text(isZh ? '添加成员' : 'Add Member')]),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person_add_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      Text(isZh ? '添加成员' : 'Add Member'),
+                    ],
+                  ),
                 ),
                 PopupMenuItem(
                   value: 'conflict',
-                  child: Row(children: [const Icon(Icons.plagiarism_rounded, size: 20), const SizedBox(width: 8), Text(AppStrings.of(ctx, 'team_conflict_check_title'))]),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.plagiarism_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      Text(AppStrings.of(ctx, 'team_conflict_check_title')),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -519,7 +655,9 @@ class _TeamPageState extends State<TeamPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    theme.colorScheme.secondaryContainer.withOpacity(0.26),
+                    theme.colorScheme.secondaryContainer.withValues(
+                      alpha: 0.26,
+                    ),
                     theme.colorScheme.surface,
                   ],
                 ),
@@ -531,14 +669,22 @@ class _TeamPageState extends State<TeamPage> {
                     child: LayoutBuilder(
                       builder: (context, constraints) {
                         final isWide = constraints.maxWidth >= 1100;
-                        final bottomPadding = MediaQuery.of(context).padding.bottom + 100;
+                        final bottomPadding =
+                            MediaQuery.of(context).padding.bottom + 100;
                         return ListView(
                           physics: const BouncingScrollPhysics(),
-                          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
+                          padding: EdgeInsets.fromLTRB(
+                            16,
+                            16,
+                            16,
+                            bottomPadding,
+                          ),
                           children: [
                             Card(
                               elevation: 0,
-                              color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                              color: isDark
+                                  ? const Color(0xFF1E1E1E)
+                                  : Colors.white,
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Wrap(
@@ -573,12 +719,18 @@ class _TeamPageState extends State<TeamPage> {
                                 children: [
                                   Expanded(
                                     flex: 5,
-                                    child: _buildRecommendationPanel(context, isDark),
+                                    child: _buildRecommendationPanel(
+                                      context,
+                                      isDark,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     flex: 7,
-                                    child: _buildMergedSchedulePanel(context, isDark),
+                                    child: _buildMergedSchedulePanel(
+                                      context,
+                                      isDark,
+                                    ),
                                   ),
                                 ],
                               )
@@ -592,9 +744,13 @@ class _TeamPageState extends State<TeamPage> {
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(child: _buildConflictPanel(context, isDark)),
+                                  Expanded(
+                                    child: _buildConflictPanel(context, isDark),
+                                  ),
                                   const SizedBox(width: 12),
-                                  Expanded(child: _buildMemberPanel(context, isDark)),
+                                  Expanded(
+                                    child: _buildMemberPanel(context, isDark),
+                                  ),
                                 ],
                               )
                             else ...[
@@ -653,8 +809,10 @@ class _TeamPageState extends State<TeamPage> {
                 final taskLabel = member.task.isEmpty
                     ? AppStrings.of(context, 'team_label_task')
                     : member.task;
-                
-                final memberCal = _calendars.where((c) => c.displayName == member.name).firstOrNull;
+
+                final memberCal = _calendars
+                    .where((c) => c.displayName == member.name)
+                    .firstOrNull;
                 final roleLabel = memberCal?.role ?? '';
 
                 return GestureDetector(
@@ -663,9 +821,13 @@ class _TeamPageState extends State<TeamPage> {
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.grey.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                      border: Border.all(
+                        color: isDark ? Colors.white12 : Colors.black12,
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -678,23 +840,33 @@ class _TeamPageState extends State<TeamPage> {
                                 children: [
                                   Text(
                                     member.name,
-                                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                    ),
                                   ),
                                   if (roleLabel.isNotEmpty)
                                     Text(
                                       roleLabel,
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
                                       ),
                                     ),
                                 ],
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -722,7 +894,9 @@ class _TeamPageState extends State<TeamPage> {
                           child: LinearProgressIndicator(
                             value: member.progress,
                             minHeight: 6,
-                            backgroundColor: isDark ? Colors.white10 : Colors.black12,
+                            backgroundColor: isDark
+                                ? Colors.white10
+                                : Colors.black12,
                           ),
                         ),
                       ],
@@ -740,7 +914,9 @@ class _TeamPageState extends State<TeamPage> {
     final compact = MobileFeedback.isNarrow(context, breakpoint: 760);
     return Card(
       elevation: 0,
-      color: Theme.of(context).colorScheme.secondaryContainer.withOpacity(0.4),
+      color: Theme.of(
+        context,
+      ).colorScheme.secondaryContainer.withValues(alpha: 0.4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -778,10 +954,14 @@ class _TeamPageState extends State<TeamPage> {
                 );
                 return Card(
                   elevation: 0,
-                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.green.withOpacity(0.3)),
+                    side: BorderSide(
+                      color: Colors.green.withValues(alpha: 0.3),
+                    ),
                   ),
                   margin: const EdgeInsets.only(bottom: 8),
                   child: compact
@@ -792,7 +972,9 @@ class _TeamPageState extends State<TeamPage> {
                             children: [
                               Text(
                                 '${w.start.format(context)} - ${end.format(context)}',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Text(
@@ -839,7 +1021,9 @@ class _TeamPageState extends State<TeamPage> {
                               backgroundColor: Colors.green.shade600,
                               foregroundColor: Colors.white,
                             ),
-                            child: Text(AppStrings.of(context, 'team_btn_book')),
+                            child: Text(
+                              AppStrings.of(context, 'team_btn_book'),
+                            ),
                           ),
                         ),
                 );
@@ -906,11 +1090,18 @@ class _TeamPageState extends State<TeamPage> {
               ..._conflicts.map(
                 (c) => Card(
                   elevation: 0,
-                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.grey.withValues(alpha: 0.05),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    leading: const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                    leading: const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.orange,
+                    ),
                     title: Text(
                       '${c.memberA} vs ${c.memberB}',
                       style: const TextStyle(fontWeight: FontWeight.w600),
@@ -952,16 +1143,21 @@ class _TeamPageState extends State<TeamPage> {
               final perm = _sharePermissionLabel(context, m.permission);
               final energy = _energyTierLabel(context, m.energy);
               final member = _memberForCalendar(m);
-              final progressValue =
-                  (member?.progress ?? 0.0).clamp(0.0, 1.0).toDouble();
+              final progressValue = (member?.progress ?? 0.0)
+                  .clamp(0.0, 1.0)
+                  .toDouble();
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.grey.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                  border: Border.all(
+                    color: isDark ? Colors.white12 : Colors.black12,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -970,7 +1166,9 @@ class _TeamPageState extends State<TeamPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         CircleAvatar(
-                          backgroundColor: theme.colorScheme.primary.withOpacity(0.2),
+                          backgroundColor: theme.colorScheme.primary.withValues(
+                            alpha: 0.2,
+                          ),
                           child: Text(
                             m.displayName.isNotEmpty ? m.displayName[0] : '?',
                             style: TextStyle(
@@ -1017,7 +1215,11 @@ class _TeamPageState extends State<TeamPage> {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          const Icon(Icons.check_circle_outline, size: 16, color: Colors.grey),
+                          const Icon(
+                            Icons.check_circle_outline,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: ClipRRect(
@@ -1025,7 +1227,9 @@ class _TeamPageState extends State<TeamPage> {
                               child: LinearProgressIndicator(
                                 value: progressValue,
                                 minHeight: 6,
-                                backgroundColor: isDark ? Colors.white10 : Colors.black12,
+                                backgroundColor: isDark
+                                    ? Colors.white10
+                                    : Colors.black12,
                               ),
                             ),
                           ),
@@ -1058,7 +1262,9 @@ class _TeamPageState extends State<TeamPage> {
                               .map(
                                 (p) => DropdownMenuItem(
                                   value: p,
-                                  child: Text(_sharePermissionLabel(context, p)),
+                                  child: Text(
+                                    _sharePermissionLabel(context, p),
+                                  ),
                                 ),
                               )
                               .toList(),
@@ -1135,7 +1341,9 @@ class _TeamKpiChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.04),
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.08)
+            : Colors.black.withValues(alpha: 0.04),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1304,8 +1512,6 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
 
     final height = (_endHour - _startHour) * _hourHeight;
     final now = TimeOfDay.fromDateTime(DateTime.now());
-    final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
-
     final laneCount = calendars.length;
     final contentWidth = _timeLabelWidth + _laneWidth * laneCount;
     final heatSegments = _busyHeatSegments();
@@ -1323,15 +1529,15 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
           runSpacing: 8,
           children: [
             _LegendChip(
-              color: Colors.green.withOpacity(0.18),
+              color: Colors.green.withValues(alpha: 0.18),
               label: AppStrings.of(context, 'team_legend_golden'),
             ),
             _LegendChip(
-              color: const Color(0xFFD68C89).withOpacity(0.12),
+              color: const Color(0xFFD68C89).withValues(alpha: 0.12),
               label: AppStrings.of(context, 'team_legend_busy_overlap'),
             ),
             _LegendChip(
-              color: Colors.blue.withOpacity(0.14),
+              color: Colors.blue.withValues(alpha: 0.14),
               label: AppStrings.of(context, 'team_legend_conflict_probe'),
             ),
           ],
@@ -1409,7 +1615,9 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                         Expanded(
                                           child: Container(
                                             height: 1,
-                                            color: Colors.grey.withOpacity(0.2),
+                                            color: Colors.grey.withValues(
+                                              alpha: 0.2,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -1426,10 +1634,11 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                         _topForMinute(seg.endMin) -
                                         _topForMinute(seg.startMin),
                                     child: Container(
-                                      color: const Color(0xFFD68C89).withOpacity(
-                                        (0.05 + (seg.busyCount - 2) * 0.03)
-                                            .clamp(0.05, 0.16)
-                                            .toDouble(),
+                                      color: const Color(0xFFD68C89).withValues(
+                                        alpha:
+                                            (0.05 + (seg.busyCount - 2) * 0.03)
+                                                .clamp(0.05, 0.16)
+                                                .toDouble(),
                                       ),
                                     ),
                                   ),
@@ -1444,9 +1653,13 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                         (meetingMinutes / 60.0) * _hourHeight,
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: Colors.green.withOpacity(0.12),
+                                        color: Colors.green.withValues(
+                                          alpha: 0.12,
+                                        ),
                                         border: Border.all(
-                                          color: Colors.green.withOpacity(0.35),
+                                          color: Colors.green.withValues(
+                                            alpha: 0.35,
+                                          ),
                                         ),
                                       ),
                                       child: Align(
@@ -1482,8 +1695,12 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                     child: Container(
                                       decoration: BoxDecoration(
                                         color: probeConflicts.isEmpty
-                                            ? Colors.green.withOpacity(0.10)
-                                            : Colors.blue.withOpacity(0.10),
+                                            ? Colors.green.withValues(
+                                                alpha: 0.10,
+                                              )
+                                            : Colors.blue.withValues(
+                                                alpha: 0.10,
+                                              ),
                                         border: Border.all(
                                           color: probeConflicts.isEmpty
                                               ? Colors.green
@@ -1525,7 +1742,9 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                       Expanded(
                                         child: Container(
                                           height: 1.5,
-                                          color: Colors.blue.withOpacity(0.6),
+                                          color: Colors.blue.withValues(
+                                            alpha: 0.6,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -1590,7 +1809,7 @@ class _LegendChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.black.withOpacity(0.06)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
       ),
       child: Text(
         label,
@@ -1619,8 +1838,8 @@ class _BusyBlock extends StatelessWidget {
     final subtitle = showDetails ? entry.tag : '';
 
     final bg = showDetails
-        ? entry.color.withOpacity(0.85)
-        : Colors.grey.withOpacity(0.75);
+        ? entry.color.withValues(alpha: 0.85)
+        : Colors.grey.withValues(alpha: 0.75);
 
     return Material(
       color: Colors.transparent,
@@ -1682,7 +1901,7 @@ class _BusyBlock extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1711,7 +1930,7 @@ class _BusyBlock extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                 ],

@@ -11,7 +11,6 @@ import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 
 class FocusPage extends StatefulWidget {
-  
   const FocusPage({super.key});
 
   @override
@@ -33,6 +32,7 @@ class _FocusPageState extends State<FocusPage> {
   int _remainingSeconds = 0;
   bool _isTimerRunning = false;
   bool _isLoading = true;
+  bool _careNoticeShown = false;
 
   String? _activeTaskId;
 
@@ -167,10 +167,8 @@ class _FocusPageState extends State<FocusPage> {
       final energy = await energyFuture;
       final emotion = await _dataService.getCurrentEmotion();
       _currentEmotion = emotion;
-
-      if (emotion == EmotionType.fatigue || emotion == EmotionType.irritable) {
-        _showCareDialog();
-      }
+      final shouldShowCareNotice =
+          emotion == EmotionType.fatigue || emotion == EmotionType.irritable;
       final allEntries = await entriesFuture;
 
       if (!mounted) return;
@@ -214,6 +212,10 @@ class _FocusPageState extends State<FocusPage> {
         _isLoading = false;
       });
 
+      if (shouldShowCareNotice) {
+        _showCareNotice();
+      }
+
       unawaited(_loadCrystalRecommendations(entries, energy));
     } catch (e, st) {
       if (!mounted) return;
@@ -245,7 +247,9 @@ class _FocusPageState extends State<FocusPage> {
         next.time.hour,
         next.time.minute,
       );
-      final wait = taskStart.isAfter(now) ? taskStart.difference(now) : Duration.zero;
+      final wait = taskStart.isAfter(now)
+          ? taskStart.difference(now)
+          : Duration.zero;
 
       final msg = AppStrings.of(
         context,
@@ -315,8 +319,14 @@ class _FocusPageState extends State<FocusPage> {
   void _startNextTask() {
     final current = _currentTask;
     if (current != null) {
-      final planned = ((current.height / 80.0) * 60.0).round().clamp(1, 24 * 60);
-      final remainingMinutes = (_remainingSeconds / 60.0).round().clamp(0, planned);
+      final planned = ((current.height / 80.0) * 60.0).round().clamp(
+        1,
+        24 * 60,
+      );
+      final remainingMinutes = (_remainingSeconds / 60.0).round().clamp(
+        0,
+        planned,
+      );
       final actual = (planned - remainingMinutes).clamp(1, planned);
       _logComplete(current, actualMinutes: actual);
     }
@@ -339,7 +349,9 @@ class _FocusPageState extends State<FocusPage> {
       nextTask.time.minute,
     );
 
-    final waitDuration = taskStartTime.isAfter(now) ? taskStartTime.difference(now) : Duration.zero;
+    final waitDuration = taskStartTime.isAfter(now)
+        ? taskStartTime.difference(now)
+        : Duration.zero;
 
     final msg = AppStrings.of(
       context,
@@ -414,14 +426,21 @@ class _FocusPageState extends State<FocusPage> {
                                   flex: 11,
                                   child: ListView(
                                     padding: EdgeInsets.only(
-                                      bottom: MediaQuery.of(context).padding.bottom + 100,
+                                      bottom:
+                                          MediaQuery.of(
+                                            context,
+                                          ).padding.bottom +
+                                          100,
                                     ),
                                     children: [
                                       _buildEnergyStatusCard(),
                                       const SizedBox(height: 18),
                                       _buildSectionTitle(
                                         context,
-                                        AppStrings.of(context, 'focus_header_current'),
+                                        AppStrings.of(
+                                          context,
+                                          'focus_header_current',
+                                        ),
                                       ),
                                       const SizedBox(height: 10),
                                       _buildCurrentTaskCard(context),
@@ -433,25 +452,31 @@ class _FocusPageState extends State<FocusPage> {
                                   flex: 10,
                                   child: ListView(
                                     padding: EdgeInsets.only(
-                                      bottom: MediaQuery.of(context).padding.bottom + 100,
+                                      bottom:
+                                          MediaQuery.of(
+                                            context,
+                                          ).padding.bottom +
+                                          100,
                                     ),
-                                    children: [
-                                      _buildPlanningPanel(theme),
-                                    ],
+                                    children: [_buildPlanningPanel(theme)],
                                   ),
                                 ),
                               ],
                             )
                           : ListView(
                               padding: EdgeInsets.only(
-                                bottom: MediaQuery.of(context).padding.bottom + 100,
+                                bottom:
+                                    MediaQuery.of(context).padding.bottom + 100,
                               ),
                               children: [
                                 _buildEnergyStatusCard(),
                                 const SizedBox(height: 18),
                                 _buildSectionTitle(
                                   context,
-                                  AppStrings.of(context, 'focus_header_current'),
+                                  AppStrings.of(
+                                    context,
+                                    'focus_header_current',
+                                  ),
                                 ),
                                 const SizedBox(height: 10),
                                 _buildCurrentTaskCard(context),
@@ -476,7 +501,10 @@ class _FocusPageState extends State<FocusPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle(context, AppStrings.of(context, 'focus_header_next')),
+            _buildSectionTitle(
+              context,
+              AppStrings.of(context, 'focus_header_next'),
+            ),
             const SizedBox(height: 8),
             if (_nextTasks.isEmpty)
               _buildHintText(AppStrings.of(context, 'focus_empty_task'))
@@ -520,11 +548,7 @@ class _FocusPageState extends State<FocusPage> {
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.bubble_chart_outlined),
-                    ],
-                  ),
+                  const Row(children: [Icon(Icons.bubble_chart_outlined)]),
                   const SizedBox(height: 8),
                   Text(r.task.title),
                   const SizedBox(height: 4),
@@ -647,7 +671,7 @@ class _FocusPageState extends State<FocusPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (emotion != null)
-                Text(
+                  Text(
                     '当前情绪：${emotion.label}',
                     style: TextStyle(
                       fontSize: 14,
@@ -675,7 +699,11 @@ class _FocusPageState extends State<FocusPage> {
             label: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.battery_full, size: 14, color: theme.colorScheme.primary),
+                Icon(
+                  Icons.battery_full,
+                  size: 14,
+                  color: theme.colorScheme.primary,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   "${energy?.batteryPercent ?? 85}%",
@@ -698,7 +726,10 @@ class _FocusPageState extends State<FocusPage> {
           child: Center(
             child: Text(
               AppStrings.of(context, 'focus_empty_task'),
-              style: TextStyle(fontSize: 18, color: theme.colorScheme.onSurfaceVariant),
+              style: TextStyle(
+                fontSize: 18,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ),
@@ -713,7 +744,11 @@ class _FocusPageState extends State<FocusPage> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            Icon(iconForTag(_currentTask!.tag), color: theme.colorScheme.onSecondaryContainer, size: 48),
+            Icon(
+              iconForTag(_currentTask!.tag),
+              color: theme.colorScheme.onSecondaryContainer,
+              size: 48,
+            ),
             const SizedBox(height: 16),
             Text(
               _currentTask!.title,
@@ -728,7 +763,9 @@ class _FocusPageState extends State<FocusPage> {
             Text(
               "${AppStrings.of(context, 'focus_time_remaining')}${_formatDuration(_remainingSeconds)}",
               style: TextStyle(
-                color: theme.colorScheme.onSecondaryContainer.withValues(alpha: 0.72),
+                color: theme.colorScheme.onSecondaryContainer.withValues(
+                  alpha: 0.72,
+                ),
                 fontSize: 16,
                 fontFamily: 'monospace',
               ),
@@ -756,13 +793,20 @@ class _FocusPageState extends State<FocusPage> {
                     _resetTimer();
                     _startNextTask();
                   },
-                  icon: Icon(Icons.check, color: theme.colorScheme.onSecondaryContainer),
+                  icon: Icon(
+                    Icons.check,
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
                   label: Text(
                     AppStrings.of(context, 'btn_finish'),
-                    style: TextStyle(color: theme.colorScheme.onSecondaryContainer),
+                    style: TextStyle(
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: theme.colorScheme.onSecondaryContainer),
+                    side: BorderSide(
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
                   ),
                 ),
               ],
@@ -787,9 +831,9 @@ class _FocusPageState extends State<FocusPage> {
     return Text(
       title,
       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.3,
-          ),
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.3,
+      ),
     );
   }
 
@@ -799,35 +843,34 @@ class _FocusPageState extends State<FocusPage> {
       style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
     );
   }
-  void _showCareDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('🛡️ 情绪关怀提醒'),
-        content: Text(
-          '检测到您当前${_currentEmotion?.label ?? "未知"}状态。\n'
-          '建议切换为低压力任务或插入 5 分钟休息。\n'
-          '您今天已经很棒了，继续保持！',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('我知道了'),
-          ),
-          TextButton(
+
+  void _showCareNotice() {
+    if (_careNoticeShown || !mounted) return;
+    _careNoticeShown = true;
+
+    final emotionLabel = _currentEmotion?.label ?? '未知';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 104),
+          showCloseIcon: true,
+          duration: const Duration(seconds: 5),
+          content: Text('检测到当前$emotionLabel状态，建议先安排低压任务或休息 5 分钟。'),
+          action: SnackBarAction(
+            label: '查看建议',
             onPressed: () {
-              Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('已为您推荐 3 个微任务（5-10分钟）'),
-                  backgroundColor: Colors.orange,
+                  behavior: SnackBarBehavior.floating,
+                  margin: EdgeInsets.fromLTRB(16, 0, 16, 104),
+                  content: Text('可优先选择 5-10 分钟微任务，降低切换成本。'),
                 ),
               );
             },
-            child: const Text('切换微任务'),
           ),
-        ],
-      ),
-    );
+        ),
+      );
   }
 }

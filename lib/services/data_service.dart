@@ -50,6 +50,7 @@ abstract class DataService {
   // ---------------------------------------------------------------------------
 
   Future<void> logTaskEvent(TaskEvent event);
+  Future<void> upsertTaskEvents(List<TaskEvent> events);
   Future<List<TaskEvent>> getTaskEvents(DateTime from, DateTime to);
   Future<ReviewReport> getWeeklyReport(DateTime weekStart);
   Future<SchedulingTuning> getSchedulingTuning();
@@ -79,7 +80,10 @@ abstract class DataService {
   Future<bool> login(String account, String password);
 
   /// 注册并自动登录
-  Future<bool> registerAccount({required String username, required String password});
+  Future<bool> registerAccount({
+    required String username,
+    required String password,
+  });
 
   /// 退出登录
   Future<void> logout();

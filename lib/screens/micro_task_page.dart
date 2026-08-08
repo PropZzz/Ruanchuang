@@ -130,12 +130,6 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
         .fold<int>(0, (sum, task) => sum + _pointsFor(task));
   }
 
-  int _pendingPoints() {
-    return _tasks
-        .where((t) => !t.done)
-        .fold<int>(0, (sum, task) => sum + _pointsFor(task));
-  }
-
   bool _isEnglish(BuildContext context) {
     return Localizations.localeOf(context).languageCode == 'en';
   }
@@ -368,73 +362,68 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleCtrl,
-                  decoration: InputDecoration(
-                    labelText: AppStrings.of(context, 'label_title'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: InputDecoration(
+                  labelText: AppStrings.of(context, 'label_title'),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: tagCtrl,
-                  decoration: InputDecoration(
-                    labelText: AppStrings.of(context, 'label_tag'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: tagCtrl,
+                decoration: InputDecoration(
+                  labelText: AppStrings.of(context, 'label_tag'),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(AppStrings.of(context, 'micro_label_min')),
-                    DropdownButton<int>(
-                      value: minutes,
-                      items: const [5, 8, 10, 15, 20, 30, 45, 60]
-                          .map(
-                            (v) => DropdownMenuItem(
-                              value: v,
-                              child: Text('$v min'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setInner(() => minutes = v);
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(AppStrings.of(context, 'label_priority')),
-                    DropdownButton<int>(
-                      value: priority,
-                      items: const [1, 2, 3, 4, 5]
-                          .map(
-                            (v) =>
-                                DropdownMenuItem(value: v, child: Text('P$v')),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setInner(() => priority = v);
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(AppStrings.of(context, 'micro_label_min')),
+                  DropdownButton<int>(
+                    value: minutes,
+                    items: const [5, 8, 10, 15, 20, 30, 45, 60]
+                        .map(
+                          (v) =>
+                              DropdownMenuItem(value: v, child: Text('$v min')),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setInner(() => minutes = v);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(AppStrings.of(context, 'label_priority')),
+                  DropdownButton<int>(
+                    value: priority,
+                    items: const [1, 2, 3, 4, 5]
+                        .map(
+                          (v) => DropdownMenuItem(value: v, child: Text('P$v')),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setInner(() => priority = v);
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -483,73 +472,68 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleCtrl,
-                  decoration: InputDecoration(
-                    labelText: AppStrings.of(context, 'label_title'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: InputDecoration(
+                  labelText: AppStrings.of(context, 'label_title'),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: tagCtrl,
-                  decoration: InputDecoration(
-                    labelText: AppStrings.of(context, 'label_tag'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: tagCtrl,
+                decoration: InputDecoration(
+                  labelText: AppStrings.of(context, 'label_tag'),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(AppStrings.of(context, 'micro_label_min')),
-                    DropdownButton<int>(
-                      value: minutes,
-                      items: const [5, 8, 10, 15, 20, 30, 45, 60]
-                          .map(
-                            (v) => DropdownMenuItem(
-                              value: v,
-                              child: Text('$v min'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setInner(() => minutes = v);
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(AppStrings.of(context, 'label_priority')),
-                    DropdownButton<int>(
-                      value: priority,
-                      items: const [1, 2, 3, 4, 5]
-                          .map(
-                            (v) =>
-                                DropdownMenuItem(value: v, child: Text('P$v')),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setInner(() => priority = v);
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(AppStrings.of(context, 'micro_label_min')),
+                  DropdownButton<int>(
+                    value: minutes,
+                    items: const [5, 8, 10, 15, 20, 30, 45, 60]
+                        .map(
+                          (v) =>
+                              DropdownMenuItem(value: v, child: Text('$v min')),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setInner(() => minutes = v);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(AppStrings.of(context, 'label_priority')),
+                  DropdownButton<int>(
+                    value: priority,
+                    items: const [1, 2, 3, 4, 5]
+                        .map(
+                          (v) => DropdownMenuItem(value: v, child: Text('P$v')),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setInner(() => priority = v);
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -948,7 +932,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -973,12 +957,12 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
         gradient: LinearGradient(
           colors: isDark
               ? [
-                  theme.colorScheme.primaryContainer.withOpacity(0.4),
-                  theme.colorScheme.primaryContainer.withOpacity(0.1),
+                  theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
+                  theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
                 ]
               : [
-                  theme.colorScheme.primaryContainer.withOpacity(0.8),
-                  theme.colorScheme.primaryContainer.withOpacity(0.3),
+                  theme.colorScheme.primaryContainer.withValues(alpha: 0.8),
+                  theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                 ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -988,7 +972,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
             ? []
             : [
                 BoxShadow(
-                  color: theme.colorScheme.primary.withOpacity(0.15),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -1000,18 +984,24 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-            child: Text(
-              AppStrings.of(context, 'micro_ai_suggestion'),
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: theme.colorScheme.onSurface,
+              Text(
+                AppStrings.of(context, 'micro_ai_suggestion'),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+              ElevatedButton.icon(
+                onPressed: _fillQuickTasks,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.auto_awesome, size: 16),
+                label: const Text('AI 填充'),
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -1148,38 +1138,40 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
+              color: Theme.of(
+                context,
+              ).colorScheme.surface.withValues(alpha: 0.8),
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '已选 $count 项',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '已选 $count 项',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
                       ),
-                      Text(
-                        '可获 +$points ${_pointsUnit(context)}',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    ),
+                    Text(
+                      '可获 +$points ${_pointsUnit(context)}',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -1189,9 +1181,6 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                         color: Colors.redAccent,
                       ),
                       onPressed: count == 0 ? null : _batchDelete,
-                      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                      padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
                     ),
                     const SizedBox(width: 4),
                     ElevatedButton(
@@ -1201,12 +1190,10 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                         foregroundColor: Theme.of(
                           context,
                         ).colorScheme.onTertiary,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        visualDensity: VisualDensity.compact,
                       ),
-                      child: const Text('集中安排', style: TextStyle(fontSize: 13)),
+                      child: const Text('集中安排'),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: count == 0 ? null : _batchMarkComplete,
                       style: ElevatedButton.styleFrom(
@@ -1214,10 +1201,8 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                         foregroundColor: Theme.of(
                           context,
                         ).colorScheme.onPrimary,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        visualDensity: VisualDensity.compact,
                       ),
-                      child: const Text('完成', style: TextStyle(fontSize: 13)),
+                      child: const Text('完成'),
                     ),
                   ],
                 ),
@@ -1239,8 +1224,8 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
       decoration: BoxDecoration(
         color: task.done
             ? (isDark
-                  ? Colors.white.withOpacity(0.02)
-                  : Colors.grey.withOpacity(0.05))
+                  ? Colors.white.withValues(alpha: 0.02)
+                  : Colors.grey.withValues(alpha: 0.05))
             : (isDark ? const Color(0xFF1E1E1E) : Colors.white),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
@@ -1253,7 +1238,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
             ? []
             : [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -1292,8 +1277,8 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: task.done
-                          ? Colors.green.withOpacity(0.1)
-                          : theme.colorScheme.primary.withOpacity(0.1),
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : theme.colorScheme.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -1342,7 +1327,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                             decoration: BoxDecoration(
                               color: isDark
                                   ? Colors.white10
-                                  : Colors.black.withOpacity(0.05),
+                                  : Colors.black.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -1373,7 +1358,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                             decoration: BoxDecoration(
                               color: isDark
                                   ? Colors.white10
-                                  : Colors.black.withOpacity(0.05),
+                                  : Colors.black.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -1404,60 +1389,47 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
 
                 // 右侧操作区
                 if (!_batchMode) ...[
-                  SizedBox(
-                    width: 80,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '+${_pointsFor(task)} ${_pointsUnit(context)}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            color: task.done
-                                ? Colors.green
-                                : theme.colorScheme.primary,
-                            fontSize: 13,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '+${_pointsFor(task)} ${_pointsUnit(context)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color: task.done
+                              ? Colors.green
+                              : theme.colorScheme.primary,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.edit_rounded,
+                              size: 20,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () =>
+                                _showEditMicroTaskDialog(context, task),
+                            constraints: const BoxConstraints(),
+                            padding: EdgeInsets.zero,
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(
-                                Icons.edit_rounded,
-                                size: 20,
-                                color: Colors.grey,
-                              ),
-                              onPressed: () =>
-                                  _showEditMicroTaskDialog(context, task),
-                              constraints: const BoxConstraints(
-                                minWidth: 32,
-                                minHeight: 32,
-                              ),
-                              padding: EdgeInsets.zero,
-                              visualDensity: VisualDensity.compact,
+                          const SizedBox(width: 12),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              size: 20,
+                              color: Colors.redAccent,
                             ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline_rounded,
-                                size: 20,
-                                color: Colors.redAccent,
-                              ),
-                              onPressed: () => _confirmDeleteOne(task),
-                              constraints: const BoxConstraints(
-                                minWidth: 32,
-                                minHeight: 32,
-                              ),
-                              padding: EdgeInsets.zero,
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                            onPressed: () => _confirmDeleteOne(task),
+                            constraints: const BoxConstraints(),
+                            padding: EdgeInsets.zero,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ],

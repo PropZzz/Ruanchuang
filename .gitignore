@@ -28,6 +28,8 @@ Thumbs.db
 /android/local.properties
 /android/.gradle
 /android/captures/
+/android/build/
+/android/app/build/
 /android/gradlew
 /android/gradlew.bat
 /android/app/src/main/assets/
@@ -48,6 +50,7 @@ key.properties
 /ios/ServiceDefinitions.json
 /ios/Runner/GeneratedPluginRegistrant.*
 /macos/Flutter/ephemeral/
+**/flutter/ephemeral/
 
 # -----------------------
 # 5. Web 相关 (防止上次提到的误传浏览器配置)
@@ -74,4 +77,10 @@ doc/api/
 coverage/
 android/gradle/wrapper/gradle-8.14-all.zip
 
-/docs/
+# -----------------------
+# 8. Local runtime state
+# -----------------------
+/.appdata/
+/.pytest_cache/
+**/__pycache__/
+/backend/data/*.db

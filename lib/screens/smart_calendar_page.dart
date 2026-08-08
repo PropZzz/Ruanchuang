@@ -7,6 +7,9 @@ import '../services/ics/ics_bridge.dart';
 import '../services/ics/ics_codec.dart';
 import '../services/ics/ics_file_saver.dart';
 import '../services/emotion/emotion_policy.dart';
+import '../services/scheduling/schedule_rescue.dart';
+import '../services/scheduling/schedule_rescue_persistence.dart';
+import '../services/scheduling/urgent_deadline.dart';
 import '../utils/helpers.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
@@ -48,8 +51,15 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
   final _dataService = AppServices.dataService;
 
+  ScheduleRescuePersistence get _rescuePersistence => ScheduleRescuePersistence(
+    upsert: _dataService.addScheduleEntry,
+    remove: _dataService.removeScheduleEntry,
+  );
+
   List<PlanTask> _smartTasks = const [];
   PlanTask? _urgentInserted;
+  ScheduleRescueOption? _acceptedRescue;
+  List<ScheduleEntry>? _rescueUndoBlocks;
 
   static const double _hourHeight = 80.0;
   static const int _startHour = 8;
@@ -64,7 +74,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     _loadSchedule();
   }
 
-  Future<void> _loadSchedule() async {
+  Future<void> _loadSchedule({bool preserveLoading = false}) async {
     setState(() {
       _isLoading = true;
     });
@@ -90,7 +100,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         setState(() {
           _blocks = entries;
           _statusByTaskId = status;
-          _isLoading = false;
+          if (!preserveLoading) _isLoading = false;
         });
         final todayEntries = entriesForDay(day: today, allEntries: entries);
         await AppServices.reminderService.rescheduleDay(
@@ -101,12 +111,12 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         return;
       }
 
-      await _loadSmartSchedule();
+      await _loadSmartSchedule(preserveLoading: preserveLoading);
     } catch (e, st) {
       if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+      if (!preserveLoading) {
+        setState(() => _isLoading = false);
+      }
       MobileFeedback.showError(
         context,
         category: 'schedule',
@@ -233,60 +243,63 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     ];
   }
 
-  Future<void> _loadSmartSchedule() async {
+  Future<SchedulingRequest> _buildSmartRequest({
+    bool includeUrgent = true,
+  }) async {
+    final energyStatus = await _dataService.getEnergyStatus();
+    final emotion = await _dataService.getEmotionState();
+    final day = dateOnly(_selectedDay);
+
+    _smartTasks = _smartTasks.isEmpty ? _seedTasks(day) : _smartTasks;
+
+    final tasks = <PlanTask>[
+      ..._smartTasks,
+      if (includeUrgent && _urgentInserted != null) _urgentInserted!,
+    ];
+
+    final tuning = await _dataService.getSchedulingTuning();
+    final shapedTasks = EmotionPolicy.adaptTasks(
+      tasks: tasks,
+      emotion: emotion,
+    );
+    final tunedTasks = shapedTasks.map((t) {
+      final mult = tuning.durationMultiplierForTag(t.tag);
+      final tunedMinutes = (t.durationMinutes * mult).round().clamp(1, 24 * 60);
+      final emotionMinutes = EmotionPolicy.applyDurationMultiplier(
+        minutes: tunedMinutes,
+        emotion: emotion,
+      );
+      return PlanTask(
+        id: t.id,
+        title: t.title,
+        durationMinutes: emotionMinutes,
+        priority: t.priority,
+        load: t.load,
+        tag: t.tag,
+        due: t.due,
+      );
+    }).toList();
+
+    return SchedulingRequest(
+      day: day,
+      tasks: tunedTasks,
+      windows: _defaultWindows(),
+      energy: EmotionPolicy.adjustEnergy(
+        base: _tierFromBattery(energyStatus.batteryPercent),
+        emotion: emotion,
+      ),
+      tuning: tuning,
+      fixed: EmotionPolicy.fixedRestBlocks(day: day, emotion: emotion),
+    );
+  }
+
+  Future<void> _loadSmartSchedule({bool preserveLoading = false}) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final energyStatus = await _dataService.getEnergyStatus();
-      final emotion = await _dataService.getEmotionState();
-      final day = dateOnly(_selectedDay);
-
-      _smartTasks = _smartTasks.isEmpty ? _seedTasks(day) : _smartTasks;
-
-      final tasks = <PlanTask>[
-        ..._smartTasks,
-        if (_urgentInserted != null) _urgentInserted!,
-      ];
-
-      final tuning = await _dataService.getSchedulingTuning();
-      final shapedTasks = EmotionPolicy.adaptTasks(
-        tasks: tasks,
-        emotion: emotion,
-      );
-      final tunedTasks = shapedTasks.map((t) {
-        final mult = tuning.durationMultiplierForTag(t.tag);
-        final tunedMinutes =
-            (t.durationMinutes * mult).round().clamp(1, 24 * 60);
-        final emotionMinutes = EmotionPolicy.applyDurationMultiplier(
-          minutes: tunedMinutes,
-          emotion: emotion,
-        );
-        return PlanTask(
-          id: t.id,
-          title: t.title,
-          durationMinutes: emotionMinutes,
-          priority: t.priority,
-          load: t.load,
-          tag: t.tag,
-          due: t.due,
-        );
-      }).toList();
-
-      final fixed = EmotionPolicy.fixedRestBlocks(day: day, emotion: emotion);
-
-      final req = SchedulingRequest(
-        day: day,
-        tasks: tunedTasks,
-        windows: _defaultWindows(),
-        energy: EmotionPolicy.adjustEnergy(
-          base: _tierFromBattery(energyStatus.batteryPercent),
-          emotion: emotion,
-        ),
-        tuning: tuning,
-        fixed: fixed,
-      );
+      final req = await _buildSmartRequest();
 
       AppServices.diagnostics.bumpReplan(reason: 'smart_plan');
 
@@ -294,13 +307,16 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       final plan = AppServices.schedulingEngine.plan(req);
       sw.stop();
 
-      AppServices.diagnostics.recordPlan(cost: sw.elapsed, reason: 'smart_plan');
+      AppServices.diagnostics.recordPlan(
+        cost: sw.elapsed,
+        reason: 'smart_plan',
+      );
       AppServices.logStore.info(
         'schedule',
         'plan smart schedule',
         data: {
           'ms': sw.elapsedMilliseconds,
-          'tasks': tunedTasks.length,
+          'tasks': req.tasks.length,
           'windows': req.windows.length,
         },
       );
@@ -313,7 +329,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
       setState(() {
         _blocks = planned;
-        _isLoading = false;
+        if (!preserveLoading) _isLoading = false;
       });
 
       final today = dateOnly(DateTime.now());
@@ -332,17 +348,13 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
           'calendar_planner_issues',
           params: {'count': plan.issues.length.toString()},
         );
-        MobileFeedback.showInfo(
-          context,
-          zhMessage: msg,
-          enMessage: msg,
-        );
+        MobileFeedback.showInfo(context, zhMessage: msg, enMessage: msg);
       }
     } catch (e, st) {
       if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+      if (!preserveLoading) {
+        setState(() => _isLoading = false);
+      }
       MobileFeedback.showError(
         context,
         category: 'schedule',
@@ -353,6 +365,265 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         stackTrace: st,
       );
     }
+  }
+
+  Future<void> _showRescueOptions(PlanTask urgent) async {
+    setState(() => _isLoading = true);
+
+    try {
+      final base = await _buildSmartRequest(includeUrgent: false);
+      final options =
+          ScheduleRescueService(engine: AppServices.schedulingEngine).propose(
+            base: base,
+            baseline: List<ScheduleEntry>.from(_blocks),
+            urgent: urgent,
+          );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      final selected = await showDialog<ScheduleRescueOption>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(AppStrings.of(ctx, 'calendar_rescue_title')),
+          content: ConstrainedBox(
+            constraints: MobileFeedback.dialogConstraints(ctx, maxWidth: 560),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: options
+                    .map((option) => _buildRescueOptionTile(ctx, option))
+                    .toList(),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(AppStrings.of(ctx, 'calendar_rescue_cancel')),
+            ),
+          ],
+        ),
+      );
+
+      if (selected == null || !mounted) return;
+
+      final previous = List<ScheduleEntry>.from(_blocks);
+      final planned = selected.plan.entries
+          .map((entry) => entry.copyWith(day: base.day))
+          .toList(growable: false);
+
+      setState(() => _isLoading = true);
+      try {
+        await _rescuePersistence.apply(before: previous, after: planned);
+      } catch (e, st) {
+        if (!mounted) return;
+        final message = AppStrings.of(context, 'calendar_rescue_save_failed');
+        setState(() => _isLoading = false);
+        MobileFeedback.showError(
+          context,
+          category: 'schedule',
+          message: 'save rescue plan failed',
+          zhMessage: message,
+          enMessage: message,
+          error: e,
+          stackTrace: st,
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      await _rescheduleRescueReminders(day: base.day, entries: planned);
+
+      await _recordRescueEvent(
+        task: urgent,
+        energy: base.energy,
+        reason: 'rescue_accept:${selected.strategy.name}',
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _urgentInserted = urgent;
+        _acceptedRescue = selected;
+        _rescueUndoBlocks = previous;
+        _blocks = planned;
+        _isLoading = false;
+      });
+
+      if (!mounted || selected.plan.issues.isEmpty) return;
+      final msg = AppStrings.of(
+        context,
+        'calendar_rescue_issues',
+        params: {'count': selected.plan.issues.length.toString()},
+      );
+      MobileFeedback.showInfo(context, zhMessage: msg, enMessage: msg);
+    } catch (e, st) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      MobileFeedback.showError(
+        context,
+        category: 'schedule',
+        message: 'rescue planning failed',
+        zhMessage: '暂时无法生成救援方案，请稍后重试。',
+        enMessage: 'Unable to generate rescue plans right now.',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  Widget _buildRescueOptionTile(
+    BuildContext context,
+    ScheduleRescueOption option,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final icon = switch (option.strategy) {
+      RescueStrategy.protectDeadline => Icons.flag_outlined,
+      RescueStrategy.protectRecovery => Icons.self_improvement_outlined,
+      RescueStrategy.minimizeChanges => Icons.tune_outlined,
+    };
+    final metrics = [
+      '预计移动 ${option.movedEntryCount} 项',
+      if (option.recoveryMinutes > 0) '恢复缓冲 ${option.recoveryMinutes} 分钟',
+      if (option.plan.issues.isNotEmpty) '仍有 ${option.plan.issues.length} 项需关注',
+    ].join(' · ');
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        leading: Icon(icon, color: scheme.primary),
+        title: Text(option.title),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text('${option.rationale}\n$metrics\n${option.tradeoff}'),
+        ),
+        onTap: () => Navigator.of(context).pop(option),
+      ),
+    );
+  }
+
+  Future<void> _recordRescueEvent({
+    required PlanTask task,
+    required EnergyTier energy,
+    required String reason,
+  }) async {
+    try {
+      await _dataService.logTaskEvent(
+        TaskEvent(
+          id: 'rescue_${DateTime.now().microsecondsSinceEpoch}',
+          taskId: task.id,
+          title: task.title,
+          tag: task.tag,
+          load: task.load,
+          at: DateTime.now(),
+          type: TaskEventType.interrupt,
+          plannedMinutes: task.durationMinutes,
+          energy: energy,
+          reason: reason,
+        ),
+      );
+    } catch (e, st) {
+      AppServices.logStore.error(
+        'schedule',
+        'rescue event logging failed',
+        error: e,
+        stackTrace: st,
+        data: {'taskId': task.id, 'reason': reason},
+      );
+    }
+  }
+
+  Future<void> _rescheduleRescueReminders({
+    required DateTime day,
+    required List<ScheduleEntry> entries,
+  }) async {
+    if (!sameDay(day, dateOnly(DateTime.now()))) return;
+
+    try {
+      await AppServices.reminderService.rescheduleDay(
+        day: day,
+        entries: entries,
+      );
+    } catch (e, st) {
+      AppServices.logStore.error(
+        'schedule',
+        'rescue reminder reschedule failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  Future<void> _undoRescue() async {
+    if (_isLoading) return;
+    final previous = _rescueUndoBlocks;
+    final accepted = _acceptedRescue;
+    final urgent = _urgentInserted;
+    if (previous == null || accepted == null || urgent == null) return;
+
+    final current = List<ScheduleEntry>.from(_blocks);
+    final rescueDay = previous
+        .map((entry) => entry.day)
+        .firstWhere((day) => day != null, orElse: () => _selectedDay)!;
+    setState(() => _isLoading = true);
+    try {
+      await _rescuePersistence.apply(before: current, after: previous);
+    } catch (e, st) {
+      if (!mounted) return;
+      final message = AppStrings.of(context, 'calendar_rescue_save_failed');
+      setState(() => _isLoading = false);
+      MobileFeedback.showError(
+        context,
+        category: 'schedule',
+        message: 'restore rescue plan failed',
+        zhMessage: message,
+        enMessage: message,
+        error: e,
+        stackTrace: st,
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    await _rescheduleRescueReminders(day: rescueDay, entries: previous);
+
+    await _recordRescueEvent(
+      task: urgent,
+      energy: EnergyTier.medium,
+      reason: 'rescue_undo:${accepted.strategy.name}',
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _blocks = previous;
+      _urgentInserted = null;
+      _acceptedRescue = null;
+      _rescueUndoBlocks = null;
+      _isLoading = false;
+    });
+  }
+
+  Widget _buildRescueBanner(BuildContext context) {
+    final option = _acceptedRescue;
+    if (option == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Material(
+        color: Theme.of(context).colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        child: ListTile(
+          dense: true,
+          leading: const Icon(Icons.route_outlined),
+          title: Text('已采用：${option.title}'),
+          subtitle: Text('本次调整移动 ${option.movedEntryCount} 项日程'),
+          trailing: TextButton.icon(
+            onPressed: _isLoading ? null : _undoRescue,
+            icon: const Icon(Icons.undo, size: 18),
+            label: Text(AppStrings.of(context, 'calendar_rescue_undo')),
+          ),
+        ),
+      ),
+    );
   }
 
   double _calculateTopOffset(TimeOfDay time) {
@@ -395,10 +666,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isCompactAppBar = MobileFeedback.isNarrow(
-      context,
-      breakpoint: 760,
-    );
+    final isCompactAppBar = MobileFeedback.isNarrow(context, breakpoint: 760);
     final allEntries = List<ScheduleEntry>.from(_blocks)
       ..sort((a, b) {
         final aMinutes = a.time.hour * 60 + a.time.minute;
@@ -435,20 +703,22 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             icon: Icon(
               _mode == _CalendarMode.manual ? Icons.bolt : Icons.edit_calendar,
             ),
-            onPressed: () async {
-              setState(() {
-                _mode = _mode == _CalendarMode.manual
-                    ? _CalendarMode.smart
-                    : _CalendarMode.manual;
-              });
-              await _loadSchedule();
-            },
+            onPressed: _isLoading
+                ? null
+                : () async {
+                    setState(() {
+                      _mode = _mode == _CalendarMode.manual
+                          ? _CalendarMode.smart
+                          : _CalendarMode.manual;
+                    });
+                    await _loadSchedule();
+                  },
           ),
           if (!isCompactAppBar && _mode == _CalendarMode.smart)
             IconButton(
               tooltip: AppStrings.of(context, 'calendar_tooltip_insert_urgent'),
               icon: const Icon(Icons.add_alert),
-              onPressed: _showInsertUrgentDialog,
+              onPressed: _isLoading ? null : _showInsertUrgentDialog,
             ),
           if (!isCompactAppBar)
             PopupMenuButton<_CalendarField>(
@@ -493,9 +763,12 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             IconButton(
               tooltip: AppStrings.of(context, 'calendar_tooltip_import_ics'),
               icon: const Icon(Icons.download),
-              onPressed: _importIcs,
+              onPressed: _isLoading ? null : _importIcs,
             ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadSchedule),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _isLoading ? null : _loadSchedule,
+          ),
           PopupMenuButton<String>(
             tooltip: AppStrings.of(context, 'tooltip_more'),
             onSelected: (v) async {
@@ -512,7 +785,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   MaterialPageRoute(builder: (_) => const IntegrationsPage()),
                 );
               } else if (v == 'urgent') {
-                _showInsertUrgentDialog();
+                if (!_isLoading) _showInsertUrgentDialog();
               } else if (v == 'export') {
                 await _exportIcs();
               } else if (v == 'import') {
@@ -538,6 +811,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               if (isCompactAppBar && _mode == _CalendarMode.smart)
                 PopupMenuItem(
                   value: 'urgent',
+                  enabled: !_isLoading,
                   child: Text(
                     AppStrings.of(ctx, 'calendar_tooltip_insert_urgent'),
                   ),
@@ -614,6 +888,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                     }
                   },
                 ),
+                if (_acceptedRescue != null) _buildRescueBanner(context),
                 _buildViewToolbar(context),
                 Expanded(
                   child: AnimatedSwitcher(
@@ -640,7 +915,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               heroTag: 'smart-calendar-replan-fab',
               icon: const Icon(Icons.bolt),
               label: Text(AppStrings.of(context, 'calendar_btn_replan')),
-              onPressed: _loadSmartSchedule,
+              onPressed: _isLoading ? null : _loadSmartSchedule,
             ),
     );
   }
@@ -874,7 +1149,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               child: SizedBox(
                 height: _totalHeight,
                 child: Stack(
-                  clipBehavior: Clip.none, 
+                  clipBehavior: Clip.none,
                   children: [
                     ...List.generate(
                       _totalHours,
@@ -1972,135 +2247,254 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     );
   }
 
-  void _showInsertUrgentDialog() {
+  Future<void> _showInsertUrgentDialog() async {
+    if (_isLoading) return;
     final titleCtrl = TextEditingController(
       text: AppStrings.of(context, 'calendar_insert_urgent_default_title'),
     );
-    int minutes = 25;
-    int priority = 5;
-    CognitiveLoad load = CognitiveLoad.medium;
+    try {
+      final scheduleDay = dateOnly(_selectedDay);
+      DateTime deadline = defaultUrgentDeadline(
+        now: DateTime.now(),
+        scheduleDay: scheduleDay,
+      );
+      String? deadlineValidationMessage;
+      int minutes = 25;
+      int priority = 5;
+      CognitiveLoad load = CognitiveLoad.medium;
 
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx2, setInner) => AlertDialog(
-          title: Text(AppStrings.of(ctx2, 'calendar_insert_urgent_title')),
-          content: ConstrainedBox(
-            constraints: MobileFeedback.dialogConstraints(ctx2, maxWidth: 420),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: titleCtrl,
-                    decoration: InputDecoration(
-                      labelText: AppStrings.of(ctx2, 'label_title'),
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx2, setInner) => AlertDialog(
+            title: Text(AppStrings.of(ctx2, 'calendar_insert_urgent_title')),
+            content: ConstrainedBox(
+              constraints: MobileFeedback.dialogConstraints(
+                ctx2,
+                maxWidth: 420,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: titleCtrl,
+                      decoration: InputDecoration(
+                        labelText: AppStrings.of(ctx2, 'label_title'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(AppStrings.of(ctx2, 'label_minutes')),
-                      DropdownButton<int>(
-                        value: minutes,
-                        items: const [10, 15, 25, 30, 45, 60]
-                            .map(
-                              (v) =>
-                                  DropdownMenuItem(value: v, child: Text('$v')),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          if (v != null) setInner(() => minutes = v);
-                        },
-                      ),
-                      Text(AppStrings.of(ctx2, 'label_priority')),
-                      DropdownButton<int>(
-                        value: priority,
-                        items: const [1, 2, 3, 4, 5]
-                            .map(
-                              (v) =>
-                                  DropdownMenuItem(value: v, child: Text('$v')),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          if (v != null) setInner(() => priority = v);
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(AppStrings.of(ctx2, 'label_cognitive_load')),
-                      DropdownButton<CognitiveLoad>(
-                        value: load,
-                        items: CognitiveLoad.values
-                            .map(
-                              (v) => DropdownMenuItem(
-                                value: v,
-                                child: Text(_cognitiveLoadLabel(ctx2, v)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(AppStrings.of(ctx2, 'label_minutes')),
+                        DropdownButton<int>(
+                          value: minutes,
+                          items: const [10, 15, 25, 30, 45, 60]
+                              .map(
+                                (v) => DropdownMenuItem(
+                                  value: v,
+                                  child: Text('$v'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) setInner(() => minutes = v);
+                          },
+                        ),
+                        Text(AppStrings.of(ctx2, 'label_priority')),
+                        DropdownButton<int>(
+                          value: priority,
+                          items: const [1, 2, 3, 4, 5]
+                              .map(
+                                (v) => DropdownMenuItem(
+                                  value: v,
+                                  child: Text('$v'),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) setInner(() => priority = v);
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(AppStrings.of(ctx2, 'label_cognitive_load')),
+                        DropdownButton<CognitiveLoad>(
+                          value: load,
+                          items: CognitiveLoad.values
+                              .map(
+                                (v) => DropdownMenuItem(
+                                  value: v,
+                                  child: Text(_cognitiveLoadLabel(ctx2, v)),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) setInner(() => load = v);
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Column(
+                      key: const ValueKey('calendar-urgent-deadline'),
+                      children: [
+                        ListTile(
+                          key: const ValueKey('calendar-urgent-deadline-date'),
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          leading: const Icon(Icons.calendar_today_outlined),
+                          title: Text(
+                            AppStrings.of(
+                              ctx2,
+                              'calendar_urgent_deadline_date',
+                            ),
+                          ),
+                          trailing: Text(
+                            MaterialLocalizations.of(
+                              ctx2,
+                            ).formatMediumDate(deadline),
+                          ),
+                          onTap: () async {
+                            final now = DateTime.now();
+                            final today = dateOnly(now);
+                            final firstDate = scheduleDay.isAfter(today)
+                                ? scheduleDay
+                                : today;
+                            final selected = await showDatePicker(
+                              context: ctx2,
+                              initialDate: deadline.isBefore(firstDate)
+                                  ? firstDate
+                                  : deadline,
+                              firstDate: firstDate,
+                              lastDate: urgentDeadlinePickerLastDate(
+                                firstDate: firstDate,
                               ),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          if (v != null) setInner(() => load = v);
-                        },
+                            );
+                            if (selected != null) {
+                              setInner(() {
+                                deadline = DateTime(
+                                  selected.year,
+                                  selected.month,
+                                  selected.day,
+                                  deadline.hour,
+                                  deadline.minute,
+                                );
+                                deadlineValidationMessage = null;
+                              });
+                            }
+                          },
+                        ),
+                        ListTile(
+                          key: const ValueKey('calendar-urgent-deadline-time'),
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          leading: const Icon(Icons.schedule_outlined),
+                          title: Text(
+                            AppStrings.of(
+                              ctx2,
+                              'calendar_urgent_deadline_time',
+                            ),
+                          ),
+                          trailing: Text(
+                            MaterialLocalizations.of(
+                              ctx2,
+                            ).formatTimeOfDay(TimeOfDay.fromDateTime(deadline)),
+                          ),
+                          onTap: () async {
+                            final selected = await showTimePicker(
+                              context: ctx2,
+                              initialTime: TimeOfDay.fromDateTime(deadline),
+                            );
+                            if (selected != null) {
+                              setInner(() {
+                                deadline = DateTime(
+                                  deadline.year,
+                                  deadline.month,
+                                  deadline.day,
+                                  selected.hour,
+                                  selected.minute,
+                                );
+                                deadlineValidationMessage = null;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    if (deadlineValidationMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          deadlineValidationMessage!,
+                          style: TextStyle(
+                            color: Theme.of(ctx2).colorScheme.error,
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(AppStrings.of(ctx2, 'btn_cancel')),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final title = titleCtrl.text.trim();
+                  if (title.isEmpty) return;
+
+                  final confirmationNow = DateTime.now();
+                  if (!isUrgentDeadlineValid(
+                    now: confirmationNow,
+                    scheduleDay: scheduleDay,
+                    deadline: deadline,
+                  )) {
+                    setInner(() {
+                      deadlineValidationMessage = AppStrings.of(
+                        ctx2,
+                        'calendar_urgent_deadline_invalid',
+                      );
+                    });
+                    return;
+                  }
+
+                  final urgent = PlanTask(
+                    id: 'urgent_${confirmationNow.microsecondsSinceEpoch}',
+                    title: title,
+                    durationMinutes: minutes,
+                    priority: priority,
+                    load: load,
+                    tag: 'Urgent',
+                    due: deadline,
+                  );
+
+                  Navigator.of(ctx).pop();
+                  await _showRescueOptions(urgent);
+                },
+                child: Text(
+                  AppStrings.of(ctx2, 'calendar_insert_urgent_confirm'),
+                ),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(AppStrings.of(ctx2, 'btn_cancel')),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final title = titleCtrl.text.trim();
-                if (title.isEmpty) return;
-
-                final now = DateTime.now();
-                final day = dateOnly(_selectedDay);
-
-                final due = now.add(const Duration(hours: 2));
-
-                _urgentInserted = PlanTask(
-                  id: 'urgent_${DateTime.now().microsecondsSinceEpoch}',
-                  title: title,
-                  durationMinutes: minutes,
-                  priority: priority,
-                  load: load,
-                  tag: 'Urgent',
-                  due: DateTime(
-                    day.year,
-                    day.month,
-                    day.day,
-                    due.hour,
-                    due.minute,
-                  ),
-                );
-
-                Navigator.of(ctx).pop();
-                await _loadSmartSchedule();
-              },
-              child: Text(
-                AppStrings.of(ctx2, 'calendar_insert_urgent_confirm'),
-              ),
-            ),
-          ],
         ),
-      ),
-    );
+      );
+    } finally {
+      titleCtrl.dispose();
+    }
   }
 
   Future<void> _exportIcs() async {
@@ -2158,21 +2552,17 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               en: 'The ICS file was saved to app storage.',
             )
           : (res.path != null
-              ? AppStrings.of(
-                  context,
-                  'calendar_ics_exported_path',
-                  params: {'path': res.path ?? ''},
-                )
-              : AppStrings.of(
-                  context,
-                  'calendar_ics_exported_download',
-                  params: {'fileName': fileName},
-                ));
-      MobileFeedback.showInfo(
-        context,
-        zhMessage: msg,
-        enMessage: msg,
-      );
+                ? AppStrings.of(
+                    context,
+                    'calendar_ics_exported_path',
+                    params: {'path': res.path ?? ''},
+                  )
+                : AppStrings.of(
+                    context,
+                    'calendar_ics_exported_download',
+                    params: {'fileName': fileName},
+                  ));
+      MobileFeedback.showInfo(context, zhMessage: msg, enMessage: msg);
     } catch (e, st) {
       sw.stop();
       AppServices.diagnostics.recordIcsExport(
@@ -2201,6 +2591,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
   }
 
   Future<void> _importIcs() async {
+    if (_isLoading) return;
     final ctrl = TextEditingController();
 
     final ok = await showDialog<bool>(
@@ -2246,6 +2637,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
     final text = ctrl.text;
     if (text.trim().isEmpty) return;
+    if (!mounted) return;
+
+    setState(() => _isLoading = true);
 
     try {
       final events = IcsCodec.decodeCalendar(text);
@@ -2331,13 +2725,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               params: {'added': added.toString()},
             );
 
-      MobileFeedback.showInfo(
-        context,
-        zhMessage: msg,
-        enMessage: msg,
-      );
+      MobileFeedback.showInfo(context, zhMessage: msg, enMessage: msg);
 
-      await _loadSchedule();
+      await _loadSchedule(preserveLoading: true);
     } catch (e, st) {
       AppServices.diagnostics.recordIcsImport(
         ok: false,
@@ -2361,6 +2751,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         error: e,
         stackTrace: st,
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -2411,209 +2805,215 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             constraints: MobileFeedback.dialogConstraints(ctx2, maxWidth: 460),
             child: SingleChildScrollView(
               child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: titleCtrl,
-                  decoration: InputDecoration(
-                    labelText: AppStrings.of(context, 'label_title'),
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: InputDecoration(
+                      labelText: AppStrings.of(context, 'label_title'),
+                    ),
                   ),
-                ),
-                TextField(
-                  controller: tagCtrl,
-                  decoration: InputDecoration(
-                    labelText: AppStrings.of(context, 'label_tag'),
+                  TextField(
+                    controller: tagCtrl,
+                    decoration: InputDecoration(
+                      labelText: AppStrings.of(context, 'label_tag'),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(AppStrings.of(context, 'label_duration')),
-                    DropdownButton<double>(
-                      value: height,
-                      items: const [
-                        DropdownMenuItem(value: 40, child: Text('30')),
-                        DropdownMenuItem(value: 60, child: Text('45')),
-                        DropdownMenuItem(value: 80, child: Text('60')),
-                        DropdownMenuItem(value: 120, child: Text('90')),
-                      ],
-                      onChanged: (v) {
-                        if (v != null) setInner(() => height = v);
-                      },
-                    ),
-                    DropdownButton<Color>(
-                      value: color,
-                      items: [
-                        DropdownMenuItem(
-                          value: Colors.teal,
-                          child: Text(AppStrings.of(context, 'color_green')),
-                        ),
-                        DropdownMenuItem(
-                          value: Colors.blue,
-                          child: Text(AppStrings.of(context, 'color_blue')),
-                        ),
-                        DropdownMenuItem(
-                          value: Colors.orange,
-                          child: Text(AppStrings.of(context, 'color_orange')),
-                        ),
-                      ],
-                      onChanged: (c) {
-                        if (c != null) setInner(() => color = c);
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(AppStrings.of(context, 'label_start_time')),
-                    TextButton(
-                      onPressed: () async {
-                        final t = await showTimePicker(
-                          context: ctx2,
-                          initialTime: selectedTime,
-                          cancelText: AppStrings.of(context, 'btn_cancel'),
-                          confirmText: AppStrings.of(context, 'btn_confirm'),
-                        );
-                        if (t != null) setInner(() => selectedTime = t);
-                      },
-                      child: Text(selectedTime.format(ctx2)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(AppStrings.of(context, 'calendar_reminder_label')),
-                    DropdownButton<int>(
-                      value: reminderMinutesBefore,
-                      items: [
-                        DropdownMenuItem(
-                          value: 0,
-                          child: Text(
-                            AppStrings.of(context, 'calendar_reminder_none'),
-                          ),
-                        ),
-                        ...[5, 10, 15, 30, 60].map(
-                          (v) => DropdownMenuItem(value: v, child: Text('$v')),
-                        ),
-                      ],
-                      onChanged: (v) {
-                        if (v != null) {
-                          setInner(() => reminderMinutesBefore = v);
-                        }
-                      },
-                    ),
-                    if (reminderMinutesBefore > 0)
-                      Text(AppStrings.of(context, 'calendar_reminder_suffix')),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(AppStrings.of(context, 'calendar_repeat_label')),
-                    DropdownButton<RepeatFrequency>(
-                      value: repeat,
-                      items: [
-                        DropdownMenuItem(
-                          value: RepeatFrequency.none,
-                          child: Text(
-                            AppStrings.of(context, 'calendar_repeat_none'),
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: RepeatFrequency.daily,
-                          child: Text(
-                            AppStrings.of(context, 'calendar_repeat_daily'),
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: RepeatFrequency.weekly,
-                          child: Text(
-                            AppStrings.of(context, 'calendar_repeat_weekly'),
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: RepeatFrequency.monthly,
-                          child: Text(
-                            AppStrings.of(context, 'calendar_repeat_monthly'),
-                          ),
-                        ),
-                      ],
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setInner(() {
-                          repeat = v;
-                          if (repeat == RepeatFrequency.none) {
-                            repeatUntil = null;
-                          }
-                        });
-                      },
-                    ),
-                  ],
-                ),
-                if (repeat != RepeatFrequency.none) ...[
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 12,
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Text(AppStrings.of(context, 'calendar_repeat_until')),
+                      Text(AppStrings.of(context, 'label_duration')),
+                      DropdownButton<double>(
+                        value: height,
+                        items: const [
+                          DropdownMenuItem(value: 40, child: Text('30')),
+                          DropdownMenuItem(value: 60, child: Text('45')),
+                          DropdownMenuItem(value: 80, child: Text('60')),
+                          DropdownMenuItem(value: 120, child: Text('90')),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) setInner(() => height = v);
+                        },
+                      ),
+                      DropdownButton<Color>(
+                        value: color,
+                        items: [
+                          DropdownMenuItem(
+                            value: Colors.teal,
+                            child: Text(AppStrings.of(context, 'color_green')),
+                          ),
+                          DropdownMenuItem(
+                            value: Colors.blue,
+                            child: Text(AppStrings.of(context, 'color_blue')),
+                          ),
+                          DropdownMenuItem(
+                            value: Colors.orange,
+                            child: Text(AppStrings.of(context, 'color_orange')),
+                          ),
+                        ],
+                        onChanged: (c) {
+                          if (c != null) setInner(() => color = c);
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(AppStrings.of(context, 'label_start_time')),
                       TextButton(
                         onPressed: () async {
-                          final now = DateTime.now();
-                          final picked = await showDatePicker(
+                          final t = await showTimePicker(
                             context: ctx2,
-                            initialDate: repeatUntil ?? now,
-                            firstDate: DateTime(now.year, now.month, now.day),
-                            lastDate: DateTime(now.year + 10, 12, 31),
+                            initialTime: selectedTime,
                             cancelText: AppStrings.of(context, 'btn_cancel'),
                             confirmText: AppStrings.of(context, 'btn_confirm'),
                           );
-                          if (picked == null) return;
-                          setInner(() {
-                            repeatUntil = DateTime(
-                              picked.year,
-                              picked.month,
-                              picked.day,
-                            );
-                          });
+                          if (t != null) setInner(() => selectedTime = t);
                         },
-                        child: Text(
-                          repeatUntil == null
-                              ? AppStrings.of(
-                                  context,
-                                  'calendar_repeat_until_none',
-                                )
-                              : '${repeatUntil!.year}-${repeatUntil!.month.toString().padLeft(2, '0')}-${repeatUntil!.day.toString().padLeft(2, '0')}',
-                        ),
+                        child: Text(selectedTime.format(ctx2)),
                       ),
-                      if (repeatUntil != null)
-                        IconButton(
-                          tooltip: AppStrings.of(context, 'btn_delete'),
-                          onPressed: () => setInner(() => repeatUntil = null),
-                          icon: const Icon(Icons.clear),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(AppStrings.of(context, 'calendar_reminder_label')),
+                      DropdownButton<int>(
+                        value: reminderMinutesBefore,
+                        items: [
+                          DropdownMenuItem(
+                            value: 0,
+                            child: Text(
+                              AppStrings.of(context, 'calendar_reminder_none'),
+                            ),
+                          ),
+                          ...[5, 10, 15, 30, 60].map(
+                            (v) =>
+                                DropdownMenuItem(value: v, child: Text('$v')),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) {
+                            setInner(() => reminderMinutesBefore = v);
+                          }
+                        },
+                      ),
+                      if (reminderMinutesBefore > 0)
+                        Text(
+                          AppStrings.of(context, 'calendar_reminder_suffix'),
                         ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(AppStrings.of(context, 'calendar_repeat_label')),
+                      DropdownButton<RepeatFrequency>(
+                        value: repeat,
+                        items: [
+                          DropdownMenuItem(
+                            value: RepeatFrequency.none,
+                            child: Text(
+                              AppStrings.of(context, 'calendar_repeat_none'),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: RepeatFrequency.daily,
+                            child: Text(
+                              AppStrings.of(context, 'calendar_repeat_daily'),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: RepeatFrequency.weekly,
+                            child: Text(
+                              AppStrings.of(context, 'calendar_repeat_weekly'),
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: RepeatFrequency.monthly,
+                            child: Text(
+                              AppStrings.of(context, 'calendar_repeat_monthly'),
+                            ),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          if (v == null) return;
+                          setInner(() {
+                            repeat = v;
+                            if (repeat == RepeatFrequency.none) {
+                              repeatUntil = null;
+                            }
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  if (repeat != RepeatFrequency.none) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(AppStrings.of(context, 'calendar_repeat_until')),
+                        TextButton(
+                          onPressed: () async {
+                            final now = DateTime.now();
+                            final picked = await showDatePicker(
+                              context: ctx2,
+                              initialDate: repeatUntil ?? now,
+                              firstDate: DateTime(now.year, now.month, now.day),
+                              lastDate: DateTime(now.year + 10, 12, 31),
+                              cancelText: AppStrings.of(context, 'btn_cancel'),
+                              confirmText: AppStrings.of(
+                                context,
+                                'btn_confirm',
+                              ),
+                            );
+                            if (picked == null) return;
+                            setInner(() {
+                              repeatUntil = DateTime(
+                                picked.year,
+                                picked.month,
+                                picked.day,
+                              );
+                            });
+                          },
+                          child: Text(
+                            repeatUntil == null
+                                ? AppStrings.of(
+                                    context,
+                                    'calendar_repeat_until_none',
+                                  )
+                                : '${repeatUntil!.year}-${repeatUntil!.month.toString().padLeft(2, '0')}-${repeatUntil!.day.toString().padLeft(2, '0')}',
+                          ),
+                        ),
+                        if (repeatUntil != null)
+                          IconButton(
+                            tooltip: AppStrings.of(context, 'btn_delete'),
+                            onPressed: () => setInner(() => repeatUntil = null),
+                            icon: const Icon(Icons.clear),
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
           ),
           actions: [
             TextButton(
@@ -2697,7 +3097,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         ),
     ];
     return Stack(
-      clipBehavior: Clip.none, 
+      clipBehavior: Clip.none,
       children: [
         Container(
           constraints: BoxConstraints(minHeight: height),

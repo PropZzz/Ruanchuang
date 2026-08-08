@@ -10,7 +10,11 @@ class EmotionQuickCheckInCard extends StatefulWidget {
   final VoidCallback? onChanged;
   final bool initiallyExpanded;
 
-  const EmotionQuickCheckInCard({super.key, this.onChanged, this.initiallyExpanded = false});
+  const EmotionQuickCheckInCard({
+    super.key,
+    this.onChanged,
+    this.initiallyExpanded = false,
+  });
 
   @override
   State<EmotionQuickCheckInCard> createState() =>
@@ -169,7 +173,9 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
 
     return AnimatedCrossFade(
       duration: const Duration(milliseconds: 250),
-      crossFadeState: _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+      crossFadeState: _isExpanded
+          ? CrossFadeState.showSecond
+          : CrossFadeState.showFirst,
       firstChild: _buildCollapsedCard(context, isDark),
       secondChild: _buildExpandedCard(context, isDark),
     );
@@ -185,7 +191,9 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.12),
+            color: Theme.of(
+              context,
+            ).colorScheme.outline.withValues(alpha: 0.12),
           ),
         ),
         child: Row(
@@ -193,7 +201,7 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _color(_current).withOpacity(0.1),
+                color: _color(_current).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -285,7 +293,9 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.12),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.12),
               ),
             ),
             padding: const EdgeInsets.all(16),
@@ -298,7 +308,7 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: _color(_current).withOpacity(0.1),
+                        color: _color(_current).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -401,7 +411,7 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
-              ? baseColor.withOpacity(0.12)
+              ? baseColor.withValues(alpha: 0.12)
               : (isDark ? const Color(0xFF3A3A3C) : const Color(0xFFF7F7F6)),
           borderRadius: BorderRadius.circular(14),
         ),

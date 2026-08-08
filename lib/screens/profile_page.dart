@@ -1,5 +1,4 @@
 // lib/screens/profile_page.dart
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -20,8 +19,10 @@ import 'auth_dialog.dart';
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
-  static final ValueNotifier<String?> globalNameNotifier = ValueNotifier<String?>(null);
-  static final ValueNotifier<Uint8List?> globalAvatarNotifier = ValueNotifier<Uint8List?>(null);
+  static final ValueNotifier<String?> globalNameNotifier =
+      ValueNotifier<String?>(null);
+  static final ValueNotifier<Uint8List?> globalAvatarNotifier =
+      ValueNotifier<Uint8List?>(null);
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -60,9 +61,7 @@ class _ProfilePageState extends State<ProfilePage> {
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text(AppStrings.of(ctx, 'profile_device')),
-          content: const Text(
-            '当前平台暂不支持设备功能。\n请在支持蓝牙的移动端或桌面端设备上打开。',
-          ),
+          content: const Text('当前平台暂不支持设备功能。\n请在支持蓝牙的移动端或桌面端设备上打开。'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
@@ -73,7 +72,9 @@ class _ProfilePageState extends State<ProfilePage> {
       );
       return;
     }
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BluetoothPage()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const BluetoothPage()));
   }
 
   void _showAuthPopup(BuildContext context) {
@@ -107,9 +108,9 @@ class _ProfilePageState extends State<ProfilePage> {
       if (image != null) {
         final bytes = await image.readAsBytes();
         ProfilePage.globalAvatarNotifier.value = bytes;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('头像修改成功')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('头像修改成功')));
       }
     } catch (e) {
       debugPrint('获取头像失败: $e');
@@ -117,11 +118,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showEditNameDialog() {
-    final ctrl = TextEditingController(text: ProfilePage.globalNameNotifier.value ?? '时序智配用户');
+    final ctrl = TextEditingController(
+      text: ProfilePage.globalNameNotifier.value ?? '时序智配用户',
+    );
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('修改昵称', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          '修改昵称',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: TextField(
           controller: ctrl,
@@ -132,7 +138,10 @@ class _ProfilePageState extends State<ProfilePage> {
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
           ElevatedButton(
             onPressed: () {
               final newName = ctrl.text.trim();
@@ -155,9 +164,14 @@ class _ProfilePageState extends State<ProfilePage> {
     final deviceSubtitle = _deviceSubtitle();
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF2F2F7),
+      backgroundColor: isDark
+          ? const Color(0xFF121212)
+          : const Color(0xFFF2F2F7),
       appBar: AppBar(
-        title: Text(AppStrings.of(context, 'profile_title'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          AppStrings.of(context, 'profile_title'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
@@ -175,76 +189,114 @@ class _ProfilePageState extends State<ProfilePage> {
             constraints: const BoxConstraints(maxWidth: 860),
             child: ListView(
               physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 100),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                8,
+                16,
+                MediaQuery.of(context).padding.bottom + 100,
+              ),
               children: [
                 _buildUserProfileCard(context),
                 const SizedBox(height: 24),
-                
-                _buildActionGroup(context, children: [
-                  _profileActionTile(
-                    context,
-                    icon: Icons.radar_rounded,
-                    iconColor: Colors.blueAccent,
-                    title: AppStrings.of(context, 'profile_model_card'),
-                    showTrailing: false,
-                    onTap: () {},
-                  ),
-                ]),
+
+                _buildActionGroup(
+                  context,
+                  children: [
+                    _profileActionTile(
+                      context,
+                      icon: Icons.radar_rounded,
+                      iconColor: Colors.blueAccent,
+                      title: AppStrings.of(context, 'profile_model_card'),
+                      showTrailing: false,
+                      onTap: () {},
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
 
                 Padding(
                   padding: const EdgeInsets.only(left: 16, bottom: 8),
-                  child: Text('核心操作', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withOpacity(0.5))),
+                  child: Text(
+                    '核心操作',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
                 ),
-                _buildActionGroup(context, children: [
-                  _profileActionTile(
-                    context,
-                    icon: Icons.watch_rounded,
-                    iconColor: Colors.teal,
-                    title: AppStrings.of(context, 'profile_device'),
-                    subtitle: deviceSubtitle,
-                    onTap: () => _openDeviceEntry(context),
-                  ),
-                  _buildDivider(context),
-                  _profileActionTile(
-                    context,
-                    icon: Icons.sync_rounded,
-                    iconColor: Colors.orange,
-                    title: AppStrings.of(context, 'profile_auth'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const IntegrationsPage())),
-                  ),
-                  _buildDivider(context),
-                  _profileActionTile(
-                    context,
-                    icon: Icons.flag_rounded,
-                    iconColor: Colors.redAccent,
-                    title: AppStrings.of(context, 'goal_title'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const GoalsPage())),
-                  ),
-                ]),
+                _buildActionGroup(
+                  context,
+                  children: [
+                    _profileActionTile(
+                      context,
+                      icon: Icons.watch_rounded,
+                      iconColor: Colors.teal,
+                      title: AppStrings.of(context, 'profile_device'),
+                      subtitle: deviceSubtitle,
+                      onTap: () => _openDeviceEntry(context),
+                    ),
+                    _buildDivider(context),
+                    _profileActionTile(
+                      context,
+                      icon: Icons.sync_rounded,
+                      iconColor: Colors.orange,
+                      title: AppStrings.of(context, 'profile_auth'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const IntegrationsPage(),
+                        ),
+                      ),
+                    ),
+                    _buildDivider(context),
+                    _profileActionTile(
+                      context,
+                      icon: Icons.flag_rounded,
+                      iconColor: Colors.redAccent,
+                      title: AppStrings.of(context, 'goal_title'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const GoalsPage()),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
 
                 Padding(
                   padding: const EdgeInsets.only(left: 16, bottom: 8),
-                  child: Text('洞察分析', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withOpacity(0.5))),
+                  child: Text(
+                    '洞察分析',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
                 ),
-                _buildActionGroup(context, children: [
-                  _profileActionTile(
-                    context,
-                    icon: Icons.monitor_heart_rounded,
-                    iconColor: Colors.pinkAccent,
-                    title: AppStrings.of(context, 'emo_title'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EmotionPage())),
-                  ),
-                  _buildDivider(context),
-                  _profileActionTile(
-                    context,
-                    icon: Icons.auto_graph_rounded,
-                    iconColor: Colors.deepPurpleAccent,
-                    title: AppStrings.of(context, 'review_title'),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReviewPage())),
-                  ),
-                ]),
+                _buildActionGroup(
+                  context,
+                  children: [
+                    _profileActionTile(
+                      context,
+                      icon: Icons.monitor_heart_rounded,
+                      iconColor: Colors.pinkAccent,
+                      title: AppStrings.of(context, 'emo_title'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const EmotionPage()),
+                      ),
+                    ),
+                    _buildDivider(context),
+                    _profileActionTile(
+                      context,
+                      icon: Icons.auto_graph_rounded,
+                      iconColor: Colors.deepPurpleAccent,
+                      title: AppStrings.of(context, 'review_title'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ReviewPage()),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -269,7 +321,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: [Theme.of(context).colorScheme.primary.withOpacity(0.5), Colors.transparent],
+                    colors: [
+                      Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.5),
+                      Colors.transparent,
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -286,8 +343,16 @@ class _ProfilePageState extends State<ProfilePage> {
                           child: CircleAvatar(
                             radius: 42,
                             backgroundColor: const Color(0xFFE5E5EA),
-                            backgroundImage: avatarBytes != null ? MemoryImage(avatarBytes) : null,
-                            child: avatarBytes == null ? const Icon(Icons.person_rounded, size: 48, color: Colors.grey) : null,
+                            backgroundImage: avatarBytes != null
+                                ? MemoryImage(avatarBytes)
+                                : null,
+                            child: avatarBytes == null
+                                ? const Icon(
+                                    Icons.person_rounded,
+                                    size: 48,
+                                    color: Colors.grey,
+                                  )
+                                : null,
                           ),
                         );
                       },
@@ -297,9 +362,16 @@ class _ProfilePageState extends State<ProfilePage> {
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.primary,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 2.5),
+                        border: Border.all(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          width: 2.5,
+                        ),
                       ),
-                      child: const Icon(Icons.edit, size: 14, color: Colors.white),
+                      child: const Icon(
+                        Icons.edit,
+                        size: 14,
+                        color: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -320,19 +392,39 @@ class _ProfilePageState extends State<ProfilePage> {
                           name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
                         );
                       },
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Icon(Icons.edit_outlined, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                  Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
                 ],
               ),
             ),
             if (status.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text(status, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 15)),
+              Text(
+                status,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontSize: 15,
+                ),
+              ),
             ],
             const SizedBox(height: 8),
           ],
@@ -341,15 +433,24 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildActionGroup(BuildContext context, {required List<Widget> children}) {
+  Widget _buildActionGroup(
+    BuildContext context, {
+    required List<Widget> children,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: isDark ? [] : [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(children: children),
     );
@@ -374,7 +475,7 @@ class _ProfilePageState extends State<ProfilePage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.15),
+                color: iconColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: iconColor, size: 22),
@@ -384,16 +485,39 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
-                    Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                    ),
                   ],
                 ],
               ),
             ),
             if (showTrailing)
-              Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.3),
+              ),
           ],
         ),
       ),
@@ -403,7 +527,10 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildDivider(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(left: 60),
-      child: Divider(height: 1, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05)),
+      child: Divider(
+        height: 1,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+      ),
     );
   }
 
@@ -414,12 +541,12 @@ class _ProfilePageState extends State<ProfilePage> {
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (ctx) => _buildSettingsPanelBody(
-          ctx, 
+          ctx,
           onClose: () => Navigator.of(ctx).pop(),
           onSwitchAccount: () {
             Navigator.of(ctx).pop();
             _showAuthPopup(context);
-          }
+          },
         ),
       );
       return;
@@ -436,13 +563,17 @@ class _ProfilePageState extends State<ProfilePage> {
           alignment: Alignment.centerRight,
           child: Material(
             elevation: 16,
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(24)),
+            borderRadius: const BorderRadius.horizontal(
+              left: Radius.circular(24),
+            ),
             child: Container(
               width: MediaQuery.of(context).size.width.clamp(360.0, 460.0),
               height: double.infinity,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.horizontal(left: Radius.circular(24)),
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(24),
+                ),
               ),
               child: _buildSettingsPanelBody(
                 ctx,
@@ -450,7 +581,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 onSwitchAccount: () {
                   Navigator.of(ctx).pop();
                   _showAuthPopup(context);
-                }
+                },
               ),
             ),
           ),
@@ -458,7 +589,10 @@ class _ProfilePageState extends State<ProfilePage> {
       },
       transitionBuilder: (ctx, anim1, anim2, child) {
         return SlideTransition(
-          position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic)),
+          position: Tween(
+            begin: const Offset(1, 0),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic)),
           child: child,
         );
       },
@@ -469,10 +603,14 @@ class _ProfilePageState extends State<ProfilePage> {
     return BattleManApp.getThemeMode(context);
   }
 
-  Widget _buildSettingsPanelBody(BuildContext context, {required VoidCallback onClose, required VoidCallback onSwitchAccount}) {
+  Widget _buildSettingsPanelBody(
+    BuildContext context, {
+    required VoidCallback onClose,
+    required VoidCallback onSwitchAccount,
+  }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF2F2F7),
@@ -484,25 +622,33 @@ class _ProfilePageState extends State<ProfilePage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF2C2C2E) : Colors.white,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const SizedBox(width: 48), 
+                const SizedBox(width: 48),
                 Expanded(
                   child: Text(
-                    AppStrings.of(context, 'settings_title'), 
+                    AppStrings.of(context, 'settings_title'),
                     textAlign: TextAlign.center,
-                    maxLines: 1, 
-                    overflow: TextOverflow.ellipsis, 
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
-                  )
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
                 IconButton(
                   icon: Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(color: theme.colorScheme.onSurface.withOpacity(0.1), shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
                     child: const Icon(Icons.close, size: 20),
                   ),
                   onPressed: onClose,
@@ -515,51 +661,124 @@ class _ProfilePageState extends State<ProfilePage> {
               padding: const EdgeInsets.all(16),
               physics: const BouncingScrollPhysics(),
               children: [
-                _buildActionGroup(context, children: [
-                  _profileActionTile(context, icon: Icons.switch_account_rounded, iconColor: Colors.blueAccent, title: AppStrings.of(context, 'profile_switch_account'), onTap: onSwitchAccount),
-                  _buildDivider(context),
-                  _profileActionTile(context, icon: Icons.language_rounded, iconColor: Colors.teal, title: AppStrings.of(context, 'settings_language'), onTap: () => _showLanguageDialog(context)),
-                  _buildDivider(context),
-                  _profileActionTile(context, icon: Icons.notifications_rounded, iconColor: Colors.orange, title: AppStrings.of(context, 'settings_notify'), onTap: (){}),
-                ]),
+                _buildActionGroup(
+                  context,
+                  children: [
+                    _profileActionTile(
+                      context,
+                      icon: Icons.switch_account_rounded,
+                      iconColor: Colors.blueAccent,
+                      title: AppStrings.of(context, 'profile_switch_account'),
+                      onTap: onSwitchAccount,
+                    ),
+                    _buildDivider(context),
+                    _profileActionTile(
+                      context,
+                      icon: Icons.language_rounded,
+                      iconColor: Colors.teal,
+                      title: AppStrings.of(context, 'settings_language'),
+                      onTap: () => _showLanguageDialog(context),
+                    ),
+                    _buildDivider(context),
+                    _profileActionTile(
+                      context,
+                      icon: Icons.notifications_rounded,
+                      iconColor: Colors.orange,
+                      title: AppStrings.of(context, 'settings_notify'),
+                      onTap: () {},
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
-                _buildActionGroup(context, children: [
-                  ExpansionTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: Colors.deepPurpleAccent.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.dark_mode_rounded, color: Colors.deepPurpleAccent, size: 22),
-                    ),
-                    title: Builder(
-                      builder: (context) {
-                        final currentThemeMode = _getCurrentThemeMode(context);
-                        String themeModeName = currentThemeMode == ThemeMode.system ? AppStrings.of(context, 'theme_system') : currentThemeMode == ThemeMode.light ? AppStrings.of(context, 'theme_light') : AppStrings.of(context, 'theme_dark');
-                        return Text('${AppStrings.of(context, 'settings_dark')}: $themeModeName', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500));
-                      },
-                    ),
-                    shape: const Border(),
-                    children: [
-                      RadioGroup<ThemeMode>(
-                        groupValue: _getCurrentThemeMode(context),
-                        onChanged: (value) { if (value != null) BattleManApp.setThemeMode(context, value); },
-                        child: Column(
-                          children: [
-                            RadioListTile<ThemeMode>(title: Text(AppStrings.of(context, 'theme_system')), value: ThemeMode.system),
-                            RadioListTile<ThemeMode>(title: Text(AppStrings.of(context, 'theme_light')), value: ThemeMode.light),
-                            RadioListTile<ThemeMode>(title: Text(AppStrings.of(context, 'theme_dark')), value: ThemeMode.dark),
-                          ],
+                _buildActionGroup(
+                  context,
+                  children: [
+                    ExpansionTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.deepPurpleAccent.withValues(
+                            alpha: 0.15,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.dark_mode_rounded,
+                          color: Colors.deepPurpleAccent,
+                          size: 22,
                         ),
                       ),
-                    ],
-                  ),
-                ]),
+                      title: Builder(
+                        builder: (context) {
+                          final currentThemeMode = _getCurrentThemeMode(
+                            context,
+                          );
+                          String themeModeName =
+                              currentThemeMode == ThemeMode.system
+                              ? AppStrings.of(context, 'theme_system')
+                              : currentThemeMode == ThemeMode.light
+                              ? AppStrings.of(context, 'theme_light')
+                              : AppStrings.of(context, 'theme_dark');
+                          return Text(
+                            '${AppStrings.of(context, 'settings_dark')}: $themeModeName',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          );
+                        },
+                      ),
+                      shape: const Border(),
+                      children: [
+                        RadioGroup<ThemeMode>(
+                          groupValue: _getCurrentThemeMode(context),
+                          onChanged: (value) {
+                            if (value != null)
+                              BattleManApp.setThemeMode(context, value);
+                          },
+                          child: Column(
+                            children: [
+                              RadioListTile<ThemeMode>(
+                                title: Text(
+                                  AppStrings.of(context, 'theme_system'),
+                                ),
+                                value: ThemeMode.system,
+                              ),
+                              RadioListTile<ThemeMode>(
+                                title: Text(
+                                  AppStrings.of(context, 'theme_light'),
+                                ),
+                                value: ThemeMode.light,
+                              ),
+                              RadioListTile<ThemeMode>(
+                                title: Text(
+                                  AppStrings.of(context, 'theme_dark'),
+                                ),
+                                value: ThemeMode.dark,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
-                _buildActionGroup(context, children: [
-                  _profileActionTile(
-                    context, icon: Icons.bug_report_rounded, iconColor: Colors.grey, title: AppStrings.of(context, 'diag_title'), 
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DiagnosticsPage())),
-                  ),
-                ]),
+                _buildActionGroup(
+                  context,
+                  children: [
+                    _profileActionTile(
+                      context,
+                      icon: Icons.bug_report_rounded,
+                      iconColor: Colors.grey,
+                      title: AppStrings.of(context, 'diag_title'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const DiagnosticsPage(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -573,17 +792,32 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder: (ctx) => SimpleDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(AppStrings.of(context, 'settings_language'), style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          AppStrings.of(context, 'settings_language'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         children: [
           SimpleDialogOption(
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-            onPressed: () { BattleManApp.setLocale(context, const Locale('zh', 'CN')); Navigator.pop(ctx); },
-            child: Text(AppStrings.of(context, 'lang_zh'), style: const TextStyle(fontSize: 16)),
+            onPressed: () {
+              BattleManApp.setLocale(context, const Locale('zh', 'CN'));
+              Navigator.pop(ctx);
+            },
+            child: Text(
+              AppStrings.of(context, 'lang_zh'),
+              style: const TextStyle(fontSize: 16),
+            ),
           ),
           SimpleDialogOption(
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-            onPressed: () { BattleManApp.setLocale(context, const Locale('en', 'US')); Navigator.pop(ctx); },
-            child: Text(AppStrings.of(context, 'lang_en'), style: const TextStyle(fontSize: 16)),
+            onPressed: () {
+              BattleManApp.setLocale(context, const Locale('en', 'US'));
+              Navigator.pop(ctx);
+            },
+            child: Text(
+              AppStrings.of(context, 'lang_en'),
+              style: const TextStyle(fontSize: 16),
+            ),
           ),
         ],
       ),

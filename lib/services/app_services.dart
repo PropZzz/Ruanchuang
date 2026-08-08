@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 
 import 'bluetooth_service.dart';
+import 'composite_data_service.dart';
 import 'data_service.dart';
 import 'local_data_service.dart';
+import 'remote_data_service.dart';
 
 import 'microtask_crystals/heuristic_microtask_crystal_engine.dart';
 import 'microtask_crystals/microtask_crystal_engine.dart';
@@ -17,7 +19,11 @@ import 'telemetry/diagnostics_service.dart';
 
 /// Single place for wiring app-wide services.
 class AppServices {
-  static final DataService _defaultDataService = LocalDataService.instance;
+  static final DataService _defaultDataService = CompositeDataService(
+    local: LocalDataService.instance,
+    remote: RemoteDataService.instance,
+    preferRemoteReads: true,
+  );
   static DataService? _dataServiceOverride;
   static DataService get dataService =>
       _dataServiceOverride ?? _defaultDataService;

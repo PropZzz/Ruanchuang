@@ -69,7 +69,8 @@ void _showFatalError(Object error, StackTrace stack) {
     if (MobileFeedback.isMobilePhone(context)) {
       MobileFeedback.showInfo(
         context,
-        zhMessage: '\u5f53\u524d\u64cd\u4f5c\u6682\u65f6\u65e0\u6cd5\u5b8c\u6210\uff0c\u5df2\u81ea\u52a8\u8bb0\u5f55\u5f02\u5e38\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
+        zhMessage:
+            '\u5f53\u524d\u64cd\u4f5c\u6682\u65f6\u65e0\u6cd5\u5b8c\u6210\uff0c\u5df2\u81ea\u52a8\u8bb0\u5f55\u5f02\u5e38\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002',
         enMessage:
             'This action could not be completed. The error was logged, please try again later.',
       );
@@ -79,9 +80,7 @@ void _showFatalError(Object error, StackTrace stack) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: const Color(0xFFFFFFFF),
         title: const Text(
           '\u64cd\u4f5c\u672a\u5b8c\u6210',
@@ -250,7 +249,9 @@ class _BattleManAppState extends State<BattleManApp> {
         final clampedScale = currentScale.clamp(0.95, maxScale);
 
         return MediaQuery(
-          data: mediaQuery.copyWith(textScaler: TextScaler.linear(clampedScale)),
+          data: mediaQuery.copyWith(
+            textScaler: TextScaler.linear(clampedScale),
+          ),
           child: child ?? const SizedBox.shrink(),
         );
       },
@@ -338,7 +339,7 @@ class _BattleManAppState extends State<BattleManApp> {
       navigationBarTheme: NavigationBarThemeData(
         height: 80,
         elevation: 0,
-        backgroundColor: surfaceColor.withOpacity(0.9), // 半透明为毛玻璃做准备
+        backgroundColor: surfaceColor.withValues(alpha: 0.9), // 半透明为毛玻璃做准备
         indicatorColor: indicatorColor,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((states) {
@@ -359,7 +360,7 @@ class _BattleManAppState extends State<BattleManApp> {
         }),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: surfaceColor.withOpacity(0.9),
+        backgroundColor: surfaceColor.withValues(alpha: 0.9),
         useIndicator: true,
         indicatorColor: indicatorColor,
         selectedIconTheme: IconThemeData(color: textColor),
