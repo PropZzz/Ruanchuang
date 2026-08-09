@@ -84,3 +84,6 @@ android/gradle/wrapper/gradle-8.14-all.zip
 /.pytest_cache/
 **/__pycache__/
 /backend/data/*.db
+
+# Local isolated workspaces
+/.worktrees/
