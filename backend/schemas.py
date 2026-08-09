@@ -247,6 +247,33 @@ class ReviewReport(APIModel):
     tuning: SchedulingTuning
 
 
+class DailyReviewPoint(APIModel):
+    day: date
+    started: int
+    completed: int
+    planned_minutes: int = Field(alias="plannedMinutes")
+    actual_minutes: int = Field(alias="actualMinutes")
+
+
+class MonthReviewReport(APIModel):
+    month_start: date = Field(alias="monthStart")
+    month_end: date = Field(alias="monthEnd")
+    started_count: int = Field(alias="startedCount")
+    completed_count: int = Field(alias="completedCount")
+    completion_rate: float = Field(alias="completionRate")
+    planned_minutes_total: int = Field(alias="plannedMinutesTotal")
+    actual_minutes_total: int = Field(alias="actualMinutesTotal")
+    actual_duration_buckets: dict[str, int] = Field(alias="actualDurationBuckets")
+    bottleneck_attribution: dict[str, int] = Field(alias="bottleneckAttribution")
+    weekly_completion_rate: dict[str, float] = Field(alias="weeklyCompletionRate")
+    daily_trend: list[DailyReviewPoint] = Field(alias="dailyTrend")
+    suggestions: list[str]
+
+
+class TuningApplyRequest(APIModel):
+    tuning: SchedulingTuning
+
+
 class TeamSharePermission:
     none = "none"
     freeBusy = "freeBusy"

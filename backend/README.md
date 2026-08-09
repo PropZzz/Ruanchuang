@@ -26,6 +26,12 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 - `PUT|DELETE /schedule/{entry_id}`
 - `POST /schedule/replan`
 - `GET|POST /events`
+- `POST /events/batch`
+- `GET /review/weekly`
+- `GET /review/monthly`
+- `GET /review/rescue-history`
+- `GET|PUT /review/tuning`
+- `POST /review/tuning/apply`
 - `GET|POST /microtasks`
 - `PUT|DELETE /microtasks/{task_id}`
 - `POST /microtasks/recommend-crystals`

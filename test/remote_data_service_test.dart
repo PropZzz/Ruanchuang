@@ -14,12 +14,18 @@ void main() {
     final schedules = <Map<String, Object?>>[];
     final microTasks = <Map<String, Object?>>[];
     final events = <Map<String, Object?>>[];
+    var tuning = <String, Object?>{
+      'defaultDurationMultiplier': 1.0,
+      'tagDurationMultiplier': <String, Object?>{},
+      'highLoadPenaltyWhenLowEnergy': 1.0,
+    };
     const token = 'token-1';
 
     final client = MockClient((request) async {
       final path = request.url.path;
       final method = request.method;
-      final auth = request.headers['authorization'] ?? request.headers['Authorization'];
+      final auth =
+          request.headers['authorization'] ?? request.headers['Authorization'];
 
       Map<String, Object?> decodeBody() {
         final raw = request.body.trim();
@@ -144,6 +150,42 @@ void main() {
         return http.Response(jsonEncode(events), 200);
       }
 
+      if (path == '/review/weekly' && method == 'GET') {
+        expect(auth, 'Bearer $token');
+        expect(request.url.queryParameters['week_start'], '2026-08-03');
+        return http.Response(
+          jsonEncode({
+            'weekStart': '2026-08-03T00:00:00',
+            'weekEnd': '2026-08-10T00:00:00',
+            'startedCount': 2,
+            'completedCount': 1,
+            'completionRate': 0.5,
+            'plannedMinutesTotal': 60,
+            'actualMinutesTotal': 45,
+            'actualDurationBuckets': {'31-60': 1},
+            'delayAttribution': {'underestimated': 1},
+            'suggestions': ['Keep recovery buffer.'],
+            'tuning': {
+              'defaultDurationMultiplier': 1.0,
+              'tagDurationMultiplier': {'Focus': 1.15},
+              'highLoadPenaltyWhenLowEnergy': 1.2,
+            },
+          }),
+          200,
+        );
+      }
+
+      if (path == '/review/tuning' && method == 'GET') {
+        expect(auth, 'Bearer $token');
+        return http.Response(jsonEncode(tuning), 200);
+      }
+
+      if (path == '/review/tuning' && method == 'PUT') {
+        expect(auth, 'Bearer $token');
+        tuning = decodeBody();
+        return http.Response(jsonEncode(tuning), 200);
+      }
+
       return http.Response('not found', 404);
     });
 
@@ -213,6 +255,23 @@ void main() {
       DateTime(2026, 6, 15),
     );
     expect(eventsAfterWrite.single.reason, 'rescue_accept:protectDeadline');
+
+    final weeklyReport = await service.getWeeklyReport(DateTime(2026, 8, 3));
+    expect(weeklyReport.startedCount, 2);
+    expect(weeklyReport.tuning.tagDurationMultiplier['Focus'], 1.15);
+
+    final defaultTuning = await service.getSchedulingTuning();
+    expect(defaultTuning.defaultDurationMultiplier, 1.0);
+
+    await service.setSchedulingTuning(
+      const SchedulingTuning(
+        defaultDurationMultiplier: 1.1,
+        tagDurationMultiplier: {'Writing': 1.25},
+        highLoadPenaltyWhenLowEnergy: 1.4,
+      ),
+    );
+    final savedTuning = await service.getSchedulingTuning();
+    expect(savedTuning.tagDurationMultiplier['Writing'], 1.25);
 
     await service.logout();
     expect(await service.getCurrentUser(), isNull);

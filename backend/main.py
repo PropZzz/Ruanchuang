@@ -9,6 +9,8 @@ from .repositories import init_db
 from .routers_auth import router as auth_router
 from .routers_events import router as events_router
 from .routers_microtasks import router as microtasks_router
+from .routers_reserved import router as reserved_router
+from .routers_review import router as review_router
 from .routers_schedule import router as schedule_router
 
 
@@ -41,6 +43,8 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
     app.include_router(events_router)
     app.include_router(schedule_router)
     app.include_router(microtasks_router)
+    app.include_router(review_router)
+    app.include_router(reserved_router)
 
     return app
 

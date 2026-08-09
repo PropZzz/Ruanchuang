@@ -35,7 +35,9 @@ class RemoteDataService implements DataService {
     return raw
         .map((item) {
           if (item is! Map) {
-            throw RemoteDataException('Expected every array item to be an object.');
+            throw RemoteDataException(
+              'Expected every array item to be an object.',
+            );
           }
           return Map<String, Object?>.from(item);
         })
@@ -174,12 +176,17 @@ class RemoteDataService implements DataService {
   }
 
   @override
-  Future<ReviewReport> getWeeklyReport(DateTime weekStart) async =>
-      Future.error(_unavailable('getWeeklyReport'));
+  Future<ReviewReport> getWeeklyReport(DateTime weekStart) async {
+    final day = _dateOnly(weekStart);
+    final raw = await _api.get('/review/weekly?week_start=$day');
+    return ReviewReport.fromJson(_map(raw));
+  }
 
   @override
-  Future<SchedulingTuning> getSchedulingTuning() async =>
-      Future.error(_unavailable('getSchedulingTuning'));
+  Future<SchedulingTuning> getSchedulingTuning() async {
+    final raw = await _api.get('/review/tuning');
+    return SchedulingTuning.fromJson(_map(raw));
+  }
 
   @override
   Future<String?> getFavoriteDevice() async =>
@@ -206,8 +213,9 @@ class RemoteDataService implements DataService {
   ) async => Future.error(_unavailable('bookTeamMeeting'));
 
   @override
-  Future<void> setSchedulingTuning(SchedulingTuning tuning) async =>
-      Future.error(_unavailable('setSchedulingTuning'));
+  Future<void> setSchedulingTuning(SchedulingTuning tuning) async {
+    await _api.put('/review/tuning', tuning.toJson());
+  }
 
   @override
   Future<String> getThemeMode() async =>
@@ -274,5 +282,12 @@ class RemoteDataService implements DataService {
   Future<void> logout() async {
     _api.setToken(null);
     _currentUser = null;
+  }
+
+  String _dateOnly(DateTime value) {
+    final year = value.year.toString().padLeft(4, '0');
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
   }
 }
