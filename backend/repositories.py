@@ -18,6 +18,18 @@ class TaskEventBatchValidationError(ValueError):
     pass
 
 
+class RepositoryConflictError(ValueError):
+    pass
+
+
+class RepositoryNotFoundError(LookupError):
+    pass
+
+
+class RepositoryValidationError(ValueError):
+    pass
+
+
 def _now() -> str:
     return datetime.utcnow().isoformat(timespec="seconds")
 
@@ -208,6 +220,89 @@ def init_db(db_path: str | Path | None = None, connection: sqlite3.Connection | 
             CREATE TABLE IF NOT EXISTS settings (
                 user_id TEXT PRIMARY KEY,
                 scheduling_tuning_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS emotion_checkins (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                at TEXT NOT NULL,
+                state TEXT NOT NULL,
+                note TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS energy_samples (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                at TEXT NOT NULL,
+                level TEXT NOT NULL,
+                status TEXT NOT NULL,
+                description TEXT NOT NULL,
+                battery_percent INTEGER NOT NULL,
+                emotion TEXT NOT NULL,
+                flow_state TEXT NOT NULL,
+                source TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS goals (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                due TEXT NOT NULL,
+                priority INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS goal_tasks (
+                id TEXT PRIMARY KEY,
+                goal_id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                duration_minutes INTEGER NOT NULL,
+                load TEXT NOT NULL,
+                tag TEXT NOT NULL,
+                done INTEGER NOT NULL,
+                depends_on_json TEXT NOT NULL,
+                position INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(goal_id) REFERENCES goals(id) ON DELETE CASCADE,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS team_members (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                role TEXT NOT NULL,
+                energy TEXT NOT NULL,
+                permission TEXT NOT NULL,
+                busy_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             )
@@ -784,3 +879,750 @@ def set_scheduling_tuning(
         )
         connection.commit()
     return normalized
+
+
+def _iso_day(value: object | None) -> str:
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    text = str(value or "").strip()
+    if "T" in text:
+        return text.split("T", 1)[0]
+    if len(text) >= 10:
+        return text[:10]
+    return text
+
+
+def _check_global_owner(
+    connection: sqlite3.Connection,
+    table: str,
+    item_id: str,
+    user_id: str,
+    label: str,
+) -> sqlite3.Row | None:
+    row = connection.execute(
+        f"SELECT user_id FROM {table} WHERE id = ?",
+        (item_id,),
+    ).fetchone()
+    if row is not None and row["user_id"] != user_id:
+        raise RepositoryConflictError(f"{label} id already belongs to another user: {item_id}")
+    return row
+
+
+def _emotion_row_to_dict(row: sqlite3.Row | None) -> dict[str, object] | None:
+    if row is None:
+        return None
+    return {
+        "id": row["id"],
+        "at": row["at"],
+        "state": row["state"],
+        "note": row["note"],
+    }
+
+
+def default_emotion_status() -> dict[str, object]:
+    return {
+        "id": None,
+        "at": None,
+        "state": "stable",
+        "note": "No emotion check-in yet; using stable default.",
+    }
+
+
+def upsert_emotion_checkin(
+    db_path: str | Path | None,
+    user_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    checkin_id = str(payload.get("id") or uuid.uuid4().hex)
+    at = str(payload.get("at") or _now())
+    state = str(payload.get("state") or "stable")
+    note_value = payload.get("note")
+    note = None if note_value is None else str(note_value)
+    day = _iso_day(at)
+    now = _now()
+
+    with _connect(db_path) as connection:
+        _check_global_owner(connection, "emotion_checkins", checkin_id, user_id, "Emotion check-in")
+        connection.execute(
+            """
+            DELETE FROM emotion_checkins
+            WHERE user_id = ? AND substr(at, 1, 10) = ? AND id <> ?
+            """,
+            (user_id, day, checkin_id),
+        )
+        connection.execute(
+            """
+            INSERT INTO emotion_checkins (id, user_id, at, state, note, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                at = excluded.at,
+                state = excluded.state,
+                note = excluded.note,
+                updated_at = excluded.updated_at
+            WHERE emotion_checkins.user_id = excluded.user_id
+            """,
+            (checkin_id, user_id, at, state, note, now, now),
+        )
+        connection.commit()
+        row = connection.execute(
+            "SELECT * FROM emotion_checkins WHERE id = ? AND user_id = ?",
+            (checkin_id, user_id),
+        ).fetchone()
+        return _emotion_row_to_dict(row) or default_emotion_status()
+
+
+def list_emotion_checkins(
+    db_path: str | Path | None,
+    user_id: str,
+    day: str,
+) -> list[dict[str, object]]:
+    with _connect(db_path) as connection:
+        rows = connection.execute(
+            """
+            SELECT * FROM emotion_checkins
+            WHERE user_id = ? AND substr(at, 1, 10) = ?
+            ORDER BY at ASC, id ASC
+            """,
+            (user_id, day),
+        ).fetchall()
+        return [_emotion_row_to_dict(row) or {} for row in rows]
+
+
+def get_current_emotion(
+    db_path: str | Path | None,
+    user_id: str,
+) -> dict[str, object]:
+    with _connect(db_path) as connection:
+        row = connection.execute(
+            """
+            SELECT * FROM emotion_checkins
+            WHERE user_id = ?
+            ORDER BY at DESC, updated_at DESC, id DESC
+            LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
+        return _emotion_row_to_dict(row) or default_emotion_status()
+
+
+def get_latest_emotion_for_day(
+    db_path: str | Path | None,
+    user_id: str,
+    day: str,
+) -> dict[str, object] | None:
+    with _connect(db_path) as connection:
+        row = connection.execute(
+            """
+            SELECT * FROM emotion_checkins
+            WHERE user_id = ? AND substr(at, 1, 10) = ?
+            ORDER BY at DESC, updated_at DESC, id DESC
+            LIMIT 1
+            """,
+            (user_id, day),
+        ).fetchone()
+        return _emotion_row_to_dict(row)
+
+
+def _energy_row_to_dict(row: sqlite3.Row | None) -> dict[str, object] | None:
+    if row is None:
+        return None
+    return {
+        "id": row["id"],
+        "at": row["at"],
+        "level": row["level"],
+        "status": row["status"],
+        "description": row["description"],
+        "batteryPercent": row["battery_percent"],
+        "emotion": row["emotion"],
+        "flowState": row["flow_state"],
+        "source": row["source"],
+    }
+
+
+def default_energy_status() -> dict[str, object]:
+    return {
+        "id": None,
+        "at": None,
+        "level": "medium",
+        "status": "flow",
+        "description": "No recent energy sample; using balanced default.",
+        "batteryPercent": 85,
+        "emotion": "stable",
+        "flowState": "normal",
+        "source": "default",
+    }
+
+
+def upsert_energy_sample(
+    db_path: str | Path | None,
+    user_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    sample_id = str(payload.get("id") or uuid.uuid4().hex)
+    at = str(payload.get("at") or _now())
+    level = str(payload.get("level") or "medium")
+    status_value = str(payload.get("status") or "flow")
+    description = str(payload.get("description") or "")
+    battery_percent = _parse_int(
+        _first_non_none(payload, "batteryPercent", "battery_percent", default=85),
+        85,
+    )
+    emotion = str(payload.get("emotion") or "stable")
+    flow_state = str(_first_non_none(payload, "flowState", "flow_state", default="normal"))
+    source = str(payload.get("source") or "manual")
+    now = _now()
+
+    with _connect(db_path) as connection:
+        _check_global_owner(connection, "energy_samples", sample_id, user_id, "Energy sample")
+        connection.execute(
+            """
+            INSERT INTO energy_samples (
+                id, user_id, at, level, status, description, battery_percent,
+                emotion, flow_state, source, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                at = excluded.at,
+                level = excluded.level,
+                status = excluded.status,
+                description = excluded.description,
+                battery_percent = excluded.battery_percent,
+                emotion = excluded.emotion,
+                flow_state = excluded.flow_state,
+                source = excluded.source,
+                updated_at = excluded.updated_at
+            WHERE energy_samples.user_id = excluded.user_id
+            """,
+            (
+                sample_id,
+                user_id,
+                at,
+                level,
+                status_value,
+                description,
+                battery_percent,
+                emotion,
+                flow_state,
+                source,
+                now,
+                now,
+            ),
+        )
+        connection.commit()
+        row = connection.execute(
+            "SELECT * FROM energy_samples WHERE id = ? AND user_id = ?",
+            (sample_id, user_id),
+        ).fetchone()
+        return _energy_row_to_dict(row) or default_energy_status()
+
+
+def get_current_energy(
+    db_path: str | Path | None,
+    user_id: str,
+) -> dict[str, object]:
+    with _connect(db_path) as connection:
+        row = connection.execute(
+            """
+            SELECT * FROM energy_samples
+            WHERE user_id = ?
+            ORDER BY at DESC, updated_at DESC, id DESC
+            LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
+        return _energy_row_to_dict(row) or default_energy_status()
+
+
+def get_energy_profile(
+    db_path: str | Path | None,
+    user_id: str,
+) -> dict[str, object]:
+    with _connect(db_path) as connection:
+        aggregate = connection.execute(
+            """
+            SELECT COUNT(*) AS sample_count, AVG(battery_percent) AS average_battery_percent
+            FROM energy_samples
+            WHERE user_id = ?
+            """,
+            (user_id,),
+        ).fetchone()
+        latest = connection.execute(
+            """
+            SELECT level FROM energy_samples
+            WHERE user_id = ?
+            ORDER BY at DESC, updated_at DESC, id DESC
+            LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
+        count = int(aggregate["sample_count"] if aggregate else 0)
+        average = aggregate["average_battery_percent"] if aggregate else None
+        return {
+            "sampleCount": count,
+            "latestLevel": latest["level"] if latest is not None else "medium",
+            "averageBatteryPercent": int(round(float(average))) if average is not None else 85,
+        }
+
+
+def _depends_on_list(value: object | None) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item).strip()]
+
+
+def _goal_task_row_to_dict(row: sqlite3.Row) -> dict[str, object]:
+    try:
+        depends_on_raw = json.loads(row["depends_on_json"])
+    except json.JSONDecodeError:
+        depends_on_raw = []
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "durationMinutes": row["duration_minutes"],
+        "load": row["load"],
+        "tag": row["tag"],
+        "done": bool(row["done"]),
+        "dependsOn": _depends_on_list(depends_on_raw),
+    }
+
+
+def _list_goal_tasks_on_connection(
+    connection: sqlite3.Connection,
+    user_id: str,
+    goal_id: str,
+) -> list[dict[str, object]]:
+    rows = connection.execute(
+        """
+        SELECT * FROM goal_tasks
+        WHERE user_id = ? AND goal_id = ?
+        ORDER BY position ASC, created_at ASC, id ASC
+        """,
+        (user_id, goal_id),
+    ).fetchall()
+    return [_goal_task_row_to_dict(row) for row in rows]
+
+
+def _goal_row_to_dict(
+    connection: sqlite3.Connection,
+    row: sqlite3.Row,
+) -> dict[str, object]:
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "due": row["due"],
+        "priority": row["priority"],
+        "tasks": _list_goal_tasks_on_connection(connection, row["user_id"], row["id"]),
+    }
+
+
+def _normalize_goal_task_payload(payload: dict[str, object], task_id: str | None = None) -> dict[str, object]:
+    resolved_id = str(task_id or payload.get("id") or uuid.uuid4().hex)
+    return {
+        "id": resolved_id,
+        "title": str(payload.get("title") or ""),
+        "durationMinutes": _parse_int(
+            _first_non_none(payload, "durationMinutes", "duration_minutes", default=30),
+            30,
+        ),
+        "load": str(payload.get("load") or "medium"),
+        "tag": str(payload.get("tag") or "Goal"),
+        "done": _parse_bool(payload.get("done"), False),
+        "dependsOn": _depends_on_list(_first_non_none(payload, "dependsOn", "depends_on", default=[])),
+    }
+
+
+def _validate_goal_tasks(tasks: list[dict[str, object]]) -> None:
+    ids = [str(task["id"]) for task in tasks]
+    if len(ids) != len(set(ids)):
+        raise RepositoryValidationError("Goal task IDs must be unique within a goal.")
+    id_set = set(ids)
+    graph: dict[str, list[str]] = {}
+    for task in tasks:
+        task_id = str(task["id"])
+        deps = _depends_on_list(task.get("dependsOn"))
+        if task_id in deps:
+            raise RepositoryValidationError("Goal task cannot depend on itself.")
+        missing = [dep for dep in deps if dep not in id_set]
+        if missing:
+            raise RepositoryValidationError(f"Goal task depends on missing task: {missing[0]}")
+        graph[task_id] = deps
+
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(node: str) -> None:
+        if node in visiting:
+            raise RepositoryValidationError("Goal task dependencies must not contain cycles.")
+        if node in visited:
+            return
+        visiting.add(node)
+        for dep in graph.get(node, []):
+            visit(dep)
+        visiting.remove(node)
+        visited.add(node)
+
+    for task_id in ids:
+        visit(task_id)
+
+
+def _insert_goal_tasks(
+    connection: sqlite3.Connection,
+    user_id: str,
+    goal_id: str,
+    tasks: list[dict[str, object]],
+    now: str,
+    *,
+    validate: bool = True,
+    start_position: int = 0,
+) -> None:
+    if validate:
+        _validate_goal_tasks(tasks)
+    for offset, task in enumerate(tasks):
+        position = start_position + offset
+        task_id = str(task["id"])
+        existing = connection.execute(
+            "SELECT user_id, goal_id FROM goal_tasks WHERE id = ?",
+            (task_id,),
+        ).fetchone()
+        if existing is not None and (
+            existing["user_id"] != user_id or existing["goal_id"] != goal_id
+        ):
+            raise RepositoryConflictError(f"Goal task id already exists: {task_id}")
+        connection.execute(
+            """
+            INSERT INTO goal_tasks (
+                id, goal_id, user_id, title, duration_minutes, load, tag, done,
+                depends_on_json, position, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                title = excluded.title,
+                duration_minutes = excluded.duration_minutes,
+                load = excluded.load,
+                tag = excluded.tag,
+                done = excluded.done,
+                depends_on_json = excluded.depends_on_json,
+                position = excluded.position,
+                updated_at = excluded.updated_at
+            WHERE goal_tasks.user_id = excluded.user_id AND goal_tasks.goal_id = excluded.goal_id
+            """,
+            (
+                task_id,
+                goal_id,
+                user_id,
+                str(task.get("title") or ""),
+                _parse_int(task.get("durationMinutes"), 30),
+                str(task.get("load") or "medium"),
+                str(task.get("tag") or "Goal"),
+                1 if _parse_bool(task.get("done"), False) else 0,
+                json.dumps(_depends_on_list(task.get("dependsOn")), ensure_ascii=False),
+                position,
+                now,
+                now,
+            ),
+        )
+
+
+def list_goals(db_path: str | Path | None, user_id: str) -> list[dict[str, object]]:
+    with _connect(db_path) as connection:
+        rows = connection.execute(
+            """
+            SELECT * FROM goals
+            WHERE user_id = ?
+            ORDER BY priority DESC, due ASC, updated_at DESC, id ASC
+            """,
+            (user_id,),
+        ).fetchall()
+        return [_goal_row_to_dict(connection, row) for row in rows]
+
+
+def upsert_goal(
+    db_path: str | Path | None,
+    user_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    goal_id = str(payload.get("id") or uuid.uuid4().hex)
+    title = str(payload.get("title") or "")
+    due = str(payload.get("due") or _now())
+    priority = max(1, min(5, _parse_int(payload.get("priority"), 3)))
+    tasks_payload = payload.get("tasks")
+    tasks = [
+        _normalize_goal_task_payload(dict(task))
+        for task in tasks_payload
+        if isinstance(task, dict)
+    ] if isinstance(tasks_payload, list) else []
+    now = _now()
+
+    with _connect(db_path) as connection:
+        _check_global_owner(connection, "goals", goal_id, user_id, "Goal")
+        connection.execute(
+            """
+            INSERT INTO goals (id, user_id, title, due, priority, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                title = excluded.title,
+                due = excluded.due,
+                priority = excluded.priority,
+                updated_at = excluded.updated_at
+            WHERE goals.user_id = excluded.user_id
+            """,
+            (goal_id, user_id, title, due, priority, now, now),
+        )
+        connection.execute(
+            "DELETE FROM goal_tasks WHERE goal_id = ? AND user_id = ?",
+            (goal_id, user_id),
+        )
+        _insert_goal_tasks(connection, user_id, goal_id, tasks, now)
+        connection.commit()
+        row = connection.execute(
+            "SELECT * FROM goals WHERE id = ? AND user_id = ?",
+            (goal_id, user_id),
+        ).fetchone()
+        if row is None:
+            raise RepositoryNotFoundError(f"Goal not found: {goal_id}")
+        return _goal_row_to_dict(connection, row)
+
+
+def delete_goal(db_path: str | Path | None, user_id: str, goal_id: str) -> None:
+    with _connect(db_path) as connection:
+        connection.execute(
+            "DELETE FROM goals WHERE id = ? AND user_id = ?",
+            (goal_id, user_id),
+        )
+        connection.commit()
+
+
+def add_goal_task(
+    db_path: str | Path | None,
+    user_id: str,
+    goal_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    now = _now()
+    with _connect(db_path) as connection:
+        goal = connection.execute(
+            "SELECT * FROM goals WHERE id = ? AND user_id = ?",
+            (goal_id, user_id),
+        ).fetchone()
+        if goal is None:
+            if connection.execute("SELECT user_id FROM goals WHERE id = ?", (goal_id,)).fetchone() is not None:
+                raise RepositoryConflictError(f"Goal belongs to another user: {goal_id}")
+            raise RepositoryNotFoundError(f"Goal not found: {goal_id}")
+
+        task = _normalize_goal_task_payload(payload)
+        existing = connection.execute(
+            "SELECT user_id, goal_id FROM goal_tasks WHERE id = ?",
+            (task["id"],),
+        ).fetchone()
+        if existing is not None:
+            raise RepositoryConflictError(f"Goal task id already exists: {task['id']}")
+
+        tasks = _list_goal_tasks_on_connection(connection, user_id, goal_id)
+        tasks.append(task)
+        _validate_goal_tasks(tasks)
+        _insert_goal_tasks(
+            connection,
+            user_id,
+            goal_id,
+            [task],
+            now,
+            validate=False,
+            start_position=len(tasks) - 1,
+        )
+        connection.commit()
+        return _goal_row_to_dict(connection, goal)
+
+
+def update_goal_task(
+    db_path: str | Path | None,
+    user_id: str,
+    goal_id: str,
+    task_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    now = _now()
+    with _connect(db_path) as connection:
+        goal = connection.execute(
+            "SELECT * FROM goals WHERE id = ? AND user_id = ?",
+            (goal_id, user_id),
+        ).fetchone()
+        if goal is None:
+            if connection.execute("SELECT user_id FROM goals WHERE id = ?", (goal_id,)).fetchone() is not None:
+                raise RepositoryConflictError(f"Goal belongs to another user: {goal_id}")
+            raise RepositoryNotFoundError(f"Goal not found: {goal_id}")
+
+        existing_task = connection.execute(
+            "SELECT user_id, goal_id FROM goal_tasks WHERE id = ?",
+            (task_id,),
+        ).fetchone()
+        if existing_task is None or existing_task["goal_id"] != goal_id or existing_task["user_id"] != user_id:
+            if existing_task is not None and existing_task["user_id"] != user_id:
+                raise RepositoryConflictError(f"Goal task belongs to another user: {task_id}")
+            raise RepositoryNotFoundError(f"Goal task not found: {task_id}")
+
+        updated_task = _normalize_goal_task_payload(payload, task_id=task_id)
+        tasks = [
+            updated_task if task["id"] == task_id else task
+            for task in _list_goal_tasks_on_connection(connection, user_id, goal_id)
+        ]
+        _validate_goal_tasks(tasks)
+        connection.execute(
+            """
+            UPDATE goal_tasks
+            SET title = ?, duration_minutes = ?, load = ?, tag = ?, done = ?,
+                depends_on_json = ?, updated_at = ?
+            WHERE id = ? AND goal_id = ? AND user_id = ?
+            """,
+            (
+                str(updated_task.get("title") or ""),
+                _parse_int(updated_task.get("durationMinutes"), 30),
+                str(updated_task.get("load") or "medium"),
+                str(updated_task.get("tag") or "Goal"),
+                1 if _parse_bool(updated_task.get("done"), False) else 0,
+                json.dumps(_depends_on_list(updated_task.get("dependsOn")), ensure_ascii=False),
+                now,
+                task_id,
+                goal_id,
+                user_id,
+            ),
+        )
+        connection.commit()
+        return _goal_row_to_dict(connection, goal)
+
+
+def _filter_busy_by_day(busy: object, day: str | None = None) -> list[dict[str, object]]:
+    if not isinstance(busy, list):
+        return []
+    out: list[dict[str, object]] = []
+    for item in busy:
+        if not isinstance(item, dict):
+            continue
+        mapped = dict(item)
+        if day is not None and _iso_day(mapped.get("day")) != day:
+            continue
+        out.append(mapped)
+    return out
+
+
+def _team_member_row_to_dict(row: sqlite3.Row, day: str | None = None) -> dict[str, object]:
+    try:
+        busy = json.loads(row["busy_json"])
+    except json.JSONDecodeError:
+        busy = []
+    return {
+        "memberId": row["id"],
+        "displayName": row["display_name"],
+        "role": row["role"],
+        "energy": row["energy"],
+        "permission": row["permission"],
+        "busy": _filter_busy_by_day(busy, day),
+    }
+
+
+def upsert_team_member(
+    db_path: str | Path | None,
+    user_id: str,
+    payload: dict[str, object],
+    member_id: str | None = None,
+) -> dict[str, object]:
+    resolved_id = str(member_id or _first_non_none(payload, "memberId", "member_id") or uuid.uuid4().hex)
+    display_name = str(_first_non_none(payload, "displayName", "display_name", default=""))
+    role = str(payload.get("role") or "")
+    energy = str(payload.get("energy") or "medium")
+    permission = str(payload.get("permission") or "freeBusy")
+    busy = payload.get("busy") if isinstance(payload.get("busy"), list) else []
+    now = _now()
+
+    with _connect(db_path) as connection:
+        _check_global_owner(connection, "team_members", resolved_id, user_id, "Team member")
+        connection.execute(
+            """
+            INSERT INTO team_members (
+                id, user_id, display_name, role, energy, permission, busy_json, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                display_name = excluded.display_name,
+                role = excluded.role,
+                energy = excluded.energy,
+                permission = excluded.permission,
+                busy_json = excluded.busy_json,
+                updated_at = excluded.updated_at
+            WHERE team_members.user_id = excluded.user_id
+            """,
+            (
+                resolved_id,
+                user_id,
+                display_name,
+                role,
+                energy,
+                permission,
+                json.dumps(busy, ensure_ascii=False),
+                now,
+                now,
+            ),
+        )
+        connection.commit()
+        row = connection.execute(
+            "SELECT * FROM team_members WHERE id = ? AND user_id = ?",
+            (resolved_id, user_id),
+        ).fetchone()
+        if row is None:
+            raise RepositoryNotFoundError(f"Team member not found: {resolved_id}")
+        return _team_member_row_to_dict(row)
+
+
+def list_team_members(
+    db_path: str | Path | None,
+    user_id: str,
+    day: str | None = None,
+) -> list[dict[str, object]]:
+    with _connect(db_path) as connection:
+        rows = connection.execute(
+            """
+            SELECT * FROM team_members
+            WHERE user_id = ?
+            ORDER BY display_name ASC, id ASC
+            """,
+            (user_id,),
+        ).fetchall()
+        return [_team_member_row_to_dict(row, day) for row in rows]
+
+
+def update_team_member_permission(
+    db_path: str | Path | None,
+    user_id: str,
+    member_id: str,
+    permission: str,
+) -> dict[str, object]:
+    with _connect(db_path) as connection:
+        row = connection.execute(
+            "SELECT * FROM team_members WHERE id = ? AND user_id = ?",
+            (member_id, user_id),
+        ).fetchone()
+        if row is None:
+            if connection.execute("SELECT user_id FROM team_members WHERE id = ?", (member_id,)).fetchone() is not None:
+                raise RepositoryConflictError(f"Team member belongs to another user: {member_id}")
+            raise RepositoryNotFoundError(f"Team member not found: {member_id}")
+        connection.execute(
+            """
+            UPDATE team_members
+            SET permission = ?, updated_at = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (permission, _now(), member_id, user_id),
+        )
+        connection.commit()
+        updated = connection.execute(
+            "SELECT * FROM team_members WHERE id = ? AND user_id = ?",
+            (member_id, user_id),
+        ).fetchone()
+        if updated is None:
+            raise RepositoryNotFoundError(f"Team member not found: {member_id}")
+        return _team_member_row_to_dict(updated)
+
+
+def delete_team_member(db_path: str | Path | None, user_id: str, member_id: str) -> None:
+    with _connect(db_path) as connection:
+        connection.execute(
+            "DELETE FROM team_members WHERE id = ? AND user_id = ?",
+            (member_id, user_id),
+        )
+        connection.commit()

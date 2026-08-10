@@ -166,6 +166,14 @@ class _FatigueDataService implements DataService {
       _inner.getTeamCalendars(day);
 
   @override
+  Future<void> upsertTeamMember(TeamMemberCalendar member) =>
+      _inner.upsertTeamMember(member);
+
+  @override
+  Future<void> deleteTeamMember(String memberId) =>
+      _inner.deleteTeamMember(memberId);
+
+  @override
   Future<void> updateTeamSharePermission(
     String memberId,
     TeamSharePermission permission,

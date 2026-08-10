@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class APIModel(BaseModel):
@@ -152,6 +152,87 @@ class EmotionCheckIn(APIModel):
     state: str
     note: str | None = None
 
+    @field_validator("state")
+    @classmethod
+    def validate_state(cls, value: str) -> str:
+        allowed = {"efficient", "stable", "tired", "irritable"}
+        if value not in allowed:
+            raise ValueError(f"state must be one of: {', '.join(sorted(allowed))}")
+        return value
+
+
+class EmotionStatusOut(APIModel):
+    id: str | None = None
+    at: datetime | None = None
+    state: str = EmotionState.stable
+    note: str | None = None
+
+
+class CareAlertOut(APIModel):
+    active: bool
+    severity: str = "none"
+    message: str
+
+
+class EnergySample(APIModel):
+    id: str
+    at: datetime
+    level: str = "medium"
+    status: str = "flow"
+    description: str = ""
+    battery_percent: int = Field(default=85, alias="batteryPercent")
+    emotion: str = EmotionState.stable
+    flow_state: str = Field(default="normal", alias="flowState")
+    source: str = "manual"
+
+    @field_validator("level")
+    @classmethod
+    def validate_level(cls, value: str) -> str:
+        allowed = {"veryLow", "low", "medium", "high", "veryHigh"}
+        if value not in allowed:
+            raise ValueError(f"level must be one of: {', '.join(sorted(allowed))}")
+        return value
+
+    @field_validator("battery_percent")
+    @classmethod
+    def validate_battery_percent(cls, value: int) -> int:
+        if value < 0 or value > 100:
+            raise ValueError("batteryPercent must be between 0 and 100")
+        return value
+
+    @field_validator("emotion")
+    @classmethod
+    def validate_emotion(cls, value: str) -> str:
+        allowed = {"efficient", "stable", "tired", "irritable"}
+        if value not in allowed:
+            raise ValueError(f"emotion must be one of: {', '.join(sorted(allowed))}")
+        return value
+
+    @field_validator("source")
+    @classmethod
+    def validate_source(cls, value: str) -> str:
+        if value != "manual":
+            raise ValueError("source must be manual until device sampling is implemented")
+        return value
+
+
+class EnergyStatusOut(APIModel):
+    id: str | None = None
+    at: datetime | None = None
+    level: str = "medium"
+    status: str = "flow"
+    description: str = "No recent energy sample; using balanced default."
+    battery_percent: int = Field(default=85, alias="batteryPercent")
+    emotion: str = EmotionState.stable
+    flow_state: str = Field(default="normal", alias="flowState")
+    source: str = "default"
+
+
+class EnergyProfileOut(APIModel):
+    sample_count: int = Field(alias="sampleCount")
+    latest_level: str = Field(alias="latestLevel")
+    average_battery_percent: int = Field(alias="averageBatteryPercent")
+
 
 class GoalTask(APIModel):
     id: str
@@ -287,6 +368,26 @@ class TeamMemberCalendar(APIModel):
     energy: str
     permission: str
     busy: list[ScheduleEntryOut] = Field(default_factory=list)
+
+    @field_validator("permission")
+    @classmethod
+    def validate_permission(cls, value: str) -> str:
+        allowed = {"none", "freeBusy", "details"}
+        if value not in allowed:
+            raise ValueError(f"permission must be one of: {', '.join(sorted(allowed))}")
+        return value
+
+
+class TeamPermissionUpdate(APIModel):
+    permission: str
+
+    @field_validator("permission")
+    @classmethod
+    def validate_permission(cls, value: str) -> str:
+        allowed = {"none", "freeBusy", "details"}
+        if value not in allowed:
+            raise ValueError(f"permission must be one of: {', '.join(sorted(allowed))}")
+        return value
 
 
 class TeamConflict(APIModel):

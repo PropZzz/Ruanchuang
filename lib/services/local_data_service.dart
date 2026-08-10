@@ -1127,6 +1127,39 @@ class LocalDataService implements DataService {
   }
 
   @override
+  Future<void> upsertTeamMember(TeamMemberCalendar member) {
+    final queued = _cloneTeamCalendar(member);
+    return _enqueueMutation(() async {
+      await _ensureLoaded();
+      final id = queued.memberId.isEmpty ? _newId('member_') : queued.memberId;
+      final saved = TeamMemberCalendar(
+        memberId: id,
+        displayName: queued.displayName,
+        role: queued.role,
+        energy: queued.energy,
+        permission: queued.permission,
+        busy: List<ScheduleEntry>.from(queued.busy),
+      );
+      final idx = _teamCalendars.indexWhere((c) => c.memberId == id);
+      if (idx == -1) {
+        _teamCalendars.add(saved);
+      } else {
+        _teamCalendars[idx] = saved;
+      }
+      await _save();
+    });
+  }
+
+  @override
+  Future<void> deleteTeamMember(String memberId) {
+    return _enqueueMutation(() async {
+      await _ensureLoaded();
+      _teamCalendars.removeWhere((c) => c.memberId == memberId);
+      await _save();
+    });
+  }
+
+  @override
   Future<void> updateTeamSharePermission(
     String memberId,
     TeamSharePermission permission,

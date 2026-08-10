@@ -35,6 +35,20 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 - `GET|POST /microtasks`
 - `PUT|DELETE /microtasks/{task_id}`
 - `POST /microtasks/recommend-crystals`
+- `GET /emotion/current`
+- `POST|GET /emotion/checkins`
+- `GET /emotion/care-alert`
+- `GET /energy/current`
+- `POST /energy/samples`
+- `GET /energy/profile`
+- `GET|POST /goals`
+- `PUT|DELETE /goals/{goal_id}`
+- `POST /goals/{goal_id}/tasks`
+- `PUT /goals/{goal_id}/tasks/{task_id}`
+- `GET|POST /team/members`
+- `PUT|DELETE /team/members/{member_id}`
+- `PUT /team/members/{member_id}/permission`
+- `GET /team/calendars`
 
 默认 SQLite 数据库文件保存在 `backend/data/app.sqlite3`。
 

@@ -62,6 +62,14 @@ abstract class DataService {
 
   Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day);
 
+  Future<void> upsertTeamMember(TeamMemberCalendar member) {
+    throw UnimplementedError('upsertTeamMember is not implemented.');
+  }
+
+  Future<void> deleteTeamMember(String memberId) {
+    throw UnimplementedError('deleteTeamMember is not implemented.');
+  }
+
   Future<void> updateTeamSharePermission(
     String memberId,
     TeamSharePermission permission,

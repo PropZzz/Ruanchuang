@@ -276,4 +276,241 @@ void main() {
     await service.logout();
     expect(await service.getCurrentUser(), isNull);
   });
+
+  test('RemoteDataService handles emotion energy goals and team basics', () async {
+    final emotionCheckIns = <Map<String, Object?>>[];
+    final goals = <Map<String, Object?>>[];
+    final teamMembers = <Map<String, Object?>>[];
+    const token = 'token-2';
+
+    final client = MockClient((request) async {
+      final path = request.url.path;
+      final method = request.method;
+      final auth =
+          request.headers['authorization'] ?? request.headers['Authorization'];
+
+      Map<String, Object?> decodeBody() {
+        final raw = request.body.trim();
+        if (raw.isEmpty) return {};
+        return Map<String, Object?>.from(jsonDecode(raw) as Map);
+      }
+
+      if (path == '/auth/login' && method == 'POST') {
+        return http.Response(
+          jsonEncode({
+            'accessToken': token,
+            'tokenType': 'Bearer',
+            'user': {
+              'id': 'user-2',
+              'contactAddress': 'bob@example.com',
+              'displayName': 'Bob',
+            },
+          }),
+          200,
+        );
+      }
+
+      if (auth != 'Bearer $token') {
+        return http.Response('Unauthorized', 401);
+      }
+
+      if (path == '/emotion/current' && method == 'GET') {
+        return http.Response(
+          jsonEncode(
+            emotionCheckIns.isEmpty
+                ? {
+                    'id': null,
+                    'at': null,
+                    'state': 'stable',
+                    'note': null,
+                  }
+                : emotionCheckIns.last,
+          ),
+          200,
+        );
+      }
+
+      if (path == '/emotion/checkins' && method == 'POST') {
+        final body = decodeBody();
+        emotionCheckIns
+          ..clear()
+          ..add(body);
+        return http.Response(jsonEncode(body), 200);
+      }
+
+      if (path == '/emotion/checkins' && method == 'GET') {
+        expect(request.url.queryParameters['day'], '2026-08-09');
+        return http.Response(jsonEncode(emotionCheckIns), 200);
+      }
+
+      if (path == '/energy/current' && method == 'GET') {
+        return http.Response(
+          jsonEncode({
+            'id': 'energy-1',
+            'at': '2026-08-09T10:00:00',
+            'level': 'high',
+            'status': 'flow',
+            'description': 'Manual sample',
+            'batteryPercent': 88,
+            'emotion': 'stable',
+            'flowState': 'focused',
+            'source': 'manual',
+          }),
+          200,
+        );
+      }
+
+      if (path == '/goals' && method == 'GET') {
+        return http.Response(jsonEncode(goals), 200);
+      }
+
+      if (path == '/goals' && method == 'POST') {
+        final body = decodeBody();
+        goals
+          ..clear()
+          ..add(body);
+        return http.Response(jsonEncode(body), 200);
+      }
+
+      if (path.startsWith('/goals/') && method == 'PUT') {
+        final body = decodeBody();
+        goals
+          ..clear()
+          ..add(body);
+        return http.Response(jsonEncode(body), 200);
+      }
+
+      if (path.startsWith('/goals/') && method == 'DELETE') {
+        goals.clear();
+        return http.Response('', 204);
+      }
+
+      if (path == '/team/members' && method == 'GET') {
+        return http.Response(jsonEncode(teamMembers), 200);
+      }
+
+      if (path == '/team/members' && method == 'POST') {
+        final body = decodeBody();
+        teamMembers
+          ..clear()
+          ..add(body);
+        return http.Response(jsonEncode(body), 200);
+      }
+
+      if (path.startsWith('/team/members/') &&
+          !path.endsWith('/permission') &&
+          method == 'PUT') {
+        final body = decodeBody();
+        teamMembers
+          ..clear()
+          ..add(body);
+        return http.Response(jsonEncode(body), 200);
+      }
+
+      if (path.startsWith('/team/members/') &&
+          path.endsWith('/permission') &&
+          method == 'PUT') {
+        final body = decodeBody();
+        final updated = {
+          ...teamMembers.single,
+          'permission': body['permission'],
+        };
+        teamMembers
+          ..clear()
+          ..add(updated);
+        return http.Response(jsonEncode(updated), 200);
+      }
+
+      if (path == '/team/calendars' && method == 'GET') {
+        expect(request.url.queryParameters['day'], '2026-08-09');
+        return http.Response(jsonEncode(teamMembers), 200);
+      }
+
+      return http.Response('not found', 404);
+    });
+
+    final api = ApiClient(httpClient: client, baseUrl: 'http://server.test');
+    final service = RemoteDataService(apiClient: api);
+
+    expect(await service.login('bob@example.com', 'secret123'), isTrue);
+
+    await service.addEmotionCheckIn(
+      EmotionCheckIn(
+        id: 'emotion-1',
+        at: DateTime(2026, 8, 9, 9),
+        state: EmotionState.tired,
+        note: 'Need recovery',
+      ),
+    );
+    expect(
+      (await service.getEmotionCheckIns(DateTime(2026, 8, 9))).single.state,
+      EmotionState.tired,
+    );
+    expect(await service.getEmotionState(), EmotionState.tired);
+    expect(await service.getCurrentEmotion(), EmotionType.fatigue);
+
+    final energy = await service.getEnergyStatus();
+    expect(energy.level, 'high');
+    expect(energy.batteryPercent, 88);
+    expect(energy.flowState, 'focused');
+
+    final goal = Goal(
+      id: 'goal-1',
+      title: 'Ship API',
+      due: DateTime(2026, 8, 30, 18),
+      priority: 5,
+      tasks: const [
+        GoalTask(
+          id: 'goal-task-1',
+          title: 'Remote methods',
+          durationMinutes: 30,
+          load: CognitiveLoad.medium,
+          tag: 'Backend',
+          dependsOn: ['spec'],
+        ),
+      ],
+    );
+    await service.upsertGoal(goal);
+    expect((await service.getGoals()).single.tasks.single.dependsOn, ['spec']);
+
+    await service.deleteGoal('goal-1');
+    expect(await service.getGoals(), isEmpty);
+
+    await service.upsertTeamMember(
+      TeamMemberCalendar(
+        memberId: 'member-1',
+        displayName: 'Li Ming',
+        role: 'PM',
+        energy: EnergyTier.high,
+        permission: TeamSharePermission.details,
+        busy: [
+          ScheduleEntry(
+            id: 'busy-1',
+            day: DateTime(2026, 8, 9),
+            title: 'Sync',
+            tag: 'Meeting',
+            height: 80,
+            color: const Color(0xFF2196F3),
+            time: const TimeOfDay(hour: 9, minute: 0),
+          ),
+        ],
+      ),
+    );
+    final calendars = await service.getTeamCalendars(DateTime(2026, 8, 9));
+    expect(calendars.single.memberId, 'member-1');
+    expect(calendars.single.busy.single.title, 'Sync');
+
+    final overview = await service.getTeamMembers();
+    expect(overview.single.name, 'Li Ming');
+    expect(overview.single.isHighEnergy, isTrue);
+
+    await service.updateTeamSharePermission(
+      'member-1',
+      TeamSharePermission.freeBusy,
+    );
+    expect(
+      (await service.getTeamCalendars(DateTime(2026, 8, 9))).single.permission,
+      TeamSharePermission.freeBusy,
+    );
+  });
 }

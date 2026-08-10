@@ -1,6 +1,7 @@
 import '../models/models.dart';
 import 'api_client.dart';
 import 'data_service.dart';
+import 'package:flutter/material.dart' show TimeOfDay;
 
 class RemoteDataException implements Exception {
   final String message;
@@ -52,35 +53,63 @@ class RemoteDataService implements DataService {
   }
 
   @override
-  Future<EmotionType> getCurrentEmotion() async =>
-      _unavailable('getCurrentEmotion');
+  Future<EmotionType> getCurrentEmotion() async {
+    final state = await getEmotionState();
+    return switch (state) {
+      EmotionState.efficient => EmotionType.highEfficiency,
+      EmotionState.stable => EmotionType.stable,
+      EmotionState.tired => EmotionType.fatigue,
+      EmotionState.irritable => EmotionType.irritable,
+    };
+  }
 
   @override
-  Future<EnergyStatus> getEnergyStatus() async =>
-      _unavailable('getEnergyStatus');
+  Future<EnergyStatus> getEnergyStatus() async {
+    final raw = await _api.get('/energy/current');
+    return EnergyStatus.fromJson(_map(raw));
+  }
 
   @override
-  Future<EmotionState> getEmotionState() async =>
-      _unavailable('getEmotionState');
+  Future<EmotionState> getEmotionState() async {
+    final raw = await _api.get('/emotion/current');
+    final stateStr = _map(raw)['state'] as String? ?? EmotionState.stable.name;
+    return EmotionState.values.firstWhere(
+      (state) => state.name == stateStr,
+      orElse: () => EmotionState.stable,
+    );
+  }
 
   @override
-  Future<void> addEmotionCheckIn(EmotionCheckIn checkIn) async =>
-      Future.error(_unavailable('addEmotionCheckIn'));
+  Future<void> addEmotionCheckIn(EmotionCheckIn checkIn) async {
+    await _api.post('/emotion/checkins', checkIn.toJson());
+  }
 
   @override
-  Future<List<EmotionCheckIn>> getEmotionCheckIns(DateTime day) async =>
-      Future.error(_unavailable('getEmotionCheckIns'));
+  Future<List<EmotionCheckIn>> getEmotionCheckIns(DateTime day) async {
+    final raw = await _api.get('/emotion/checkins?day=${_dateOnly(day)}');
+    return _listOfMaps(raw).map(EmotionCheckIn.fromJson).toList();
+  }
 
   @override
-  Future<List<Goal>> getGoals() async => Future.error(_unavailable('getGoals'));
+  Future<List<Goal>> getGoals() async {
+    final raw = await _api.get('/goals');
+    return _listOfMaps(raw).map(Goal.fromJson).toList();
+  }
 
   @override
-  Future<void> upsertGoal(Goal goal) async =>
-      Future.error(_unavailable('upsertGoal'));
+  Future<void> upsertGoal(Goal goal) async {
+    if (goal.id.isEmpty) {
+      await _api.post('/goals', goal.toJson());
+    } else {
+      await _api.put('/goals/${goal.id}', goal.toJson());
+    }
+  }
 
   @override
-  Future<void> deleteGoal(String goalId) async =>
-      Future.error(_unavailable('deleteGoal'));
+  Future<void> deleteGoal(String goalId) async {
+    if (goalId.isEmpty) return;
+    await _api.delete('/goals/$goalId');
+  }
 
   @override
   Future<Task> getCurrentTask() async =>
@@ -141,8 +170,13 @@ class RemoteDataService implements DataService {
   }
 
   @override
-  Future<List<TeamMember>> getTeamMembers() async =>
-      Future.error(_unavailable('getTeamMembers'));
+  Future<List<TeamMember>> getTeamMembers() async {
+    final raw = await _api.get('/team/members');
+    return _listOfMaps(raw)
+        .map(TeamMemberCalendar.fromJson)
+        .map(_teamOverviewFromCalendar)
+        .toList(growable: false);
+  }
 
   @override
   Future<UserProfile> getUserProfile() async {
@@ -197,14 +231,35 @@ class RemoteDataService implements DataService {
       Future.error(_unavailable('setFavoriteDevice'));
 
   @override
-  Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day) async =>
-      Future.error(_unavailable('getTeamCalendars'));
+  Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day) async {
+    final raw = await _api.get('/team/calendars?day=${_dateOnly(day)}');
+    return _listOfMaps(raw).map(TeamMemberCalendar.fromJson).toList();
+  }
+
+  @override
+  Future<void> upsertTeamMember(TeamMemberCalendar member) async {
+    if (member.memberId.isEmpty) {
+      await _api.post('/team/members', member.toJson());
+    } else {
+      await _api.put('/team/members/${member.memberId}', member.toJson());
+    }
+  }
+
+  @override
+  Future<void> deleteTeamMember(String memberId) async {
+    if (memberId.isEmpty) return;
+    await _api.delete('/team/members/$memberId');
+  }
 
   @override
   Future<void> updateTeamSharePermission(
     String memberId,
     TeamSharePermission permission,
-  ) async => Future.error(_unavailable('updateTeamSharePermission'));
+  ) async {
+    await _api.put('/team/members/$memberId/permission', {
+      'permission': permission.name,
+    });
+  }
 
   @override
   Future<void> bookTeamMeeting(
@@ -289,5 +344,38 @@ class RemoteDataService implements DataService {
     final month = value.month.toString().padLeft(2, '0');
     final day = value.day.toString().padLeft(2, '0');
     return '$year-$month-$day';
+  }
+
+  int _durationFromHeight(double height) {
+    return ((height / 80.0) * 60.0).round().clamp(1, 24 * 60).toInt();
+  }
+
+  TimeOfDay _endTime(ScheduleEntry entry) {
+    final totalMinutes =
+        entry.time.hour * 60 +
+        entry.time.minute +
+        _durationFromHeight(entry.height);
+    return TimeOfDay(
+      hour: (totalMinutes ~/ 60) % 24,
+      minute: totalMinutes % 60,
+    );
+  }
+
+  TeamMember _teamOverviewFromCalendar(TeamMemberCalendar calendar) {
+    final busyMinutes = calendar.busy.fold<int>(
+      0,
+      (sum, entry) => sum + _durationFromHeight(entry.height),
+    );
+    final progress = (busyMinutes / 240.0).clamp(0.0, 1.0).toDouble();
+    final task = calendar.busy.isEmpty ? '${calendar.role}规划中' : calendar.busy.first.title;
+    return TeamMember(
+      name: calendar.displayName,
+      task: task,
+      progress: progress,
+      isHighEnergy: calendar.energy.index >= EnergyTier.high.index,
+      busyTimes: calendar.busy
+          .map((entry) => TimeRange(start: entry.time, end: _endTime(entry)))
+          .toList(growable: false),
+    );
   }
 }

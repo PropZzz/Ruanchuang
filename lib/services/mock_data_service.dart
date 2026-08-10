@@ -309,6 +309,32 @@ class MockDataService implements DataService {
   }
 
   @override
+  Future<void> upsertTeamMember(TeamMemberCalendar member) async {
+    await _delay();
+    final id = member.memberId.isEmpty ? _newId('member_') : member.memberId;
+    final saved = TeamMemberCalendar(
+      memberId: id,
+      displayName: member.displayName,
+      role: member.role,
+      energy: member.energy,
+      permission: member.permission,
+      busy: List<ScheduleEntry>.from(member.busy),
+    );
+    final idx = _team.indexWhere((c) => c.memberId == id);
+    if (idx == -1) {
+      _team.add(saved);
+    } else {
+      _team[idx] = saved;
+    }
+  }
+
+  @override
+  Future<void> deleteTeamMember(String memberId) async {
+    await _delay();
+    _team.removeWhere((c) => c.memberId == memberId);
+  }
+
+  @override
   Future<void> updateTeamSharePermission(
     String memberId,
     TeamSharePermission permission,

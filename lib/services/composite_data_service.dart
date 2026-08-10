@@ -200,6 +200,14 @@ class CompositeDataService implements DataService {
       _read((s) => s.getTeamCalendars(day));
 
   @override
+  Future<void> upsertTeamMember(TeamMemberCalendar member) =>
+      _writeVoid((s) => s.upsertTeamMember(member));
+
+  @override
+  Future<void> deleteTeamMember(String memberId) =>
+      _writeVoid((s) => s.deleteTeamMember(memberId));
+
+  @override
   Future<void> updateTeamSharePermission(
     String memberId,
     TeamSharePermission permission,
