@@ -435,6 +435,38 @@ void main() {
     }
   });
 
+  testWidgets(
+    'primary destinations render without exceptions at target widths',
+    (tester) async {
+      for (final size in [const Size(1440, 960), const Size(390, 844)]) {
+        await tester.binding.setSurfaceSize(size);
+        try {
+          await tester.pumpWidget(const BattleManApp());
+          await tester.pumpAndSettle();
+          await _dismissStartupAuthIfShown(tester);
+
+          for (final id in ['focus', 'schedule', 'micro', 'team', 'profile']) {
+            final barDestination = find.byKey(ValueKey('shell-nav-$id'));
+            final railDestination = find.byKey(ValueKey('shell-rail-$id-icon'));
+            final target = barDestination.evaluate().isNotEmpty
+                ? barDestination
+                : railDestination;
+            expect(target, findsOneWidget, reason: 'missing nav for $id at $size');
+            await tester.tap(target);
+            await tester.pumpAndSettle();
+            expect(
+              tester.takeException(),
+              isNull,
+              reason: 'destination $id failed at $size',
+            );
+          }
+        } finally {
+          await tester.binding.setSurfaceSize(null);
+        }
+      }
+    },
+  );
+
   testWidgets('focus page keeps the current task action visible on mobile', (
     tester,
   ) async {
