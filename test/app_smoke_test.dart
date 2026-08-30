@@ -321,7 +321,11 @@ END:VCALENDAR
 }
 
 void _setWideSurface(WidgetTester tester) {
-  tester.view.physicalSize = const Size(1024, 900);
+  _setSurface(tester, const Size(1024, 900));
+}
+
+void _setSurface(WidgetTester tester, Size size) {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
 }
 
@@ -404,7 +408,7 @@ void main() {
   });
 
   testWidgets('wide shell exposes all primary destinations', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1440, 960));
+    _setSurface(tester, const Size(1440, 960));
     try {
       await tester.pumpWidget(const BattleManApp());
       await tester.pumpAndSettle();
@@ -415,12 +419,12 @@ void main() {
       }
       expect(tester.takeException(), isNull);
     } finally {
-      await tester.binding.setSurfaceSize(null);
+      _resetSurface(tester);
     }
   });
 
   testWidgets('narrow shell exposes keyed destinations', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    _setSurface(tester, const Size(390, 844));
     try {
       await tester.pumpWidget(const BattleManApp());
       await tester.pumpAndSettle();
@@ -431,7 +435,7 @@ void main() {
       }
       expect(tester.takeException(), isNull);
     } finally {
-      await tester.binding.setSurfaceSize(null);
+      _resetSurface(tester);
     }
   });
 
@@ -439,7 +443,7 @@ void main() {
     'primary destinations render without exceptions at target widths',
     (tester) async {
       for (final size in [const Size(1440, 960), const Size(390, 844)]) {
-        await tester.binding.setSurfaceSize(size);
+        _setSurface(tester, size);
         try {
           await tester.pumpWidget(const BattleManApp());
           await tester.pumpAndSettle();
@@ -448,9 +452,14 @@ void main() {
           for (final id in ['focus', 'schedule', 'micro', 'team', 'profile']) {
             final barDestination = find.byKey(ValueKey('shell-nav-$id'));
             final railDestination = find.byKey(ValueKey('shell-rail-$id-icon'));
+            final railSelectedDestination = find.byKey(
+              ValueKey('shell-rail-$id-selected-icon'),
+            );
             final target = barDestination.evaluate().isNotEmpty
                 ? barDestination
-                : railDestination;
+                : (railDestination.evaluate().isNotEmpty
+                      ? railDestination
+                      : railSelectedDestination);
             expect(target, findsOneWidget, reason: 'missing nav for $id at $size');
             await tester.tap(target);
             await tester.pumpAndSettle();
@@ -461,8 +470,11 @@ void main() {
             );
           }
         } finally {
-          await tester.binding.setSurfaceSize(null);
+          _resetSurface(tester);
         }
+        // Unmount the app so the next width starts from a fresh shell instead
+        // of animating the previous shell out at the new size.
+        await tester.pumpWidget(const SizedBox());
       }
     },
   );
@@ -470,7 +482,7 @@ void main() {
   testWidgets('focus page keeps the current task action visible on mobile', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    _setSurface(tester, const Size(390, 844));
     try {
       await tester.pumpWidget(const BattleManApp());
       await tester.pumpAndSettle();
@@ -480,14 +492,14 @@ void main() {
       expect(find.text('开始').first, findsOneWidget);
       expect(tester.takeException(), isNull);
     } finally {
-      await tester.binding.setSurfaceSize(null);
+      _resetSurface(tester);
     }
   });
 
   testWidgets('micro task page keeps add and batch actions accessible', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    _setSurface(tester, const Size(390, 844));
     try {
       await tester.pumpWidget(const BattleManApp());
       await tester.pumpAndSettle();
@@ -500,7 +512,7 @@ void main() {
       expect(find.byTooltip('批量模式'), findsOneWidget);
       expect(tester.takeException(), isNull);
     } finally {
-      await tester.binding.setSurfaceSize(null);
+      _resetSurface(tester);
     }
   });
 
@@ -833,7 +845,7 @@ void main() {
       ),
       reminderService: _NoopReminderService(),
     );
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    _setSurface(tester, const Size(390, 844));
     try {
       await tester.pumpWidget(const BattleManApp());
       await tester.pumpAndSettle();
@@ -846,21 +858,25 @@ void main() {
       expect(find.text('未找到团队成员。'), findsWidgets);
       expect(tester.takeException(), isNull);
     } finally {
-      await tester.binding.setSurfaceSize(null);
+      _resetSurface(tester);
     }
   });
 
   testWidgets('urgent rescue presents all strategies before acceptance', (tester) async {
     _setWideSurface(tester);
-    await _openSmartCalendar(tester);
-    await tester.tap(find.byTooltip('插入紧急任务并重新规划'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('插入并重新规划'));
-    await tester.pumpAndSettle();
+    try {
+      await _openSmartCalendar(tester);
+      await tester.tap(find.byTooltip('插入紧急任务并重新规划'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('插入并重新规划'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('优先保住截止时间'), findsOneWidget);
-    expect(find.text('优先保留恢复时间'), findsOneWidget);
-    expect(find.text('尽量少动原计划'), findsOneWidget);
-    expect(find.text('采用此方案'), findsNothing);
+      expect(find.text('优先保住截止时间'), findsOneWidget);
+      expect(find.text('优先保留恢复时间'), findsOneWidget);
+      expect(find.text('尽量少动原计划'), findsOneWidget);
+      expect(find.text('采用此方案'), findsNothing);
+    } finally {
+      _resetSurface(tester);
+    }
   });
 }
