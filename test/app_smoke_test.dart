@@ -230,6 +230,17 @@ class _EventFailingDataService extends _FatigueDataService {
       Future<void>.error(StateError('event store unavailable'));
 }
 
+class _EmptyTeamDataService extends _FatigueDataService {
+  _EmptyTeamDataService(super.inner);
+
+  @override
+  Future<List<TeamMember>> getTeamMembers() async => const [];
+
+  @override
+  Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day) async =>
+      const [];
+}
+
 class _BlockingImportDataService extends _FatigueDataService {
   _BlockingImportDataService(super.inner);
 
@@ -760,6 +771,50 @@ void main() {
       expect(enabledRefresh.onPressed, isNotNull);
     } finally {
       _resetSurface(tester);
+    }
+  });
+
+  testWidgets('profile hub exposes review and settings entries', (tester) async {
+    await tester.pumpWidget(const BattleManApp());
+    await tester.pumpAndSettle();
+    await _dismissStartupAuthIfShown(tester);
+    await tester.tap(find.byKey(const ValueKey('shell-nav-profile')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('复盘'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('设置'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('设置'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('team page keeps collaboration heading and empty state readable at 390px', (
+    tester,
+  ) async {
+    AppServices.installTestOverrides(
+      dataService: _EmptyTeamDataService(
+        LocalDataService.forPersistence(InMemoryLocalPersistence()),
+      ),
+      reminderService: _NoopReminderService(),
+    );
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+
+      await tester.tap(find.byKey(const ValueKey('shell-nav-team')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('协作黄金窗口'), findsOneWidget);
+      expect(find.text('未找到团队成员。'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    } finally {
+      await tester.binding.setSurfaceSize(null);
     }
   });
 

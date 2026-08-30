@@ -5,6 +5,7 @@ import '../services/app_services.dart';
 import '../services/review/review_rules.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
+import '../widgets/workbench_surface.dart';
 
 enum _ReviewRange { week, month }
 
@@ -415,7 +416,10 @@ class _ReviewPageState extends State<ReviewPage> {
   Widget _buildWeeklySection(BuildContext context) {
     final r = _weeklyReport;
     if (r == null) {
-      return Text(AppStrings.of(context, 'review_empty'));
+      return WorkbenchEmptyState(
+        icon: Icons.insights_outlined,
+        title: AppStrings.of(context, 'review_empty'),
+      );
     }
 
     return Column(
@@ -448,60 +452,68 @@ class _ReviewPageState extends State<ReviewPage> {
           r.delayAttribution,
         ),
         const SizedBox(height: 12),
-        Text(
-          AppStrings.of(context, 'review_suggestions_title'),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        if (r.suggestions.isEmpty)
-          Text(AppStrings.of(context, 'review_suggestions_empty'))
-        else
-          ...r.suggestions.map(
-            (s) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text('- $s'),
-            ),
+        WorkbenchSurface(
+          title: AppStrings.of(context, 'review_suggestions_title'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (r.suggestions.isEmpty)
+                Text(AppStrings.of(context, 'review_suggestions_empty'))
+              else
+                ...r.suggestions.map(
+                  (s) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text('- $s'),
+                  ),
+                ),
+            ],
           ),
+        ),
         const SizedBox(height: 12),
-        Text(
-          AppStrings.of(context, 'review_tuning_title'),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          AppStrings.of(
-            context,
-            'review_tuning_default_duration_multiplier',
-            params: {
-              'value': r.tuning.defaultDurationMultiplier.toStringAsFixed(2),
-            },
-          ),
-        ),
-        Text(
-          AppStrings.of(
-            context,
-            'review_tuning_high_load_penalty_low_energy',
-            params: {
-              'value': r.tuning.highLoadPenaltyWhenLowEnergy.toStringAsFixed(2),
-            },
-          ),
-        ),
-        const SizedBox(height: 6),
-        if (r.tuning.tagDurationMultiplier.isEmpty)
-          Text(AppStrings.of(context, 'review_tuning_tag_multiplier_none'))
-        else
-          ...r.tuning.tagDurationMultiplier.entries.map(
-            (e) => Text(
-              AppStrings.of(
-                context,
-                'review_tuning_tag_multiplier_entry',
-                params: {
-                  'tag': _tagLabel(context, e.key),
-                  'value': e.value.toStringAsFixed(2),
-                },
+        WorkbenchSurface(
+          title: AppStrings.of(context, 'review_tuning_title'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                AppStrings.of(
+                  context,
+                  'review_tuning_default_duration_multiplier',
+                  params: {
+                    'value': r.tuning.defaultDurationMultiplier
+                        .toStringAsFixed(2),
+                  },
+                ),
               ),
-            ),
+              Text(
+                AppStrings.of(
+                  context,
+                  'review_tuning_high_load_penalty_low_energy',
+                  params: {
+                    'value': r.tuning.highLoadPenaltyWhenLowEnergy
+                        .toStringAsFixed(2),
+                  },
+                ),
+              ),
+              const SizedBox(height: 6),
+              if (r.tuning.tagDurationMultiplier.isEmpty)
+                Text(AppStrings.of(context, 'review_tuning_tag_multiplier_none'))
+              else
+                ...r.tuning.tagDurationMultiplier.entries.map(
+                  (e) => Text(
+                    AppStrings.of(
+                      context,
+                      'review_tuning_tag_multiplier_entry',
+                      params: {
+                        'tag': _tagLabel(context, e.key),
+                        'value': e.value.toStringAsFixed(2),
+                      },
+                    ),
+                  ),
+                ),
+            ],
           ),
+        ),
       ],
     );
   }
@@ -509,7 +521,10 @@ class _ReviewPageState extends State<ReviewPage> {
   Widget _buildMonthlySection(BuildContext context) {
     final s = _monthSummary;
     if (s == null) {
-      return const Text('暂无月度复盘，点击“生成报告”。');
+      return const WorkbenchEmptyState(
+        icon: Icons.calendar_month_outlined,
+        title: '暂无月度复盘，点击“生成报告”。',
+      );
     }
 
     final trend = s.dailyTrend
@@ -534,58 +549,44 @@ class _ReviewPageState extends State<ReviewPage> {
         const SizedBox(height: 8),
         _section('瓶颈归因', s.bottleneckAttribution),
         const SizedBox(height: 8),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '周趋势',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                if (s.weeklyCompletionRate.isEmpty)
-                  const Text('暂无周趋势。')
-                else
-                  ...s.weeklyCompletionRate.entries.map(
-                    (e) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('${e.key}: ${(e.value * 100).round()}%'),
-                    ),
+        WorkbenchSurface(
+          title: '周趋势',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (s.weeklyCompletionRate.isEmpty)
+                const Text('暂无周趋势。')
+              else
+                ...s.weeklyCompletionRate.entries.map(
+                  (e) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text('${e.key}: ${(e.value * 100).round()}%'),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
         const SizedBox(height: 8),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '每日执行概览',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                if (trend.isEmpty)
-                  const Text('本月暂无日常执行记录。')
-                else
-                  ...trend
-                      .take(10)
-                      .map(
-                        (d) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text(
-                            '${d.day.month}/${d.day.day}: ${d.completed}/${d.started} '
-                            '(${(d.completionRate * 100).round()}%)',
-                          ),
+        WorkbenchSurface(
+          title: '每日执行概览',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (trend.isEmpty)
+                const Text('本月暂无日常执行记录。')
+              else
+                ...trend
+                    .take(10)
+                    .map(
+                      (d) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          '${d.day.month}/${d.day.day}: ${d.completed}/${d.started} '
+                          '(${(d.completionRate * 100).round()}%)',
                         ),
                       ),
-              ],
-            ),
+                    ),
+            ],
           ),
         ),
         const SizedBox(height: 8),
@@ -596,56 +597,66 @@ class _ReviewPageState extends State<ReviewPage> {
                 '${_reviewMapLabel(topBottlenecks.first.key)}: ${topBottlenecks.first.value}',
           ),
         const SizedBox(height: 8),
-        const Text('行动建议', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 6),
-        if (s.suggestions.isEmpty)
-          const Text('本月暂无具体行动建议。')
-        else
-          ...s.suggestions.map(
-            (line) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text('- $line'),
-            ),
+        WorkbenchSurface(
+          title: '行动建议',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (s.suggestions.isEmpty)
+                const Text('本月暂无具体行动建议。')
+              else
+                ...s.suggestions.map(
+                  (line) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Text('- $line'),
+                  ),
+                ),
+            ],
           ),
+        ),
       ],
     );
   }
 
   Widget _buildRescueHistory(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final material = MaterialLocalizations.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.route_outlined),
-                const SizedBox(width: 8),
-                Text(
-                  AppStrings.of(context, 'review_rescue_history'),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+    return WorkbenchSurface(
+      title: AppStrings.of(context, 'review_rescue_history'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_rescueEvents.isEmpty)
+            Text(
+              AppStrings.of(context, 'review_rescue_empty'),
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            )
+          else
+            ..._rescueEvents.map((event) {
+              final undone = event.reason!.startsWith('rescue_undo:');
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  undone
+                      ? Icons.undo_rounded
+                      : Icons.check_circle_outline_rounded,
+                  color: undone ? scheme.tertiary : scheme.secondary,
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (_rescueEvents.isEmpty)
-              Text(AppStrings.of(context, 'review_rescue_empty'))
-            else
-              ..._rescueEvents.map(
-                (event) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(event.title),
-                  subtitle: Text(
-                    '${material.formatTimeOfDay(TimeOfDay.fromDateTime(event.at))} - '
-                    '${_rescueStrategyLabel(context, event.reason!)}',
+                title: Text(event.title),
+                subtitle: Text(
+                  '${material.formatTimeOfDay(TimeOfDay.fromDateTime(event.at))} - '
+                  '${_rescueStrategyLabel(context, event.reason!)}',
+                ),
+                trailing: Text(
+                  _rescueStatusLabel(context, event.reason!),
+                  style: TextStyle(
+                    color: undone ? scheme.tertiary : scheme.secondary,
+                    fontWeight: FontWeight.w600,
                   ),
-                  trailing: Text(_rescueStatusLabel(context, event.reason!)),
                 ),
-              ),
-          ],
-        ),
+              );
+            }),
+        ],
       ),
     );
   }
@@ -715,41 +726,31 @@ class _ReviewPageState extends State<ReviewPage> {
   }
 
   Widget _metricCard({required String title, required String value}) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            Text(value),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: WorkbenchSurface(
+        child: WorkbenchMetric(label: title, value: value),
       ),
     );
   }
 
   Widget _section(String title, Map<String, int> data) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
+    final scheme = Theme.of(context).colorScheme;
+    return WorkbenchSurface(
+      title: title,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (data.isEmpty)
+            Text('暂无数据。', style: TextStyle(color: scheme.onSurfaceVariant))
+          else
             ...data.entries.map(
               (e) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text('${_reviewMapLabel(e.key)}: ${e.value}'),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
