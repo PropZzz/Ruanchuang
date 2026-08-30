@@ -1349,6 +1349,7 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
     if (calendars.isEmpty) {
       return WorkbenchEmptyState(
         icon: Icons.groups_outlined,
@@ -1383,8 +1384,16 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
               label: AppStrings.of(context, 'team_legend_busy_overlap'),
             ),
             _LegendChip(
-              color: scheme.tertiary.withValues(alpha: 0.14),
-              label: AppStrings.of(context, 'team_legend_conflict_probe'),
+              color: scheme.secondary.withValues(alpha: 0.14),
+              label:
+                  '${AppStrings.of(context, 'team_legend_conflict_probe')} · '
+                  '${isZh ? '无冲突' : 'free'}',
+            ),
+            _LegendChip(
+              color: scheme.error.withValues(alpha: 0.14),
+              label:
+                  '${AppStrings.of(context, 'team_legend_conflict_probe')} · '
+                  '${isZh ? '有冲突' : 'conflict'}',
             ),
           ],
         ),
