@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/app_services.dart';
 import '../services/microtask_crystals/microtask_crystal_engine.dart';
+import '../ui/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/helpers.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
+import '../widgets/workbench_surface.dart';
 
 class FocusPage extends StatefulWidget {
   const FocusPage({super.key});
@@ -383,8 +385,7 @@ class _FocusPageState extends State<FocusPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isWide = MediaQuery.of(context).size.width >= 1024;
+    final isWide = MediaQuery.of(context).size.width >= AppTheme.shellBreakpoint;
     final horizontalPadding = isWide ? 28.0 : 16.0;
     return Scaffold(
       appBar: AppBar(
@@ -395,96 +396,74 @@ class _FocusPageState extends State<FocusPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    theme.colorScheme.primary.withValues(alpha: 0.08),
-                    theme.colorScheme.surface,
-                  ],
-                ),
-              ),
-              child: SafeArea(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1320),
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        horizontalPadding,
-                        12,
-                        horizontalPadding,
-                        16,
-                      ),
-                      child: isWide
-                          // 修复：添加 crossAxisAlignment.stretch 给双列表提供安全边界高度，防止 Web 抛出无限高度异常
-                          ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(
-                                  flex: 11,
-                                  child: ListView(
-                                    padding: EdgeInsets.only(
-                                      bottom:
-                                          MediaQuery.of(
-                                            context,
-                                          ).padding.bottom +
-                                          100,
-                                    ),
-                                    children: [
-                                      _buildEnergyStatusCard(),
-                                      const SizedBox(height: 18),
-                                      _buildSectionTitle(
-                                        context,
-                                        AppStrings.of(
-                                          context,
-                                          'focus_header_current',
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      _buildCurrentTaskCard(context),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 18),
-                                Expanded(
-                                  flex: 10,
-                                  child: ListView(
-                                    padding: EdgeInsets.only(
-                                      bottom:
-                                          MediaQuery.of(
-                                            context,
-                                          ).padding.bottom +
-                                          100,
-                                    ),
-                                    children: [_buildPlanningPanel(theme)],
-                                  ),
-                                ),
-                              ],
-                            )
-                          : ListView(
-                              padding: EdgeInsets.only(
-                                bottom:
-                                    MediaQuery.of(context).padding.bottom + 100,
-                              ),
-                              children: [
-                                _buildEnergyStatusCard(),
-                                const SizedBox(height: 18),
-                                _buildSectionTitle(
-                                  context,
-                                  AppStrings.of(
-                                    context,
-                                    'focus_header_current',
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                _buildCurrentTaskCard(context),
-                                const SizedBox(height: 18),
-                                _buildPlanningPanel(theme),
-                              ],
-                            ),
+          : SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1320),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      12,
+                      horizontalPadding,
+                      16,
                     ),
+                    child: isWide
+                        // 修复：添加 crossAxisAlignment.stretch 给双列表提供安全边界高度，防止 Web 抛出无限高度异常
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                flex: 7,
+                                child: ListView(
+                                  padding: EdgeInsets.only(
+                                    bottom:
+                                        MediaQuery.of(
+                                          context,
+                                        ).padding.bottom +
+                                        100,
+                                  ),
+                                  children: [
+                                    _buildEnergyStatusCard(),
+                                    const SizedBox(height: 18),
+                                    _buildCurrentTaskCard(context),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 18),
+                              Expanded(
+                                flex: 5,
+                                child: ListView(
+                                  padding: EdgeInsets.only(
+                                    bottom:
+                                        MediaQuery.of(
+                                          context,
+                                        ).padding.bottom +
+                                        100,
+                                  ),
+                                  children: [
+                                    _buildNextTasksSection(),
+                                    const SizedBox(height: 18),
+                                    _buildCrystalSection(),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          )
+                        : ListView(
+                            padding: EdgeInsets.only(
+                              bottom:
+                                  MediaQuery.of(context).padding.bottom + 100,
+                            ),
+                            children: [
+                              _buildEnergyStatusCard(),
+                              const SizedBox(height: 18),
+                              _buildCurrentTaskCard(context),
+                              const SizedBox(height: 18),
+                              _buildNextTasksSection(),
+                              const SizedBox(height: 18),
+                              _buildCrystalSection(),
+                            ],
+                          ),
                   ),
                 ),
               ),
@@ -492,48 +471,40 @@ class _FocusPageState extends State<FocusPage> {
     );
   }
 
-  Widget _buildPlanningPanel(ThemeData theme) {
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle(
-              context,
-              AppStrings.of(context, 'focus_header_next'),
-            ),
-            const SizedBox(height: 8),
-            if (_nextTasks.isEmpty)
-              _buildHintText(AppStrings.of(context, 'focus_empty_task'))
-            else
-              ..._nextTasks.map((task) {
+  Widget _buildNextTasksSection() {
+    return WorkbenchSurface(
+      title: AppStrings.of(context, 'focus_header_next'),
+      child: _nextTasks.isEmpty
+          ? _buildHintText(AppStrings.of(context, 'focus_empty_task'))
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: _nextTasks.map((task) {
                 return _buildNextTaskItem(
                   '${task.time.format(context)} ${task.title}',
                   iconForTag(task.tag),
                   task.color,
                 );
-              }),
-            const SizedBox(height: 16),
-            _buildSectionTitle(
-              context,
-              AppStrings.of(context, 'focus_time_crystal_title'),
+              }).toList(),
             ),
-            const SizedBox(height: 8),
-            if (_isRecsLoading)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (_crystalRecs.isEmpty)
-              _buildHintText(AppStrings.of(context, 'focus_time_crystal_empty'))
-            else
-              ..._crystalRecs.map((r) => _buildCrystalItem(r)),
-          ],
-        ),
-      ),
+    );
+  }
+
+  Widget _buildCrystalSection() {
+    return WorkbenchSurface(
+      title: AppStrings.of(context, 'focus_time_crystal_title'),
+      child: _isRecsLoading
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          : _crystalRecs.isEmpty
+          ? _buildHintText(AppStrings.of(context, 'focus_time_crystal_empty'))
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: _crystalRecs.map((r) => _buildCrystalItem(r)).toList(),
+            ),
     );
   }
 
@@ -633,48 +604,30 @@ class _FocusPageState extends State<FocusPage> {
 
   Widget _buildEnergyStatusCard() {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final energy = _energyStatus;
     final emotion = _currentEmotion;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            theme.colorScheme.primaryContainer,
-            theme.colorScheme.tertiaryContainer.withValues(alpha: 0.6),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.primary),
-      ),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        crossAxisAlignment: WrapCrossAlignment.center,
+    return WorkbenchSurface(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.monitor_heart, color: theme.colorScheme.primary, size: 32),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 180, maxWidth: 420),
+          Icon(Icons.monitor_heart, color: scheme.primary, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   "${AppStrings.of(context, 'focus_status_label')}${energy?.status ?? AppStrings.of(context, 'status_flow_value')}",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
+                  style: theme.textTheme.titleMedium,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (emotion != null)
                   Text(
                     '当前情绪：${emotion.label}',
-                    style: TextStyle(
-                      fontSize: 14,
+                    style: theme.textTheme.bodySmall?.copyWith(
                       color: emotion.color,
                       fontWeight: FontWeight.w600,
                     ),
@@ -682,11 +635,8 @@ class _FocusPageState extends State<FocusPage> {
                 Text(
                   energy?.description ??
                       AppStrings.of(context, 'status_flow_desc'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: theme.colorScheme.onPrimaryContainer.withValues(
-                      alpha: 0.78,
-                    ),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -694,23 +644,10 @@ class _FocusPageState extends State<FocusPage> {
               ],
             ),
           ),
-          Chip(
-            backgroundColor: theme.colorScheme.surface,
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.battery_full,
-                  size: 14,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  "${energy?.batteryPercent ?? 85}%",
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
+          const SizedBox(width: 12),
+          WorkbenchMetric(
+            label: '精力电量',
+            value: "${energy?.batteryPercent ?? 85}%",
           ),
         ],
       ),
@@ -719,120 +656,91 @@ class _FocusPageState extends State<FocusPage> {
 
   Widget _buildCurrentTaskCard(BuildContext context) {
     final theme = Theme.of(context);
-    if (_currentTask == null) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Center(
-            child: Text(
-              AppStrings.of(context, 'focus_empty_task'),
-              style: TextStyle(
-                fontSize: 18,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ),
-      );
+    final scheme = theme.colorScheme;
+    final current = _currentTask;
+    final hasUpcoming = _nextTasks.isNotEmpty;
+    final canStart = current != null || hasUpcoming;
+
+    final IconData displayIcon;
+    final String displayTitle;
+    if (current != null) {
+      displayIcon = iconForTag(current.tag);
+      displayTitle = current.title;
+    } else if (hasUpcoming) {
+      final next = _nextTasks.first;
+      displayIcon = iconForTag(next.tag);
+      displayTitle = '${next.time.format(context)} ${next.title}';
+    } else {
+      displayIcon = Icons.hourglass_empty;
+      displayTitle = AppStrings.of(context, 'focus_empty_task');
     }
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.85),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            Icon(
-              iconForTag(_currentTask!.tag),
-              color: theme.colorScheme.onSecondaryContainer,
-              size: 48,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _currentTask!.title,
-              style: TextStyle(
-                color: theme.colorScheme.onSecondaryContainer,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
+    return WorkbenchSurface(
+      title: AppStrings.of(context, 'focus_header_current'),
+      child: Column(
+        children: [
+          const SizedBox(height: 8),
+          Icon(displayIcon, color: scheme.primary, size: 40),
+          const SizedBox(height: 12),
+          Text(
+            displayTitle,
+            style: theme.textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          if (current != null) ...[
             const SizedBox(height: 8),
             Text(
               "${AppStrings.of(context, 'focus_time_remaining')}${_formatDuration(_remainingSeconds)}",
-              style: TextStyle(
-                color: theme.colorScheme.onSecondaryContainer.withValues(
-                  alpha: 0.72,
-                ),
-                fontSize: 16,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: scheme.onSurfaceVariant,
                 fontFamily: 'monospace',
               ),
             ),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              alignment: WrapAlignment.center,
-              children: [
-                if (!_isTimerRunning)
-                  ElevatedButton.icon(
-                    onPressed: _startTimer,
-                    icon: const Icon(Icons.play_arrow),
-                    label: Text(AppStrings.of(context, 'btn_start')),
-                  )
-                else
-                  ElevatedButton.icon(
-                    onPressed: _pauseTimer,
-                    icon: const Icon(Icons.pause),
-                    label: Text(AppStrings.of(context, 'btn_pause')),
-                  ),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    _resetTimer();
-                    _startNextTask();
-                  },
-                  icon: Icon(
-                    Icons.check,
-                    color: theme.colorScheme.onSecondaryContainer,
-                  ),
-                  label: Text(
-                    AppStrings.of(context, 'btn_finish'),
-                    style: TextStyle(
-                      color: theme.colorScheme.onSecondaryContainer,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                      color: theme.colorScheme.onSecondaryContainer,
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ],
-        ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              if (!_isTimerRunning)
+                ElevatedButton.icon(
+                  onPressed: canStart ? _startTimer : null,
+                  icon: const Icon(Icons.play_arrow),
+                  label: Text(AppStrings.of(context, 'btn_start')),
+                )
+              else
+                ElevatedButton.icon(
+                  onPressed: _pauseTimer,
+                  icon: const Icon(Icons.pause),
+                  label: Text(AppStrings.of(context, 'btn_pause')),
+                ),
+              OutlinedButton.icon(
+                onPressed: current == null
+                    ? null
+                    : () {
+                        _resetTimer();
+                        _startNextTask();
+                      },
+                icon: const Icon(Icons.check),
+                label: Text(AppStrings.of(context, 'btn_finish')),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildNextTaskItem(String title, IconData icon, Color color) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Icon(icon, color: color),
-        title: Text(title),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(BuildContext context, String title) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: 0.3,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 8),
+          Expanded(child: Text(title)),
+        ],
       ),
     );
   }

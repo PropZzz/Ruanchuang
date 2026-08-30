@@ -422,6 +422,43 @@ void main() {
     }
   });
 
+  testWidgets('focus page keeps the current task action visible on mobile', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+
+      expect(find.text('当前任务'), findsOneWidget);
+      expect(find.text('开始').first, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    } finally {
+      await tester.binding.setSurfaceSize(null);
+    }
+  });
+
+  testWidgets('micro task page keeps add and batch actions accessible', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+
+      await tester.tap(find.byKey(const ValueKey('shell-nav-micro')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('添加微任务'), findsOneWidget);
+      expect(find.byTooltip('批量模式'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    } finally {
+      await tester.binding.setSurfaceSize(null);
+    }
+  });
+
   testWidgets('Smart calendar month view fits on small screens', (
     tester,
   ) async {
