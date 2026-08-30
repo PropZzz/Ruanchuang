@@ -289,6 +289,8 @@ Future<void> _selectDefaultRescue(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('优先保住截止时间'));
   await tester.pumpAndSettle();
+  await tester.tap(find.text('采用此方案'));
+  await tester.pumpAndSettle();
 }
 
 String _validIcsFor(DateTime day) {
@@ -759,5 +761,19 @@ void main() {
     } finally {
       _resetSurface(tester);
     }
+  });
+
+  testWidgets('urgent rescue presents all strategies before acceptance', (tester) async {
+    _setWideSurface(tester);
+    await _openSmartCalendar(tester);
+    await tester.tap(find.byTooltip('插入紧急任务并重新规划'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('插入并重新规划'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('优先保住截止时间'), findsOneWidget);
+    expect(find.text('优先保留恢复时间'), findsOneWidget);
+    expect(find.text('尽量少动原计划'), findsOneWidget);
+    expect(find.text('采用此方案'), findsNothing);
   });
 }
