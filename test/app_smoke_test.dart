@@ -390,6 +390,38 @@ void main() {
     expect(hasNavBar || hasRail, true);
   });
 
+  testWidgets('wide shell exposes all primary destinations', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 960));
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+
+      for (final label in ['专注', '日程', '微任务', '团队', '我的']) {
+        expect(find.text(label), findsWidgets);
+      }
+      expect(tester.takeException(), isNull);
+    } finally {
+      await tester.binding.setSurfaceSize(null);
+    }
+  });
+
+  testWidgets('narrow shell exposes keyed destinations', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+
+      for (final id in ['focus', 'schedule', 'micro', 'team', 'profile']) {
+        expect(find.byKey(ValueKey('shell-nav-$id')), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    } finally {
+      await tester.binding.setSurfaceSize(null);
+    }
+  });
+
   testWidgets('Smart calendar month view fits on small screens', (
     tester,
   ) async {

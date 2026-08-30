@@ -1,9 +1,8 @@
 // lib/screens/main_screen.dart
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../services/app_services.dart';
+import '../ui/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
 import 'auth_dialog.dart';
@@ -21,7 +20,6 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  static const double _wideBreakpoint = 1024;
   int _selectedIndex = 0;
   bool _startupAuthPromptShown = false;
 
@@ -122,7 +120,8 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.sizeOf(context).width >= _wideBreakpoint;
+    final isWide =
+        MediaQuery.sizeOf(context).width >= AppTheme.shellBreakpoint;
     final destinations = _destinations(context);
     final active = destinations[_selectedIndex];
     final pageStack = IndexedStack(index: _selectedIndex, children: _pages);
@@ -183,7 +182,7 @@ class _NarrowShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final scheme = theme.colorScheme;
     final compactLabels = MobileFeedback.isNarrow(context, breakpoint: 420);
 
     return Column(
@@ -191,52 +190,37 @@ class _NarrowShell extends StatelessWidget {
         Expanded(child: ClipRRect(child: child)),
         Container(
           decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-                blurRadius: 20,
-                offset: const Offset(0, -6),
-              ),
-            ],
+            color: scheme.surface,
+            border: Border(top: BorderSide(color: scheme.outline)),
           ),
-          child: ClipRRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                color: theme.colorScheme.surface.withValues(
-                  alpha: isDark ? 0.75 : 0.85,
-                ),
-                child: SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0,
-                      vertical: 4.0,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8.0,
+                vertical: 4.0,
+              ),
+              child: NavigationBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                height: compactLabels ? 68 : null,
+                labelBehavior: compactLabels
+                    ? NavigationDestinationLabelBehavior.onlyShowSelected
+                    : NavigationDestinationLabelBehavior.alwaysShow,
+                selectedIndex: selectedIndex,
+                onDestinationSelected: onSelect,
+                destinations: [
+                  for (final d in destinations)
+                    NavigationDestination(
+                      key: ValueKey('shell-nav-${d.id}'),
+                      icon: Icon(d.icon, size: compactLabels ? 20 : 22),
+                      selectedIcon: Icon(
+                        d.selectedIcon,
+                        size: compactLabels ? 20 : 22,
+                      ),
+                      label: d.label,
                     ),
-                    child: NavigationBar(
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      height: compactLabels ? 68 : null,
-                      labelBehavior: compactLabels
-                          ? NavigationDestinationLabelBehavior.onlyShowSelected
-                          : NavigationDestinationLabelBehavior.alwaysShow,
-                      selectedIndex: selectedIndex,
-                      onDestinationSelected: onSelect,
-                      destinations: [
-                        for (final d in destinations)
-                          NavigationDestination(
-                            key: ValueKey('shell-nav-${d.id}'),
-                            icon: Icon(d.icon, size: compactLabels ? 20 : 22),
-                            selectedIcon: Icon(
-                              d.selectedIcon,
-                              size: compactLabels ? 20 : 22,
-                            ),
-                            label: d.label,
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
+                ],
               ),
             ),
           ),
@@ -267,23 +251,17 @@ class _WideShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final text = theme.textTheme;
-    final railExtended = MediaQuery.sizeOf(context).width >= 1220;
-    final isDark = theme.brightness == Brightness.dark;
+    final profileIndex = destinations.indexWhere((d) => d.id == 'profile');
 
     return Row(
       children: [
         Container(
-          width: railExtended ? 260 : 100,
+          width: 240,
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
-                blurRadius: 40,
-                offset: const Offset(10, 0),
-              ),
-            ],
+            color: scheme.surface,
+            border: Border(right: BorderSide(color: scheme.outline)),
           ),
           child: SafeArea(
             right: false,
@@ -291,65 +269,109 @@ class _WideShell extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    railExtended ? 32 : 0,
-                    40,
-                    0,
-                    40,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
                   child: Row(
-                    mainAxisAlignment: railExtended
-                        ? MainAxisAlignment.start
-                        : MainAxisAlignment.center,
                     children: [
                       Container(
                         width: 12,
                         height: 12,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: theme.colorScheme.onSurface,
+                          color: scheme.primary,
                         ),
                       ),
-                      if (railExtended) ...[
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: text.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.0,
-                            ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.0,
                           ),
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
                 Expanded(
-                  child: NavigationRail(
-                    backgroundColor: Colors.transparent,
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: onSelect,
-                    extended: railExtended,
-                    minExtendedWidth: 260,
-                    labelType: railExtended
-                        ? NavigationRailLabelType.none
-                        : NavigationRailLabelType.selected,
-                    destinations: [
-                      for (final d in destinations)
-                        NavigationRailDestination(
-                          icon: Icon(
-                            d.icon,
-                            key: ValueKey('shell-rail-${d.id}-icon'),
-                          ),
-                          selectedIcon: Icon(
-                            d.selectedIcon,
-                            key: ValueKey('shell-rail-${d.id}-selected-icon'),
-                          ),
-                          label: Text(d.label),
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    children: [
+                      for (var i = 0; i < destinations.length; i++)
+                        _WideNavItem(
+                          destination: destinations[i],
+                          selected: i == selectedIndex,
+                          onTap: () => onSelect(i),
                         ),
+                    ],
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: scheme.outline)),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(6),
+                          onTap: profileIndex >= 0
+                              ? () => onSelect(profileIndex)
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 8,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.person_outline,
+                                  size: 20,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ValueListenableBuilder<String?>(
+                                    valueListenable:
+                                        ProfilePage.globalNameNotifier,
+                                    builder: (context, name, _) {
+                                      return Text(
+                                        name ?? '未登录',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: text.bodySmall?.copyWith(
+                                          color: scheme.onSurfaceVariant,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.notifications_none, size: 20),
+                        tooltip: '通知',
+                        color: scheme.onSurfaceVariant,
+                        onPressed: null,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.settings_outlined, size: 20),
+                        tooltip: '设置',
+                        color: scheme.onSurfaceVariant,
+                        onPressed: profileIndex >= 0
+                            ? () => onSelect(profileIndex)
+                            : null,
+                      ),
                     ],
                   ),
                 ),
@@ -364,29 +386,23 @@ class _WideShell extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(40, 40, 40, 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: scheme.outline)),
+                  ),
                   child: Text(
                     activeLabel,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: text.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 28,
-                    ),
+                    style: text.titleLarge,
                   ),
                 ),
                 Expanded(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(40),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: theme.scaffoldBackgroundColor,
-                      ),
-                      child: child,
-                    ),
+                  child: Container(
+                    color: theme.scaffoldBackgroundColor,
+                    child: child,
                   ),
                 ),
               ],
@@ -394,6 +410,66 @@ class _WideShell extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _WideNavItem extends StatelessWidget {
+  const _WideNavItem({
+    required this.destination,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _ShellDestination destination;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final foreground = selected ? scheme.onSurface : scheme.onSurfaceVariant;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? scheme.primary.withValues(alpha: 0.12) : null,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                selected ? destination.selectedIcon : destination.icon,
+                key: ValueKey(
+                  selected
+                      ? 'shell-rail-${destination.id}-selected-icon'
+                      : 'shell-rail-${destination.id}-icon',
+                ),
+                size: 22,
+                color: foreground,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  destination.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: foreground,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
