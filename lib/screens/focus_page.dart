@@ -9,6 +9,8 @@ import '../utils/app_strings.dart';
 import '../utils/helpers.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
+import '../widgets/energy_status_card.dart';
+import '../widgets/focus_task_card.dart';
 
 class FocusPage extends StatefulWidget {
   const FocusPage({super.key});
@@ -632,188 +634,26 @@ class _FocusPageState extends State<FocusPage> {
   }
 
   Widget _buildEnergyStatusCard() {
-    final theme = Theme.of(context);
-    final energy = _energyStatus;
-    final emotion = _currentEmotion;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            theme.colorScheme.primaryContainer,
-            theme.colorScheme.tertiaryContainer.withValues(alpha: 0.6),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.primary),
-      ),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Icon(Icons.monitor_heart, color: theme.colorScheme.primary, size: 32),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 180, maxWidth: 420),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "${AppStrings.of(context, 'focus_status_label')}${energy?.status ?? AppStrings.of(context, 'status_flow_value')}",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (emotion != null)
-                  Text(
-                    '当前情绪：${emotion.label}',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: emotion.color,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                Text(
-                  energy?.description ??
-                      AppStrings.of(context, 'status_flow_desc'),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: theme.colorScheme.onPrimaryContainer.withValues(
-                      alpha: 0.78,
-                    ),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          Chip(
-            backgroundColor: theme.colorScheme.surface,
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.battery_full,
-                  size: 14,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  "${energy?.batteryPercent ?? 85}%",
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return EnergyStatusCard(
+      energy: _energyStatus,
+      emotion: _currentEmotion,
     );
   }
 
   Widget _buildCurrentTaskCard(BuildContext context) {
-    final theme = Theme.of(context);
-    if (_currentTask == null) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Center(
-            child: Text(
-              AppStrings.of(context, 'focus_empty_task'),
-              style: TextStyle(
-                fontSize: 18,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.85),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            Icon(
-              iconForTag(_currentTask!.tag),
-              color: theme.colorScheme.onSecondaryContainer,
-              size: 48,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _currentTask!.title,
-              style: TextStyle(
-                color: theme.colorScheme.onSecondaryContainer,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "${AppStrings.of(context, 'focus_time_remaining')}${_formatDuration(_remainingSeconds)}",
-              style: TextStyle(
-                color: theme.colorScheme.onSecondaryContainer.withValues(
-                  alpha: 0.72,
-                ),
-                fontSize: 16,
-                fontFamily: 'monospace',
-              ),
-            ),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              alignment: WrapAlignment.center,
-              children: [
-                if (!_isTimerRunning)
-                  ElevatedButton.icon(
-                    onPressed: _startTimer,
-                    icon: const Icon(Icons.play_arrow),
-                    label: Text(AppStrings.of(context, 'btn_start')),
-                  )
-                else
-                  ElevatedButton.icon(
-                    onPressed: _pauseTimer,
-                    icon: const Icon(Icons.pause),
-                    label: Text(AppStrings.of(context, 'btn_pause')),
-                  ),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    _resetTimer();
-                    _startNextTask();
-                  },
-                  icon: Icon(
-                    Icons.check,
-                    color: theme.colorScheme.onSecondaryContainer,
-                  ),
-                  label: Text(
-                    AppStrings.of(context, 'btn_finish'),
-                    style: TextStyle(
-                      color: theme.colorScheme.onSecondaryContainer,
-                    ),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                      color: theme.colorScheme.onSecondaryContainer,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return FocusTaskCard(
+      task: _currentTask,
+      remainingSeconds: _remainingSeconds,
+      isRunning: _isTimerRunning,
+      onStart: _startTimer,
+      onPause: _pauseTimer,
+      onFinish: () {
+        _resetTimer();
+        _startNextTask();
+      },
+      onRefresh: () {
+        _loadTasks();
+      },
     );
   }
 
