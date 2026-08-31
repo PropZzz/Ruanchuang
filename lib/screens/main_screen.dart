@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../services/app_services.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
+import '../widgets/workspace_status_bar.dart';
 import 'auth_dialog.dart';
 import 'focus_page.dart';
 import 'micro_task_page.dart';
@@ -148,6 +149,8 @@ class _MainScreenState extends State<MainScreen> {
                 )
               : _NarrowShell(
                   key: const ValueKey('narrow-shell'),
+                  brand: AppStrings.of(context, 'app_title'),
+                  activeLabel: active.label,
                   selectedIndex: _selectedIndex,
                   destinations: destinations,
                   onSelect: _onSelect,
@@ -169,12 +172,16 @@ class _MainScreenState extends State<MainScreen> {
 class _NarrowShell extends StatelessWidget {
   const _NarrowShell({
     super.key,
+    required this.brand,
+    required this.activeLabel,
     required this.selectedIndex,
     required this.destinations,
     required this.onSelect,
     required this.child,
   });
 
+  final String brand;
+  final String activeLabel;
   final int selectedIndex;
   final List<_ShellDestination> destinations;
   final ValueChanged<int> onSelect;
@@ -188,6 +195,12 @@ class _NarrowShell extends StatelessWidget {
 
     return Column(
       children: [
+        WorkspaceStatusBar(
+          brand: brand,
+          title: activeLabel,
+          compact: true,
+          onSettings: () => onSelect(4),
+        ),
         Expanded(child: ClipRRect(child: child)),
         Container(
           decoration: BoxDecoration(
@@ -365,15 +378,11 @@ class _WideShell extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(40, 40, 40, 20),
-                  child: Text(
-                    activeLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 28,
-                    ),
+                  padding: EdgeInsets.zero,
+                  child: WorkspaceStatusBar(
+                    brand: title,
+                    title: activeLabel,
+                    onSettings: () => onSelect(4),
                   ),
                 ),
                 Expanded(
