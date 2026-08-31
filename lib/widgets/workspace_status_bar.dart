@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/app_strings.dart';
 import 'glass_surface.dart';
 
 class WorkspaceStatusBar extends StatelessWidget {
@@ -71,11 +72,19 @@ class WorkspaceStatusBar extends StatelessWidget {
           ),
           if (!compact) ...[
             Icon(
-              Icons.cloud_done_outlined,
+              Icons.offline_bolt_outlined,
               size: 17,
               color: theme.colorScheme.tertiary,
             ),
             const SizedBox(width: 6),
+            Text(
+              AppStrings.of(context, 'workspace_local_ready'),
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.tertiary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 12),
             Text(
               date,
               style: theme.textTheme.labelMedium?.copyWith(
@@ -85,7 +94,7 @@ class WorkspaceStatusBar extends StatelessWidget {
           ],
           if (onSettings != null)
             IconButton(
-              tooltip: '打开设置',
+              tooltip: AppStrings.of(context, 'workspace_settings'),
               icon: const Icon(Icons.tune_rounded),
               onPressed: onSettings,
               visualDensity: VisualDensity.compact,

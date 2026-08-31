@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/scheduling/schedule_rescue.dart';
+import '../utils/app_strings.dart';
 import 'glass_surface.dart';
 
 class RescueSummary extends StatelessWidget {
@@ -24,12 +25,26 @@ class RescueSummary extends StatelessWidget {
     final accent = hasAccepted
         ? theme.colorScheme.tertiary
         : theme.colorScheme.secondary;
-    final title = hasAccepted ? '已采用：${accepted!.title}' : '日程救援';
+    final title = hasAccepted
+        ? AppStrings.of(
+            context,
+            'calendar_rescue_applied',
+            params: {'title': _strategyLabel(context, accepted!.strategy)},
+          )
+        : AppStrings.of(context, 'calendar_rescue_title');
     final subtitle = hasAccepted
-        ? '本次调整移动 ${accepted!.movedEntryCount} 项日程'
+        ? AppStrings.of(
+            context,
+            'calendar_rescue_moved',
+            params: {'count': '${accepted!.movedEntryCount}'},
+          )
         : issueCount > 0
-        ? '有 $issueCount 项规划提示需要关注'
-        : '当前没有待处理冲突，按原计划推进';
+        ? AppStrings.of(
+            context,
+            'calendar_rescue_attention',
+            params: {'count': '$issueCount'},
+          )
+        : AppStrings.of(context, 'calendar_rescue_clear');
 
     return GlassSurface(
       key: const ValueKey('calendar-rescue-summary'),
@@ -57,7 +72,7 @@ class RescueSummary extends StatelessWidget {
             ? TextButton.icon(
                 onPressed: onUndo,
                 icon: const Icon(Icons.undo_rounded, size: 18),
-                label: const Text('撤销'),
+                label: Text(AppStrings.of(context, 'calendar_rescue_undo')),
               )
             : Icon(
                 Icons.chevron_right_rounded,
@@ -65,5 +80,16 @@ class RescueSummary extends StatelessWidget {
               ),
       ),
     );
+  }
+
+  String _strategyLabel(BuildContext context, RescueStrategy strategy) {
+    switch (strategy) {
+      case RescueStrategy.protectDeadline:
+        return AppStrings.of(context, 'review_rescue_protect_deadline');
+      case RescueStrategy.protectRecovery:
+        return AppStrings.of(context, 'review_rescue_protect_recovery');
+      case RescueStrategy.minimizeChanges:
+        return AppStrings.of(context, 'review_rescue_minimize_changes');
+    }
   }
 }

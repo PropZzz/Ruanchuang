@@ -79,7 +79,11 @@ class EnergyStatusCard extends StatelessWidget {
           if (emotion != null) ...[
             const SizedBox(height: 8),
             Text(
-              '当前情绪：${emotion!.label}',
+              AppStrings.of(
+                context,
+                'focus_emotion_label',
+                params: {'emotion': emotion!.label},
+              ),
               style: theme.textTheme.labelLarge?.copyWith(
                 color: emotion!.color,
               ),

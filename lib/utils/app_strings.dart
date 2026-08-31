@@ -11,6 +11,9 @@ class AppStrings {
       'nav_team': '团队',
       'nav_profile': '我的',
 
+      'workspace_local_ready': '本地优先 · 就绪',
+      'workspace_settings': '打开设置',
+
       'btn_add': '添加',
       'btn_cancel': '取消',
       'btn_confirm': '确认',
@@ -52,6 +55,7 @@ class AppStrings {
 
       'focus_title': '当前专注',
       'focus_status_label': '当前状态：',
+      'focus_emotion_label': '当前情绪：{emotion}',
       'status_flow_value': '高效状态',
       'status_flow_desc': '状态稳定，适合深度工作',
       'focus_header_current': '当前任务',
@@ -84,6 +88,14 @@ class AppStrings {
       'calendar_status_done': '已完成',
       'calendar_status_overdue': '已超时',
       'calendar_planner_issues': '规划提示：{count} 项',
+      'calendar_today_rhythm': '今日节奏',
+      'calendar_schedule_count': '{count} 项日程',
+      'calendar_mode_smart': '智能规划',
+      'calendar_mode_manual': '手动安排',
+      'calendar_rescue_applied': '已采用：{title}',
+      'calendar_rescue_moved': '本次调整移动 {count} 项日程',
+      'calendar_rescue_attention': '有 {count} 项规划提示需要关注',
+      'calendar_rescue_clear': '当前没有待处理冲突，按原计划推进',
       'calendar_insert_urgent_title': '插入紧急任务',
       'calendar_insert_urgent_default_title': '紧急：解除阻塞',
       'calendar_insert_urgent_confirm': '插入并重新规划',
@@ -343,6 +355,9 @@ class AppStrings {
       'nav_team': 'Team',
       'nav_profile': 'Profile',
 
+      'workspace_local_ready': 'Local-first · Ready',
+      'workspace_settings': 'Open settings',
+
       'btn_add': 'Add',
       'btn_cancel': 'Cancel',
       'btn_confirm': 'Confirm',
@@ -384,6 +399,7 @@ class AppStrings {
 
       'focus_title': 'Focus Now',
       'focus_status_label': 'Status:',
+      'focus_emotion_label': 'Emotion: {emotion}',
       'status_flow_value': 'Flow State',
       'status_flow_desc': 'Stable state, ready for deep work',
       'focus_header_current': 'Current Task',
@@ -416,6 +432,15 @@ class AppStrings {
       'calendar_status_done': 'Done',
       'calendar_status_overdue': 'Overdue',
       'calendar_planner_issues': 'Planner issues: {count}',
+      'calendar_today_rhythm': "Today's rhythm",
+      'calendar_schedule_count': '{count} schedule items',
+      'calendar_mode_smart': 'Smart planning',
+      'calendar_mode_manual': 'Manual planning',
+      'calendar_rescue_applied': 'Applied: {title}',
+      'calendar_rescue_moved':
+          'Moved {count} schedule items in this adjustment',
+      'calendar_rescue_attention': '{count} planning hints need attention',
+      'calendar_rescue_clear': 'No pending conflicts. Continue as planned.',
       'calendar_insert_urgent_title': 'Insert urgent task',
       'calendar_insert_urgent_default_title': 'Urgent: unblock',
       'calendar_insert_urgent_confirm': 'Insert and replan',

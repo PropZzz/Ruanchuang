@@ -610,7 +610,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     List<ScheduleEntry> dayEntries,
   ) {
     final theme = Theme.of(context);
-    final modeLabel = _mode == _CalendarMode.smart ? '智能规划' : '手动安排';
+    final modeLabel = _mode == _CalendarMode.smart
+        ? AppStrings.of(context, 'calendar_mode_smart')
+        : AppStrings.of(context, 'calendar_mode_manual');
     return GlassSurface(
       key: const ValueKey('calendar-today-status'),
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
@@ -626,14 +628,20 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             color: theme.colorScheme.tertiary,
           ),
           Text(
-            '今日节奏',
+            AppStrings.of(context, 'calendar_today_rhythm'),
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
           Chip(
             avatar: const Icon(Icons.event_available_outlined, size: 16),
-            label: Text('${dayEntries.length} 项日程'),
+            label: Text(
+              AppStrings.of(
+                context,
+                'calendar_schedule_count',
+                params: {'count': '${dayEntries.length}'},
+              ),
+            ),
             visualDensity: VisualDensity.compact,
           ),
           Chip(
