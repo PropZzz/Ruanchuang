@@ -201,6 +201,10 @@ class AppStrings {
       'theme_system': '跟随系统',
       'theme_light': '浅色模式',
       'theme_dark': '深色模式',
+      'settings_accent': '强调色',
+      'accent_sea': '海盐绿',
+      'accent_moss': '苔藓绿',
+      'accent_amber': '琥珀橙',
       'lang_zh': '简体中文',
       'lang_en': 'English',
 
@@ -536,6 +540,10 @@ class AppStrings {
       'theme_system': 'System',
       'theme_light': 'Light',
       'theme_dark': 'Dark',
+      'settings_accent': 'Accent color',
+      'accent_sea': 'Sea salt',
+      'accent_moss': 'Moss',
+      'accent_amber': 'Amber',
       'lang_zh': 'Chinese',
       'lang_en': 'English',
 

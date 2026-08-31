@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../main.dart';
 import '../models/models.dart';
 import '../services/app_services.dart';
+import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
 import 'bluetooth_page.dart';
@@ -213,6 +214,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
                 const SizedBox(height: 24),
+                _buildAccentPresetPicker(context),
+                const SizedBox(height: 24),
 
                 Padding(
                   padding: const EdgeInsets.only(left: 16, bottom: 8),
@@ -302,6 +305,56 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAccentPresetPicker(BuildContext context) {
+    final presets = [
+      _AccentPreset(
+        color: AppThemeTokens.recoveryLight,
+        label: AppStrings.of(context, 'accent_sea'),
+      ),
+      _AccentPreset(
+        color: const Color(0xFF6E8E7D),
+        label: AppStrings.of(context, 'accent_moss'),
+      ),
+      _AccentPreset(
+        color: AppThemeTokens.deadlineLight,
+        label: AppStrings.of(context, 'accent_amber'),
+      ),
+    ];
+    final selected = BattleManApp.getAccentColor(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 16, bottom: 8),
+          child: Text(
+            AppStrings.of(context, 'settings_accent'),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.62),
+            ),
+          ),
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final preset in presets)
+              FilterChip(
+                selected: selected == preset.color,
+                onSelected: (_) =>
+                    BattleManApp.setAccentColor(context, preset.color),
+                avatar: CircleAvatar(radius: 8, backgroundColor: preset.color),
+                label: Text(preset.label),
+              ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -729,33 +782,54 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       shape: const Border(),
                       children: [
-                        RadioGroup<ThemeMode>(
-                          groupValue: _getCurrentThemeMode(context),
-                          onChanged: (value) {
-                            if (value != null)
-                              BattleManApp.setThemeMode(context, value);
-                          },
-                          child: Column(
-                            children: [
-                              RadioListTile<ThemeMode>(
-                                title: Text(
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                          child: SegmentedButton<ThemeMode>(
+                            segments: [
+                              ButtonSegment<ThemeMode>(
+                                value: ThemeMode.system,
+                                icon: const Icon(
+                                  Icons.settings_suggest_outlined,
+                                ),
+                                label: Text(
                                   AppStrings.of(context, 'theme_system'),
                                 ),
-                                value: ThemeMode.system,
                               ),
-                              RadioListTile<ThemeMode>(
-                                title: Text(
+                              ButtonSegment<ThemeMode>(
+                                value: ThemeMode.light,
+                                icon: const Icon(Icons.light_mode_outlined),
+                                label: Text(
                                   AppStrings.of(context, 'theme_light'),
                                 ),
-                                value: ThemeMode.light,
                               ),
-                              RadioListTile<ThemeMode>(
-                                title: Text(
+                              ButtonSegment<ThemeMode>(
+                                value: ThemeMode.dark,
+                                icon: const Icon(Icons.dark_mode_outlined),
+                                label: Text(
                                   AppStrings.of(context, 'theme_dark'),
                                 ),
-                                value: ThemeMode.dark,
                               ),
                             ],
+                            selected: {_getCurrentThemeMode(context)},
+                            showSelectedIcon: false,
+                            style: ButtonStyle(
+                              visualDensity: VisualDensity.compact,
+                              tapTargetSize: MaterialTapTargetSize.padded,
+                              padding: const WidgetStatePropertyAll(
+                                EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 10,
+                                ),
+                              ),
+                            ),
+                            onSelectionChanged: (selection) {
+                              if (selection.isNotEmpty) {
+                                BattleManApp.setThemeMode(
+                                  context,
+                                  selection.first,
+                                );
+                              }
+                            },
                           ),
                         ),
                       ],
@@ -823,4 +897,11 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+}
+
+class _AccentPreset {
+  const _AccentPreset({required this.color, required this.label});
+
+  final Color color;
+  final String label;
 }

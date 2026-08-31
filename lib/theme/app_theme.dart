@@ -23,7 +23,7 @@ abstract final class AppTheme {
 
   static ThemeData get dark => build(Brightness.dark);
 
-  static ThemeData build(Brightness brightness) {
+  static ThemeData build(Brightness brightness, {Color? accentColor}) {
     final isDark = brightness == Brightness.dark;
     final canvas = isDark
         ? AppThemeTokens.canvasDark
@@ -33,9 +33,9 @@ abstract final class AppTheme {
         : AppThemeTokens.surfaceLight;
     final ink = isDark ? AppThemeTokens.inkDark : AppThemeTokens.inkLight;
     final muted = isDark ? AppThemeTokens.mutedDark : AppThemeTokens.mutedLight;
-    final recovery = isDark
-        ? AppThemeTokens.recoveryDark
-        : AppThemeTokens.recoveryLight;
+    final recovery =
+        accentColor ??
+        (isDark ? AppThemeTokens.recoveryDark : AppThemeTokens.recoveryLight);
     final deadline = isDark
         ? AppThemeTokens.deadlineDark
         : AppThemeTokens.deadlineLight;

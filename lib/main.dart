@@ -169,6 +169,16 @@ class BattleManApp extends StatefulWidget {
     return state?._themeMode ?? ThemeMode.system;
   }
 
+  static void setAccentColor(BuildContext context, Color color) {
+    final state = context.findAncestorStateOfType<_BattleManAppState>();
+    state?.setAccentColor(color);
+  }
+
+  static Color getAccentColor(BuildContext context) {
+    final state = context.findAncestorStateOfType<_BattleManAppState>();
+    return state?._accentColor ?? AppThemeTokens.recoveryLight;
+  }
+
   @override
   State<BattleManApp> createState() => _BattleManAppState();
 }
@@ -176,6 +186,7 @@ class BattleManApp extends StatefulWidget {
 class _BattleManAppState extends State<BattleManApp> {
   late ThemeMode _themeMode;
   late Locale _locale;
+  Color _accentColor = AppThemeTokens.recoveryLight;
 
   @override
   void initState() {
@@ -198,6 +209,13 @@ class _BattleManAppState extends State<BattleManApp> {
       _themeMode = newThemeMode;
     });
     _persistThemeMode(newThemeMode);
+  }
+
+  void setAccentColor(Color color) {
+    if (_accentColor == color) return;
+    setState(() {
+      _accentColor = color;
+    });
   }
 
   Future<void> _persistThemeMode(ThemeMode mode) async {
@@ -223,8 +241,8 @@ class _BattleManAppState extends State<BattleManApp> {
       scaffoldMessengerKey: appScaffoldMessengerKey,
       title: '\u65f6\u5e8f\u667a\u914d',
       onGenerateTitle: (context) => AppStrings.of(context, 'app_title'),
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      theme: AppTheme.build(Brightness.light, accentColor: _accentColor),
+      darkTheme: AppTheme.build(Brightness.dark, accentColor: _accentColor),
       themeMode: _themeMode,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

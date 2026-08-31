@@ -132,7 +132,7 @@
 
 - [ ] **Step 1: Write failing persistence and responsive tests**
 
-  Assert selecting system/light/dark and an accent preset calls the existing `DataService` settings methods; pump at 375, 768, 1024 and 1440 widths and assert no horizontal overflow and valid navigation semantics.
+  Assert selecting system/light/dark calls the existing `DataService` settings methods and an accent preset updates the client theme state; pump at 375, 768, 1024 and 1440 widths and assert no horizontal overflow and valid navigation semantics.
 
 - [ ] **Step 2: Run tests to verify RED**
 
@@ -140,7 +140,7 @@
 
 - [ ] **Step 3: Implement settings and accessibility polish**
 
-  Add a Material 3 `SegmentedButton<ThemeMode>` and preset `FilterChip` group to the existing profile settings surface. Add `Tooltip`, semantic labels, visible focus styles, 44/48dp hit areas, safe-area padding and reduced-motion handling. Keep unsupported capabilities out of the UI.
+  Add a Material 3 `SegmentedButton<ThemeMode>` and preset `FilterChip` group to the existing profile settings surface. Persist only the supported theme mode through `DataService`; keep accent presets in the client theme state. Add `Tooltip`, semantic labels, visible focus styles, 44/48dp hit areas, safe-area padding and reduced-motion handling. Keep unsupported capabilities out of the UI.
 
 - [ ] **Step 4: Run complete verification**
 
@@ -162,4 +162,3 @@
 - [ ] **Step 3: Re-run `flutter analyze` and the full test commands from Task 5**
 - [ ] **Step 4: Review requirements against `docs/superpowers/specs/2026-08-31-temporal-intelligence-frontend-design.md`**
 - [ ] **Step 5: Request a focused code review before final delivery**
-
