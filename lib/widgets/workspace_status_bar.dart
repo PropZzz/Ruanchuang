@@ -19,9 +19,9 @@ class WorkspaceStatusBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final date = MaterialLocalizations.of(context).formatMediumDate(
-      DateTime.now(),
-    );
+    final date = MaterialLocalizations.of(
+      context,
+    ).formatMediumDate(DateTime.now());
     final horizontal = compact ? 12.0 : 24.0;
 
     return GlassSurface(
@@ -70,7 +70,11 @@ class WorkspaceStatusBar extends StatelessWidget {
             ),
           ),
           if (!compact) ...[
-            Icon(Icons.cloud_done_outlined, size: 17, color: theme.colorScheme.tertiary),
+            Icon(
+              Icons.cloud_done_outlined,
+              size: 17,
+              color: theme.colorScheme.tertiary,
+            ),
             const SizedBox(width: 6),
             Text(
               date,
