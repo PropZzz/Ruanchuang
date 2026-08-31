@@ -15,6 +15,8 @@ import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 import '../widgets/emotion_quick_checkin_card.dart';
+import '../widgets/glass_surface.dart';
+import '../widgets/rescue_summary.dart';
 import 'emotion_page.dart';
 import 'goals_page.dart';
 import 'integrations_page.dart';
@@ -603,25 +605,47 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     });
   }
 
-  Widget _buildRescueBanner(BuildContext context) {
-    final option = _acceptedRescue;
-    if (option == null) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      child: Material(
-        color: Theme.of(context).colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        child: ListTile(
-          dense: true,
-          leading: const Icon(Icons.route_outlined),
-          title: Text('已采用：${option.title}'),
-          subtitle: Text('本次调整移动 ${option.movedEntryCount} 项日程'),
-          trailing: TextButton.icon(
-            onPressed: _isLoading ? null : _undoRescue,
-            icon: const Icon(Icons.undo, size: 18),
-            label: Text(AppStrings.of(context, 'calendar_rescue_undo')),
+  Widget _buildTodayStatusStrip(
+    BuildContext context,
+    List<ScheduleEntry> dayEntries,
+  ) {
+    final theme = Theme.of(context);
+    final modeLabel = _mode == _CalendarMode.smart ? '智能规划' : '手动安排';
+    return GlassSurface(
+      key: const ValueKey('calendar-today-status'),
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Icon(
+            Icons.wb_sunny_outlined,
+            size: 19,
+            color: theme.colorScheme.tertiary,
           ),
-        ),
+          Text(
+            '今日节奏',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Chip(
+            avatar: const Icon(Icons.event_available_outlined, size: 16),
+            label: Text('${dayEntries.length} 项日程'),
+            visualDensity: VisualDensity.compact,
+          ),
+          Chip(
+            avatar: Icon(
+              Icons.tune_rounded,
+              size: 16,
+              color: theme.colorScheme.secondary,
+            ),
+            label: Text(modeLabel),
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
       ),
     );
   }
@@ -888,18 +912,27 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                     }
                   },
                 ),
-                if (_acceptedRescue != null) _buildRescueBanner(context),
+                _buildTodayStatusStrip(context, dayEntries),
+                RescueSummary(
+                  accepted: _acceptedRescue,
+                  issueCount: _acceptedRescue?.plan.issues.length ?? 0,
+                  onUndo: _isLoading ? null : _undoRescue,
+                  compact: isCompactAppBar,
+                ),
                 _buildViewToolbar(context),
                 Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeIn,
-                    child: KeyedSubtree(
-                      key: ValueKey(
-                        '${_view.name}-${_selectedDay.toIso8601String()}',
+                  child: KeyedSubtree(
+                    key: const ValueKey('calendar-time-map'),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      child: KeyedSubtree(
+                        key: ValueKey(
+                          '${_view.name}-${_selectedDay.toIso8601String()}',
+                        ),
+                        child: _buildViewBody(context, allEntries, dayEntries),
                       ),
-                      child: _buildViewBody(context, allEntries, dayEntries),
                     ),
                   ),
                 ),

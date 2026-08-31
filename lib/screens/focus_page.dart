@@ -376,13 +376,6 @@ class _FocusPageState extends State<FocusPage> {
     });
   }
 
-  String _formatDuration(int totalSeconds) {
-    final duration = Duration(seconds: totalSeconds);
-    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return "${duration.inHours > 0 ? '${duration.inHours}:' : ''}$minutes:$seconds";
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -634,10 +627,7 @@ class _FocusPageState extends State<FocusPage> {
   }
 
   Widget _buildEnergyStatusCard() {
-    return EnergyStatusCard(
-      energy: _energyStatus,
-      emotion: _currentEmotion,
-    );
+    return EnergyStatusCard(energy: _energyStatus, emotion: _currentEmotion);
   }
 
   Widget _buildCurrentTaskCard(BuildContext context) {

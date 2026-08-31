@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shixuzhipei/main.dart';
 import 'package:shixuzhipei/screens/main_screen.dart';
 import 'package:shixuzhipei/screens/profile_page.dart';
 import 'package:shixuzhipei/services/app_services.dart';

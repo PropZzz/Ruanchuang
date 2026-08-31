@@ -32,9 +32,7 @@ abstract final class AppTheme {
         ? AppThemeTokens.surfaceDark
         : AppThemeTokens.surfaceLight;
     final ink = isDark ? AppThemeTokens.inkDark : AppThemeTokens.inkLight;
-    final muted = isDark
-        ? AppThemeTokens.mutedDark
-        : AppThemeTokens.mutedLight;
+    final muted = isDark ? AppThemeTokens.mutedDark : AppThemeTokens.mutedLight;
     final recovery = isDark
         ? AppThemeTokens.recoveryDark
         : AppThemeTokens.recoveryLight;
@@ -43,21 +41,22 @@ abstract final class AppTheme {
         : AppThemeTokens.deadlineLight;
     final risk = isDark ? AppThemeTokens.riskDark : AppThemeTokens.riskLight;
 
-    final scheme = ColorScheme.fromSeed(
-      seedColor: ink,
-      brightness: brightness,
-      surface: surface,
-      onSurface: ink,
-    ).copyWith(
-      primary: ink,
-      onPrimary: isDark ? AppThemeTokens.canvasDark : Colors.white,
-      secondary: deadline,
-      onSecondary: AppThemeTokens.inkLight,
-      tertiary: recovery,
-      onTertiary: AppThemeTokens.inkLight,
-      error: risk,
-      onError: Colors.white,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: ink,
+          brightness: brightness,
+          surface: surface,
+          onSurface: ink,
+        ).copyWith(
+          primary: ink,
+          onPrimary: isDark ? AppThemeTokens.canvasDark : Colors.white,
+          secondary: deadline,
+          onSecondary: AppThemeTokens.inkLight,
+          tertiary: recovery,
+          onTertiary: AppThemeTokens.inkLight,
+          error: risk,
+          onError: Colors.white,
+        );
 
     final base = ThemeData(
       useMaterial3: true,
