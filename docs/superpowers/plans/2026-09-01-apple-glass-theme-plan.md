@@ -10,6 +10,8 @@
 
 ---
 
+**Execution status (2026-09-01):** Tasks 1-7 are implemented and their focused checks pass. Task 8 produced verified desktop/mobile screenshots. Full Flutter tests reproduce two pre-existing text assertions (`当前任务`, `复盘`) while all other tests pass; this is recorded as a baseline gap rather than a visual regression.
+
 ### Task 1: Establish the visual regression contract
 
 **Files:**
