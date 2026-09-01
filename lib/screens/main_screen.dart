@@ -2,10 +2,11 @@
 import 'package:flutter/material.dart';
 
 import '../services/app_services.dart';
-import '../theme/app_theme.dart' show AppMotion;
+import '../theme/app_theme.dart' show AppMaterialLevel, AppMotion;
 import '../ui/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
+import '../widgets/glass_surface.dart';
 import 'auth_dialog.dart';
 import 'focus_page.dart';
 import 'micro_task_page.dart';
@@ -196,11 +197,12 @@ class _NarrowShell extends StatelessWidget {
     return Column(
       children: [
         Expanded(child: ClipRRect(child: child)),
-        Container(
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            border: Border(top: BorderSide(color: scheme.outline)),
-          ),
+        GlassSurface(
+          key: const ValueKey('shell-bottom-material'),
+          level: AppMaterialLevel.chrome,
+          borderRadius: BorderRadius.zero,
+          padding: EdgeInsets.zero,
+          showShadow: false,
           child: SafeArea(
             top: false,
             child: Padding(
@@ -274,203 +276,215 @@ class _WideShell extends StatelessWidget {
 
     return Row(
       children: [
-        Container(
+        SizedBox(
           width: railWidth,
-          decoration: BoxDecoration(color: scheme.surface),
-          foregroundDecoration: BoxDecoration(
-            border: Border(right: BorderSide(color: scheme.outline)),
-          ),
-          child: SafeArea(
-            right: false,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    railExpanded ? 20 : 0,
-                    24,
-                    railExpanded ? 20 : 0,
-                    12,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: railExpanded
-                        ? MainAxisAlignment.start
-                        : MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: scheme.primary,
-                        ),
-                      ),
-                      if (railExpanded) ...[
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: text.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: railExpanded ? 12 : 14,
-                    vertical: 4,
-                  ),
-                  child: Tooltip(
-                    message: railToggleLabel,
-                    child: IconButton(
-                      key: const ValueKey('shell-rail-toggle'),
-                      onPressed: onToggleRail,
-                      icon: Icon(
-                        railExpanded ? Icons.chevron_left : Icons.chevron_right,
-                      ),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: NavigationRail(
-                    key: ValueKey(
-                      railExpanded
-                          ? 'shell-rail-expanded'
-                          : 'shell-rail-collapsed',
-                    ),
-                    backgroundColor: Colors.transparent,
-                    extended: railExpanded,
-                    minWidth: 76,
-                    minExtendedWidth: 248,
-                    labelType: railExpanded
-                        ? null
-                        : NavigationRailLabelType.none,
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: onSelect,
-                    destinations: [
-                      for (final destination in destinations)
-                        NavigationRailDestination(
-                          icon: Icon(
-                            destination.icon,
-                            key: ValueKey('shell-rail-${destination.id}-icon'),
-                          ),
-                          selectedIcon: Icon(
-                            destination.selectedIcon,
-                            key: ValueKey(
-                              'shell-rail-${destination.id}-selected-icon',
-                            ),
-                          ),
-                          label: Text(
-                            destination.label,
-                            key: ValueKey('shell-rail-${destination.id}-label'),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                if (railExpanded)
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: scheme.outline)),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+          child: GlassSurface(
+            key: const ValueKey('shell-rail-material'),
+            level: AppMaterialLevel.chrome,
+            borderRadius: BorderRadius.zero,
+            padding: EdgeInsets.zero,
+            showShadow: false,
+            child: SafeArea(
+              right: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      railExpanded ? 20 : 0,
+                      24,
+                      railExpanded ? 20 : 0,
+                      12,
                     ),
                     child: Row(
+                      mainAxisAlignment: railExpanded
+                          ? MainAxisAlignment.start
+                          : MainAxisAlignment.center,
                       children: [
-                        Expanded(
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(6),
-                            onTap: profileIndex >= 0
-                                ? () => onSelect(profileIndex)
-                                : null,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 8,
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.person_outline,
-                                    size: 20,
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: ValueListenableBuilder<String?>(
-                                      valueListenable:
-                                          ProfilePage.globalNameNotifier,
-                                      builder: (context, name, _) {
-                                        return Text(
-                                          name ?? '未登录',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: text.bodySmall?.copyWith(
-                                            color: scheme.onSurfaceVariant,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ],
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: scheme.primary,
+                          ),
+                        ),
+                        if (railExpanded) ...[
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: text.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.0,
                               ),
                             ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.notifications_none, size: 20),
-                          tooltip: '通知',
-                          color: scheme.onSurfaceVariant,
-                          onPressed: null,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.settings_outlined, size: 20),
-                          tooltip: '设置',
-                          color: scheme.onSurfaceVariant,
-                          onPressed: profileIndex >= 0
-                              ? () => onSelect(profileIndex)
-                              : null,
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: scheme.outline)),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Column(
-                      children: [
-                        IconButton(
-                          tooltip: '我的',
-                          color: scheme.onSurfaceVariant,
-                          icon: const Icon(Icons.person_outline, size: 20),
-                          onPressed: profileIndex >= 0
-                              ? () => onSelect(profileIndex)
-                              : null,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.settings_outlined, size: 20),
-                          tooltip: '设置',
-                          color: scheme.onSurfaceVariant,
-                          onPressed: profileIndex >= 0
-                              ? () => onSelect(profileIndex)
-                              : null,
-                        ),
+                        ],
                       ],
                     ),
                   ),
-              ],
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: railExpanded ? 12 : 14,
+                      vertical: 4,
+                    ),
+                    child: Tooltip(
+                      message: railToggleLabel,
+                      child: IconButton(
+                        key: const ValueKey('shell-rail-toggle'),
+                        onPressed: onToggleRail,
+                        icon: Icon(
+                          railExpanded
+                              ? Icons.chevron_left
+                              : Icons.chevron_right,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: NavigationRail(
+                      key: ValueKey(
+                        railExpanded
+                            ? 'shell-rail-expanded'
+                            : 'shell-rail-collapsed',
+                      ),
+                      backgroundColor: Colors.transparent,
+                      extended: railExpanded,
+                      minWidth: 76,
+                      minExtendedWidth: 248,
+                      labelType: railExpanded
+                          ? null
+                          : NavigationRailLabelType.none,
+                      selectedIndex: selectedIndex,
+                      onDestinationSelected: onSelect,
+                      destinations: [
+                        for (final destination in destinations)
+                          NavigationRailDestination(
+                            icon: Icon(
+                              destination.icon,
+                              key: ValueKey(
+                                'shell-rail-${destination.id}-icon',
+                              ),
+                            ),
+                            selectedIcon: Icon(
+                              destination.selectedIcon,
+                              key: ValueKey(
+                                'shell-rail-${destination.id}-selected-icon',
+                              ),
+                            ),
+                            label: Text(
+                              destination.label,
+                              key: ValueKey(
+                                'shell-rail-${destination.id}-label',
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (railExpanded)
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border(top: BorderSide(color: scheme.outline)),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(6),
+                              onTap: profileIndex >= 0
+                                  ? () => onSelect(profileIndex)
+                                  : null,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 8,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.person_outline,
+                                      size: 20,
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: ValueListenableBuilder<String?>(
+                                        valueListenable:
+                                            ProfilePage.globalNameNotifier,
+                                        builder: (context, name, _) {
+                                          return Text(
+                                            name ?? '未登录',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: text.bodySmall?.copyWith(
+                                              color: scheme.onSurfaceVariant,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.notifications_none,
+                              size: 20,
+                            ),
+                            tooltip: '通知',
+                            color: scheme.onSurfaceVariant,
+                            onPressed: null,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.settings_outlined, size: 20),
+                            tooltip: '设置',
+                            color: scheme.onSurfaceVariant,
+                            onPressed: profileIndex >= 0
+                                ? () => onSelect(profileIndex)
+                                : null,
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border(top: BorderSide(color: scheme.outline)),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        children: [
+                          IconButton(
+                            tooltip: '我的',
+                            color: scheme.onSurfaceVariant,
+                            icon: const Icon(Icons.person_outline, size: 20),
+                            onPressed: profileIndex >= 0
+                                ? () => onSelect(profileIndex)
+                                : null,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.settings_outlined, size: 20),
+                            tooltip: '设置',
+                            color: scheme.onSurfaceVariant,
+                            onPressed: profileIndex >= 0
+                                ? () => onSelect(profileIndex)
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -481,18 +495,20 @@ class _WideShell extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  key: const ValueKey('workspace-status-bar'),
-                  width: double.infinity,
+                GlassSurface(
+                  key: const ValueKey('workspace-status-bar-material'),
+                  level: AppMaterialLevel.chrome,
+                  borderRadius: BorderRadius.zero,
                   padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                  decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: scheme.outline)),
-                  ),
-                  child: Text(
-                    activeLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.titleLarge,
+                  showShadow: false,
+                  child: KeyedSubtree(
+                    key: const ValueKey('workspace-status-bar'),
+                    child: Text(
+                      activeLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.titleLarge,
+                    ),
                   ),
                 ),
                 Expanded(

@@ -6,6 +6,7 @@ import 'package:shixuzhipei/screens/profile_page.dart';
 import 'package:shixuzhipei/services/app_services.dart';
 import 'package:shixuzhipei/services/mock_data_service.dart';
 import 'package:shixuzhipei/theme/app_theme.dart';
+import 'package:shixuzhipei/widgets/glass_surface.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -45,7 +46,18 @@ void main() {
     await pumpShell(tester, const Size(1440, 900));
 
     expect(find.byKey(const ValueKey('workspace-status-bar')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('workspace-status-bar-material')),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<GlassSurface>(
+        find.byKey(const ValueKey('workspace-status-bar-material')),
+      ),
+      isA<GlassSurface>(),
+    );
     expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-rail-material')), findsOneWidget);
     tester.view.reset();
   });
 
@@ -92,6 +104,7 @@ void main() {
     await pumpShell(tester, const Size(390, 844));
 
     expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-bottom-material')), findsOneWidget);
     expect(tester.takeException(), isNull);
     tester.view.reset();
   });
