@@ -23,7 +23,12 @@ void main() {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     await tester.pumpWidget(
-      MaterialApp(theme: AppTheme.light, home: const MainScreen()),
+      MaterialApp(
+        locale: const Locale('zh'),
+        supportedLocales: const [Locale('zh'), Locale('en')],
+        theme: AppTheme.light,
+        home: const MainScreen(),
+      ),
     );
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
   }
@@ -49,6 +54,7 @@ void main() {
     expect(rail.extended, isFalse);
     expect(tester.getSize(railFinder).width, 76);
     expect(find.byKey(const ValueKey('shell-rail-toggle')), findsOneWidget);
+    expect(find.byTooltip('展开导航栏'), findsOneWidget);
     final focusLabel = find.byKey(const ValueKey('shell-rail-focus-label'));
     expect(focusLabel, findsOneWidget);
     expect(tester.getSize(focusLabel), Size.zero);
@@ -68,6 +74,7 @@ void main() {
 
     expect(rail.extended, isTrue);
     expect(tester.getSize(railFinder).width, 248);
+    expect(find.byTooltip('收起导航栏'), findsOneWidget);
     expect(
       find.descendant(of: railFinder, matching: find.text('专注')),
       findsOneWidget,

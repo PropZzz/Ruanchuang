@@ -10,6 +10,8 @@ class AppStrings {
       'nav_micro': '微任务',
       'nav_team': '团队',
       'nav_profile': '我的',
+      'nav_rail_expand': '展开导航栏',
+      'nav_rail_collapse': '收起导航栏',
 
       'workspace_local_ready': '本地优先 · 就绪',
       'workspace_settings': '打开设置',
@@ -368,6 +370,8 @@ class AppStrings {
       'nav_micro': 'Micro',
       'nav_team': 'Team',
       'nav_profile': 'Profile',
+      'nav_rail_expand': 'Expand navigation rail',
+      'nav_rail_collapse': 'Collapse navigation rail',
 
       'workspace_local_ready': 'Local-first · Ready',
       'workspace_settings': 'Open settings',

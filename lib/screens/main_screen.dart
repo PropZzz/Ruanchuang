@@ -265,6 +265,10 @@ class _WideShell extends StatelessWidget {
     final text = theme.textTheme;
     final profileIndex = destinations.indexWhere((d) => d.id == 'profile');
     final railWidth = railExpanded ? 248.0 : 76.0;
+    final railToggleLabel = AppStrings.of(
+      context,
+      railExpanded ? 'nav_rail_collapse' : 'nav_rail_expand',
+    );
 
     return Row(
       children: [
@@ -361,7 +365,7 @@ class _WideShell extends StatelessWidget {
                     vertical: 4,
                   ),
                   child: Tooltip(
-                    message: railExpanded ? '收起导航栏' : '展开导航栏',
+                    message: railToggleLabel,
                     child: IconButton(
                       key: const ValueKey('shell-rail-toggle'),
                       onPressed: onToggleRail,
