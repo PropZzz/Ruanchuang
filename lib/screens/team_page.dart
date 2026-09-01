@@ -254,7 +254,6 @@ class _TeamPageState extends State<TeamPage> {
   void _showConflictCheck() {
     TimeOfDay start = const TimeOfDay(hour: 15, minute: 0);
     int minutes = _meetingMinutes;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     showDialog(
       context: context,
@@ -279,9 +278,9 @@ class _TeamPageState extends State<TeamPage> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white10
-                        : Colors.black.withValues(alpha: 0.05),
+                    color: Theme.of(
+                      ctx2,
+                    ).colorScheme.onSurface.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
@@ -317,9 +316,9 @@ class _TeamPageState extends State<TeamPage> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white10
-                        : Colors.black.withValues(alpha: 0.05),
+                    color: Theme.of(
+                      ctx2,
+                    ).colorScheme.onSurface.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
@@ -722,7 +721,8 @@ class _TeamPageState extends State<TeamPage> {
 
   Widget _buildProgressPanel(BuildContext context, bool isDark) {
     final avgProgress = _averageProgress();
-    final cardColor = isDark ? const Color(0xFF1C1C1E) : Colors.white;
+    final cardColor = Theme.of(context).colorScheme.surface;
+    final scheme = Theme.of(context).colorScheme;
 
     return Card(
       elevation: 0,
@@ -777,13 +777,9 @@ class _TeamPageState extends State<TeamPage> {
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.05)
-                          : Colors.grey.withValues(alpha: 0.05),
+                      color: scheme.onSurface.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark ? Colors.white12 : Colors.black12,
-                      ),
+                      border: Border.all(color: scheme.outline),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -843,7 +839,7 @@ class _TeamPageState extends State<TeamPage> {
                         Text(
                           taskLabel,
                           style: TextStyle(
-                            color: isDark ? Colors.white70 : Colors.black87,
+                            color: scheme.onSurface,
                             fontSize: 13,
                           ),
                         ),
@@ -853,9 +849,9 @@ class _TeamPageState extends State<TeamPage> {
                           child: LinearProgressIndicator(
                             value: member.progress,
                             minHeight: 6,
-                            backgroundColor: isDark
-                                ? Colors.white10
-                                : Colors.black12,
+                            backgroundColor: scheme.onSurface.withValues(
+                              alpha: 0.08,
+                            ),
                           ),
                         ),
                       ],
@@ -914,12 +910,16 @@ class _TeamPageState extends State<TeamPage> {
                 return Card(
                   elevation: 0,
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.white,
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.05)
+                      : Theme.of(context).colorScheme.surface,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                     side: BorderSide(
-                      color: Colors.green.withValues(alpha: 0.3),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.secondary.withValues(alpha: 0.3),
                     ),
                   ),
                   margin: const EdgeInsets.only(bottom: 8),
@@ -949,8 +949,12 @@ class _TeamPageState extends State<TeamPage> {
                               ElevatedButton(
                                 onPressed: () => _book(w),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green.shade600,
-                                  foregroundColor: Colors.white,
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primary,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimary,
                                 ),
                                 child: Text(
                                   AppStrings.of(context, 'team_btn_book'),
@@ -977,8 +981,12 @@ class _TeamPageState extends State<TeamPage> {
                           trailing: ElevatedButton(
                             onPressed: () => _book(w),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green.shade600,
-                              foregroundColor: Colors.white,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onPrimary,
                             ),
                             child: Text(
                               AppStrings.of(context, 'team_btn_book'),
@@ -996,7 +1004,7 @@ class _TeamPageState extends State<TeamPage> {
   Widget _buildMergedSchedulePanel(BuildContext context, bool isDark) {
     return Card(
       elevation: 0,
-      color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1026,7 +1034,7 @@ class _TeamPageState extends State<TeamPage> {
   Widget _buildConflictPanel(BuildContext context, bool isDark) {
     return Card(
       elevation: 0,
-      color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1050,16 +1058,20 @@ class _TeamPageState extends State<TeamPage> {
                 (c) => Card(
                   elevation: 0,
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.grey.withValues(alpha: 0.05),
+                      ? Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.05)
+                      : Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.05),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.warning_amber_rounded,
-                      color: Colors.orange,
+                      color: Theme.of(context).colorScheme.tertiary,
                     ),
                     title: Text(
                       '${c.memberA} vs ${c.memberB}',
@@ -1083,10 +1095,11 @@ class _TeamPageState extends State<TeamPage> {
         ? '成员权限'
         : 'Members & access';
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
 
     return Card(
       elevation: 0,
-      color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1097,8 +1110,8 @@ class _TeamPageState extends State<TeamPage> {
             const SizedBox(height: 8),
             ..._calendars.map((m) {
               final energyColor = (m.energy.index >= EnergyTier.high.index)
-                  ? Colors.green
-                  : Colors.grey;
+                  ? scheme.secondary
+                  : scheme.onSurfaceVariant;
               final perm = _sharePermissionLabel(context, m.permission);
               final energy = _energyTierLabel(context, m.energy);
               final member = _memberForCalendar(m);
@@ -1110,13 +1123,9 @@ class _TeamPageState extends State<TeamPage> {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.grey.withValues(alpha: 0.05),
+                  color: scheme.onSurface.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isDark ? Colors.white12 : Colors.black12,
-                  ),
+                  border: Border.all(color: scheme.outline),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1174,10 +1183,10 @@ class _TeamPageState extends State<TeamPage> {
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.check_circle_outline,
                             size: 16,
-                            color: Colors.grey,
+                            color: scheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -1186,9 +1195,9 @@ class _TeamPageState extends State<TeamPage> {
                               child: LinearProgressIndicator(
                                 value: progressValue,
                                 minHeight: 6,
-                                backgroundColor: isDark
-                                    ? Colors.white10
-                                    : Colors.black12,
+                                backgroundColor: scheme.onSurface.withValues(
+                                  alpha: 0.08,
+                                ),
                               ),
                             ),
                           ),
@@ -1296,13 +1305,12 @@ class _TeamKpiChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final scheme = theme.colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.black.withValues(alpha: 0.04),
+        color: scheme.onSurface.withValues(alpha: isDark ? 0.08 : 0.04),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1313,7 +1321,7 @@ class _TeamKpiChip extends StatelessWidget {
             '$label:',
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white70 : Colors.black87,
+              color: scheme.onSurface,
             ),
           ),
           const SizedBox(width: 4),
@@ -1463,13 +1471,16 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
           padding: const EdgeInsets.symmetric(vertical: 40),
           child: Text(
             AppStrings.of(context, 'team_no_members'),
-            style: const TextStyle(color: Colors.grey),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       );
     }
 
     final height = (_endHour - _startHour) * _hourHeight;
+    final scheme = Theme.of(context).colorScheme;
     final now = TimeOfDay.fromDateTime(DateTime.now());
     final laneCount = calendars.length;
     final contentWidth = _timeLabelWidth + _laneWidth * laneCount;
@@ -1488,15 +1499,15 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
           runSpacing: 8,
           children: [
             _LegendChip(
-              color: Colors.green.withValues(alpha: 0.18),
+              color: scheme.secondary.withValues(alpha: 0.18),
               label: AppStrings.of(context, 'team_legend_golden'),
             ),
             _LegendChip(
-              color: const Color(0xFFD68C89).withValues(alpha: 0.12),
+              color: scheme.error.withValues(alpha: 0.12),
               label: AppStrings.of(context, 'team_legend_busy_overlap'),
             ),
             _LegendChip(
-              color: Colors.blue.withValues(alpha: 0.14),
+              color: scheme.primary.withValues(alpha: 0.14),
               label: AppStrings.of(context, 'team_legend_conflict_probe'),
             ),
           ],
@@ -1564,9 +1575,9 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                             ),
                                             child: Text(
                                               '${h.toString().padLeft(2, '0')}:00',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 12,
-                                                color: Colors.grey,
+                                                color: scheme.onSurfaceVariant,
                                               ),
                                             ),
                                           ),
@@ -1574,8 +1585,8 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                         Expanded(
                                           child: Container(
                                             height: 1,
-                                            color: Colors.grey.withValues(
-                                              alpha: 0.2,
+                                            color: scheme.outline.withValues(
+                                              alpha: 0.45,
                                             ),
                                           ),
                                         ),
@@ -1593,7 +1604,7 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                         _topForMinute(seg.endMin) -
                                         _topForMinute(seg.startMin),
                                     child: Container(
-                                      color: const Color(0xFFD68C89).withValues(
+                                      color: scheme.error.withValues(
                                         alpha:
                                             (0.05 + (seg.busyCount - 2) * 0.03)
                                                 .clamp(0.05, 0.16)
@@ -1612,11 +1623,11 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                         (meetingMinutes / 60.0) * _hourHeight,
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: Colors.green.withValues(
+                                        color: scheme.secondary.withValues(
                                           alpha: 0.12,
                                         ),
                                         border: Border.all(
-                                          color: Colors.green.withValues(
+                                          color: scheme.secondary.withValues(
                                             alpha: 0.35,
                                           ),
                                         ),
@@ -1632,7 +1643,7 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                             ),
                                             style: TextStyle(
                                               fontSize: 12,
-                                              color: Colors.green.shade900,
+                                              color: scheme.secondary,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
@@ -1654,16 +1665,16 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                     child: Container(
                                       decoration: BoxDecoration(
                                         color: probeConflicts.isEmpty
-                                            ? Colors.green.withValues(
+                                            ? scheme.secondary.withValues(
                                                 alpha: 0.10,
                                               )
-                                            : Colors.blue.withValues(
+                                            : scheme.primary.withValues(
                                                 alpha: 0.10,
                                               ),
                                         border: Border.all(
                                           color: probeConflicts.isEmpty
-                                              ? Colors.green
-                                              : Colors.blue,
+                                              ? scheme.secondary
+                                              : scheme.primary,
                                           width: 2,
                                         ),
                                       ),
@@ -1701,7 +1712,7 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                                       Expanded(
                                         child: Container(
                                           height: 1.5,
-                                          color: Colors.blue.withValues(
+                                          color: scheme.primary.withValues(
                                             alpha: 0.6,
                                           ),
                                         ),
@@ -1745,8 +1756,8 @@ class _TeamMergedScheduleViewState extends State<TeamMergedScheduleView> {
                     ),
               style: TextStyle(
                 color: probeConflicts.isEmpty
-                    ? Colors.green.shade800
-                    : Colors.blue.shade800,
+                    ? scheme.secondary
+                    : scheme.primary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1763,12 +1774,13 @@ class _LegendChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.72)),
       ),
       child: Text(
         label,
@@ -1792,13 +1804,14 @@ class _BusyBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showDetails = permission == TeamSharePermission.details;
+    final scheme = Theme.of(context).colorScheme;
     final busyLabel = AppStrings.of(context, 'team_busy');
     final title = showDetails ? entry.title : busyLabel;
     final subtitle = showDetails ? entry.tag : '';
 
     final bg = showDetails
         ? entry.color.withValues(alpha: 0.85)
-        : Colors.grey.withValues(alpha: 0.75);
+        : scheme.onSurfaceVariant.withValues(alpha: 0.75);
 
     return Material(
       color: Colors.transparent,
@@ -1860,7 +1873,7 @@ class _BusyBlock extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
+                color: scheme.shadow.withValues(alpha: 0.16),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1868,7 +1881,7 @@ class _BusyBlock extends StatelessWidget {
           ),
           padding: const EdgeInsets.all(8),
           child: DefaultTextStyle(
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: scheme.onPrimary),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1889,7 +1902,7 @@ class _BusyBlock extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: scheme.onPrimary.withValues(alpha: 0.9),
                     ),
                   ),
                 ],

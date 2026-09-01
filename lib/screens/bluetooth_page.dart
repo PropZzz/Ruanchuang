@@ -34,18 +34,21 @@ class _BluetoothPageState extends State<BluetoothPage> {
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: const [
-              Icon(Icons.bluetooth_disabled, size: 48, color: Colors.grey),
-              SizedBox(height: 8),
-              Text(
-                '当前平台不可用蓝牙。',
-                textAlign: TextAlign.center,
+            children: [
+              Icon(
+                Icons.bluetooth_disabled,
+                size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
+              SizedBox(height: 8),
+              Text('当前平台不可用蓝牙。', textAlign: TextAlign.center),
               SizedBox(height: 4),
               Text(
                 '请在支持真实硬件的设备版本上使用。',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -111,38 +114,35 @@ class _BluetoothPageState extends State<BluetoothPage> {
 
         final trailing = switch (state) {
           BluetoothConnectionState.connected => ElevatedButton(
-              onPressed: () => _handleDisconnect(result.device),
-              child: const Text('断开连接'),
-            ),
+            onPressed: () => _handleDisconnect(result.device),
+            child: const Text('断开连接'),
+          ),
           _ => ElevatedButton(
-              onPressed: () => _handleConnect(result.device),
-              child: const Text('连接'),
-            ),
+            onPressed: () => _handleConnect(result.device),
+            child: const Text('连接'),
+          ),
         };
 
         return ListTile(
           leading: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.bluetooth),
-              Text('${result.rssi}'),
-            ],
+            children: [const Icon(Icons.bluetooth), Text('${result.rssi}')],
           ),
           title: Text(
             result.device.platformName.isNotEmpty
                 ? result.device.platformName
                 : (result.device.advName.isNotEmpty
-                    ? result.device.advName
-                    : '未知设备'),
+                      ? result.device.advName
+                      : '未知设备'),
           ),
           subtitle: Text(result.device.remoteId.toString()),
           trailing: trailing,
           onTap: state == BluetoothConnectionState.connected
               ? () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => DeviceDetailPage(device: result.device),
-                    ),
-                  )
+                  MaterialPageRoute(
+                    builder: (_) => DeviceDetailPage(device: result.device),
+                  ),
+                )
               : null,
         );
       },
@@ -176,10 +176,7 @@ class _BluetoothPageState extends State<BluetoothPage> {
               },
             )
           else
-            const IconButton(
-              icon: Icon(Icons.block),
-              onPressed: null,
-            ),
+            const IconButton(icon: Icon(Icons.block), onPressed: null),
         ],
       ),
       body: _supportsBluetooth

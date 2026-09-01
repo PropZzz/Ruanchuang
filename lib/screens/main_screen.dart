@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 
 import '../services/app_services.dart';
-import '../theme/app_theme.dart' show AppMaterialLevel, AppMotion;
 import '../ui/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
@@ -190,8 +189,6 @@ class _NarrowShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final compactLabels = MobileFeedback.isNarrow(context, breakpoint: 420);
 
     return Column(

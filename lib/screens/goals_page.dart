@@ -150,7 +150,9 @@ class _GoalsPageState extends State<GoalsPage> {
               const SizedBox(height: 8),
               Text(
                 AppStrings.of(ctx2, 'goal_hint'),
-                style: const TextStyle(color: Colors.grey),
+                style: TextStyle(
+                  color: Theme.of(ctx2).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -315,7 +317,7 @@ class _GoalsPageState extends State<GoalsPage> {
       goalId: g.id,
       goalTaskId: next.id,
       height: _heightFromMinutes(next.durationMinutes),
-      color: Colors.purple,
+      color: Theme.of(context).colorScheme.primary,
       time: start,
       reminderMinutesBefore: 10,
     );

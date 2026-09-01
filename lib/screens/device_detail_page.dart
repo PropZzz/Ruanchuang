@@ -126,7 +126,9 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     : Icons.notifications_none,
               ),
               onPressed: () async {
-                await characteristic.setNotifyValue(!characteristic.isNotifying);
+                await characteristic.setNotifyValue(
+                  !characteristic.isNotifying,
+                );
                 if (mounted) {
                   setState(() {});
                 }
@@ -191,18 +193,21 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.bluetooth_disabled, size: 48, color: Colors.grey),
-                      SizedBox(height: 8),
-                      Text(
-                        '当前目标平台不支持蓝牙服务。',
-                        textAlign: TextAlign.center,
+                    children: [
+                      Icon(
+                        Icons.bluetooth_disabled,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
+                      SizedBox(height: 8),
+                      Text('当前目标平台不支持蓝牙服务。', textAlign: TextAlign.center),
                       SizedBox(height: 4),
                       Text(
                         '请在支持该功能的设备上打开此页面。',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),

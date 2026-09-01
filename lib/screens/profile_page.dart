@@ -203,7 +203,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   _profileActionTile(
                     context,
                     icon: Icons.radar_rounded,
-                    iconColor: Colors.blueAccent,
+                    iconColor: theme.colorScheme.primary,
                     title: AppStrings.of(context, 'profile_model_card'),
                     showTrailing: false,
                     onTap: () {},
@@ -231,7 +231,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   _profileActionTile(
                     context,
                     icon: Icons.watch_rounded,
-                    iconColor: Colors.teal,
+                    iconColor: theme.colorScheme.primary,
                     title: AppStrings.of(context, 'profile_device'),
                     subtitle: deviceSubtitle,
                     onTap: () => _openDeviceEntry(context),
@@ -240,7 +240,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   _profileActionTile(
                     context,
                     icon: Icons.sync_rounded,
-                    iconColor: Colors.orange,
+                    iconColor: theme.colorScheme.tertiary,
                     title: AppStrings.of(context, 'profile_auth'),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
@@ -252,7 +252,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   _profileActionTile(
                     context,
                     icon: Icons.flag_rounded,
-                    iconColor: Colors.redAccent,
+                    iconColor: theme.colorScheme.error,
                     title: AppStrings.of(context, 'goal_title'),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const GoalsPage()),
@@ -279,7 +279,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   _profileActionTile(
                     context,
                     icon: Icons.monitor_heart_rounded,
-                    iconColor: Colors.pinkAccent,
+                    iconColor: theme.colorScheme.secondary,
                     title: AppStrings.of(context, 'emo_title'),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const EmotionPage()),
@@ -289,7 +289,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   _profileActionTile(
                     context,
                     icon: Icons.auto_graph_rounded,
-                    iconColor: Colors.deepPurpleAccent,
+                    iconColor: theme.colorScheme.primary,
                     title: AppStrings.of(context, 'review_title'),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ReviewPage()),
@@ -311,7 +311,7 @@ class _ProfilePageState extends State<ProfilePage> {
         label: AppStrings.of(context, 'accent_sea'),
       ),
       _AccentPreset(
-        color: const Color(0xFF6E8E7D),
+        color: AppThemeTokens.brandDark,
         label: AppStrings.of(context, 'accent_moss'),
       ),
       _AccentPreset(
@@ -381,18 +381,24 @@ class _ProfilePageState extends State<ProfilePage> {
                       builder: (context, avatarBytes, child) {
                         return CircleAvatar(
                           radius: 46,
-                          backgroundColor: Colors.white,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.surface,
                           child: CircleAvatar(
                             radius: 42,
-                            backgroundColor: const Color(0xFFE5E5EA),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
                             backgroundImage: avatarBytes != null
                                 ? MemoryImage(avatarBytes)
                                 : null,
                             child: avatarBytes == null
-                                ? const Icon(
+                                ? Icon(
                                     Icons.person_rounded,
                                     size: 48,
-                                    color: Colors.grey,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                                   )
                                 : null,
                           ),
@@ -409,10 +415,10 @@ class _ProfilePageState extends State<ProfilePage> {
                           width: 2.5,
                         ),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.edit,
                         size: 14,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                   ],
@@ -482,8 +488,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.72),
+        ),
         boxShadow: isDark
             ? []
             : [
@@ -658,7 +667,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF2F2F7),
+        color: isDark
+            ? Theme.of(context).colorScheme.surface
+            : Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -666,7 +677,7 @@ class _ProfilePageState extends State<ProfilePage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF2C2C2E) : Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(24),
               ),
@@ -712,7 +723,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     _profileActionTile(
                       context,
                       icon: Icons.switch_account_rounded,
-                      iconColor: Colors.blueAccent,
+                      iconColor: theme.colorScheme.primary,
                       title: AppStrings.of(context, 'profile_switch_account'),
                       onTap: onSwitchAccount,
                     ),
@@ -720,7 +731,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     _profileActionTile(
                       context,
                       icon: Icons.language_rounded,
-                      iconColor: Colors.teal,
+                      iconColor: theme.colorScheme.primary,
                       title: AppStrings.of(context, 'settings_language'),
                       onTap: () => _showLanguageDialog(context),
                     ),
@@ -728,7 +739,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     _profileActionTile(
                       context,
                       icon: Icons.notifications_rounded,
-                      iconColor: Colors.orange,
+                      iconColor: theme.colorScheme.tertiary,
                       title: AppStrings.of(context, 'settings_notify'),
                       onTap: () {},
                     ),
@@ -742,14 +753,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.deepPurpleAccent.withValues(
+                          color: theme.colorScheme.primary.withValues(
                             alpha: 0.15,
                           ),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.dark_mode_rounded,
-                          color: Colors.deepPurpleAccent,
+                          color: theme.colorScheme.primary,
                           size: 22,
                         ),
                       ),
@@ -835,7 +846,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     _profileActionTile(
                       context,
                       icon: Icons.bug_report_rounded,
-                      iconColor: Colors.grey,
+                      iconColor: Theme.of(context).colorScheme.onSurfaceVariant,
                       title: AppStrings.of(context, 'diag_title'),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(

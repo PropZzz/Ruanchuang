@@ -86,7 +86,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
             title: p.title,
             tag: p.source,
             height: _heightFromMinutes(p.minutes),
-            color: Colors.blue,
+            color: Theme.of(context).colorScheme.primary,
             time: tod,
             reminderMinutesBefore: 10,
           )
