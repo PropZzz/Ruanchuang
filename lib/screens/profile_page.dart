@@ -184,6 +184,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       body: SafeArea(
         child: ResponsivePageFrame(
+          maxWidth: 860,
           child: ListView(
             physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.fromLTRB(

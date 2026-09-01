@@ -11,7 +11,9 @@ void main() {
       const MaterialApp(
         home: SizedBox(
           width: 1600,
-          child: ResponsivePageFrame(child: SizedBox(key: Key('content'))),
+          child: ResponsivePageFrame(
+            child: SizedBox(key: Key('content'), width: double.infinity),
+          ),
         ),
       ),
     );
@@ -19,7 +21,24 @@ void main() {
     final frame = tester.getSize(
       find.byKey(const Key('responsive-page-frame')),
     );
-    expect(frame.width, lessThanOrEqualTo(1320));
+    expect(frame.width, 1320);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  });
+
+  testWidgets('frame supports a narrower page width override', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1200, 600));
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ResponsivePageFrame(
+          maxWidth: 860,
+          child: SizedBox(width: double.infinity, height: 10),
+        ),
+      ),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('responsive-page-frame'))).width,
+      860,
+    );
     addTearDown(() => tester.binding.setSurfaceSize(null));
   });
 
@@ -99,6 +118,7 @@ void main() {
           .width,
       600,
     );
+    expect(second.dy - (first.dy + 20), greaterThanOrEqualTo(16));
     addTearDown(() => tester.binding.setSurfaceSize(null));
   });
 }

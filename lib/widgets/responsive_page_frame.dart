@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
 class ResponsivePageFrame extends StatelessWidget {
-  const ResponsivePageFrame({super.key, required this.child});
+  const ResponsivePageFrame({
+    super.key,
+    required this.child,
+    this.maxWidth = 1320,
+  });
 
   final Widget child;
+  final double maxWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +25,7 @@ class ResponsivePageFrame extends StatelessWidget {
             alignment: Alignment.topCenter,
             child: ConstrainedBox(
               key: const Key('responsive-page-frame'),
-              constraints: const BoxConstraints(maxWidth: 1320),
+              constraints: BoxConstraints(maxWidth: maxWidth),
               child: child,
             ),
           ),

@@ -12,7 +12,7 @@ class ResponsiveCardGrid extends StatelessWidget {
         if (constraints.maxWidth < 720) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: _indexedChildren(),
+            children: _mobileChildren(),
           );
         }
 
@@ -44,8 +44,11 @@ class ResponsiveCardGrid extends StatelessWidget {
     );
   }
 
-  List<Widget> _indexedChildren() => [
-    for (var index = 0; index < children.length; index++) _item(index),
+  List<Widget> _mobileChildren() => [
+    for (var index = 0; index < children.length; index++) ...[
+      if (index > 0) const SizedBox(height: 16),
+      _item(index),
+    ],
   ];
 
   Widget _item(int index) => KeyedSubtree(
