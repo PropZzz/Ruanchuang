@@ -9,6 +9,7 @@ import '../services/app_services.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
+import '../widgets/responsive_page_frame.dart';
 import 'bluetooth_page.dart';
 import 'debug/diagnostics_page.dart';
 import 'emotion_page.dart';
@@ -182,123 +183,120 @@ class _ProfilePageState extends State<ProfilePage> {
         ],
       ),
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 860),
-            child: ListView(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(
-                16,
-                8,
-                16,
-                MediaQuery.of(context).padding.bottom + 100,
-              ),
-              children: [
-                _buildUserProfileCard(context),
-                const SizedBox(height: 24),
-
-                _buildActionGroup(
-                  context,
-                  children: [
-                    _profileActionTile(
-                      context,
-                      icon: Icons.radar_rounded,
-                      iconColor: Colors.blueAccent,
-                      title: AppStrings.of(context, 'profile_model_card'),
-                      showTrailing: false,
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildAccentPresetPicker(context),
-                const SizedBox(height: 24),
-
-                Padding(
-                  padding: const EdgeInsets.only(left: 16, bottom: 8),
-                  child: Text(
-                    '核心操作',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ),
-                _buildActionGroup(
-                  context,
-                  children: [
-                    _profileActionTile(
-                      context,
-                      icon: Icons.watch_rounded,
-                      iconColor: Colors.teal,
-                      title: AppStrings.of(context, 'profile_device'),
-                      subtitle: deviceSubtitle,
-                      onTap: () => _openDeviceEntry(context),
-                    ),
-                    _buildDivider(context),
-                    _profileActionTile(
-                      context,
-                      icon: Icons.sync_rounded,
-                      iconColor: Colors.orange,
-                      title: AppStrings.of(context, 'profile_auth'),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const IntegrationsPage(),
-                        ),
-                      ),
-                    ),
-                    _buildDivider(context),
-                    _profileActionTile(
-                      context,
-                      icon: Icons.flag_rounded,
-                      iconColor: Colors.redAccent,
-                      title: AppStrings.of(context, 'goal_title'),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const GoalsPage()),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                Padding(
-                  padding: const EdgeInsets.only(left: 16, bottom: 8),
-                  child: Text(
-                    '洞察分析',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ),
-                _buildActionGroup(
-                  context,
-                  children: [
-                    _profileActionTile(
-                      context,
-                      icon: Icons.monitor_heart_rounded,
-                      iconColor: Colors.pinkAccent,
-                      title: AppStrings.of(context, 'emo_title'),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const EmotionPage()),
-                      ),
-                    ),
-                    _buildDivider(context),
-                    _profileActionTile(
-                      context,
-                      icon: Icons.auto_graph_rounded,
-                      iconColor: Colors.deepPurpleAccent,
-                      title: AppStrings.of(context, 'review_title'),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ReviewPage()),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+        child: ResponsivePageFrame(
+          child: ListView(
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              MediaQuery.of(context).padding.bottom + 100,
             ),
+            children: [
+              _buildUserProfileCard(context),
+              const SizedBox(height: 24),
+
+              _buildActionGroup(
+                context,
+                children: [
+                  _profileActionTile(
+                    context,
+                    icon: Icons.radar_rounded,
+                    iconColor: Colors.blueAccent,
+                    title: AppStrings.of(context, 'profile_model_card'),
+                    showTrailing: false,
+                    onTap: () {},
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildAccentPresetPicker(context),
+              const SizedBox(height: 24),
+
+              Padding(
+                padding: const EdgeInsets.only(left: 16, bottom: 8),
+                child: Text(
+                  '核心操作',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+              _buildActionGroup(
+                context,
+                children: [
+                  _profileActionTile(
+                    context,
+                    icon: Icons.watch_rounded,
+                    iconColor: Colors.teal,
+                    title: AppStrings.of(context, 'profile_device'),
+                    subtitle: deviceSubtitle,
+                    onTap: () => _openDeviceEntry(context),
+                  ),
+                  _buildDivider(context),
+                  _profileActionTile(
+                    context,
+                    icon: Icons.sync_rounded,
+                    iconColor: Colors.orange,
+                    title: AppStrings.of(context, 'profile_auth'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const IntegrationsPage(),
+                      ),
+                    ),
+                  ),
+                  _buildDivider(context),
+                  _profileActionTile(
+                    context,
+                    icon: Icons.flag_rounded,
+                    iconColor: Colors.redAccent,
+                    title: AppStrings.of(context, 'goal_title'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const GoalsPage()),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              Padding(
+                padding: const EdgeInsets.only(left: 16, bottom: 8),
+                child: Text(
+                  '洞察分析',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ),
+              _buildActionGroup(
+                context,
+                children: [
+                  _profileActionTile(
+                    context,
+                    icon: Icons.monitor_heart_rounded,
+                    iconColor: Colors.pinkAccent,
+                    title: AppStrings.of(context, 'emo_title'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const EmotionPage()),
+                    ),
+                  ),
+                  _buildDivider(context),
+                  _profileActionTile(
+                    context,
+                    icon: Icons.auto_graph_rounded,
+                    iconColor: Colors.deepPurpleAccent,
+                    title: AppStrings.of(context, 'review_title'),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ReviewPage()),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),

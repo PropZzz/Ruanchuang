@@ -13,6 +13,8 @@ import '../utils/schedule_occurrence.dart';
 import '../widgets/energy_status_card.dart';
 import '../widgets/focus_task_card.dart';
 import '../widgets/mini_timeline.dart';
+import '../widgets/responsive_card_grid.dart';
+import '../widgets/responsive_page_frame.dart';
 
 class FocusPage extends StatefulWidget {
   const FocusPage({super.key});
@@ -381,73 +383,54 @@ class _FocusPageState extends State<FocusPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final width = MediaQuery.sizeOf(context).width;
-    final isWide = width >= 1024;
-    final horizontalPadding = width >= 1200 ? 32.0 : 20.0;
     return Scaffold(
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
       appBar: null,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1320),
-                  child: ListView(
-                    padding: EdgeInsets.fromLTRB(
-                      horizontalPadding,
-                      22,
-                      horizontalPadding,
-                      40,
+              child: ResponsivePageFrame(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(0, 22, 0, 40),
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppStrings.of(context, 'focus_today_label'),
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                AppStrings.of(context, 'focus_today'),
+                                style: theme.textTheme.displaySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: AppStrings.of(context, 'btn_check'),
+                          onPressed: _loadTasks,
+                          icon: const Icon(Icons.refresh_rounded),
+                        ),
+                      ],
                     ),
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  AppStrings.of(context, 'focus_today_label'),
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  AppStrings.of(context, 'focus_today'),
-                                  style: theme.textTheme.displaySmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            tooltip: AppStrings.of(context, 'btn_check'),
-                            onPressed: _loadTasks,
-                            icon: const Icon(Icons.refresh_rounded),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-                      if (isWide)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(child: _buildCurrentTaskCard(context)),
-                            const SizedBox(width: 16),
-                            Expanded(child: _buildEnergyStatusCard()),
-                          ],
-                        )
-                      else ...[
+                    const SizedBox(height: 18),
+                    ResponsiveCardGrid(
+                      children: [
                         _buildCurrentTaskCard(context),
-                        const SizedBox(height: 12),
                         _buildEnergyStatusCard(),
                       ],
-                      const SizedBox(height: 12),
-                      _buildRhythmPanel(theme),
-                      const SizedBox(height: 12),
-                      _buildPlanningPanel(theme),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildRhythmPanel(theme),
+                    const SizedBox(height: 12),
+                    _buildPlanningPanel(theme),
+                  ],
                 ),
               ),
             ),
@@ -474,32 +457,27 @@ class _FocusPageState extends State<FocusPage> {
           ],
         ),
         const SizedBox(height: 12),
-        Row(
+        ResponsiveCardGrid(
           children: [
-            Expanded(
-              child: _buildSummaryTile(
-                theme,
-                Icons.route_outlined,
-                AppStrings.of(context, 'focus_rescue_title'),
-                conflictCount > 0
-                    ? '${AppStrings.of(context, 'focus_attention')} $conflictCount'
-                    : AppStrings.of(context, 'focus_clear'),
-                conflictCount > 0
-                    ? theme.colorScheme.error
-                    : theme.colorScheme.tertiary,
-              ),
+            _buildSummaryTile(
+              theme,
+              Icons.route_outlined,
+              AppStrings.of(context, 'focus_rescue_title'),
+              conflictCount > 0
+                  ? '${AppStrings.of(context, 'focus_attention')} $conflictCount'
+                  : AppStrings.of(context, 'focus_clear'),
+              conflictCount > 0
+                  ? theme.colorScheme.error
+                  : theme.colorScheme.tertiary,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildSummaryTile(
-                theme,
-                Icons.people_outline_rounded,
-                AppStrings.of(context, 'focus_team_window'),
-                teamCount > 0
-                    ? '15:00 · $teamCount ${AppStrings.of(context, 'focus_people_free')}'
-                    : AppStrings.of(context, 'focus_no_window'),
-                theme.colorScheme.primary,
-              ),
+            _buildSummaryTile(
+              theme,
+              Icons.people_outline_rounded,
+              AppStrings.of(context, 'focus_team_window'),
+              teamCount > 0
+                  ? '15:00 · $teamCount ${AppStrings.of(context, 'focus_people_free')}'
+                  : AppStrings.of(context, 'focus_no_window'),
+              theme.colorScheme.primary,
             ),
           ],
         ),

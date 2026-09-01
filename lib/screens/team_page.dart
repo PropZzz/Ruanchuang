@@ -6,6 +6,8 @@ import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
+import '../widgets/responsive_card_grid.dart';
+import '../widgets/responsive_page_frame.dart';
 
 class TeamPage extends StatefulWidget {
   const TeamPage({super.key});
@@ -652,106 +654,65 @@ class _TeamPageState extends State<TeamPage> {
           : Container(
               color: AppWindowTones.canvas(context, AppWindowTone.neutral),
               child: SafeArea(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1400),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isWide = constraints.maxWidth >= 1100;
-                        final bottomPadding =
-                            MediaQuery.of(context).padding.bottom + 100;
-                        return ListView(
-                          physics: const BouncingScrollPhysics(),
-                          padding: EdgeInsets.fromLTRB(
-                            16,
-                            16,
-                            16,
-                            bottomPadding,
-                          ),
-                          children: [
-                            Card(
-                              elevation: 0,
-                              color: AppWindowTones.surface(
-                                context,
-                                AppWindowTone.team,
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Wrap(
-                                  spacing: 10,
-                                  runSpacing: 10,
-                                  children: [
-                                    _TeamKpiChip(
-                                      icon: Icons.people_outline,
-                                      label: kpiMembersLabel,
-                                      value: _calendars.length.toString(),
-                                    ),
-                                    _TeamKpiChip(
-                                      icon: Icons.stars_outlined,
-                                      label: kpiGoldenLabel,
-                                      value: _golden.length.toString(),
-                                    ),
-                                    _TeamKpiChip(
-                                      icon: Icons.error_outline,
-                                      label: kpiConflictsLabel,
-                                      value: _conflicts.length.toString(),
-                                    ),
-                                  ],
-                                ),
+                child: ResponsivePageFrame(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final bottomPadding =
+                          MediaQuery.of(context).padding.bottom + 100;
+                      return ListView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
+                        children: [
+                          Card(
+                            elevation: 0,
+                            color: AppWindowTones.surface(
+                              context,
+                              AppWindowTone.team,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: [
+                                  _TeamKpiChip(
+                                    icon: Icons.people_outline,
+                                    label: kpiMembersLabel,
+                                    value: _calendars.length.toString(),
+                                  ),
+                                  _TeamKpiChip(
+                                    icon: Icons.stars_outlined,
+                                    label: kpiGoldenLabel,
+                                    value: _golden.length.toString(),
+                                  ),
+                                  _TeamKpiChip(
+                                    icon: Icons.error_outline,
+                                    label: kpiConflictsLabel,
+                                    value: _conflicts.length.toString(),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            _buildProgressPanel(context, isDark),
-                            const SizedBox(height: 12),
-                            if (isWide)
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    flex: 5,
-                                    child: _buildRecommendationPanel(
-                                      context,
-                                      isDark,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    flex: 7,
-                                    child: _buildMergedSchedulePanel(
-                                      context,
-                                      isDark,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            else ...[
+                          ),
+                          const SizedBox(height: 12),
+                          _buildProgressPanel(context, isDark),
+                          const SizedBox(height: 12),
+                          ResponsiveCardGrid(
+                            children: [
                               _buildRecommendationPanel(context, isDark),
-                              const SizedBox(height: 12),
                               _buildMergedSchedulePanel(context, isDark),
                             ],
-                            const SizedBox(height: 12),
-                            if (isWide)
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: _buildConflictPanel(context, isDark),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: _buildMemberPanel(context, isDark),
-                                  ),
-                                ],
-                              )
-                            else ...[
+                          ),
+                          const SizedBox(height: 12),
+                          ResponsiveCardGrid(
+                            children: [
                               _buildConflictPanel(context, isDark),
-                              const SizedBox(height: 12),
                               _buildMemberPanel(context, isDark),
                             ],
-                          ],
-                        );
-                      },
-                    ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),

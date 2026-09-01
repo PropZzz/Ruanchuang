@@ -8,6 +8,7 @@ import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 import '../widgets/press_scale.dart';
+import '../widgets/responsive_page_frame.dart';
 
 class MicroTaskPage extends StatefulWidget {
   const MicroTaskPage({super.key});
@@ -1096,7 +1097,13 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                _buildHeaderCard(doneCount, totalPoints, completedPoints),
+                ResponsivePageFrame(
+                  child: _buildHeaderCard(
+                    doneCount,
+                    totalPoints,
+                    completedPoints,
+                  ),
+                ),
                 if (_batchMode) _buildTagQuickSelect(),
                 Expanded(
                   child: ListView.builder(
