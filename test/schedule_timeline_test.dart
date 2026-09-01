@@ -166,4 +166,80 @@ void main() {
     expect(find.text('Planning'), findsOneWidget);
     expect(find.text('15m'), findsOneWidget);
   });
+
+  testWidgets('gantt has a dedicated label lane and skips late bars', (
+    tester,
+  ) async {
+    final lateEntry = ScheduleEntry(
+      id: 'late-1',
+      day: day,
+      title: 'Late task',
+      tag: 'Planning',
+      height: 80,
+      color: Colors.teal,
+      time: const TimeOfDay(hour: 20, minute: 0),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ScheduleTimeline(
+            view: ScheduleTimelineView.gantt,
+            selectedDay: day,
+            entries: [lateEntry],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('schedule-timeline-gantt-label-lane-0')),
+      findsOneWidget,
+    );
+    expect(find.text('Late task'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('schedule-timeline-gantt-bar-late-1')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('localization builders are used in day and month summaries', (
+    tester,
+  ) async {
+    final entry = ScheduleEntry(
+      id: 'localized-1',
+      day: day,
+      title: 'Raw title',
+      tag: 'Raw tag',
+      height: 80,
+      color: Colors.teal,
+      time: const TimeOfDay(hour: 9, minute: 0),
+    );
+    Future<void> pumpView(ScheduleTimelineView view) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: Scaffold(
+            body: ScheduleTimeline(
+              view: view,
+              selectedDay: day,
+              entries: [entry],
+              visibleFields: const {ScheduleTimelineField.tag},
+              titleBuilder: (_, e) => 'Localized ${e.title}',
+              tagBuilder: (_, tag) => 'Localized $tag',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await pumpView(ScheduleTimelineView.day);
+    expect(find.text('Localized Raw title'), findsOneWidget);
+    expect(find.text('Localized Raw tag'), findsOneWidget);
+    await pumpView(ScheduleTimelineView.month);
+    expect(find.text('Localized Raw title'), findsOneWidget);
+    expect(find.text('Localized Raw tag'), findsOneWidget);
+  });
 }

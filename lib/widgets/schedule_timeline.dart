@@ -26,6 +26,9 @@ class ScheduleTimeline extends StatelessWidget {
     this.statusByTaskId = const {},
     this.startHour = 8,
     this.endHour = 20,
+    this.titleBuilder,
+    this.tagBuilder,
+    this.statusBuilder,
     this.onSelectDay,
     this.onDelete,
     this.onEntryTap,
@@ -38,11 +41,15 @@ class ScheduleTimeline extends StatelessWidget {
   final Map<String, String> statusByTaskId;
   final int startHour;
   final int endHour;
+  final String Function(BuildContext, ScheduleEntry)? titleBuilder;
+  final String Function(BuildContext, String)? tagBuilder;
+  final String Function(BuildContext, String)? statusBuilder;
   final ValueChanged<DateTime>? onSelectDay;
   final ValueChanged<ScheduleEntry>? onDelete;
   final ValueChanged<ScheduleEntry>? onEntryTap;
 
   static const double _gutterWidth = 68;
+  static const double _labelLaneWidth = 160;
   static const double _minTrackWidth = 760;
   static const double _hourHeight = 80;
 
@@ -214,9 +221,10 @@ class ScheduleTimeline extends StatelessWidget {
       theme.colorScheme.surface,
     );
     final status = entry.id == null ? null : statusByTaskId[entry.id!];
+    final title = titleBuilder?.call(context, entry) ?? entry.title;
     return Semantics(
       container: true,
-      label: entry.title,
+      label: title,
       button: onEntryTap != null,
       child: Material(
         color: surface,
@@ -261,7 +269,7 @@ class ScheduleTimeline extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        entry.title,
+                        title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w700),
@@ -294,11 +302,11 @@ class ScheduleTimeline extends StatelessWidget {
     }
     if (visibleFields.contains(ScheduleTimelineField.tag) &&
         entry.tag.isNotEmpty) {
-      result.add(_metaText(entry.tag));
+      result.add(_metaText(tagBuilder?.call(context, entry.tag) ?? entry.tag));
     }
     if (visibleFields.contains(ScheduleTimelineField.status) &&
         status != null) {
-      result.add(_metaText(status));
+      result.add(_metaText(statusBuilder?.call(context, status) ?? status));
     }
     if (visibleFields.contains(ScheduleTimelineField.reminder) &&
         entry.reminderMinutesBefore > 0) {
@@ -318,6 +326,12 @@ class ScheduleTimeline extends StatelessWidget {
     maxLines: 1,
     overflow: TextOverflow.ellipsis,
   );
+
+  String _durationLabel(ScheduleEntry entry) {
+    final minutes = math.max(1, (entry.height / 80.0 * 60.0).round());
+    if (minutes >= 60 && minutes % 60 == 0) return '${minutes ~/ 60}h';
+    return '${minutes}m';
+  }
 
   Widget _buildWeek(BuildContext context) {
     final weekStart = startOfWeek(selectedDay);
@@ -507,7 +521,7 @@ class ScheduleTimeline extends StatelessWidget {
               if (firstEntry != null) ...[
                 const SizedBox(height: 4),
                 Text(
-                  firstEntry.title,
+                  titleBuilder?.call(context, firstEntry) ?? firstEntry.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11),
@@ -552,12 +566,13 @@ class ScheduleTimeline extends StatelessWidget {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SizedBox(
-          width: _gutterWidth + _minTrackWidth,
+          width: _gutterWidth + _labelLaneWidth + _minTrackWidth,
           child: Column(
             children: [
               Row(
                 children: [
                   const SizedBox(width: _gutterWidth, child: Text('日程')),
+                  const SizedBox(width: _labelLaneWidth, child: Text('任务')),
                   ConstrainedBox(
                     key: const ValueKey('schedule-timeline-gantt-track'),
                     constraints: const BoxConstraints(minWidth: _minTrackWidth),
@@ -610,6 +625,74 @@ class ScheduleTimeline extends StatelessWidget {
                         ),
                       ),
                       SizedBox(
+                        key: ValueKey(
+                          'schedule-timeline-gantt-label-lane-$index',
+                        ),
+                        width: _labelLaneWidth,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              height: 24,
+                              child: Text(
+                                '${MaterialLocalizations.of(context).narrowWeekdays[day.weekday % 7]} ${day.month}/${day.day}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: theme.colorScheme.outline,
+                                ),
+                              ),
+                            ),
+                            ...dayEntries.map(
+                              (entry) => SizedBox(
+                                height: 100,
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    8,
+                                    4,
+                                    8,
+                                    4,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        titleBuilder?.call(context, entry) ??
+                                            entry.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${entry.time.format(context)} / ${_durationLabel(entry)}',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: theme.colorScheme.outline,
+                                        ),
+                                      ),
+                                      Wrap(
+                                        spacing: 5,
+                                        runSpacing: 1,
+                                        children: _metadata(
+                                          context,
+                                          entry,
+                                          entry.id == null
+                                              ? null
+                                              : statusByTaskId[entry.id!],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(
                         width: _minTrackWidth,
                         child: Stack(
                           children: [
@@ -639,7 +722,7 @@ class ScheduleTimeline extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                            ...dayEntries.asMap().entries.map((entryItem) {
+                            ...dayEntries.asMap().entries.expand((entryItem) {
                               final entryIndex = entryItem.key;
                               final entry = entryItem.value;
                               final start =
@@ -653,22 +736,28 @@ class ScheduleTimeline extends StatelessWidget {
                               );
                               final left =
                                   start / totalMinutes * _minTrackWidth;
-                              final width = math.max(
-                                120.0,
-                                math.min(
-                                  _minTrackWidth - left,
-                                  duration / totalMinutes * _minTrackWidth,
-                                ),
+                              final remaining = math.max(
+                                0.0,
+                                _minTrackWidth - left,
                               );
-                              return Positioned(
-                                key: ValueKey(
-                                  'schedule-timeline-gantt-bar-${entry.id ?? entry.title}',
-                                ),
-                                left: left,
-                                top: 24.0 + entryIndex * 100.0,
-                                width: width,
-                                child: _buildEvent(context, entry),
+                              if (remaining <= 0) return <Widget>[];
+                              final desiredWidth =
+                                  duration / totalMinutes * _minTrackWidth;
+                              final width = math.min(
+                                remaining,
+                                math.max(48.0, desiredWidth),
                               );
+                              return <Widget>[
+                                Positioned(
+                                  key: ValueKey(
+                                    'schedule-timeline-gantt-bar-${entry.id ?? entry.title}',
+                                  ),
+                                  left: left,
+                                  top: 24.0 + entryIndex * 100.0,
+                                  width: width,
+                                  child: _buildEvent(context, entry),
+                                ),
+                              ];
                             }),
                           ],
                         ),

@@ -1194,6 +1194,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       statusByTaskId: statusByTaskId,
       startHour: _startHour,
       endHour: _endHour,
+      titleBuilder: (context, entry) =>
+          _scheduleTitleLabel(context, entry.title),
+      tagBuilder: _tagLabel,
+      statusBuilder: (context, status) => status,
       onSelectDay: _jumpToDay,
       onDelete: _mode == _CalendarMode.manual ? _showDeleteDialog : null,
     );
