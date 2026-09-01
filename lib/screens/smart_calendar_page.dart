@@ -19,6 +19,7 @@ import '../widgets/emotion_quick_checkin_card.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/rescue_summary.dart';
 import '../widgets/press_scale.dart';
+import '../widgets/schedule_timeline.dart';
 import 'emotion_page.dart';
 import 'goals_page.dart';
 import 'integrations_page.dart';
@@ -1162,18 +1163,44 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     List<ScheduleEntry> allEntries,
     List<ScheduleEntry> dayEntries,
   ) {
-    switch (_view) {
-      case _CalendarView.day:
-        return _buildDayView(context, dayEntries);
-      case _CalendarView.week:
-        return _buildWeekView(context, allEntries);
-      case _CalendarView.month:
-        return _buildMonthView(context, allEntries);
-      case _CalendarView.gantt:
-        return _buildGanttView(context, allEntries);
+    final statusByTaskId = <String, String>{};
+    for (final entry in allEntries) {
+      final id = entry.id;
+      if (id == null || id.isEmpty) continue;
+      final status = _statusByTaskId[id];
+      if (status != null) statusByTaskId[id] = _statusLabel(status);
     }
+
+    return ScheduleTimeline(
+      view: switch (_view) {
+        _CalendarView.day => ScheduleTimelineView.day,
+        _CalendarView.week => ScheduleTimelineView.week,
+        _CalendarView.month => ScheduleTimelineView.month,
+        _CalendarView.gantt => ScheduleTimelineView.gantt,
+      },
+      selectedDay: _selectedDay,
+      entries: allEntries,
+      visibleFields: _visibleFields
+          .map(
+            (field) => switch (field) {
+              _CalendarField.time => ScheduleTimelineField.time,
+              _CalendarField.tag => ScheduleTimelineField.tag,
+              _CalendarField.status => ScheduleTimelineField.status,
+              _CalendarField.reminder => ScheduleTimelineField.reminder,
+              _CalendarField.goal => ScheduleTimelineField.goal,
+            },
+          )
+          .toSet(),
+      statusByTaskId: statusByTaskId,
+      startHour: _startHour,
+      endHour: _endHour,
+      onSelectDay: _jumpToDay,
+      onDelete: _mode == _CalendarMode.manual ? _showDeleteDialog : null,
+    );
   }
 
+  // Kept as a compatibility reference while ScheduleTimeline owns rendering.
+  // ignore: unused_element
   Widget _buildDayView(BuildContext context, List<ScheduleEntry> dayEntries) {
     final theme = Theme.of(context);
     final bottomPadding = MediaQuery.of(context).padding.bottom + 100;
@@ -1262,6 +1289,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildWeekView(BuildContext context, List<ScheduleEntry> allEntries) {
     final weekStart = startOfWeek(_selectedDay);
     final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
@@ -1676,6 +1704,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildMonthView(BuildContext context, List<ScheduleEntry> allEntries) {
     final monthAnchor = DateTime(_selectedDay.year, _selectedDay.month, 1);
     final monthEntries = _entriesForMonth(monthAnchor, allEntries);
@@ -2004,6 +2033,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildGanttView(BuildContext context, List<ScheduleEntry> allEntries) {
     final weekStart = startOfWeek(_selectedDay);
     final days = List.generate(7, (i) => weekStart.add(Duration(days: i)));
