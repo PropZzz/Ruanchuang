@@ -9,7 +9,6 @@ import '../services/app_services.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
-import '../widgets/workbench_surface.dart';
 import 'bluetooth_page.dart';
 import 'debug/diagnostics_page.dart';
 import 'emotion_page.dart';
@@ -162,17 +161,10 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-<<<<<<< HEAD
     final deviceSubtitle = _deviceSubtitle();
 
     return Scaffold(
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
-=======
-    final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
-    final deviceSubtitle = _deviceSubtitle();
-
-    return Scaffold(
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
       appBar: AppBar(
         title: Text(
           AppStrings.of(context, 'profile_title'),
@@ -205,14 +197,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 _buildUserProfileCard(context),
                 const SizedBox(height: 24),
 
-                _buildHubSection(
+                _buildActionGroup(
                   context,
-                  title: isZh ? '账户' : 'Account',
                   children: [
                     _profileActionTile(
                       context,
                       icon: Icons.radar_rounded,
-                      iconColor: theme.colorScheme.primary,
+                      iconColor: Colors.blueAccent,
                       title: AppStrings.of(context, 'profile_model_card'),
                       showTrailing: false,
                       onTap: () {},
@@ -223,51 +214,24 @@ class _ProfilePageState extends State<ProfilePage> {
                 _buildAccentPresetPicker(context),
                 const SizedBox(height: 24),
 
-                _buildHubSection(
-                  context,
-                  title: isZh ? '规划' : 'Planning',
-                  children: [
-                    _profileActionTile(
-                      context,
-                      icon: Icons.monitor_heart_rounded,
-                      iconColor: theme.colorScheme.tertiary,
-                      title: AppStrings.of(context, 'emo_title'),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const EmotionPage()),
-                      ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, bottom: 8),
+                  child: Text(
+                    '核心操作',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
-                    _buildDivider(context),
-                    _profileActionTile(
-                      context,
-                      icon: Icons.flag_rounded,
-                      iconColor: theme.colorScheme.secondary,
-                      title: AppStrings.of(context, 'goal_title'),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const GoalsPage()),
-                      ),
-                    ),
-                    _buildDivider(context),
-                    _profileActionTile(
-                      context,
-                      icon: Icons.auto_graph_rounded,
-                      iconColor: theme.colorScheme.primary,
-                      title: isZh ? '复盘' : 'Review',
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ReviewPage()),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 24),
-
-                _buildHubSection(
+                _buildActionGroup(
                   context,
-                  title: isZh ? '系统' : 'System',
                   children: [
                     _profileActionTile(
                       context,
                       icon: Icons.watch_rounded,
-                      iconColor: theme.colorScheme.secondary,
+                      iconColor: Colors.teal,
                       title: AppStrings.of(context, 'profile_device'),
                       subtitle: deviceSubtitle,
                       onTap: () => _openDeviceEntry(context),
@@ -276,7 +240,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     _profileActionTile(
                       context,
                       icon: Icons.sync_rounded,
-                      iconColor: theme.colorScheme.tertiary,
+                      iconColor: Colors.orange,
                       title: AppStrings.of(context, 'profile_auth'),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
@@ -287,22 +251,49 @@ class _ProfilePageState extends State<ProfilePage> {
                     _buildDivider(context),
                     _profileActionTile(
                       context,
-                      icon: Icons.bug_report_rounded,
-                      iconColor: theme.colorScheme.onSurfaceVariant,
-                      title: AppStrings.of(context, 'diag_title'),
+                      icon: Icons.flag_rounded,
+                      iconColor: Colors.redAccent,
+                      title: AppStrings.of(context, 'goal_title'),
                       onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const DiagnosticsPage(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const GoalsPage()),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                Padding(
+                  padding: const EdgeInsets.only(left: 16, bottom: 8),
+                  child: Text(
+                    '洞察分析',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+                _buildActionGroup(
+                  context,
+                  children: [
+                    _profileActionTile(
+                      context,
+                      icon: Icons.monitor_heart_rounded,
+                      iconColor: Colors.pinkAccent,
+                      title: AppStrings.of(context, 'emo_title'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const EmotionPage()),
                       ),
                     ),
                     _buildDivider(context),
                     _profileActionTile(
                       context,
-                      icon: Icons.settings_outlined,
-                      iconColor: theme.colorScheme.onSurfaceVariant,
-                      title: isZh ? '设置' : 'Settings',
-                      onTap: () => _openSettingsPanel(context),
+                      icon: Icons.auto_graph_rounded,
+                      iconColor: Colors.deepPurpleAccent,
+                      title: AppStrings.of(context, 'review_title'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ReviewPage()),
+                      ),
                     ),
                   ],
                 ),
@@ -314,7 +305,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-<<<<<<< HEAD
   Widget _buildAccentPresetPicker(BuildContext context) {
     final presets = [
       _AccentPreset(
@@ -362,17 +352,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ],
         ),
       ],
-=======
-  Widget _buildHubSection(
-    BuildContext context, {
-    required String title,
-    required List<Widget> children,
-  }) {
-    return WorkbenchSurface(
-      title: title,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Column(children: children),
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
     );
   }
 

@@ -7,11 +7,7 @@ import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
-<<<<<<< HEAD
 import '../widgets/press_scale.dart';
-=======
-import '../widgets/workbench_surface.dart';
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
 
 class MicroTaskPage extends StatefulWidget {
   const MicroTaskPage({super.key});
@@ -924,14 +920,13 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
   }
 
   Widget _buildPriorityBadge(MicroTask task) {
-    final scheme = Theme.of(context).colorScheme;
     final p = task.priority.clamp(1, 5);
     final colors = [
-      scheme.onSurfaceVariant,
-      scheme.primary,
-      scheme.secondary,
-      scheme.tertiary,
-      scheme.error,
+      Colors.grey,
+      Colors.blue,
+      Colors.teal,
+      Colors.orange,
+      Colors.red,
     ];
     final color = colors[p - 1];
 
@@ -953,7 +948,6 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
   }
 
   Widget _buildHeaderCard(int doneCount, int totalPoints, int completedPoints) {
-<<<<<<< HEAD
     final theme = Theme.of(context);
 
     return Container(
@@ -1053,26 +1047,6 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           ),
         ),
       ],
-=======
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: WorkbenchSurface(
-        title: AppStrings.of(context, 'micro_ai_suggestion'),
-        trailing: ElevatedButton.icon(
-          onPressed: _fillQuickTasks,
-          icon: const Icon(Icons.auto_awesome, size: 16),
-          label: const Text('AI 填充'),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            WorkbenchMetric(label: '已完成', value: '$doneCount/${_tasks.length}'),
-            WorkbenchMetric(label: '已获积分', value: '$completedPoints'),
-            WorkbenchMetric(label: '总计积分', value: '$totalPoints'),
-          ],
-        ),
-      ),
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
     );
   }
 
@@ -1090,12 +1064,14 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     final completedPoints = _completedPoints();
 
     return Scaffold(
-<<<<<<< HEAD
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
-=======
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
       appBar: AppBar(
-        title: Text(AppStrings.of(context, 'micro_title')),
+        title: Text(
+          AppStrings.of(context, 'micro_title'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -1138,7 +1114,6 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
             ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _batchMode
-<<<<<<< HEAD
           ? _buildBatchActionBar(selectedCount, selectedPoints)
           : PressScale(
               child: FloatingActionButton.extended(
@@ -1151,27 +1126,14 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                 icon: const Icon(Icons.add_rounded),
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
-=======
-          ? (selectedCount > 0
-                ? _buildBatchActionBar(selectedCount, selectedPoints)
-                : null)
-          : FloatingActionButton.extended(
-              heroTag: 'micro-task-add-fab',
-              onPressed: () => _showAddMicroTaskDialog(context),
-              label: Text(
-                AppStrings.of(context, 'micro_btn_add'),
-                style: const TextStyle(fontWeight: FontWeight.bold),
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
               ),
             ),
     );
   }
 
   Widget _buildBatchActionBar(int count, int points) {
-    final scheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-<<<<<<< HEAD
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         decoration: BoxDecoration(
@@ -1235,62 +1197,6 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
             ),
           ],
         ),
-=======
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: scheme.outline),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '已选 $count 项',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-              Text(
-                '可获 +$points ${_pointsUnit(context)}',
-                style: TextStyle(
-                  color: scheme.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(Icons.delete_outline, color: scheme.error),
-                onPressed: count == 0 ? null : _batchDelete,
-              ),
-              const SizedBox(width: 4),
-              ElevatedButton(
-                onPressed: count == 0 ? null : _batchSchedule,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: scheme.tertiary,
-                  foregroundColor: scheme.onTertiary,
-                ),
-                child: const Text('集中安排'),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: count == 0 ? null : _batchMarkComplete,
-                child: const Text('完成'),
-              ),
-            ],
-          ),
-        ],
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
       ),
     );
   }
@@ -1298,30 +1204,43 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
   Widget _buildMicroTaskBubble(MicroTask task) {
     final selected = _selected.contains(_taskKey(task));
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: task.done
-            ? scheme.onSurfaceVariant.withValues(alpha: 0.05)
-            : scheme.surface,
-        borderRadius: BorderRadius.circular(8),
+            ? (isDark
+                  ? Colors.white.withValues(alpha: 0.02)
+                  : Colors.grey.withValues(alpha: 0.05))
+            : (isDark ? const Color(0xFF1E1E1E) : Colors.white),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: selected ? scheme.primary : scheme.outline,
+          color: selected
+              ? theme.colorScheme.primary
+              : (isDark ? Colors.white10 : Colors.black12),
           width: selected ? 2 : 1,
         ),
+        boxShadow: task.done || isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(20),
           onTap: _batchMode ? () => _toggleSelected(task) : null,
           onLongPress: () {
             if (!_batchMode) _confirmDeleteOne(task);
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 if (_batchMode) ...[
@@ -1331,7 +1250,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    activeColor: scheme.primary,
+                    activeColor: theme.colorScheme.primary,
                   ),
                   const SizedBox(width: 8),
                 ],
@@ -1342,23 +1261,25 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                     if (!_batchMode) _setDone(task, !task.done);
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: task.done
-                          ? scheme.secondary.withValues(alpha: 0.1)
-                          : scheme.primary.withValues(alpha: 0.1),
+                          ? Colors.green.withValues(alpha: 0.1)
+                          : theme.colorScheme.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       task.done
                           ? Icons.check_circle_rounded
                           : Icons.radio_button_unchecked_rounded,
-                      color: task.done ? scheme.secondary : scheme.primary,
-                      size: 24,
+                      color: task.done
+                          ? Colors.green
+                          : theme.colorScheme.primary,
+                      size: 26,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
 
                 // 中间信息区
                 Expanded(
@@ -1368,14 +1289,14 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                       Text(
                         task.title,
                         style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                           decoration: task.done
                               ? TextDecoration.lineThrough
                               : null,
                           color: task.done
-                              ? scheme.onSurfaceVariant
-                              : scheme.onSurface,
+                              ? theme.colorScheme.onSurfaceVariant
+                              : theme.colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -1391,10 +1312,10 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: scheme.onSurfaceVariant.withValues(
-                                alpha: 0.08,
-                              ),
-                              borderRadius: BorderRadius.circular(6),
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -1402,7 +1323,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                                 Icon(
                                   Icons.access_time_rounded,
                                   size: 12,
-                                  color: scheme.onSurfaceVariant,
+                                  color: theme.colorScheme.onSurfaceVariant,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
@@ -1410,7 +1331,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: scheme.onSurfaceVariant,
+                                    color: theme.colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ],
@@ -1422,10 +1343,10 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: scheme.onSurfaceVariant.withValues(
-                                alpha: 0.08,
-                              ),
-                              borderRadius: BorderRadius.circular(6),
+                              color: isDark
+                                  ? Colors.white10
+                                  : Colors.black.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -1433,7 +1354,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                                 Icon(
                                   Icons.tag_rounded,
                                   size: 12,
-                                  color: scheme.onSurfaceVariant,
+                                  color: theme.colorScheme.onSurfaceVariant,
                                 ),
                                 const SizedBox(width: 2),
                                 Text(
@@ -1441,7 +1362,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: scheme.onSurfaceVariant,
+                                    color: theme.colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ],
@@ -1461,8 +1382,10 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                       Text(
                         '+${_pointsFor(task)} ${_pointsUnit(context)}',
                         style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: task.done ? scheme.secondary : scheme.primary,
+                          fontWeight: FontWeight.w900,
+                          color: task.done
+                              ? Colors.green
+                              : theme.colorScheme.primary,
                           fontSize: 13,
                         ),
                       ),
@@ -1470,10 +1393,10 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                       Row(
                         children: [
                           IconButton(
-                            icon: Icon(
+                            icon: const Icon(
                               Icons.edit_rounded,
                               size: 20,
-                              color: scheme.onSurfaceVariant,
+                              color: Colors.grey,
                             ),
                             onPressed: () =>
                                 _showEditMicroTaskDialog(context, task),
@@ -1482,10 +1405,10 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                           ),
                           const SizedBox(width: 12),
                           IconButton(
-                            icon: Icon(
+                            icon: const Icon(
                               Icons.delete_outline_rounded,
                               size: 20,
-                              color: scheme.error,
+                              color: Colors.redAccent,
                             ),
                             onPressed: () => _confirmDeleteOne(task),
                             constraints: const BoxConstraints(),

@@ -16,13 +16,9 @@ import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 import '../widgets/emotion_quick_checkin_card.dart';
-<<<<<<< HEAD
 import '../widgets/glass_surface.dart';
 import '../widgets/rescue_summary.dart';
 import '../widgets/press_scale.dart';
-=======
-import '../widgets/rescue_plan_comparison.dart';
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
 import 'emotion_page.dart';
 import 'goals_page.dart';
 import 'integrations_page.dart';
@@ -392,13 +388,25 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
       final selected = await showDialog<ScheduleRescueOption>(
         context: context,
-        builder: (ctx) => RescuePlanComparison(
-          options: options,
-          baseline: List<ScheduleEntry>.from(_blocks),
-          title: AppStrings.of(ctx, 'calendar_rescue_title'),
-          cancelLabel: AppStrings.of(ctx, 'calendar_rescue_cancel'),
-          onCancel: () => Navigator.of(ctx).pop(),
-          onSelect: (option) => Navigator.of(ctx).pop(option),
+        builder: (ctx) => AlertDialog(
+          title: Text(AppStrings.of(ctx, 'calendar_rescue_title')),
+          content: ConstrainedBox(
+            constraints: MobileFeedback.dialogConstraints(ctx, maxWidth: 560),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: options
+                    .map((option) => _buildRescueOptionTile(ctx, option))
+                    .toList(),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(AppStrings.of(ctx, 'calendar_rescue_cancel')),
+            ),
+          ],
         ),
       );
 
@@ -466,6 +474,36 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         stackTrace: st,
       );
     }
+  }
+
+  Widget _buildRescueOptionTile(
+    BuildContext context,
+    ScheduleRescueOption option,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final icon = switch (option.strategy) {
+      RescueStrategy.protectDeadline => Icons.flag_outlined,
+      RescueStrategy.protectRecovery => Icons.self_improvement_outlined,
+      RescueStrategy.minimizeChanges => Icons.tune_outlined,
+    };
+    final metrics = [
+      '预计移动 ${option.movedEntryCount} 项',
+      if (option.recoveryMinutes > 0) '恢复缓冲 ${option.recoveryMinutes} 分钟',
+      if (option.plan.issues.isNotEmpty) '仍有 ${option.plan.issues.length} 项需关注',
+    ].join(' · ');
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        leading: Icon(icon, color: scheme.primary),
+        title: Text(option.title),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text('${option.rationale}\n$metrics\n${option.tradeoff}'),
+        ),
+        onTap: () => Navigator.of(context).pop(option),
+      ),
+    );
   }
 
   Future<void> _recordRescueEvent({
@@ -569,7 +607,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     });
   }
 
-<<<<<<< HEAD
   Widget _buildTodayStatusStrip(
     BuildContext context,
     List<ScheduleEntry> dayEntries,
@@ -620,55 +657,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             visualDensity: VisualDensity.compact,
           ),
         ],
-=======
-  Widget _buildRescueBanner(BuildContext context) {
-    final option = _acceptedRescue;
-    if (option == null) return const SizedBox.shrink();
-    final scheme = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: scheme.secondary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: scheme.secondary.withValues(alpha: 0.4)),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.route_outlined, size: 20, color: scheme.secondary),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '已采用：${option.title}',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    '本次调整移动 ${option.movedEntryCount} 项日程',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            TextButton.icon(
-              onPressed: _isLoading ? null : _undoRescue,
-              icon: const Icon(Icons.undo, size: 18),
-              label: Text(AppStrings.of(context, 'calendar_rescue_undo')),
-            ),
-          ],
-        ),
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
       ),
     );
   }

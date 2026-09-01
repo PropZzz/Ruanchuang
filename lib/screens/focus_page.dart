@@ -5,22 +5,14 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/app_services.dart';
 import '../services/microtask_crystals/microtask_crystal_engine.dart';
-<<<<<<< HEAD
 import '../theme/app_theme.dart';
-=======
-import '../ui/app_theme.dart';
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
 import '../utils/app_strings.dart';
 import '../utils/helpers.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
-<<<<<<< HEAD
 import '../widgets/energy_status_card.dart';
 import '../widgets/focus_task_card.dart';
 import '../widgets/mini_timeline.dart';
-=======
-import '../widgets/workbench_surface.dart';
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
 
 class FocusPage extends StatefulWidget {
   const FocusPage({super.key});
@@ -388,15 +380,10 @@ class _FocusPageState extends State<FocusPage> {
 
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
     final theme = Theme.of(context);
     final width = MediaQuery.sizeOf(context).width;
     final isWide = width >= 1024;
     final horizontalPadding = width >= 1200 ? 32.0 : 20.0;
-=======
-    final isWide = MediaQuery.of(context).size.width >= AppTheme.shellBreakpoint;
-    final horizontalPadding = isWide ? 28.0 : 16.0;
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
     return Scaffold(
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
       appBar: null,
@@ -406,7 +393,6 @@ class _FocusPageState extends State<FocusPage> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1320),
-<<<<<<< HEAD
                   child: ListView(
                     padding: EdgeInsets.fromLTRB(
                       horizontalPadding,
@@ -461,72 +447,6 @@ class _FocusPageState extends State<FocusPage> {
                       const SizedBox(height: 12),
                       _buildPlanningPanel(theme),
                     ],
-=======
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      horizontalPadding,
-                      12,
-                      horizontalPadding,
-                      16,
-                    ),
-                    child: isWide
-                        // 修复：添加 crossAxisAlignment.stretch 给双列表提供安全边界高度，防止 Web 抛出无限高度异常
-                        ? Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(
-                                flex: 7,
-                                child: ListView(
-                                  padding: EdgeInsets.only(
-                                    bottom:
-                                        MediaQuery.of(
-                                          context,
-                                        ).padding.bottom +
-                                        100,
-                                  ),
-                                  children: [
-                                    _buildEnergyStatusCard(),
-                                    const SizedBox(height: 18),
-                                    _buildCurrentTaskCard(context),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 18),
-                              Expanded(
-                                flex: 5,
-                                child: ListView(
-                                  padding: EdgeInsets.only(
-                                    bottom:
-                                        MediaQuery.of(
-                                          context,
-                                        ).padding.bottom +
-                                        100,
-                                  ),
-                                  children: [
-                                    _buildNextTasksSection(),
-                                    const SizedBox(height: 18),
-                                    _buildCrystalSection(),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          )
-                        : ListView(
-                            padding: EdgeInsets.only(
-                              bottom:
-                                  MediaQuery.of(context).padding.bottom + 100,
-                            ),
-                            children: [
-                              _buildEnergyStatusCard(),
-                              const SizedBox(height: 18),
-                              _buildCurrentTaskCard(context),
-                              const SizedBox(height: 18),
-                              _buildNextTasksSection(),
-                              const SizedBox(height: 18),
-                              _buildCrystalSection(),
-                            ],
-                          ),
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
                   ),
                 ),
               ),
@@ -534,7 +454,6 @@ class _FocusPageState extends State<FocusPage> {
     );
   }
 
-<<<<<<< HEAD
   Widget _buildRhythmPanel(ThemeData theme) {
     // Conflict and team-window APIs are not part of the FocusPage data load;
     // keep the summary truthful until those services provide real values.
@@ -639,42 +558,30 @@ class _FocusPageState extends State<FocusPage> {
               _buildHintText(AppStrings.of(context, 'focus_empty_task'))
             else
               ..._nextTasks.map((task) {
-=======
-  Widget _buildNextTasksSection() {
-    return WorkbenchSurface(
-      title: AppStrings.of(context, 'focus_header_next'),
-      child: _nextTasks.isEmpty
-          ? _buildHintText(AppStrings.of(context, 'focus_empty_task'))
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: _nextTasks.map((task) {
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
                 return _buildNextTaskItem(
                   '${task.time.format(context)} ${task.title}',
                   iconForTag(task.tag),
                   task.color,
                 );
-              }).toList(),
+              }),
+            const SizedBox(height: 16),
+            _buildSectionTitle(
+              context,
+              AppStrings.of(context, 'focus_time_crystal_title'),
             ),
-    );
-  }
-
-  Widget _buildCrystalSection() {
-    return WorkbenchSurface(
-      title: AppStrings.of(context, 'focus_time_crystal_title'),
-      child: _isRecsLoading
-          ? const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          : _crystalRecs.isEmpty
-          ? _buildHintText(AppStrings.of(context, 'focus_time_crystal_empty'))
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: _crystalRecs.map((r) => _buildCrystalItem(r)).toList(),
-            ),
+            const SizedBox(height: 8),
+            if (_isRecsLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_crystalRecs.isEmpty)
+              _buildHintText(AppStrings.of(context, 'focus_time_crystal_empty'))
+            else
+              ..._crystalRecs.map((r) => _buildCrystalItem(r)),
+          ],
+        ),
+      ),
     );
   }
 
@@ -773,7 +680,6 @@ class _FocusPageState extends State<FocusPage> {
   }
 
   Widget _buildEnergyStatusCard() {
-<<<<<<< HEAD
     return EnergyStatusCard(energy: _energyStatus, emotion: _currentEmotion);
   }
 
@@ -791,146 +697,25 @@ class _FocusPageState extends State<FocusPage> {
       onRefresh: () {
         _loadTasks();
       },
-=======
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final energy = _energyStatus;
-    final emotion = _currentEmotion;
-    return WorkbenchSurface(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(Icons.monitor_heart, color: scheme.primary, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "${AppStrings.of(context, 'focus_status_label')}${energy?.status ?? AppStrings.of(context, 'status_flow_value')}",
-                  style: theme.textTheme.titleMedium,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (emotion != null)
-                  Text(
-                    '当前情绪：${emotion.label}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: emotion.color,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                Text(
-                  energy?.description ??
-                      AppStrings.of(context, 'status_flow_desc'),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          WorkbenchMetric(
-            label: '精力电量',
-            value: "${energy?.batteryPercent ?? 85}%",
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCurrentTaskCard(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final current = _currentTask;
-    final hasUpcoming = _nextTasks.isNotEmpty;
-    final canStart = current != null || hasUpcoming;
-
-    final IconData displayIcon;
-    final String displayTitle;
-    if (current != null) {
-      displayIcon = iconForTag(current.tag);
-      displayTitle = current.title;
-    } else if (hasUpcoming) {
-      final next = _nextTasks.first;
-      displayIcon = iconForTag(next.tag);
-      displayTitle = '${next.time.format(context)} ${next.title}';
-    } else {
-      displayIcon = Icons.hourglass_empty;
-      displayTitle = AppStrings.of(context, 'focus_empty_task');
-    }
-
-    return WorkbenchSurface(
-      title: AppStrings.of(context, 'focus_header_current'),
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-          Icon(displayIcon, color: scheme.primary, size: 40),
-          const SizedBox(height: 12),
-          Text(
-            displayTitle,
-            style: theme.textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-          if (current != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              "${AppStrings.of(context, 'focus_time_remaining')}${_formatDuration(_remainingSeconds)}",
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: scheme.onSurfaceVariant,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            alignment: WrapAlignment.center,
-            children: [
-              if (!_isTimerRunning)
-                ElevatedButton.icon(
-                  onPressed: canStart ? _startTimer : null,
-                  icon: const Icon(Icons.play_arrow),
-                  label: Text(AppStrings.of(context, 'btn_start')),
-                )
-              else
-                ElevatedButton.icon(
-                  onPressed: _pauseTimer,
-                  icon: const Icon(Icons.pause),
-                  label: Text(AppStrings.of(context, 'btn_pause')),
-                ),
-              OutlinedButton.icon(
-                onPressed: current == null
-                    ? null
-                    : () {
-                        _resetTimer();
-                        _startNextTask();
-                      },
-                icon: const Icon(Icons.check),
-                label: Text(AppStrings.of(context, 'btn_finish')),
-              ),
-            ],
-          ),
-        ],
-      ),
->>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
     );
   }
 
   Widget _buildNextTaskItem(String title, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 8),
-          Expanded(child: Text(title)),
-        ],
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(icon, color: color),
+        title: Text(title),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.3,
       ),
     );
   }
