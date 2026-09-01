@@ -19,6 +19,7 @@ import '../widgets/emotion_quick_checkin_card.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/rescue_summary.dart';
 import '../widgets/rescue_plan_comparison.dart';
+import '../widgets/responsive_page_frame.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/schedule_timeline.dart';
 import 'emotion_page.dart';
@@ -884,14 +885,20 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                     }
                   },
                 ),
-                _buildTodayStatusStrip(context, dayEntries),
-                RescueSummary(
-                  accepted: _acceptedRescue,
-                  issueCount: _acceptedRescue?.plan.issues.length ?? 0,
-                  onUndo: _isLoading ? null : _undoRescue,
-                  compact: isCompactAppBar,
+                ResponsivePageFrame(
+                  child: Column(
+                    children: [
+                      _buildTodayStatusStrip(context, dayEntries),
+                      RescueSummary(
+                        accepted: _acceptedRescue,
+                        issueCount: _acceptedRescue?.plan.issues.length ?? 0,
+                        onUndo: _isLoading ? null : _undoRescue,
+                        compact: isCompactAppBar,
+                      ),
+                      _buildViewToolbar(context),
+                    ],
+                  ),
                 ),
-                _buildViewToolbar(context),
                 Expanded(
                   child: KeyedSubtree(
                     key: const ValueKey('calendar-time-map'),
@@ -1014,6 +1021,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 children: [
                   IconButton(
                     onPressed: () => _shiftSelectedPeriod(-1),
+                    tooltip:
+                        Localizations.localeOf(context).languageCode == 'en'
+                        ? 'Previous period'
+                        : '上一周期',
                     icon: const Icon(Icons.chevron_left),
                   ),
                   Expanded(
@@ -1027,6 +1038,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   ),
                   IconButton(
                     onPressed: () => _shiftSelectedPeriod(1),
+                    tooltip:
+                        Localizations.localeOf(context).languageCode == 'en'
+                        ? 'Next period'
+                        : '下一周期',
                     icon: const Icon(Icons.chevron_right),
                   ),
                 ],
