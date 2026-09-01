@@ -29,6 +29,12 @@ class ScheduleTimeline extends StatelessWidget {
     this.titleBuilder,
     this.tagBuilder,
     this.statusBuilder,
+    this.reminderBuilder,
+    this.emptyLabel = 'No events',
+    this.goalLabel = 'Goal',
+    this.ganttLabel = 'Gantt',
+    this.taskLaneLabel = 'Task',
+    this.deleteLabel = 'Delete schedule',
     this.onSelectDay,
     this.onDelete,
     this.onEntryTap,
@@ -44,6 +50,12 @@ class ScheduleTimeline extends StatelessWidget {
   final String Function(BuildContext, ScheduleEntry)? titleBuilder;
   final String Function(BuildContext, String)? tagBuilder;
   final String Function(BuildContext, String)? statusBuilder;
+  final String Function(BuildContext, int)? reminderBuilder;
+  final String emptyLabel;
+  final String goalLabel;
+  final String ganttLabel;
+  final String taskLaneLabel;
+  final String deleteLabel;
   final ValueChanged<DateTime>? onSelectDay;
   final ValueChanged<ScheduleEntry>? onDelete;
   final ValueChanged<ScheduleEntry>? onEntryTap;
@@ -186,7 +198,7 @@ class ScheduleTimeline extends StatelessWidget {
         if (entries.isEmpty)
           Center(
             child: Text(
-              '暂无日程',
+              emptyLabel,
               style: TextStyle(color: theme.colorScheme.outline),
             ),
           ),
@@ -252,7 +264,7 @@ class ScheduleTimeline extends StatelessWidget {
                 ),
                 if (onDelete != null)
                   Tooltip(
-                    message: '删除日程',
+                    message: deleteLabel,
                     child: IconButton(
                       key: const ValueKey('schedule-entry-delete'),
                       onPressed: () => onDelete!(entry),
@@ -310,12 +322,17 @@ class ScheduleTimeline extends StatelessWidget {
     }
     if (visibleFields.contains(ScheduleTimelineField.reminder) &&
         entry.reminderMinutesBefore > 0) {
-      result.add(_metaText('${entry.reminderMinutesBefore}m'));
+      result.add(
+        _metaText(
+          reminderBuilder?.call(context, entry.reminderMinutesBefore) ??
+              '${entry.reminderMinutesBefore}m',
+        ),
+      );
     }
     if (visibleFields.contains(ScheduleTimelineField.goal) &&
         ((entry.goalId?.isNotEmpty ?? false) ||
             (entry.goalTaskId?.isNotEmpty ?? false))) {
-      result.add(_metaText('目标'));
+      result.add(_metaText(goalLabel));
     }
     return result;
   }
@@ -402,7 +419,7 @@ class ScheduleTimeline extends StatelessWidget {
             const SizedBox(height: 8),
             if (dayEntries.isEmpty)
               Text(
-                '暂无日程',
+                emptyLabel,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: theme.colorScheme.outline),
               )
@@ -554,7 +571,10 @@ class ScheduleTimeline extends StatelessWidget {
       7,
       (index) => weekStart.add(Duration(days: index)),
     );
-    final totalMinutes = (endHour - startHour) * 60.0;
+    const ganttStartHour = 0;
+    const ganttEndHour = 24;
+    const ganttHours = ganttEndHour - ganttStartHour;
+    final totalMinutes = ganttHours * 60.0;
     final theme = Theme.of(context);
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
@@ -571,8 +591,8 @@ class ScheduleTimeline extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const SizedBox(width: _gutterWidth, child: Text('日程')),
-                  const SizedBox(width: _labelLaneWidth, child: Text('任务')),
+                  SizedBox(width: _gutterWidth, child: Text(ganttLabel)),
+                  SizedBox(width: _labelLaneWidth, child: Text(taskLaneLabel)),
                   ConstrainedBox(
                     key: const ValueKey('schedule-timeline-gantt-track'),
                     constraints: const BoxConstraints(minWidth: _minTrackWidth),
@@ -581,17 +601,12 @@ class ScheduleTimeline extends StatelessWidget {
                       height: 32,
                       child: Stack(
                         children: [
-                          for (
-                            var hour = 0;
-                            hour <= endHour - startHour;
-                            hour++
-                          )
+                          for (var hour = 0; hour <= ganttHours; hour++)
                             Positioned(
-                              left:
-                                  hour / (endHour - startHour) * _minTrackWidth,
+                              left: hour / ganttHours * _minTrackWidth,
                               top: 0,
                               child: Text(
-                                '${startHour + hour}:00',
+                                '${ganttStartHour + hour}:00',
                                 style: const TextStyle(fontSize: 10),
                               ),
                             ),
@@ -696,16 +711,9 @@ class ScheduleTimeline extends StatelessWidget {
                         width: _minTrackWidth,
                         child: Stack(
                           children: [
-                            for (
-                              var hour = 0;
-                              hour <= endHour - startHour;
-                              hour++
-                            )
+                            for (var hour = 0; hour <= ganttHours; hour++)
                               Positioned(
-                                left:
-                                    hour /
-                                    (endHour - startHour) *
-                                    _minTrackWidth,
+                                left: hour / ganttHours * _minTrackWidth,
                                 top: 0,
                                 bottom: 0,
                                 child: Container(
@@ -716,7 +724,7 @@ class ScheduleTimeline extends StatelessWidget {
                             if (dayEntries.isEmpty)
                               Center(
                                 child: Text(
-                                  '暂无日程',
+                                  emptyLabel,
                                   style: TextStyle(
                                     color: theme.colorScheme.outline,
                                   ),
@@ -727,7 +735,7 @@ class ScheduleTimeline extends StatelessWidget {
                               final entry = entryItem.value;
                               final start =
                                   ((entry.time.hour * 60 + entry.time.minute) -
-                                          startHour * 60)
+                                          ganttStartHour * 60)
                                       .clamp(0, totalMinutes.toInt())
                                       .toDouble();
                               final duration = math.max(

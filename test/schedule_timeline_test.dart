@@ -65,7 +65,7 @@ void main() {
 
   testWidgets('timeline shows empty state', (tester) async {
     await tester.pumpWidget(host());
-    expect(find.text('暂无日程'), findsOneWidget);
+    expect(find.text('No events'), findsOneWidget);
   });
 
   testWidgets('day timeline keeps minimum readable track width', (
@@ -167,7 +167,7 @@ void main() {
     expect(find.text('15m'), findsOneWidget);
   });
 
-  testWidgets('gantt has a dedicated label lane and skips late bars', (
+  testWidgets('gantt has a dedicated label lane and bounds late bars', (
     tester,
   ) async {
     final lateEntry = ScheduleEntry(
@@ -177,7 +177,7 @@ void main() {
       tag: 'Planning',
       height: 80,
       color: Colors.teal,
-      time: const TimeOfDay(hour: 20, minute: 0),
+      time: const TimeOfDay(hour: 23, minute: 59),
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -197,11 +197,11 @@ void main() {
       find.byKey(const ValueKey('schedule-timeline-gantt-label-lane-0')),
       findsOneWidget,
     );
-    expect(find.text('Late task'), findsOneWidget);
-    expect(
+    expect(find.text('Late task'), findsNWidgets(2));
+    final lateBar = tester.widget<Positioned>(
       find.byKey(const ValueKey('schedule-timeline-gantt-bar-late-1')),
-      findsNothing,
     );
+    expect(lateBar.width, lessThanOrEqualTo(1));
   });
 
   testWidgets('localization builders are used in day and month summaries', (
@@ -241,5 +241,73 @@ void main() {
     await pumpView(ScheduleTimelineView.month);
     expect(find.text('Localized Raw title'), findsOneWidget);
     expect(find.text('Localized Raw tag'), findsOneWidget);
+  });
+
+  testWidgets('gantt uses a full-day domain for early and late entries', (
+    tester,
+  ) async {
+    final early = ScheduleEntry(
+      id: 'early-1',
+      day: day,
+      title: 'Early',
+      tag: '',
+      height: 60,
+      color: Colors.teal,
+      time: const TimeOfDay(hour: 7, minute: 0),
+    );
+    final late = early.copyWith(
+      id: 'late-2',
+      title: 'Late',
+      time: const TimeOfDay(hour: 21, minute: 0),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ScheduleTimeline(
+            view: ScheduleTimelineView.gantt,
+            selectedDay: day,
+            entries: [early, late],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('schedule-timeline-gantt-bar-early-1')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('schedule-timeline-gantt-bar-late-2')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('reminder builder localizes reminder metadata', (tester) async {
+    final entry = ScheduleEntry(
+      day: day,
+      title: 'Reminder task',
+      tag: '',
+      height: 80,
+      color: Colors.teal,
+      time: const TimeOfDay(hour: 9, minute: 0),
+      reminderMinutesBefore: 15,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ScheduleTimeline(
+            view: ScheduleTimelineView.day,
+            selectedDay: day,
+            entries: [entry],
+            visibleFields: const {ScheduleTimelineField.reminder},
+            reminderBuilder: (_, minutes) => 'before $minutes minutes',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('before 15 minutes'), findsOneWidget);
   });
 }
