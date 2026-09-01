@@ -187,9 +187,9 @@ class _ProfilePageState extends State<ProfilePage> {
           child: ListView(
             physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.fromLTRB(
-              16,
+              0,
               8,
-              16,
+              0,
               MediaQuery.of(context).padding.bottom + 100,
             ),
             children: [

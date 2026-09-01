@@ -23,9 +23,26 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
   });
 
+  testWidgets('frame applies the compact 16 pixel inset', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(600, 600));
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ResponsivePageFrame(
+          child: SizedBox(width: double.infinity, height: 10),
+        ),
+      ),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('responsive-page-frame'))).width,
+      568,
+    );
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  });
+
   testWidgets('grid gives desktop cards equal widths and row heights', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(1000, 600));
     await tester.pumpWidget(
       const MaterialApp(
         home: SizedBox(
@@ -53,6 +70,7 @@ void main() {
     expect(first.width, second.width);
     expect(first.height, second.height);
     expect(third.height, 30);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
   });
 
   testWidgets('grid becomes a single column below 720 pixels', (tester) async {

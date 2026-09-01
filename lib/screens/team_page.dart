@@ -661,7 +661,7 @@ class _TeamPageState extends State<TeamPage> {
                           MediaQuery.of(context).padding.bottom + 100;
                       return ListView(
                         physics: const BouncingScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
+                        padding: EdgeInsets.fromLTRB(0, 16, 0, bottomPadding),
                         children: [
                           Card(
                             elevation: 0,
