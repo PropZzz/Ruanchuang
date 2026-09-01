@@ -1208,7 +1208,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       taskLaneLabel: AppStrings.of(context, 'team_label_task'),
       deleteLabel: AppStrings.of(context, 'btn_delete'),
       onSelectDay: _jumpToDay,
-      onDelete: _mode == _CalendarMode.manual ? _showDeleteDialog : null,
+      onDelete: _mode == _CalendarMode.manual && _view == _CalendarView.day
+          ? _showDeleteDialog
+          : null,
     );
   }
 

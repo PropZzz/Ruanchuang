@@ -201,7 +201,8 @@ void main() {
     final lateBar = tester.widget<Positioned>(
       find.byKey(const ValueKey('schedule-timeline-gantt-bar-late-1')),
     );
-    expect(lateBar.width, lessThanOrEqualTo(1));
+    expect(lateBar.width, 48);
+    expect(lateBar.left, 712);
   });
 
   testWidgets('localization builders are used in day and month summaries', (
@@ -309,5 +310,40 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('before 15 minutes'), findsOneWidget);
+  });
+
+  testWidgets('gantt keys duplicate title entries by day index', (
+    tester,
+  ) async {
+    final first = ScheduleEntry(
+      day: day,
+      title: 'Duplicate',
+      tag: '',
+      height: 60,
+      color: Colors.teal,
+      time: const TimeOfDay(hour: 9, minute: 0),
+    );
+    final second = first.copyWith(time: const TimeOfDay(hour: 10, minute: 0));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ScheduleTimeline(
+            view: ScheduleTimelineView.gantt,
+            selectedDay: day,
+            entries: [first, second],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('schedule-timeline-gantt-bar-Duplicate-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('schedule-timeline-gantt-bar-Duplicate-1')),
+      findsOneWidget,
+    );
   });
 }
