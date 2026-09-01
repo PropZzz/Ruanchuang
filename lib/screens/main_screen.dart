@@ -272,12 +272,10 @@ class _WideShell extends StatelessWidget {
 
     return Row(
       children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
+        Container(
           width: railWidth,
-          decoration: BoxDecoration(
-            color: scheme.surface,
+          decoration: BoxDecoration(color: scheme.surface),
+          foregroundDecoration: BoxDecoration(
             border: Border(right: BorderSide(color: scheme.outline)),
           ),
           child: SafeArea(
@@ -322,6 +320,22 @@ class _WideShell extends StatelessWidget {
                     ],
                   ),
                 ),
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: railExpanded ? 12 : 14,
+                    vertical: 4,
+                  ),
+                  child: Tooltip(
+                    message: railToggleLabel,
+                    child: IconButton(
+                      key: const ValueKey('shell-rail-toggle'),
+                      onPressed: onToggleRail,
+                      icon: Icon(
+                        railExpanded ? Icons.chevron_left : Icons.chevron_right,
+                      ),
+                    ),
+                  ),
+                ),
                 Expanded(
                   child: NavigationRail(
                     key: ValueKey(
@@ -357,22 +371,6 @@ class _WideShell extends StatelessWidget {
                           ),
                         ),
                     ],
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: railExpanded ? 12 : 14,
-                    vertical: 4,
-                  ),
-                  child: Tooltip(
-                    message: railToggleLabel,
-                    child: IconButton(
-                      key: const ValueKey('shell-rail-toggle'),
-                      onPressed: onToggleRail,
-                      icon: Icon(
-                        railExpanded ? Icons.chevron_left : Icons.chevron_right,
-                      ),
-                    ),
                   ),
                 ),
                 if (railExpanded)

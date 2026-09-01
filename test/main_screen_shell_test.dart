@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shixuzhipei/screens/main_screen.dart';
 import 'package:shixuzhipei/screens/profile_page.dart';
 import 'package:shixuzhipei/services/app_services.dart';
@@ -25,6 +26,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('zh'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         supportedLocales: const [Locale('zh'), Locale('en')],
         theme: AppTheme.light,
         home: const MainScreen(),
