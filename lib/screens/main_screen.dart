@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/app_services.dart';
+import '../theme/app_theme.dart' show AppMotion;
 import '../ui/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
@@ -69,7 +70,7 @@ class _MainScreenState extends State<MainScreen> {
         barrierDismissible: true,
         barrierLabel: '关闭登录',
         barrierColor: Colors.transparent,
-        transitionDuration: const Duration(milliseconds: 300),
+        transitionDuration: AppMotion.resolve(context, AppMotion.enter),
         pageBuilder: (ctx, anim1, anim2) {
           return AuthDialog(
             onAuthSuccess: () {
@@ -132,7 +133,8 @@ class _MainScreenState extends State<MainScreen> {
         top: false,
         bottom: false,
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
+          duration: AppMotion.resolve(context, AppMotion.enter),
+          reverseDuration: AppMotion.resolve(context, AppMotion.exit),
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
           child: isWide
