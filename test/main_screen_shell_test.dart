@@ -38,6 +38,43 @@ void main() {
     tester.view.reset();
   });
 
+  testWidgets('wide shell starts with a collapsed icon-only navigation rail', (
+    tester,
+  ) async {
+    await pumpShell(tester, const Size(1440, 900));
+
+    final railFinder = find.byKey(const ValueKey('shell-rail-collapsed'));
+    final rail = tester.widget<NavigationRail>(railFinder);
+
+    expect(rail.extended, isFalse);
+    expect(tester.getSize(railFinder).width, 76);
+    expect(find.byKey(const ValueKey('shell-rail-toggle')), findsOneWidget);
+    final focusLabel = find.byKey(const ValueKey('shell-rail-focus-label'));
+    expect(focusLabel, findsOneWidget);
+    expect(tester.getSize(focusLabel), Size.zero);
+    tester.view.reset();
+  });
+
+  testWidgets('wide shell toggle expands the rail and reveals labels', (
+    tester,
+  ) async {
+    await pumpShell(tester, const Size(1440, 900));
+
+    await tester.tap(find.byKey(const ValueKey('shell-rail-toggle')));
+    await tester.pumpAndSettle();
+
+    final railFinder = find.byKey(const ValueKey('shell-rail-expanded'));
+    final rail = tester.widget<NavigationRail>(railFinder);
+
+    expect(rail.extended, isTrue);
+    expect(tester.getSize(railFinder).width, 248);
+    expect(
+      find.descendant(of: railFinder, matching: find.text('专注')),
+      findsOneWidget,
+    );
+    tester.view.reset();
+  });
+
   testWidgets('narrow shell uses material navigation bar', (tester) async {
     await pumpShell(tester, const Size(390, 844));
 
