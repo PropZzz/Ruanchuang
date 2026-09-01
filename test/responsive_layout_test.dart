@@ -76,7 +76,7 @@ void main() {
       await pumpShell(tester, width);
       expectNoShellDiagnostics(tester, width);
 
-      if (width >= 1024) {
+      if (width >= 720) {
         expect(find.byType(NavigationRail), findsOneWidget);
         expect(find.byType(NavigationBar), findsNothing);
       } else {
@@ -87,14 +87,14 @@ void main() {
     tester.view.reset();
   });
 
-  testWidgets('wide shell keeps the navigation rail collapsed by default', (
+  testWidgets('wide shell expands the navigation rail by default', (
     tester,
   ) async {
     await pumpShell(tester, 1440);
 
-    final railFinder = find.byKey(const ValueKey('shell-rail-collapsed'));
+    final railFinder = find.byKey(const ValueKey('shell-rail-expanded'));
     expect(railFinder, findsOneWidget);
-    expect(tester.widget<NavigationRail>(railFinder).extended, isFalse);
+    expect(tester.widget<NavigationRail>(railFinder).extended, isTrue);
     expectNoShellDiagnostics(tester, 1440);
     tester.view.reset();
   });

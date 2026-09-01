@@ -531,7 +531,7 @@ void main() {
   testWidgets('Smart calendar month view fits on small screens', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    _setSurface(tester, const Size(390, 844));
     try {
       await tester.pumpWidget(const BattleManApp());
       await tester.pumpAndSettle();
@@ -545,7 +545,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
     } finally {
-      await tester.binding.setSurfaceSize(null);
+      _resetSurface(tester);
     }
   });
 
@@ -555,7 +555,7 @@ void main() {
       dataService: _FatigueDataService(local),
       reminderService: _NoopReminderService(),
     );
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    _setSurface(tester, const Size(390, 844));
 
     try {
       await tester.pumpWidget(const BattleManApp());
@@ -570,14 +570,37 @@ void main() {
       expect(find.byType(SmartCalendarPage), findsOneWidget);
       expect(tester.takeException(), isNull);
     } finally {
-      await tester.binding.setSurfaceSize(null);
+      _resetSurface(tester);
+    }
+  });
+
+  testWidgets('fatigue guidance stays inline instead of covering actions', (
+    tester,
+  ) async {
+    final local = LocalDataService.forPersistence(InMemoryLocalPersistence());
+    AppServices.installTestOverrides(
+      dataService: _FatigueDataService(local),
+      reminderService: _NoopReminderService(),
+    );
+    _setSurface(tester, const Size(390, 844));
+
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+
+      expect(find.byKey(const ValueKey('focus-care-notice')), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(find.byTooltip('关闭关怀提示'), findsOneWidget);
+    } finally {
+      _resetSurface(tester);
     }
   });
 
   testWidgets('Smart calendar gantt switch fits on small screens', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    _setSurface(tester, const Size(390, 844));
     try {
       await tester.pumpWidget(const BattleManApp());
       await tester.pumpAndSettle();
@@ -591,7 +614,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
     } finally {
-      await tester.binding.setSurfaceSize(null);
+      _resetSurface(tester);
     }
   });
 
@@ -833,17 +856,22 @@ void main() {
   testWidgets('profile hub exposes review and settings entries', (
     tester,
   ) async {
-    await tester.pumpWidget(const BattleManApp());
-    await tester.pumpAndSettle();
-    await _dismissStartupAuthIfShown(tester);
-    await tester.tap(find.byKey(const ValueKey('shell-nav-profile')));
-    await tester.pumpAndSettle();
+    _setSurface(tester, const Size(390, 844));
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+      await tester.tap(find.byKey(const ValueKey('shell-nav-profile')));
+      await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -420));
-    await tester.pumpAndSettle();
-    expect(find.text('复盘'), findsOneWidget);
-    expect(find.byTooltip('设置'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+      await tester.drag(find.byType(ListView).first, const Offset(0, -420));
+      await tester.pumpAndSettle();
+      expect(find.text('复盘'), findsOneWidget);
+      expect(find.byTooltip('设置'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    } finally {
+      _resetSurface(tester);
+    }
   });
 
   testWidgets(

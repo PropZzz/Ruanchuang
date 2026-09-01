@@ -8,6 +8,7 @@ import 'package:shixuzhipei/services/data_service.dart';
 import 'package:shixuzhipei/screens/team_page.dart';
 import 'package:shixuzhipei/theme/app_theme.dart';
 import 'package:shixuzhipei/screens/focus_page.dart';
+import 'package:shixuzhipei/screens/smart_calendar_page.dart';
 import 'package:shixuzhipei/widgets/emotion_quick_checkin_card.dart';
 
 void main() {
@@ -82,6 +83,38 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('focus load failure keeps a local retry action visible', (
+    tester,
+  ) async {
+    AppServices.installTestOverrides(
+      dataService: _ParallelStartupFailureDataService(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.light, home: const FocusPage()),
+    );
+    await tester.pumpAndSettle(const Duration(milliseconds: 200));
+
+    expect(find.byKey(const ValueKey('focus-load-retry')), findsOneWidget);
+    expect(find.byKey(const ValueKey('focus-energy-status')), findsOneWidget);
+  });
+
+  testWidgets('calendar load failure keeps a local retry action visible', (
+    tester,
+  ) async {
+    AppServices.installTestOverrides(
+      dataService: _ParallelStartupFailureDataService(),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.light, home: const SmartCalendarPage()),
+    );
+    await tester.pumpAndSettle(const Duration(milliseconds: 200));
+
+    expect(find.byKey(const ValueKey('calendar-load-retry')), findsOneWidget);
+    expect(find.byKey(const ValueKey('calendar-time-map')), findsOneWidget);
+  });
 }
 
 class _UnauthorizedDataService implements DataService {

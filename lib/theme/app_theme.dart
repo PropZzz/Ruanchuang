@@ -16,8 +16,14 @@ abstract final class AppThemeTokens {
   static const actionDark = Color(0xFF0A84FF);
   static const recoveryLight = Color(0xFF34C759);
   static const recoveryDark = Color(0xFF30D158);
+  static const successLight = Color(0xFF18794E);
+  static const successDark = Color(0xFF8BE3C4);
   static const pressureLight = Color(0xFFFF9F0A);
   static const pressureDark = Color(0xFFFF9F0A);
+  static const warningLight = Color(0xFF9A4D00);
+  static const warningDark = Color(0xFFFFB340);
+  static const actionButtonLight = Color(0xFF005FB8);
+  static const actionButtonDark = Color(0xFF0066CC);
   // Legacy aliases kept for existing page accent references.
   static const deadlineLight = pressureLight;
   static const deadlineDark = pressureDark;
@@ -135,8 +141,11 @@ abstract final class AppWindowTones {
 }
 
 abstract final class AppTheme {
-  /// Desktop shell threshold: >= 1024 uses the wide navigation shell.
-  static const double shellBreakpoint = 1024;
+  /// Compact rail threshold: >= 720 uses a side navigation shell.
+  static const double compactShellBreakpoint = 720;
+
+  /// Desktop shell threshold: >= 1200 uses the expanded navigation shell.
+  static const double shellBreakpoint = 1200;
 
   /// Rescue comparison threshold: >= 760 uses side-by-side columns.
   static const double comparisonBreakpoint = 760;
@@ -161,6 +170,9 @@ abstract final class AppTheme {
     final action = isDark
         ? AppThemeTokens.actionDark
         : AppThemeTokens.actionLight;
+    final actionButton = isDark
+        ? AppThemeTokens.actionButtonDark
+        : AppThemeTokens.actionButtonLight;
     final recovery =
         accentColor ??
         (isDark ? AppThemeTokens.recoveryDark : AppThemeTokens.recoveryLight);
@@ -280,7 +292,7 @@ abstract final class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          backgroundColor: action,
+          backgroundColor: actionButton,
           foregroundColor: Colors.white,
           overlayColor: Colors.white.withValues(alpha: 0.14),
           elevation: 1,

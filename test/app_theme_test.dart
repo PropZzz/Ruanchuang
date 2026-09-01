@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shixuzhipei/theme/app_theme.dart';
 import 'package:shixuzhipei/widgets/glass_surface.dart';
+import 'package:shixuzhipei/widgets/workbench_surface.dart';
 
 void main() {
   test('light and dark themes expose the approved semantic tokens', () {
@@ -25,6 +28,43 @@ void main() {
     expect(theme.useMaterial3, isTrue);
     expect(theme.textTheme.bodyMedium?.fontSize, greaterThanOrEqualTo(12));
     expect(theme.cardTheme.shape, isA<RoundedRectangleBorder>());
+  });
+
+  test('workbench status colors preserve success and warning semantics', () {
+    final scheme = AppTheme.light.colorScheme;
+
+    expect(
+      WorkbenchStatus.success.colorOf(scheme),
+      AppThemeTokens.successLight,
+    );
+    expect(
+      WorkbenchStatus.warning.colorOf(scheme),
+      AppThemeTokens.warningLight,
+    );
+  });
+
+  test('filled button colors meet normal text contrast', () {
+    final style = AppTheme.light.filledButtonTheme.style!;
+    final foreground = style.foregroundColor!.resolve({})!;
+    final background = style.backgroundColor!.resolve({})!;
+
+    double relativeLuminance(Color color) {
+      double channel(int value) {
+        final normalized = value / 255;
+        return normalized <= 0.03928
+            ? normalized / 12.92
+            : math.pow((normalized + 0.055) / 1.055, 2.4).toDouble();
+      }
+
+      return 0.2126 * channel((color.r * 255).round()) +
+          0.7152 * channel((color.g * 255).round()) +
+          0.0722 * channel((color.b * 255).round());
+    }
+
+    final lighter = relativeLuminance(foreground);
+    final darker = relativeLuminance(background);
+    final ratio = (lighter + 0.05) / (darker + 0.05);
+    expect(ratio, greaterThanOrEqualTo(4.5));
   });
 
   testWidgets(

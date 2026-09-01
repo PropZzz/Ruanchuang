@@ -14,7 +14,8 @@ void main() {
   ) async {
     AppServices.installTestOverrides(dataService: MockDataService());
     ProfilePage.globalNameNotifier.value = '测试用户';
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
 
     try {
       await tester.pumpWidget(
@@ -27,7 +28,7 @@ void main() {
       expect(find.text('AI 填充'), findsOneWidget);
       expect(tester.takeException(), isNull);
     } finally {
-      await tester.binding.setSurfaceSize(null);
+      tester.view.reset();
       ProfilePage.globalNameNotifier.value = null;
       AppServices.resetForTests();
     }

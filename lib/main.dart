@@ -10,6 +10,10 @@ import 'theme/app_theme.dart';
 import 'utils/app_strings.dart';
 import 'utils/mobile_feedback.dart';
 
+double resolveAppTextScale(double currentScale) {
+  return currentScale > 0 ? currentScale : 1.0;
+}
+
 Future<void> main() async {
   await runZonedGuarded(
     () async {
@@ -253,14 +257,11 @@ class _BattleManAppState extends State<BattleManApp> {
       locale: _locale,
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
-        final width = mediaQuery.size.width;
         final currentScale = mediaQuery.textScaler.scale(1);
-        final maxScale = width < 420 ? 1.08 : 1.16;
-        final clampedScale = currentScale.clamp(0.95, maxScale);
 
         return MediaQuery(
           data: mediaQuery.copyWith(
-            textScaler: TextScaler.linear(clampedScale),
+            textScaler: TextScaler.linear(resolveAppTextScale(currentScale)),
           ),
           child: child ?? const SizedBox.shrink(),
         );

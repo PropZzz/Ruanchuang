@@ -20,7 +20,7 @@ void main() {
   test(
     'material levels expose selective blur defaults and shell breakpoints',
     () {
-      expect(AppTheme.shellBreakpoint, 1024);
+      expect(AppTheme.shellBreakpoint, 1200);
       expect(AppTheme.comparisonBreakpoint, 760);
       expect(AppMaterialTokens.chromeBlur, 22);
       expect(AppMaterialTokens.overlayBlur, 28);

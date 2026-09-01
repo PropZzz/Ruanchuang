@@ -18,11 +18,14 @@ class EnergyStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final battery = (energy?.batteryPercent ?? 85).clamp(0, 100);
-    final status =
-        energy?.status ?? AppStrings.of(context, 'status_flow_value');
-    final description =
-        energy?.description ?? AppStrings.of(context, 'status_flow_desc');
+    final hasEnergy = energy != null;
+    final battery = (energy?.batteryPercent ?? 0).clamp(0, 100);
+    final status = hasEnergy
+        ? energy!.status
+        : AppStrings.of(context, 'focus_energy_unavailable');
+    final description = hasEnergy
+        ? energy!.description
+        : AppStrings.of(context, 'focus_energy_unavailable_desc');
 
     return GlassSurface(
       key: const ValueKey('focus-energy-status'),
@@ -44,29 +47,30 @@ class EnergyStatusCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  SizedBox(
-                    width: 64,
-                    child: Text(
-                      '$battery',
-                      textAlign: TextAlign.right,
-                      style: theme.textTheme.displaySmall?.copyWith(
-                        fontSize: 34,
-                        color: theme.colorScheme.onSurface,
+              if (hasEnergy)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    SizedBox(
+                      width: 64,
+                      child: Text(
+                        '$battery',
+                        textAlign: TextAlign.right,
+                        style: theme.textTheme.displaySmall?.copyWith(
+                          fontSize: 34,
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
                     ),
-                  ),
-                  Text(
-                    '$battery%',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                    Text(
+                      '$battery%',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
             ],
           ),
           const SizedBox(height: 2),
@@ -77,19 +81,20 @@ class EnergyStatusCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: battery / 100,
-              minHeight: 7,
-              backgroundColor: theme.colorScheme.tertiary.withValues(
-                alpha: 0.16,
-              ),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                theme.colorScheme.tertiary,
+          if (hasEnergy)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: battery / 100,
+                minHeight: 7,
+                backgroundColor: theme.colorScheme.tertiary.withValues(
+                  alpha: 0.16,
+                ),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  theme.colorScheme.tertiary,
+                ),
               ),
             ),
-          ),
           const SizedBox(height: 10),
           Text(
             description,

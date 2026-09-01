@@ -7,6 +7,7 @@ import 'package:shixuzhipei/services/app_services.dart';
 import 'package:shixuzhipei/services/mock_data_service.dart';
 import 'package:shixuzhipei/theme/app_theme.dart';
 import 'package:shixuzhipei/widgets/glass_surface.dart';
+import 'package:shixuzhipei/main.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -52,21 +53,21 @@ void main() {
     tester.view.reset();
   });
 
-  testWidgets('wide shell starts with a collapsed icon-only navigation rail', (
+  testWidgets('wide shell starts with an expanded navigation rail', (
     tester,
   ) async {
     await pumpShell(tester, const Size(1440, 900));
 
-    final railFinder = find.byKey(const ValueKey('shell-rail-collapsed'));
+    final railFinder = find.byKey(const ValueKey('shell-rail-expanded'));
     final rail = tester.widget<NavigationRail>(railFinder);
 
-    expect(rail.extended, isFalse);
-    expect(tester.getSize(railFinder).width, 76);
+    expect(rail.extended, isTrue);
+    expect(tester.getSize(railFinder).width, 260);
     expect(find.byKey(const ValueKey('shell-rail-toggle')), findsOneWidget);
-    expect(find.byTooltip('展开导航栏'), findsOneWidget);
+    expect(find.byTooltip('收起导航栏'), findsOneWidget);
     final focusLabel = find.byKey(const ValueKey('shell-rail-focus-label'));
     expect(focusLabel, findsOneWidget);
-    expect(tester.getSize(focusLabel), Size.zero);
+    expect(tester.getSize(focusLabel).width, greaterThan(0));
     tester.view.reset();
   });
 
@@ -78,16 +79,14 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('shell-rail-toggle')));
     await tester.pumpAndSettle();
 
-    final railFinder = find.byKey(const ValueKey('shell-rail-expanded'));
+    final railFinder = find.byKey(const ValueKey('shell-rail-collapsed'));
     final rail = tester.widget<NavigationRail>(railFinder);
 
-    expect(rail.extended, isTrue);
-    expect(tester.getSize(railFinder).width, 248);
-    expect(find.byTooltip('收起导航栏'), findsOneWidget);
-    expect(
-      find.descendant(of: railFinder, matching: find.text('专注')),
-      findsOneWidget,
-    );
+    expect(rail.extended, isFalse);
+    expect(tester.getSize(railFinder).width, 76);
+    expect(find.byTooltip('展开导航栏'), findsOneWidget);
+    final focusLabel = find.byKey(const ValueKey('shell-rail-focus-label'));
+    expect(tester.getSize(focusLabel), Size.zero);
     tester.view.reset();
   });
 
@@ -110,6 +109,25 @@ void main() {
     expect(materialRect.right, 378);
     expect(materialRect.bottom, lessThanOrEqualTo(834));
     expect(tester.takeException(), isNull);
+    expect(find.text('日程'), findsOneWidget);
+    expect(find.text('微任务'), findsOneWidget);
+    expect(find.text('团队'), findsOneWidget);
+    expect(find.text('我的'), findsOneWidget);
     tester.view.reset();
+  });
+
+  testWidgets('tablet shell uses a compact navigation rail', (tester) async {
+    await pumpShell(tester, const Size(768, 900));
+
+    final railFinder = find.byKey(const ValueKey('shell-rail-compact'));
+    expect(railFinder, findsOneWidget);
+    expect(tester.widget<NavigationRail>(railFinder).extended, isFalse);
+    expect(tester.getSize(railFinder).width, 88);
+    expect(find.byType(NavigationBar), findsNothing);
+    tester.view.reset();
+  });
+
+  test('text scale resolver preserves a 200 percent system scale', () {
+    expect(resolveAppTextScale(2.0), 2.0);
   });
 }

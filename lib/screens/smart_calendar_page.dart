@@ -22,6 +22,7 @@ import '../widgets/rescue_plan_comparison.dart';
 import '../widgets/responsive_page_frame.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/schedule_timeline.dart';
+import '../widgets/workbench_surface.dart';
 import 'emotion_page.dart';
 import 'goals_page.dart';
 import 'integrations_page.dart';
@@ -44,6 +45,8 @@ class SmartCalendarPage extends StatefulWidget {
 class _SmartCalendarPageState extends State<SmartCalendarPage> {
   List<ScheduleEntry> _blocks = [];
   bool _isLoading = true;
+  bool _hasLoadedOnce = false;
+  String? _loadErrorKey;
   Map<String, _EntryStatus> _statusByTaskId = const {};
 
   _CalendarMode _mode = _CalendarMode.manual;
@@ -84,6 +87,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
   Future<void> _loadSchedule({bool preserveLoading = false}) async {
     setState(() {
       _isLoading = true;
+      _loadErrorKey = null;
     });
 
     try {
@@ -107,7 +111,8 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         setState(() {
           _blocks = entries;
           _statusByTaskId = status;
-          if (!preserveLoading) _isLoading = false;
+          _hasLoadedOnce = true;
+          _isLoading = preserveLoading;
         });
         final todayEntries = entriesForDay(day: today, allEntries: entries);
         await AppServices.reminderService.rescheduleDay(
@@ -121,15 +126,13 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       await _loadSmartSchedule(preserveLoading: preserveLoading);
     } catch (e, st) {
       if (!mounted) return;
-      if (!preserveLoading) {
-        setState(() => _isLoading = false);
-      }
-      MobileFeedback.showError(
-        context,
-        category: 'schedule',
-        message: 'load schedule failed',
-        zhMessage: '暂时无法加载日程，请稍后重试。',
-        enMessage: 'Unable to load the schedule right now.',
+      setState(() {
+        _isLoading = false;
+        _loadErrorKey = 'calendar_load_error';
+      });
+      AppServices.logStore.error(
+        'schedule',
+        'load schedule failed',
         error: e,
         stackTrace: st,
       );
@@ -336,7 +339,8 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
       setState(() {
         _blocks = planned;
-        if (!preserveLoading) _isLoading = false;
+        _hasLoadedOnce = true;
+        _isLoading = preserveLoading;
       });
 
       final today = dateOnly(DateTime.now());
@@ -359,15 +363,13 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       }
     } catch (e, st) {
       if (!mounted) return;
-      if (!preserveLoading) {
-        setState(() => _isLoading = false);
-      }
-      MobileFeedback.showError(
-        context,
-        category: 'schedule',
-        message: 'load smart schedule failed',
-        zhMessage: '暂时无法生成智能规划，请稍后重试。',
-        enMessage: 'Smart planning is unavailable right now.',
+      setState(() {
+        _isLoading = false;
+        _loadErrorKey = 'calendar_load_error';
+      });
+      AppServices.logStore.error(
+        'schedule',
+        'load smart schedule failed',
         error: e,
         stackTrace: st,
       );
@@ -875,10 +877,19 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
           ),
         ],
       ),
-      body: _isLoading
+      body: !_hasLoadedOnce && _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                if (_isLoading) const LinearProgressIndicator(minHeight: 2),
+                if (_loadErrorKey != null)
+                  WorkbenchStatusBanner(
+                    key: const ValueKey('calendar-load-error'),
+                    message: AppStrings.of(context, _loadErrorKey!),
+                    actionLabel: AppStrings.of(context, 'common_retry'),
+                    actionKey: const ValueKey('calendar-load-retry'),
+                    onAction: _loadSchedule,
+                  ),
                 EmotionQuickCheckInCard(
                   onChanged: () async {
                     if (_mode == _CalendarMode.smart) {

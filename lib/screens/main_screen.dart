@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../services/app_services.dart';
 import '../ui/app_theme.dart';
 import '../utils/app_strings.dart';
-import '../utils/mobile_feedback.dart';
 import '../widgets/glass_surface.dart';
 import 'auth_dialog.dart';
 import 'focus_page.dart';
@@ -22,7 +21,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
-  bool _railExpanded = false;
+  bool _railExpanded = true;
   bool _startupAuthPromptShown = false;
 
   final List<Widget> _pages = const [
@@ -122,7 +121,9 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.sizeOf(context).width >= AppTheme.shellBreakpoint;
+    final width = MediaQuery.sizeOf(context).width;
+    final isWide = width >= AppTheme.compactShellBreakpoint;
+    final isDesktop = width >= AppTheme.shellBreakpoint;
     final destinations = _destinations(context);
     final pageStack = IndexedStack(index: _selectedIndex, children: _pages);
 
@@ -143,7 +144,8 @@ class _MainScreenState extends State<MainScreen> {
                   selectedIndex: _selectedIndex,
                   destinations: destinations,
                   onSelect: _onSelect,
-                  railExpanded: _railExpanded,
+                  compact: !isDesktop,
+                  railExpanded: isDesktop && _railExpanded,
                   onToggleRail: () {
                     setState(() {
                       _railExpanded = !_railExpanded;
@@ -187,8 +189,6 @@ class _NarrowShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compactLabels = MobileFeedback.isNarrow(context, breakpoint: 420);
-
     return Column(
       children: [
         Expanded(child: ClipRRect(child: child)),
@@ -212,21 +212,16 @@ class _NarrowShell extends StatelessWidget {
                 child: NavigationBar(
                   backgroundColor: Colors.transparent,
                   elevation: 0,
-                  height: compactLabels ? 68 : null,
-                  labelBehavior: compactLabels
-                      ? NavigationDestinationLabelBehavior.onlyShowSelected
-                      : NavigationDestinationLabelBehavior.alwaysShow,
+                  height: null,
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                   selectedIndex: selectedIndex,
                   onDestinationSelected: onSelect,
                   destinations: [
                     for (final d in destinations)
                       NavigationDestination(
                         key: ValueKey('shell-nav-${d.id}'),
-                        icon: Icon(d.icon, size: compactLabels ? 20 : 22),
-                        selectedIcon: Icon(
-                          d.selectedIcon,
-                          size: compactLabels ? 20 : 22,
-                        ),
+                        icon: Icon(d.icon, size: 22),
+                        selectedIcon: Icon(d.selectedIcon, size: 22),
                         label: d.label,
                       ),
                   ],
@@ -250,6 +245,7 @@ class _WideShell extends StatelessWidget {
     required this.railExpanded,
     required this.onToggleRail,
     required this.child,
+    this.compact = false,
   });
 
   final String title;
@@ -259,6 +255,7 @@ class _WideShell extends StatelessWidget {
   final bool railExpanded;
   final VoidCallback onToggleRail;
   final Widget child;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -266,7 +263,7 @@ class _WideShell extends StatelessWidget {
     final scheme = theme.colorScheme;
     final text = theme.textTheme;
     final profileIndex = destinations.indexWhere((d) => d.id == 'profile');
-    final railWidth = railExpanded ? 248.0 : 76.0;
+    final railWidth = compact ? 88.0 : (railExpanded ? 260.0 : 76.0);
     final railToggleLabel = AppStrings.of(
       context,
       railExpanded ? 'nav_rail_collapse' : 'nav_rail_expand',
@@ -324,35 +321,38 @@ class _WideShell extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: railExpanded ? 12 : 14,
-                      vertical: 4,
-                    ),
-                    child: Tooltip(
-                      message: railToggleLabel,
-                      child: IconButton(
-                        key: const ValueKey('shell-rail-toggle'),
-                        onPressed: onToggleRail,
-                        icon: Icon(
-                          railExpanded
-                              ? Icons.chevron_left
-                              : Icons.chevron_right,
+                  if (!compact)
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: railExpanded ? 12 : 14,
+                        vertical: 4,
+                      ),
+                      child: Tooltip(
+                        message: railToggleLabel,
+                        child: IconButton(
+                          key: const ValueKey('shell-rail-toggle'),
+                          onPressed: onToggleRail,
+                          icon: Icon(
+                            railExpanded
+                                ? Icons.chevron_left
+                                : Icons.chevron_right,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                   Expanded(
                     child: NavigationRail(
                       key: ValueKey(
-                        railExpanded
+                        compact
+                            ? 'shell-rail-compact'
+                            : railExpanded
                             ? 'shell-rail-expanded'
                             : 'shell-rail-collapsed',
                       ),
                       backgroundColor: Colors.transparent,
                       extended: railExpanded,
-                      minWidth: 76,
-                      minExtendedWidth: 248,
+                      minWidth: compact ? 88 : 76,
+                      minExtendedWidth: 260,
                       labelType: railExpanded
                           ? null
                           : NavigationRailLabelType.none,

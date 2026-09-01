@@ -50,6 +50,8 @@ class AppStrings {
 
       'tooltip_more': '更多',
       'common_loading': '加载中...',
+      'common_retry': '重试',
+      'calendar_load_error': '暂时无法加载日程，当前数据可能不完整。',
       'common_ok': '成功',
       'common_fail': '失败',
       'common_count': '数量',
@@ -60,6 +62,7 @@ class AppStrings {
 
       'focus_title': '当前专注',
       'focus_today_label': '08 月 31 日 · 工作台',
+      'focus_workbench_label': '工作台',
       'focus_today': '今天',
       'focus_next_four_hours': '接下来 4 小时',
       'focus_view_calendar': '查看完整日历 →',
@@ -71,6 +74,14 @@ class AppStrings {
       'focus_no_window': '暂无窗口',
       'focus_status_label': '当前状态：',
       'focus_energy_label': '今日的节奏',
+      'focus_load_error': '暂时无法加载专注面板，当前数据可能不完整。',
+      'focus_energy_unavailable': '暂无能量数据',
+      'focus_energy_unavailable_desc': '等待数据同步后显示当前节奏。',
+      'focus_care_message': '检测到当前{emotion}状态，建议先安排低压任务或休息 5 分钟。',
+      'focus_care_action': '查看建议',
+      'focus_care_hide_advice': '收起建议',
+      'focus_care_advice': '可优先选择 5-10 分钟微任务，降低切换成本。',
+      'focus_care_close': '关闭关怀提示',
       'focus_emotion_label': '当前情绪：{emotion}',
       'status_flow_value': '高效状态',
       'status_flow_desc': '状态稳定，适合深度工作',
@@ -411,6 +422,9 @@ class AppStrings {
 
       'tooltip_more': 'More',
       'common_loading': 'Loading...',
+      'common_retry': 'Retry',
+      'calendar_load_error':
+          'Unable to load the schedule; current data may be incomplete.',
       'common_ok': 'OK',
       'common_fail': 'FAIL',
       'common_count': 'Count',
@@ -421,6 +435,7 @@ class AppStrings {
 
       'focus_title': 'Focus Now',
       'focus_today_label': 'Aug 31 · Workbench',
+      'focus_workbench_label': 'Workbench',
       'focus_today': 'Today',
       'focus_next_four_hours': 'Next 4 hours',
       'focus_view_calendar': 'View full calendar →',
@@ -432,6 +447,18 @@ class AppStrings {
       'focus_no_window': 'No window yet',
       'focus_status_label': 'Status:',
       'focus_energy_label': "Today's rhythm",
+      'focus_load_error':
+          'Unable to load the focus dashboard; current data may be incomplete.',
+      'focus_energy_unavailable': 'Energy data unavailable',
+      'focus_energy_unavailable_desc':
+          'Current rhythm will appear after data sync.',
+      'focus_care_message':
+          'Your {emotion} state suggests a low-pressure task or a 5-minute break.',
+      'focus_care_action': 'View advice',
+      'focus_care_hide_advice': 'Hide advice',
+      'focus_care_advice':
+          'Try a 5-10 minute micro task to reduce switching cost.',
+      'focus_care_close': 'Dismiss care notice',
       'focus_emotion_label': 'Emotion: {emotion}',
       'status_flow_value': 'Flow State',
       'status_flow_desc': 'Stable state, ready for deep work',

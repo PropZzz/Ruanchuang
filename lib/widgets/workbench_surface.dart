@@ -5,15 +5,21 @@ import 'glass_surface.dart';
 
 /// 工作台状态语义：映射到 AppTheme 语义色槽位。
 ///
-/// success -> colorScheme.secondary，warning -> colorScheme.tertiary，
-/// risk -> colorScheme.error，neutral -> colorScheme.onSurfaceVariant。
+/// success/warning use dedicated semantic text colors; risk -> colorScheme.error,
+/// neutral -> colorScheme.onSurfaceVariant.
 enum WorkbenchStatus { neutral, success, warning, risk }
 
 extension WorkbenchStatusStyle on WorkbenchStatus {
   Color colorOf(ColorScheme scheme) => switch (this) {
     WorkbenchStatus.neutral => scheme.onSurfaceVariant,
-    WorkbenchStatus.success => scheme.secondary,
-    WorkbenchStatus.warning => scheme.tertiary,
+    WorkbenchStatus.success =>
+      scheme.brightness == Brightness.dark
+          ? AppThemeTokens.successDark
+          : AppThemeTokens.successLight,
+    WorkbenchStatus.warning =>
+      scheme.brightness == Brightness.dark
+          ? AppThemeTokens.warningDark
+          : AppThemeTokens.warningLight,
     WorkbenchStatus.risk => scheme.error,
   };
 
@@ -236,6 +242,55 @@ class WorkbenchEmptyState extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Inline status feedback that keeps the surrounding workbench visible.
+class WorkbenchStatusBanner extends StatelessWidget {
+  const WorkbenchStatusBanner({
+    super.key,
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+    this.status = WorkbenchStatus.risk,
+    this.actionKey,
+  });
+
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+  final WorkbenchStatus status;
+  final Key? actionKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = status.colorOf(scheme);
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Card(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        color: color.withValues(alpha: 0.08),
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+          child: Row(
+            children: [
+              Icon(status.icon, size: 20, color: color),
+              const SizedBox(width: 8),
+              Expanded(child: Text(message)),
+              TextButton.icon(
+                key: actionKey,
+                onPressed: onAction,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(actionLabel),
+              ),
+            ],
+          ),
         ),
       ),
     );

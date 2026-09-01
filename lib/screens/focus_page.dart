@@ -15,6 +15,8 @@ import '../widgets/focus_task_card.dart';
 import '../widgets/mini_timeline.dart';
 import '../widgets/responsive_card_grid.dart';
 import '../widgets/responsive_page_frame.dart';
+import '../widgets/workbench_surface.dart';
+import 'smart_calendar_page.dart';
 
 class FocusPage extends StatefulWidget {
   const FocusPage({super.key});
@@ -38,7 +40,11 @@ class _FocusPageState extends State<FocusPage> {
   int _remainingSeconds = 0;
   bool _isTimerRunning = false;
   bool _isLoading = true;
+  bool _hasLoadedOnce = false;
+  String? _loadErrorKey;
   bool _careNoticeShown = false;
+  bool _careNoticeVisible = false;
+  bool _careNoticeExpanded = false;
 
   String? _activeTaskId;
 
@@ -173,6 +179,7 @@ class _FocusPageState extends State<FocusPage> {
   Future<void> _loadTasks() async {
     setState(() {
       _isLoading = true;
+      _loadErrorKey = null;
     });
 
     try {
@@ -231,6 +238,7 @@ class _FocusPageState extends State<FocusPage> {
           _nextTasks = upcoming;
         }
         _isLoading = false;
+        _hasLoadedOnce = true;
       });
 
       if (shouldShowCareNotice) {
@@ -242,13 +250,11 @@ class _FocusPageState extends State<FocusPage> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
+        _loadErrorKey = 'focus_load_error';
       });
-      MobileFeedback.showError(
-        context,
-        category: 'focus',
-        message: 'load focus tasks failed',
-        zhMessage: '暂时无法加载专注面板，请稍后重试。',
-        enMessage: 'Unable to load the focus dashboard right now.',
+      AppServices.logStore.error(
+        'focus',
+        'load focus tasks failed',
         error: e,
         stackTrace: st,
       );
@@ -398,65 +404,87 @@ class _FocusPageState extends State<FocusPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final todayLabel =
+        '${MaterialLocalizations.of(context).formatMediumDate(DateTime.now())} '
+        '\u00b7 ${AppStrings.of(context, 'focus_workbench_label')}';
     return Scaffold(
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
       appBar: null,
-      body: _isLoading
+      body: !_hasLoadedOnce && _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
-              child: ResponsivePageFrame(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(0, 22, 0, 40),
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+              child: Column(
+                children: [
+                  if (_isLoading) const LinearProgressIndicator(minHeight: 2),
+                  if (_loadErrorKey != null)
+                    WorkbenchStatusBanner(
+                      key: const ValueKey('focus-load-error'),
+                      message: AppStrings.of(context, _loadErrorKey!),
+                      actionLabel: AppStrings.of(context, 'common_retry'),
+                      actionKey: const ValueKey('focus-load-retry'),
+                      onAction: _loadTasks,
+                    ),
+                  if (_careNoticeVisible) _buildCareNotice(context),
+                  Expanded(
+                    child: ResponsivePageFrame(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(0, 22, 0, 40),
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Text(
-                                AppStrings.of(context, 'focus_today_label'),
-                                style: theme.textTheme.bodyMedium,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      todayLabel,
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      AppStrings.of(context, 'focus_today'),
+                                      style: theme.textTheme.displaySmall,
+                                    ),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                AppStrings.of(context, 'focus_today'),
-                                style: theme.textTheme.displaySmall,
+                              IconButton(
+                                tooltip: AppStrings.of(context, 'btn_check'),
+                                onPressed: _loadTasks,
+                                icon: const Icon(Icons.refresh_rounded),
                               ),
                             ],
                           ),
-                        ),
-                        IconButton(
-                          tooltip: AppStrings.of(context, 'btn_check'),
-                          onPressed: _loadTasks,
-                          icon: const Icon(Icons.refresh_rounded),
-                        ),
-                      ],
+                          const SizedBox(height: 18),
+                          ResponsiveCardGrid(
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _buildSectionTitle(
+                                    context,
+                                    AppStrings.of(
+                                      context,
+                                      'focus_header_current',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildCurrentTaskCard(context),
+                                ],
+                              ),
+                              _buildEnergyStatusCard(),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildRhythmPanel(theme),
+                          const SizedBox(height: 12),
+                          _buildPlanningPanel(theme),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 18),
-                    ResponsiveCardGrid(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _buildSectionTitle(
-                              context,
-                              AppStrings.of(context, 'focus_header_current'),
-                            ),
-                            const SizedBox(height: 8),
-                            _buildCurrentTaskCard(context),
-                          ],
-                        ),
-                        _buildEnergyStatusCard(),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildRhythmPanel(theme),
-                    const SizedBox(height: 12),
-                    _buildPlanningPanel(theme),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
     );
@@ -473,7 +501,9 @@ class _FocusPageState extends State<FocusPage> {
         MiniTimeline(
           title: AppStrings.of(context, 'focus_next_four_hours'),
           actionLabel: AppStrings.of(context, 'focus_view_calendar'),
-          onAction: () {},
+          onAction: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const SmartCalendarPage())),
           segments: [
             theme.colorScheme.tertiary.withValues(alpha: 0.35),
             theme.colorScheme.secondary.withValues(alpha: 0.55),
@@ -733,30 +763,78 @@ class _FocusPageState extends State<FocusPage> {
   void _showCareNotice() {
     if (_careNoticeShown || !mounted) return;
     _careNoticeShown = true;
+    setState(() {
+      _careNoticeVisible = true;
+      _careNoticeExpanded = false;
+    });
+  }
 
-    final emotionLabel = _currentEmotion?.label ?? '未知';
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 104),
-          showCloseIcon: true,
-          duration: const Duration(seconds: 5),
-          content: Text('检测到当前$emotionLabel状态，建议先安排低压任务或休息 5 分钟。'),
-          action: SnackBarAction(
-            label: '查看建议',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  behavior: SnackBarBehavior.floating,
-                  margin: EdgeInsets.fromLTRB(16, 0, 16, 104),
-                  content: Text('可优先选择 5-10 分钟微任务，降低切换成本。'),
+  Widget _buildCareNotice(BuildContext context) {
+    final theme = Theme.of(context);
+    final emotionLabel =
+        _currentEmotion?.label ?? AppStrings.of(context, 'common_unknown');
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Card(
+        key: const ValueKey('focus-care-notice'),
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        color: theme.colorScheme.tertiary.withValues(alpha: 0.1),
+        elevation: 0,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.self_improvement_outlined,
+                color: theme.colorScheme.tertiary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppStrings.of(
+                        context,
+                        'focus_care_message',
+                        params: {'emotion': emotionLabel},
+                      ),
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    if (_careNoticeExpanded) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        AppStrings.of(context, 'focus_care_advice'),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                    TextButton(
+                      onPressed: () => setState(
+                        () => _careNoticeExpanded = !_careNoticeExpanded,
+                      ),
+                      child: Text(
+                        AppStrings.of(
+                          context,
+                          _careNoticeExpanded
+                              ? 'focus_care_hide_advice'
+                              : 'focus_care_action',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              );
-            },
+              ),
+              IconButton(
+                tooltip: AppStrings.of(context, 'focus_care_close'),
+                onPressed: () => setState(() => _careNoticeVisible = false),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
   }
 }
