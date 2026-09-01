@@ -87,4 +87,83 @@ void main() {
     );
     expect(track.constraints.minWidth, greaterThanOrEqualTo(760));
   });
+
+  testWidgets('gantt groups the selected week into positioned day tracks', (
+    tester,
+  ) async {
+    final entry = ScheduleEntry(
+      id: 'gantt-1',
+      day: day,
+      title: 'Gantt task',
+      tag: 'Planning',
+      height: 80,
+      color: Colors.teal,
+      time: const TimeOfDay(hour: 9, minute: 0),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ScheduleTimeline(
+            view: ScheduleTimelineView.gantt,
+            selectedDay: day,
+            entries: [entry],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('schedule-timeline-gantt-track')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('schedule-timeline-gantt-day-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('schedule-timeline-gantt-day-6')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('schedule-timeline-gantt-bar-gantt-1')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('month summary keeps visible event metadata', (tester) async {
+    final entry = ScheduleEntry(
+      id: 'month-1',
+      day: day,
+      title: 'Month task',
+      tag: 'Planning',
+      height: 80,
+      color: Colors.teal,
+      time: const TimeOfDay(hour: 9, minute: 0),
+      reminderMinutesBefore: 15,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ScheduleTimeline(
+            view: ScheduleTimelineView.month,
+            selectedDay: day,
+            entries: [entry],
+            visibleFields: const {
+              ScheduleTimelineField.time,
+              ScheduleTimelineField.tag,
+              ScheduleTimelineField.reminder,
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Month task'), findsOneWidget);
+    expect(find.text('Planning'), findsOneWidget);
+    expect(find.text('15m'), findsOneWidget);
+  });
 }

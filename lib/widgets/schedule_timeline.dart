@@ -475,6 +475,10 @@ class ScheduleTimeline extends StatelessWidget {
     final selected = sameDay(day, selectedDay);
     final inMonth = day.month == month.month;
     final dayEntries = _forDay(day);
+    final firstEntry = dayEntries.isEmpty ? null : dayEntries.first;
+    final firstStatus = firstEntry?.id == null
+        ? null
+        : statusByTaskId[firstEntry!.id!];
     return InkWell(
       onTap: onSelectDay == null ? null : () => onSelectDay!(day),
       child: Container(
@@ -500,13 +504,19 @@ class ScheduleTimeline extends StatelessWidget {
                 '${day.day}',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
-              if (dayEntries.isNotEmpty) ...[
-                const SizedBox(height: 5),
+              if (firstEntry != null) ...[
+                const SizedBox(height: 4),
                 Text(
-                  dayEntries.first.title,
+                  firstEntry.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11),
+                ),
+                ..._metadata(context, firstEntry, firstStatus).map(
+                  (meta) => DefaultTextStyle.merge(
+                    style: const TextStyle(fontSize: 10),
+                    child: meta,
+                  ),
                 ),
                 if (dayEntries.length > 1)
                   Text(
@@ -525,7 +535,13 @@ class ScheduleTimeline extends StatelessWidget {
   }
 
   Widget _buildGantt(BuildContext context) {
-    final sorted = entries.toList()..sort(_compareEntries);
+    final weekStart = startOfWeek(selectedDay);
+    final days = List.generate(
+      7,
+      (index) => weekStart.add(Duration(days: index)),
+    );
+    final totalMinutes = (endHour - startHour) * 60.0;
+    final theme = Theme.of(context);
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         12,
@@ -533,29 +549,137 @@ class ScheduleTimeline extends StatelessWidget {
         12,
         MediaQuery.of(context).padding.bottom + 100,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (sorted.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(32),
-              child: Center(
-                child: Text(
-                  '暂无日程',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.outline,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: _gutterWidth + _minTrackWidth,
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  const SizedBox(width: _gutterWidth, child: Text('日程')),
+                  ConstrainedBox(
+                    key: const ValueKey('schedule-timeline-gantt-track'),
+                    constraints: const BoxConstraints(minWidth: _minTrackWidth),
+                    child: SizedBox(
+                      width: _minTrackWidth,
+                      height: 32,
+                      child: Stack(
+                        children: [
+                          for (
+                            var hour = 0;
+                            hour <= endHour - startHour;
+                            hour++
+                          )
+                            Positioned(
+                              left:
+                                  hour / (endHour - startHour) * _minTrackWidth,
+                              top: 0,
+                              child: Text(
+                                '${startHour + hour}:00',
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            )
-          else
-            ...sorted.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _buildEvent(context, entry),
-              ),
-            ),
-        ],
+              ...days.asMap().entries.map((item) {
+                final index = item.key;
+                final day = item.value;
+                final dayEntries = _forDay(day);
+                final rowHeight = math.max(
+                  128.0,
+                  24.0 + dayEntries.length * 100.0,
+                );
+                return SizedBox(
+                  height: rowHeight,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        key: ValueKey('schedule-timeline-gantt-day-$index'),
+                        width: _gutterWidth,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            '${MaterialLocalizations.of(context).narrowWeekdays[day.weekday % 7]} ${day.month}/${day.day}',
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: _minTrackWidth,
+                        child: Stack(
+                          children: [
+                            for (
+                              var hour = 0;
+                              hour <= endHour - startHour;
+                              hour++
+                            )
+                              Positioned(
+                                left:
+                                    hour /
+                                    (endHour - startHour) *
+                                    _minTrackWidth,
+                                top: 0,
+                                bottom: 0,
+                                child: Container(
+                                  width: 1,
+                                  color: theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                            if (dayEntries.isEmpty)
+                              Center(
+                                child: Text(
+                                  '暂无日程',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.outline,
+                                  ),
+                                ),
+                              ),
+                            ...dayEntries.asMap().entries.map((entryItem) {
+                              final entryIndex = entryItem.key;
+                              final entry = entryItem.value;
+                              final start =
+                                  ((entry.time.hour * 60 + entry.time.minute) -
+                                          startHour * 60)
+                                      .clamp(0, totalMinutes.toInt())
+                                      .toDouble();
+                              final duration = math.max(
+                                30.0,
+                                (entry.height / 80.0) * 60.0,
+                              );
+                              final left =
+                                  start / totalMinutes * _minTrackWidth;
+                              final width = math.max(
+                                120.0,
+                                math.min(
+                                  _minTrackWidth - left,
+                                  duration / totalMinutes * _minTrackWidth,
+                                ),
+                              );
+                              return Positioned(
+                                key: ValueKey(
+                                  'schedule-timeline-gantt-bar-${entry.id ?? entry.title}',
+                                ),
+                                left: left,
+                                top: 24.0 + entryIndex * 100.0,
+                                width: width,
+                                child: _buildEvent(context, entry),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
       ),
     );
   }
