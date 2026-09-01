@@ -230,6 +230,17 @@ class _EventFailingDataService extends _FatigueDataService {
       Future<void>.error(StateError('event store unavailable'));
 }
 
+class _EmptyTeamDataService extends _FatigueDataService {
+  _EmptyTeamDataService(super.inner);
+
+  @override
+  Future<List<TeamMember>> getTeamMembers() async => const [];
+
+  @override
+  Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day) async =>
+      const [];
+}
+
 class _BlockingImportDataService extends _FatigueDataService {
   _BlockingImportDataService(super.inner);
 
@@ -289,6 +300,8 @@ Future<void> _selectDefaultRescue(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(find.text('优先保住截止时间'));
   await tester.pumpAndSettle();
+  await tester.tap(find.text('采用此方案'));
+  await tester.pumpAndSettle();
 }
 
 String _validIcsFor(DateTime day) {
@@ -308,7 +321,11 @@ END:VCALENDAR
 }
 
 void _setWideSurface(WidgetTester tester) {
-  tester.view.physicalSize = const Size(1024, 900);
+  _setSurface(tester, const Size(1024, 900));
+}
+
+void _setSurface(WidgetTester tester, Size size) {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
 }
 
@@ -388,6 +405,115 @@ void main() {
     final hasNavBar = find.byType(NavigationBar).evaluate().isNotEmpty;
     final hasRail = find.byType(NavigationRail).evaluate().isNotEmpty;
     expect(hasNavBar || hasRail, true);
+  });
+
+  testWidgets('wide shell exposes all primary destinations', (tester) async {
+    _setSurface(tester, const Size(1440, 960));
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+
+      for (final label in ['专注', '日程', '微任务', '团队', '我的']) {
+        expect(find.text(label), findsWidgets);
+      }
+      expect(tester.takeException(), isNull);
+    } finally {
+      _resetSurface(tester);
+    }
+  });
+
+  testWidgets('narrow shell exposes keyed destinations', (tester) async {
+    _setSurface(tester, const Size(390, 844));
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+
+      for (final id in ['focus', 'schedule', 'micro', 'team', 'profile']) {
+        expect(find.byKey(ValueKey('shell-nav-$id')), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    } finally {
+      _resetSurface(tester);
+    }
+  });
+
+  testWidgets(
+    'primary destinations render without exceptions at target widths',
+    (tester) async {
+      for (final size in [const Size(1440, 960), const Size(390, 844)]) {
+        _setSurface(tester, size);
+        try {
+          await tester.pumpWidget(const BattleManApp());
+          await tester.pumpAndSettle();
+          await _dismissStartupAuthIfShown(tester);
+
+          for (final id in ['focus', 'schedule', 'micro', 'team', 'profile']) {
+            final barDestination = find.byKey(ValueKey('shell-nav-$id'));
+            final railDestination = find.byKey(ValueKey('shell-rail-$id-icon'));
+            final railSelectedDestination = find.byKey(
+              ValueKey('shell-rail-$id-selected-icon'),
+            );
+            final target = barDestination.evaluate().isNotEmpty
+                ? barDestination
+                : (railDestination.evaluate().isNotEmpty
+                      ? railDestination
+                      : railSelectedDestination);
+            expect(target, findsOneWidget, reason: 'missing nav for $id at $size');
+            await tester.tap(target);
+            await tester.pumpAndSettle();
+            expect(
+              tester.takeException(),
+              isNull,
+              reason: 'destination $id failed at $size',
+            );
+          }
+        } finally {
+          _resetSurface(tester);
+        }
+        // Unmount the app so the next width starts from a fresh shell instead
+        // of animating the previous shell out at the new size.
+        await tester.pumpWidget(const SizedBox());
+      }
+    },
+  );
+
+  testWidgets('focus page keeps the current task action visible on mobile', (
+    tester,
+  ) async {
+    _setSurface(tester, const Size(390, 844));
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+
+      expect(find.text('当前任务'), findsOneWidget);
+      expect(find.text('开始').first, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    } finally {
+      _resetSurface(tester);
+    }
+  });
+
+  testWidgets('micro task page keeps add and batch actions accessible', (
+    tester,
+  ) async {
+    _setSurface(tester, const Size(390, 844));
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+
+      await tester.tap(find.byKey(const ValueKey('shell-nav-micro')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('添加微任务'), findsOneWidget);
+      expect(find.byTooltip('批量模式'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    } finally {
+      _resetSurface(tester);
+    }
   });
 
   testWidgets('Smart calendar month view fits on small screens', (
@@ -687,6 +813,68 @@ void main() {
         find.widgetWithIcon(IconButton, Icons.refresh),
       );
       expect(enabledRefresh.onPressed, isNotNull);
+    } finally {
+      _resetSurface(tester);
+    }
+  });
+
+  testWidgets('profile hub exposes review and settings entries', (tester) async {
+    await tester.pumpWidget(const BattleManApp());
+    await tester.pumpAndSettle();
+    await _dismissStartupAuthIfShown(tester);
+    await tester.tap(find.byKey(const ValueKey('shell-nav-profile')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('复盘'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('设置'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('设置'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('team page keeps collaboration heading and empty state readable at 390px', (
+    tester,
+  ) async {
+    AppServices.installTestOverrides(
+      dataService: _EmptyTeamDataService(
+        LocalDataService.forPersistence(InMemoryLocalPersistence()),
+      ),
+      reminderService: _NoopReminderService(),
+    );
+    _setSurface(tester, const Size(390, 844));
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+
+      await tester.tap(find.byKey(const ValueKey('shell-nav-team')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('协作黄金窗口'), findsOneWidget);
+      expect(find.text('未找到团队成员。'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    } finally {
+      _resetSurface(tester);
+    }
+  });
+
+  testWidgets('urgent rescue presents all strategies before acceptance', (tester) async {
+    _setWideSurface(tester);
+    try {
+      await _openSmartCalendar(tester);
+      await tester.tap(find.byTooltip('插入紧急任务并重新规划'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('插入并重新规划'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('优先保住截止时间'), findsOneWidget);
+      expect(find.text('优先保留恢复时间'), findsOneWidget);
+      expect(find.text('尽量少动原计划'), findsOneWidget);
+      expect(find.text('采用此方案'), findsNothing);
     } finally {
       _resetSurface(tester);
     }

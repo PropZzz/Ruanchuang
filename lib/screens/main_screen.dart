@@ -2,7 +2,11 @@
 import 'package:flutter/material.dart';
 
 import '../services/app_services.dart';
+<<<<<<< HEAD
 import '../theme/app_theme.dart';
+=======
+import '../ui/app_theme.dart';
+>>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
 import '../widgets/workspace_status_bar.dart';
@@ -21,9 +25,12 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+<<<<<<< HEAD
   // Keep the logical-width breakpoint aligned with existing Flutter test and
   // desktop behavior; phones remain below this threshold in production.
   static const double _wideBreakpoint = 1024;
+=======
+>>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
   int _selectedIndex = 0;
   bool _startupAuthPromptShown = false;
 
@@ -124,7 +131,8 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.sizeOf(context).width >= _wideBreakpoint;
+    final isWide =
+        MediaQuery.sizeOf(context).width >= AppTheme.shellBreakpoint;
     final destinations = _destinations(context);
     final active = destinations[_selectedIndex];
     final pageStack = IndexedStack(index: _selectedIndex, children: _pages);
@@ -192,10 +200,15 @@ class _NarrowShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+<<<<<<< HEAD
+=======
+    final scheme = theme.colorScheme;
+>>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
     final compactLabels = MobileFeedback.isNarrow(context, breakpoint: 420);
 
     return Column(
       children: [
+<<<<<<< HEAD
         WorkspaceStatusBar(
           brand: brand,
           title: activeLabel,
@@ -251,6 +264,42 @@ class _NarrowShell extends StatelessWidget {
                     ),
                   ),
                 ),
+=======
+        Expanded(child: ClipRRect(child: child)),
+        Container(
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            border: Border(top: BorderSide(color: scheme.outline)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8.0,
+                vertical: 4.0,
+              ),
+              child: NavigationBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                height: compactLabels ? 68 : null,
+                labelBehavior: compactLabels
+                    ? NavigationDestinationLabelBehavior.onlyShowSelected
+                    : NavigationDestinationLabelBehavior.alwaysShow,
+                selectedIndex: selectedIndex,
+                onDestinationSelected: onSelect,
+                destinations: [
+                  for (final d in destinations)
+                    NavigationDestination(
+                      key: ValueKey('shell-nav-${d.id}'),
+                      icon: Icon(d.icon, size: compactLabels ? 20 : 22),
+                      selectedIcon: Icon(
+                        d.selectedIcon,
+                        size: compactLabels ? 20 : 22,
+                      ),
+                      label: d.label,
+                    ),
+                ],
+>>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
               ),
             ],
           ),
@@ -281,15 +330,26 @@ class _WideShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final text = theme.textTheme;
+<<<<<<< HEAD
     final railExtended = MediaQuery.sizeOf(context).width >= 1220;
+=======
+    final profileIndex = destinations.indexWhere((d) => d.id == 'profile');
+
+>>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
     return Row(
       children: [
         Container(
-          width: railExtended ? 260 : 100,
+          width: 240,
           decoration: BoxDecoration(
+<<<<<<< HEAD
             color: theme.colorScheme.surface,
             border: Border(right: BorderSide(color: theme.colorScheme.outline)),
+=======
+            color: scheme.surface,
+            border: Border(right: BorderSide(color: scheme.outline)),
+>>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
           ),
           child: SafeArea(
             right: false,
@@ -297,21 +357,23 @@ class _WideShell extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
+<<<<<<< HEAD
                   padding: EdgeInsets.fromLTRB(
                     railExtended ? 24 : 0,
                     24,
                     railExtended ? 24 : 0,
                     24,
                   ),
+=======
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+>>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
                   child: Row(
-                    mainAxisAlignment: railExtended
-                        ? MainAxisAlignment.start
-                        : MainAxisAlignment.center,
                     children: [
                       Container(
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
+<<<<<<< HEAD
                           color: theme.colorScheme.primary,
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -333,35 +395,104 @@ class _WideShell extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0,
                             ),
+=======
+                          shape: BoxShape.circle,
+                          color: scheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.0,
+>>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
                           ),
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
                 Expanded(
-                  child: NavigationRail(
-                    backgroundColor: Colors.transparent,
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: onSelect,
-                    extended: railExtended,
-                    minExtendedWidth: 260,
-                    labelType: railExtended
-                        ? NavigationRailLabelType.none
-                        : NavigationRailLabelType.selected,
-                    destinations: [
-                      for (final d in destinations)
-                        NavigationRailDestination(
-                          icon: Icon(
-                            d.icon,
-                            key: ValueKey('shell-rail-${d.id}-icon'),
-                          ),
-                          selectedIcon: Icon(
-                            d.selectedIcon,
-                            key: ValueKey('shell-rail-${d.id}-selected-icon'),
-                          ),
-                          label: Text(d.label),
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    children: [
+                      for (var i = 0; i < destinations.length; i++)
+                        _WideNavItem(
+                          destination: destinations[i],
+                          selected: i == selectedIndex,
+                          onTap: () => onSelect(i),
                         ),
+                    ],
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: scheme.outline)),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(6),
+                          onTap: profileIndex >= 0
+                              ? () => onSelect(profileIndex)
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 8,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.person_outline,
+                                  size: 20,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ValueListenableBuilder<String?>(
+                                    valueListenable:
+                                        ProfilePage.globalNameNotifier,
+                                    builder: (context, name, _) {
+                                      return Text(
+                                        name ?? '未登录',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: text.bodySmall?.copyWith(
+                                          color: scheme.onSurfaceVariant,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.notifications_none, size: 20),
+                        tooltip: '通知',
+                        color: scheme.onSurfaceVariant,
+                        onPressed: null,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.settings_outlined, size: 20),
+                        tooltip: '设置',
+                        color: scheme.onSurfaceVariant,
+                        onPressed: profileIndex >= 0
+                            ? () => onSelect(profileIndex)
+                            : null,
+                      ),
                     ],
                   ),
                 ),
@@ -376,6 +507,7 @@ class _WideShell extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+<<<<<<< HEAD
                 Padding(
                   padding: EdgeInsets.zero,
                   child: WorkspaceStatusBar(
@@ -396,6 +528,25 @@ class _WideShell extends StatelessWidget {
                       ),
                       child: child,
                     ),
+=======
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: scheme.outline)),
+                  ),
+                  child: Text(
+                    activeLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.titleLarge,
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    color: theme.scaffoldBackgroundColor,
+                    child: child,
+>>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
                   ),
                 ),
               ],
@@ -403,6 +554,66 @@ class _WideShell extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _WideNavItem extends StatelessWidget {
+  const _WideNavItem({
+    required this.destination,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _ShellDestination destination;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final foreground = selected ? scheme.onSurface : scheme.onSurfaceVariant;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? scheme.primary.withValues(alpha: 0.12) : null,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                selected ? destination.selectedIcon : destination.icon,
+                key: ValueKey(
+                  selected
+                      ? 'shell-rail-${destination.id}-selected-icon'
+                      : 'shell-rail-${destination.id}-icon',
+                ),
+                size: 22,
+                color: foreground,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  destination.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: foreground,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

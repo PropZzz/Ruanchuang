@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'app_globals.dart';
 import 'screens/main_screen.dart';
+import 'ui/app_theme.dart';
 import 'services/app_services.dart';
 import 'theme/app_theme.dart';
 import 'utils/app_strings.dart';
@@ -186,7 +187,10 @@ class BattleManApp extends StatefulWidget {
 class _BattleManAppState extends State<BattleManApp> {
   late ThemeMode _themeMode;
   late Locale _locale;
+<<<<<<< HEAD
   Color _accentColor = AppThemeTokens.recoveryLight;
+=======
+>>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
 
   @override
   void initState() {
@@ -241,8 +245,13 @@ class _BattleManAppState extends State<BattleManApp> {
       scaffoldMessengerKey: appScaffoldMessengerKey,
       title: '\u65f6\u5e8f\u667a\u914d',
       onGenerateTitle: (context) => AppStrings.of(context, 'app_title'),
+<<<<<<< HEAD
       theme: AppTheme.build(Brightness.light, accentColor: _accentColor),
       darkTheme: AppTheme.build(Brightness.dark, accentColor: _accentColor),
+=======
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+>>>>>>> d9a13f017b1d6e2337be5f4fe471d93a1f14c33d
       themeMode: _themeMode,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
