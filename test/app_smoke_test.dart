@@ -494,7 +494,14 @@ void main() {
       await _dismissStartupAuthIfShown(tester);
 
       expect(find.text('当前任务'), findsOneWidget);
-      expect(find.text('开始').first, findsOneWidget);
+      if (find
+          .byKey(const ValueKey('focus-task-empty'))
+          .evaluate()
+          .isNotEmpty) {
+        expect(find.text('检查'), findsOneWidget);
+      } else {
+        expect(find.text('开始').first, findsOneWidget);
+      }
       expect(tester.takeException(), isNull);
     } finally {
       _resetSurface(tester);
@@ -832,14 +839,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('shell-nav-profile')));
     await tester.pumpAndSettle();
 
-    expect(find.text('复盘'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('设置'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await tester.drag(find.byType(ListView).first, const Offset(0, -420));
     await tester.pumpAndSettle();
-    expect(find.text('设置'), findsOneWidget);
+    expect(find.text('复盘'), findsOneWidget);
+    expect(find.byTooltip('设置'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

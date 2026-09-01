@@ -291,7 +291,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     context,
                     icon: Icons.auto_graph_rounded,
                     iconColor: theme.colorScheme.primary,
-                    title: AppStrings.of(context, 'review_title'),
+                    title: AppStrings.of(context, 'review_nav_label'),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ReviewPage()),
                     ),

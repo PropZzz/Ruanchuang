@@ -237,6 +237,7 @@ class AppStrings {
       'lang_en': 'English',
 
       'review_title': '智能复盘',
+      'review_nav_label': '复盘',
       'review_tooltip_prev_week': '上一周',
       'review_tooltip_next_week': '下一周',
       'review_btn_simulate_week': '模拟一周',
@@ -605,6 +606,7 @@ class AppStrings {
       'lang_en': 'English',
 
       'review_title': 'Smart Review',
+      'review_nav_label': 'Review',
       'review_tooltip_prev_week': 'Previous week',
       'review_tooltip_next_week': 'Next week',
       'review_btn_simulate_week': 'Simulate 1 Week',

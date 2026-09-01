@@ -422,7 +422,17 @@ class _FocusPageState extends State<FocusPage> {
                     const SizedBox(height: 18),
                     ResponsiveCardGrid(
                       children: [
-                        _buildCurrentTaskCard(context),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildSectionTitle(
+                              context,
+                              AppStrings.of(context, 'focus_header_current'),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildCurrentTaskCard(context),
+                          ],
+                        ),
                         _buildEnergyStatusCard(),
                       ],
                     ),
