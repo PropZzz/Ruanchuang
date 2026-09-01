@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shixuzhipei/theme/app_theme.dart';
 import 'package:shixuzhipei/widgets/glass_surface.dart';
+import 'package:shixuzhipei/widgets/workspace_status_bar.dart';
 
 void main() {
   test('Apple Utility tokens expose the approved light and dark palette', () {
@@ -46,5 +47,21 @@ void main() {
     expect(find.byType(BackdropFilter), findsOneWidget);
     expect(find.text('glass content'), findsOneWidget);
     expect(tester.getSize(find.text('glass content')), isNot(Size.zero));
+  });
+
+  testWidgets('workspace status chrome keeps its status-bar semantics', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(
+          body: WorkspaceStatusBar(brand: '时序智配', title: '专注'),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const ValueKey('workspace-status-bar')), findsOneWidget);
+    expect(find.byType(BackdropFilter), findsOneWidget);
   });
 }

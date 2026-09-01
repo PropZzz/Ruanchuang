@@ -96,7 +96,7 @@ this.level = AppMaterialLevel.surface,
 this.enabled = true,
 ```
 
-Use the caller-provided `blur`/`opacity` when non-default; otherwise resolve defaults from `AppMaterialTokens`. For `canvas`/`surface`, render an opaque decorated box. For `chrome`/`overlay` with `enabled == true` and `!MediaQuery.highContrast`, render the existing `BackdropFilter` plus a tinted surface, top highlight border, and level-specific shadow. For `enabled == false` or high contrast, skip `BackdropFilter` and use the corresponding opaque color while preserving padding, radius, margin, and child semantics.
+Use the caller-provided `blur`/`opacity` when non-default; otherwise resolve defaults from `AppMaterialTokens`. Keep the constructor default at `AppMaterialLevel.chrome` for backwards compatibility, while all content call sites pass `surface` explicitly. For `canvas`/`surface`, render an opaque decorated box. For `chrome`/`overlay` with `enabled == true` and `!MediaQuery.highContrast`, render the existing `BackdropFilter` plus a tinted surface, top highlight border, and level-specific shadow. For `enabled == false` or high contrast, skip `BackdropFilter` and use the corresponding opaque color while preserving padding, radius, margin, and child semantics.
 
 - [ ] **Step 3: Extend tests for both paths**
 
