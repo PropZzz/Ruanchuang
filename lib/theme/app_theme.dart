@@ -27,6 +27,45 @@ abstract final class AppThemeTokens {
   static const dividerDark = Color(0xFF38383A);
 }
 
+/// Material hierarchy used by structural chrome and floating overlays.
+enum AppMaterialLevel { canvas, surface, chrome, overlay }
+
+/// Shared opacity, blur, and shadow values for the selective glass system.
+abstract final class AppMaterialTokens {
+  static const chromeLightOpacity = 0.76;
+  static const chromeDarkOpacity = 0.72;
+  static const overlayLightOpacity = 0.86;
+  static const overlayDarkOpacity = 0.82;
+  static const chromeBlur = 22.0;
+  static const overlayBlur = 28.0;
+
+  static double opacity(Brightness brightness, AppMaterialLevel level) {
+    final isDark = brightness == Brightness.dark;
+    return switch (level) {
+      AppMaterialLevel.canvas || AppMaterialLevel.surface => 1,
+      AppMaterialLevel.chrome =>
+        isDark ? chromeDarkOpacity : chromeLightOpacity,
+      AppMaterialLevel.overlay =>
+        isDark ? overlayDarkOpacity : overlayLightOpacity,
+    };
+  }
+
+  static double blur(AppMaterialLevel level) => switch (level) {
+    AppMaterialLevel.canvas || AppMaterialLevel.surface => 0,
+    AppMaterialLevel.chrome => chromeBlur,
+    AppMaterialLevel.overlay => overlayBlur,
+  };
+
+  static double shadowAlpha(Brightness brightness, AppMaterialLevel level) {
+    final isDark = brightness == Brightness.dark;
+    return switch (level) {
+      AppMaterialLevel.canvas || AppMaterialLevel.surface => 0,
+      AppMaterialLevel.chrome => isDark ? 0.2 : 0.08,
+      AppMaterialLevel.overlay => isDark ? 0.3 : 0.14,
+    };
+  }
+}
+
 enum AppWindowTone { neutral, focus, schedule, micro, team, profile }
 
 abstract final class AppMotion {
@@ -96,6 +135,12 @@ abstract final class AppWindowTones {
 }
 
 abstract final class AppTheme {
+  /// Desktop shell threshold: >= 1024 uses the wide navigation shell.
+  static const double shellBreakpoint = 1024;
+
+  /// Rescue comparison threshold: >= 760 uses side-by-side columns.
+  static const double comparisonBreakpoint = 760;
+
   static ThemeData get light => build(Brightness.light);
 
   static ThemeData get dark => build(Brightness.dark);
