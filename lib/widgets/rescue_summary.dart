@@ -50,6 +50,7 @@ class RescueSummary extends StatelessWidget {
 
     return GlassSurface(
       key: const ValueKey('calendar-rescue-summary'),
+      level: AppMaterialLevel.overlay,
       margin: EdgeInsets.fromLTRB(compact ? 12 : 20, 4, compact ? 12 : 20, 8),
       padding: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(16),

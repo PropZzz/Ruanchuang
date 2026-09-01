@@ -400,6 +400,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AuthDialog), findsOneWidget);
+    expect(find.byKey(const ValueKey('auth-dialog-material')), findsOneWidget);
     await _dismissStartupAuthIfShown(tester);
 
     final hasNavBar = find.byType(NavigationBar).evaluate().isNotEmpty;
@@ -460,7 +461,11 @@ void main() {
                 : (railDestination.evaluate().isNotEmpty
                       ? railDestination
                       : railSelectedDestination);
-            expect(target, findsOneWidget, reason: 'missing nav for $id at $size');
+            expect(
+              target,
+              findsOneWidget,
+              reason: 'missing nav for $id at $size',
+            );
             await tester.tap(target);
             await tester.pumpAndSettle();
             expect(
@@ -818,7 +823,9 @@ void main() {
     }
   });
 
-  testWidgets('profile hub exposes review and settings entries', (tester) async {
+  testWidgets('profile hub exposes review and settings entries', (
+    tester,
+  ) async {
     await tester.pumpWidget(const BattleManApp());
     await tester.pumpAndSettle();
     await _dismissStartupAuthIfShown(tester);
@@ -836,33 +843,36 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('team page keeps collaboration heading and empty state readable at 390px', (
+  testWidgets(
+    'team page keeps collaboration heading and empty state readable at 390px',
+    (tester) async {
+      AppServices.installTestOverrides(
+        dataService: _EmptyTeamDataService(
+          LocalDataService.forPersistence(InMemoryLocalPersistence()),
+        ),
+        reminderService: _NoopReminderService(),
+      );
+      _setSurface(tester, const Size(390, 844));
+      try {
+        await tester.pumpWidget(const BattleManApp());
+        await tester.pumpAndSettle();
+        await _dismissStartupAuthIfShown(tester);
+
+        await tester.tap(find.byKey(const ValueKey('shell-nav-team')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('协作黄金窗口'), findsOneWidget);
+        expect(find.text('未找到团队成员。'), findsWidgets);
+        expect(tester.takeException(), isNull);
+      } finally {
+        _resetSurface(tester);
+      }
+    },
+  );
+
+  testWidgets('urgent rescue presents all strategies before acceptance', (
     tester,
   ) async {
-    AppServices.installTestOverrides(
-      dataService: _EmptyTeamDataService(
-        LocalDataService.forPersistence(InMemoryLocalPersistence()),
-      ),
-      reminderService: _NoopReminderService(),
-    );
-    _setSurface(tester, const Size(390, 844));
-    try {
-      await tester.pumpWidget(const BattleManApp());
-      await tester.pumpAndSettle();
-      await _dismissStartupAuthIfShown(tester);
-
-      await tester.tap(find.byKey(const ValueKey('shell-nav-team')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('协作黄金窗口'), findsOneWidget);
-      expect(find.text('未找到团队成员。'), findsWidgets);
-      expect(tester.takeException(), isNull);
-    } finally {
-      _resetSurface(tester);
-    }
-  });
-
-  testWidgets('urgent rescue presents all strategies before acceptance', (tester) async {
     _setWideSurface(tester);
     try {
       await _openSmartCalendar(tester);

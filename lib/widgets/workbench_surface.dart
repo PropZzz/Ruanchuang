@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+import 'glass_surface.dart';
+
 /// 工作台状态语义：映射到 AppTheme 语义色槽位。
 ///
 /// success -> colorScheme.secondary，warning -> colorScheme.tertiary，
@@ -31,23 +34,29 @@ class WorkbenchSurface extends StatelessWidget {
     this.title,
     this.trailing,
     this.padding = const EdgeInsets.all(16),
+    this.materialLevel = AppMaterialLevel.surface,
     required this.child,
   });
 
   final String? title;
   final Widget? trailing;
   final EdgeInsetsGeometry padding;
+  final AppMaterialLevel materialLevel;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
+    final content = Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: scheme.outline),
+        color: materialLevel == AppMaterialLevel.surface
+            ? scheme.surface
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: materialLevel == AppMaterialLevel.surface
+            ? Border.all(color: scheme.outline)
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,6 +69,14 @@ class WorkbenchSurface extends StatelessWidget {
           child,
         ],
       ),
+    );
+    if (materialLevel == AppMaterialLevel.surface) return content;
+    return GlassSurface(
+      level: materialLevel,
+      padding: EdgeInsets.zero,
+      borderRadius: BorderRadius.circular(12),
+      showShadow: materialLevel == AppMaterialLevel.overlay,
+      child: content,
     );
   }
 }

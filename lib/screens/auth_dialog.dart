@@ -8,6 +8,7 @@ import '../services/app_services.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../main.dart';
+import '../widgets/glass_surface.dart';
 import '../widgets/press_scale.dart';
 import 'profile_page.dart';
 
@@ -472,351 +473,366 @@ class _AuthDialogState extends State<AuthDialog> with TickerProviderStateMixin {
             opacity: _fadeAnimation,
             child: ScaleTransition(
               scale: _scaleAnimation,
-              child: Container(
+              child: SizedBox(
                 width: MediaQuery.of(context).size.width.clamp(320.0, 420.0),
-                margin: EdgeInsets.fromLTRB(
-                  24,
-                  MediaQuery.of(context).padding.top + 24,
-                  24,
-                  24,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.outline,
+                child: GlassSurface(
+                  key: const ValueKey('auth-dialog-material'),
+                  level: AppMaterialLevel.overlay,
+                  margin: EdgeInsets.fromLTRB(
+                    24,
+                    MediaQuery.of(context).padding.top + 24,
+                    24,
+                    24,
                   ),
-                ),
-                child: ClipRRect(
+                  padding: EdgeInsets.zero,
                   borderRadius: BorderRadius.circular(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // 顶部区域
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(32, 36, 24, 24),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: primaryColor.withValues(
-                                      alpha: isDark ? 0.2 : 0.1,
+                  tint: Theme.of(context).colorScheme.surface,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 顶部区域
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(32, 36, 24, 24),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: primaryColor.withValues(
+                                        alpha: isDark ? 0.2 : 0.1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
-                                    borderRadius: BorderRadius.circular(16),
+                                    child: Icon(
+                                      Icons.auto_awesome_rounded,
+                                      color: primaryColor,
+                                      size: 28,
+                                    ),
                                   ),
-                                  child: Icon(
-                                    Icons.auto_awesome_rounded,
-                                    color: primaryColor,
-                                    size: 28,
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  AppStrings.of(context, 'auth_title'),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineSmall
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                        color: textColor,
-                                        letterSpacing: 0.5,
-                                      ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.language_rounded,
-                                    color: textColor.withValues(alpha: 0.5),
-                                  ),
-                                  onPressed: _showLanguageDialog,
-                                  tooltip: '切换语言',
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: isDark
-                                        ? Colors.white10
-                                        : Colors.black.withValues(alpha: 0.05),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.close_rounded,
-                                    color: textColor.withValues(alpha: 0.55),
-                                  ),
-                                  onPressed: _dismiss,
-                                  tooltip: '关闭登录',
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: isDark
-                                        ? Colors.white10
-                                        : Colors.black.withValues(alpha: 0.05),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // 定制化分段器
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: Container(
-                          height: 52,
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.black.withValues(alpha: 0.3)
-                                : Colors.black.withValues(alpha: 0.04),
-                            borderRadius: BorderRadius.circular(26),
-                          ),
-                          child: TabBar(
-                            controller: _tabController,
-                            indicator: BoxDecoration(
-                              borderRadius: BorderRadius.circular(22),
-                              color: isDark
-                                  ? Colors.white.withValues(alpha: 0.15)
-                                  : Colors.white,
-                              boxShadow: isDark
-                                  ? []
-                                  : [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.05,
+                                  const SizedBox(height: 20),
+                                  Text(
+                                    AppStrings.of(context, 'auth_title'),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          color: textColor,
+                                          letterSpacing: 0.5,
                                         ),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                            ),
-                            indicatorSize: TabBarIndicatorSize.tab,
-                            dividerColor: Colors.transparent,
-                            labelColor: isDark ? Colors.white : Colors.black87,
-                            unselectedLabelColor: textColor.withValues(
-                              alpha: 0.5,
-                            ),
-                            labelStyle: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
-                            ),
-                            unselectedLabelStyle: const TextStyle(
-                              fontWeight: FontWeight.w500,
-                              fontSize: 15,
-                            ),
-                            tabs: [
-                              Tab(
-                                text: AppStrings.of(context, 'auth_tab_login'),
+                                  ),
+                                ],
                               ),
-                              Tab(
-                                text: AppStrings.of(
-                                  context,
-                                  'auth_tab_register',
-                                ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.language_rounded,
+                                      color: textColor.withValues(alpha: 0.5),
+                                    ),
+                                    onPressed: _showLanguageDialog,
+                                    tooltip: '切换语言',
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: isDark
+                                          ? Colors.white10
+                                          : Colors.black.withValues(
+                                              alpha: 0.05,
+                                            ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.close_rounded,
+                                      color: textColor.withValues(alpha: 0.55),
+                                    ),
+                                    onPressed: _dismiss,
+                                    tooltip: '关闭登录',
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: isDark
+                                          ? Colors.white10
+                                          : Colors.black.withValues(
+                                              alpha: 0.05,
+                                            ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
                         ),
-                      ),
 
-                      // 输入表单与按钮区域
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
-                        child: AnimatedSize(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeOutCubic,
-                          alignment: Alignment.topCenter,
-                          child: Column(
-                            children: [
-                              // 注册时显示头像上传控件
-                              if (_tabController.index == 1)
-                                _buildAvatarPicker(),
-
-                              _buildTextField(
-                                controller: _accountController,
-                                focusNode: _accountFocus,
-                                nextFocusNode: _tabController.index == 1
-                                    ? _nicknameFocus
-                                    : _passwordFocus,
-                                labelText: AppStrings.of(
-                                  context,
-                                  'auth_label_contact',
-                                ),
-                                icon: CupertinoIcons.envelope_fill,
+                        // 定制化分段器
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Container(
+                            height: 52,
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.black.withValues(alpha: 0.3)
+                                  : Colors.black.withValues(alpha: 0.04),
+                              borderRadius: BorderRadius.circular(26),
+                            ),
+                            child: TabBar(
+                              controller: _tabController,
+                              indicator: BoxDecoration(
+                                borderRadius: BorderRadius.circular(22),
+                                color: isDark
+                                    ? Colors.white.withValues(alpha: 0.15)
+                                    : Colors.white,
+                                boxShadow: isDark
+                                    ? []
+                                    : [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.05,
+                                          ),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
                               ),
+                              indicatorSize: TabBarIndicatorSize.tab,
+                              dividerColor: Colors.transparent,
+                              labelColor: isDark
+                                  ? Colors.white
+                                  : Colors.black87,
+                              unselectedLabelColor: textColor.withValues(
+                                alpha: 0.5,
+                              ),
+                              labelStyle: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                              unselectedLabelStyle: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 15,
+                              ),
+                              tabs: [
+                                Tab(
+                                  text: AppStrings.of(
+                                    context,
+                                    'auth_tab_login',
+                                  ),
+                                ),
+                                Tab(
+                                  text: AppStrings.of(
+                                    context,
+                                    'auth_tab_register',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
 
-                              if (_tabController.index == 1) ...[
+                        // 输入表单与按钮区域
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
+                          child: AnimatedSize(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOutCubic,
+                            alignment: Alignment.topCenter,
+                            child: Column(
+                              children: [
+                                // 注册时显示头像上传控件
+                                if (_tabController.index == 1)
+                                  _buildAvatarPicker(),
+
                                 _buildTextField(
-                                  controller: _nicknameController,
-                                  focusNode: _nicknameFocus,
-                                  nextFocusNode: _passwordFocus,
+                                  controller: _accountController,
+                                  focusNode: _accountFocus,
+                                  nextFocusNode: _tabController.index == 1
+                                      ? _nicknameFocus
+                                      : _passwordFocus,
                                   labelText: AppStrings.of(
                                     context,
-                                    'auth_label_name',
+                                    'auth_label_contact',
                                   ),
-                                  icon: CupertinoIcons.person_solid,
+                                  icon: CupertinoIcons.envelope_fill,
                                 ),
-                              ],
 
-                              _buildTextField(
-                                controller: _passwordController,
-                                focusNode: _passwordFocus,
-                                nextFocusNode: _tabController.index == 1
-                                    ? _confirmPasswordFocus
-                                    : null,
-                                labelText: isZh ? '密码' : 'Password',
-                                icon: CupertinoIcons.lock_shield_fill,
-                                isPassword: true,
-                                obscureText: _obscurePassword,
-                                onToggleObscure: () => setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                ),
-                              ),
+                                if (_tabController.index == 1) ...[
+                                  _buildTextField(
+                                    controller: _nicknameController,
+                                    focusNode: _nicknameFocus,
+                                    nextFocusNode: _passwordFocus,
+                                    labelText: AppStrings.of(
+                                      context,
+                                      'auth_label_name',
+                                    ),
+                                    icon: CupertinoIcons.person_solid,
+                                  ),
+                                ],
 
-                              if (_tabController.index == 1) ...[
                                 _buildTextField(
-                                  controller: _confirmPasswordController,
-                                  focusNode: _confirmPasswordFocus,
-                                  labelText: isZh ? '确认密码' : 'Confirm Password',
-                                  icon: CupertinoIcons.lock_rotation,
+                                  controller: _passwordController,
+                                  focusNode: _passwordFocus,
+                                  nextFocusNode: _tabController.index == 1
+                                      ? _confirmPasswordFocus
+                                      : null,
+                                  labelText: isZh ? '密码' : 'Password',
+                                  icon: CupertinoIcons.lock_shield_fill,
                                   isPassword: true,
-                                  obscureText: _obscureConfirmPassword,
+                                  obscureText: _obscurePassword,
                                   onToggleObscure: () => setState(
-                                    () => _obscureConfirmPassword =
-                                        !_obscureConfirmPassword,
+                                    () => _obscurePassword = !_obscurePassword,
+                                  ),
+                                ),
+
+                                if (_tabController.index == 1) ...[
+                                  _buildTextField(
+                                    controller: _confirmPasswordController,
+                                    focusNode: _confirmPasswordFocus,
+                                    labelText: isZh
+                                        ? '确认密码'
+                                        : 'Confirm Password',
+                                    icon: CupertinoIcons.lock_rotation,
+                                    isPassword: true,
+                                    obscureText: _obscureConfirmPassword,
+                                    onToggleObscure: () => setState(
+                                      () => _obscureConfirmPassword =
+                                          !_obscureConfirmPassword,
+                                    ),
+                                  ),
+                                ],
+
+                                // 错误提示区
+                                if (_errorMessage != null) ...[
+                                  Padding(
+                                    padding: const EdgeInsets.only(
+                                      top: 4,
+                                      bottom: 12,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          CupertinoIcons
+                                              .exclamationmark_circle_fill,
+                                          color: Colors.red.shade400,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _errorMessage!,
+                                            style: TextStyle(
+                                              color: Colors.red.shade400,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 8),
+
+                                // 主操作按钮
+                                PressScale(
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    height: 56,
+                                    child: ElevatedButton(
+                                      onPressed: _isLoading
+                                          ? null
+                                          : _handleAuth,
+                                      style:
+                                          ElevatedButton.styleFrom(
+                                            backgroundColor: primaryColor,
+                                            foregroundColor: Colors.white,
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                          ).copyWith(
+                                            elevation:
+                                                WidgetStateProperty.resolveWith<
+                                                  double
+                                                >((states) {
+                                                  if (states.contains(
+                                                    WidgetState.pressed,
+                                                  ))
+                                                    return 2;
+                                                  if (states.contains(
+                                                    WidgetState.disabled,
+                                                  ))
+                                                    return 0;
+                                                  return 8;
+                                                }),
+                                          ),
+                                      child: _isLoading
+                                          ? const SizedBox(
+                                              height: 24,
+                                              width: 24,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.5,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : Text(
+                                              _tabController.index == 0
+                                                  ? AppStrings.of(
+                                                      context,
+                                                      'auth_btn_login',
+                                                    )
+                                                  : AppStrings.of(
+                                                      context,
+                                                      'auth_btn_register',
+                                                    ),
+                                              style: const TextStyle(
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 1.0,
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                ),
+
+                                // 新增：游客登录按钮
+                                const SizedBox(height: 12),
+                                TextButton(
+                                  onPressed: _isLoading
+                                      ? null
+                                      : _handleGuestLogin,
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: textColor.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                    minimumSize: const Size(
+                                      double.infinity,
+                                      48,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    isZh ? '游客身份体验' : 'Continue as Guest',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ],
-
-                              // 错误提示区
-                              if (_errorMessage != null) ...[
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                    top: 4,
-                                    bottom: 12,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        CupertinoIcons
-                                            .exclamationmark_circle_fill,
-                                        color: Colors.red.shade400,
-                                        size: 16,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          _errorMessage!,
-                                          style: TextStyle(
-                                            color: Colors.red.shade400,
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 8),
-
-                              // 主操作按钮
-                              PressScale(
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  height: 56,
-                                  child: ElevatedButton(
-                                    onPressed: _isLoading ? null : _handleAuth,
-                                    style:
-                                        ElevatedButton.styleFrom(
-                                          backgroundColor: primaryColor,
-                                          foregroundColor: Colors.white,
-                                          elevation: 0,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
-                                          ),
-                                        ).copyWith(
-                                          elevation:
-                                              WidgetStateProperty.resolveWith<
-                                                double
-                                              >((states) {
-                                                if (states.contains(
-                                                  WidgetState.pressed,
-                                                ))
-                                                  return 2;
-                                                if (states.contains(
-                                                  WidgetState.disabled,
-                                                ))
-                                                  return 0;
-                                                return 8;
-                                              }),
-                                        ),
-                                    child: _isLoading
-                                        ? const SizedBox(
-                                            height: 24,
-                                            width: 24,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2.5,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Text(
-                                            _tabController.index == 0
-                                                ? AppStrings.of(
-                                                    context,
-                                                    'auth_btn_login',
-                                                  )
-                                                : AppStrings.of(
-                                                    context,
-                                                    'auth_btn_register',
-                                                  ),
-                                            style: const TextStyle(
-                                              fontSize: 17,
-                                              fontWeight: FontWeight.w700,
-                                              letterSpacing: 1.0,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              ),
-
-                              // 新增：游客登录按钮
-                              const SizedBox(height: 12),
-                              TextButton(
-                                onPressed: _isLoading
-                                    ? null
-                                    : _handleGuestLogin,
-                                style: TextButton.styleFrom(
-                                  foregroundColor: textColor.withValues(
-                                    alpha: 0.6,
-                                  ),
-                                  minimumSize: const Size(double.infinity, 48),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                child: Text(
-                                  isZh ? '游客身份体验' : 'Continue as Guest',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
