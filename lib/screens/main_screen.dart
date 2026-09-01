@@ -124,7 +124,6 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final isWide = MediaQuery.sizeOf(context).width >= AppTheme.shellBreakpoint;
     final destinations = _destinations(context);
-    final active = destinations[_selectedIndex];
     final pageStack = IndexedStack(index: _selectedIndex, children: _pages);
 
     return Scaffold(
@@ -141,7 +140,6 @@ class _MainScreenState extends State<MainScreen> {
               ? _WideShell(
                   key: const ValueKey('wide-shell'),
                   title: AppStrings.of(context, 'app_title'),
-                  activeLabel: active.label,
                   selectedIndex: _selectedIndex,
                   destinations: destinations,
                   onSelect: _onSelect,
@@ -194,40 +192,45 @@ class _NarrowShell extends StatelessWidget {
     return Column(
       children: [
         Expanded(child: ClipRRect(child: child)),
-        GlassSurface(
-          key: const ValueKey('shell-bottom-material'),
-          level: AppMaterialLevel.chrome,
-          borderRadius: BorderRadius.zero,
-          padding: EdgeInsets.zero,
-          showShadow: false,
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8.0,
-                vertical: 4.0,
-              ),
-              child: NavigationBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                height: compactLabels ? 68 : null,
-                labelBehavior: compactLabels
-                    ? NavigationDestinationLabelBehavior.onlyShowSelected
-                    : NavigationDestinationLabelBehavior.alwaysShow,
-                selectedIndex: selectedIndex,
-                onDestinationSelected: onSelect,
-                destinations: [
-                  for (final d in destinations)
-                    NavigationDestination(
-                      key: ValueKey('shell-nav-${d.id}'),
-                      icon: Icon(d.icon, size: compactLabels ? 20 : 22),
-                      selectedIcon: Icon(
-                        d.selectedIcon,
-                        size: compactLabels ? 20 : 22,
+        Padding(
+          key: const ValueKey('shell-bottom-capsule'),
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+          child: GlassSurface(
+            key: const ValueKey('shell-bottom-material'),
+            level: AppMaterialLevel.chrome,
+            borderRadius: BorderRadius.circular(24),
+            opacity: 0.9,
+            padding: EdgeInsets.zero,
+            showShadow: true,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8.0,
+                  vertical: 4.0,
+                ),
+                child: NavigationBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  height: compactLabels ? 68 : null,
+                  labelBehavior: compactLabels
+                      ? NavigationDestinationLabelBehavior.onlyShowSelected
+                      : NavigationDestinationLabelBehavior.alwaysShow,
+                  selectedIndex: selectedIndex,
+                  onDestinationSelected: onSelect,
+                  destinations: [
+                    for (final d in destinations)
+                      NavigationDestination(
+                        key: ValueKey('shell-nav-${d.id}'),
+                        icon: Icon(d.icon, size: compactLabels ? 20 : 22),
+                        selectedIcon: Icon(
+                          d.selectedIcon,
+                          size: compactLabels ? 20 : 22,
+                        ),
+                        label: d.label,
                       ),
-                      label: d.label,
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -241,7 +244,6 @@ class _WideShell extends StatelessWidget {
   const _WideShell({
     super.key,
     required this.title,
-    required this.activeLabel,
     required this.selectedIndex,
     required this.destinations,
     required this.onSelect,
@@ -251,7 +253,6 @@ class _WideShell extends StatelessWidget {
   });
 
   final String title;
-  final String activeLabel;
   final int selectedIndex;
   final List<_ShellDestination> destinations;
   final ValueChanged<int> onSelect;
@@ -489,32 +490,9 @@ class _WideShell extends StatelessWidget {
           child: SafeArea(
             left: false,
             bottom: false,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GlassSurface(
-                  key: const ValueKey('workspace-status-bar-material'),
-                  level: AppMaterialLevel.chrome,
-                  borderRadius: BorderRadius.zero,
-                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                  showShadow: false,
-                  child: KeyedSubtree(
-                    key: const ValueKey('workspace-status-bar'),
-                    child: Text(
-                      activeLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.titleLarge,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    color: theme.scaffoldBackgroundColor,
-                    child: child,
-                  ),
-                ),
-              ],
+            child: Container(
+              color: theme.scaffoldBackgroundColor,
+              child: child,
             ),
           ),
         ),

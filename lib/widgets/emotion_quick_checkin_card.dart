@@ -42,37 +42,56 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
   Future<void> _load() async {
     setState(() => _loading = true);
     final now = DateTime.now();
-    final stateF = _data.getEmotionState();
-    final todayF = _data.getEmotionCheckIns(now);
-    final yF = _data.getEmotionCheckIns(now.subtract(const Duration(days: 1)));
+    try {
+      // Consume every request together. If one request fails (for example a
+      // normal unauthenticated 401), the other concurrent failures must not
+      // escape as unhandled futures.
+      final values = await Future.wait<dynamic>([
+        _data.getEmotionState(),
+        _data.getEmotionCheckIns(now),
+        _data.getEmotionCheckIns(now.subtract(const Duration(days: 1))),
+      ]);
+      final state = values[0] as EmotionState;
+      final today = values[1] as List<EmotionCheckIn>;
+      final y = values[2] as List<EmotionCheckIn>;
 
-    final state = await stateF;
-    final today = await todayF;
-    final y = await yF;
+      EmotionState? lastState(List<EmotionCheckIn> xs) {
+        if (xs.isEmpty) return null;
+        final s = List<EmotionCheckIn>.from(xs)
+          ..sort((a, b) => a.at.compareTo(b.at));
+        return s.last.state;
+      }
 
-    EmotionState? lastState(List<EmotionCheckIn> xs) {
-      if (xs.isEmpty) return null;
-      final s = List<EmotionCheckIn>.from(xs)
-        ..sort((a, b) => a.at.compareTo(b.at));
-      return s.last.state;
+      final care = EmotionPolicy.shouldShowCareHint(
+        today: lastState(today),
+        yesterday: lastState(y),
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _current = state;
+        _today = today.isEmpty
+            ? null
+            : (List<EmotionCheckIn>.from(
+                today,
+              )..sort((a, b) => a.at.compareTo(b.at))).last;
+        _careHint = care ? AppStrings.of(context, 'emo_care_hint') : null;
+        _loading = false;
+      });
+    } catch (e, st) {
+      if (!mounted) return;
+      AppServices.logStore.error(
+        'emotion',
+        'load quick check-in failed',
+        error: e,
+        stackTrace: st,
+      );
+      setState(() {
+        _today = null;
+        _careHint = null;
+        _loading = false;
+      });
     }
-
-    final care = EmotionPolicy.shouldShowCareHint(
-      today: lastState(today),
-      yesterday: lastState(y),
-    );
-
-    if (!mounted) return;
-    setState(() {
-      _current = state;
-      _today = today.isEmpty
-          ? null
-          : (List<EmotionCheckIn>.from(
-              today,
-            )..sort((a, b) => a.at.compareTo(b.at))).last;
-      _careHint = care ? AppStrings.of(context, 'emo_care_hint') : null;
-      _loading = false;
-    });
   }
 
   String _label(BuildContext context, EmotionState s) {

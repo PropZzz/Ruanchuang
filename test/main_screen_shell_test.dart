@@ -40,21 +40,12 @@ void main() {
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
   }
 
-  testWidgets('wide shell exposes workspace status bar and navigation rail', (
-    tester,
-  ) async {
+  testWidgets('wide shell omits the workspace title block', (tester) async {
     await pumpShell(tester, const Size(1440, 900));
 
-    expect(find.byKey(const ValueKey('workspace-status-bar')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('workspace-status-bar-material')),
-      findsOneWidget,
-    );
-    expect(
-      tester.widget<GlassSurface>(
-        find.byKey(const ValueKey('workspace-status-bar-material')),
-      ),
-      isA<GlassSurface>(),
+      findsNothing,
     );
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-rail-material')), findsOneWidget);
@@ -104,7 +95,20 @@ void main() {
     await pumpShell(tester, const Size(390, 844));
 
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.byKey(const ValueKey('shell-bottom-material')), findsOneWidget);
+    final materialFinder = find.byKey(const ValueKey('shell-bottom-material'));
+    expect(materialFinder, findsOneWidget);
+    final material = tester.widget<GlassSurface>(materialFinder);
+    expect(material.borderRadius, BorderRadius.circular(24));
+    expect(material.margin, EdgeInsets.zero);
+    expect(material.opacity, 0.9);
+    expect(material.showShadow, isTrue);
+    final capsuleFinder = find.byKey(const ValueKey('shell-bottom-capsule'));
+    expect(capsuleFinder, findsOneWidget);
+    final materialRect = tester.getRect(materialFinder);
+    expect(materialRect.width, 366);
+    expect(materialRect.left, 12);
+    expect(materialRect.right, 378);
+    expect(materialRect.bottom, lessThanOrEqualTo(834));
     expect(tester.takeException(), isNull);
     tester.view.reset();
   });

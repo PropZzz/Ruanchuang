@@ -141,22 +141,33 @@ class _FocusPageState extends State<FocusPage> {
       _isRecsLoading = true;
     });
 
-    final microTasks = await _dataService.getMicroTasks();
-    if (!mounted) return;
+    try {
+      final microTasks = await _dataService.getMicroTasks();
+      if (!mounted) return;
 
-    final recs = AppServices.microTaskCrystalEngine.recommend(
-      schedule: schedule,
-      microTasks: microTasks,
-      windows: _defaultWindows(),
-      energy: _tierFromBattery(energy.batteryPercent),
-      now: TimeOfDay.now(),
-      maxRecommendations: 4,
-    );
+      final recs = AppServices.microTaskCrystalEngine.recommend(
+        schedule: schedule,
+        microTasks: microTasks,
+        windows: _defaultWindows(),
+        energy: _tierFromBattery(energy.batteryPercent),
+        now: TimeOfDay.now(),
+        maxRecommendations: 4,
+      );
 
-    setState(() {
-      _crystalRecs = recs;
-      _isRecsLoading = false;
-    });
+      setState(() {
+        _crystalRecs = recs;
+        _isRecsLoading = false;
+      });
+    } catch (e, st) {
+      if (!mounted) return;
+      AppServices.logStore.error(
+        'focus',
+        'load time crystal recommendations failed',
+        error: e,
+        stackTrace: st,
+      );
+      setState(() => _isRecsLoading = false);
+    }
   }
 
   Future<void> _loadTasks() async {
@@ -165,17 +176,21 @@ class _FocusPageState extends State<FocusPage> {
     });
 
     try {
-      final energyFuture = _dataService.getEnergyStatus();
       final now = TimeOfDay.now();
       final nowMinutes = now.hour * 60 + now.minute;
-      final entriesFuture = _dataService.getScheduleEntries();
-
-      final energy = await energyFuture;
+      // Both requests start together, so consume them together as well. A
+      // failed unauthorized request must not leave its sibling Future
+      // unhandled when the first await exits through the catch block.
+      final values = await Future.wait<dynamic>([
+        _dataService.getEnergyStatus(),
+        _dataService.getScheduleEntries(),
+      ]);
+      final energy = values[0] as EnergyStatus;
+      final allEntries = values[1] as List<ScheduleEntry>;
       final emotion = await _dataService.getCurrentEmotion();
       _currentEmotion = emotion;
       final shouldShowCareNotice =
           emotion == EmotionType.fatigue || emotion == EmotionType.irritable;
-      final allEntries = await entriesFuture;
 
       if (!mounted) return;
 

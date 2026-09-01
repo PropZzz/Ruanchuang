@@ -121,11 +121,14 @@ class _TeamPageState extends State<TeamPage> {
       final sw = Stopwatch()..start();
 
       final day = DateTime.now();
-      final calendarsFuture = _dataService.getTeamCalendars(day);
-      final membersFuture = _dataService.getTeamMembers();
-
-      final cals = await calendarsFuture;
-      final mems = await membersFuture;
+      // Consume both concurrent requests so a second 401 cannot escape when
+      // the first request fails and enters the shared error path.
+      final values = await Future.wait<dynamic>([
+        _dataService.getTeamCalendars(day),
+        _dataService.getTeamMembers(),
+      ]);
+      final cals = values[0] as List<TeamMemberCalendar>;
+      final mems = values[1] as List<TeamMember>;
 
       _calendars = List<TeamMemberCalendar>.from(cals);
       _members = List<TeamMember>.from(mems);
