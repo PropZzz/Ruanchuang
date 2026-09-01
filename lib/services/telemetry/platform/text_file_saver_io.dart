@@ -1,7 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-
 class SaveTextResult {
   final String? path;
   final String? error;
@@ -14,10 +12,6 @@ class TextFileSaver {
     String content, {
     required String fileName,
   }) async {
-    if (kIsWeb) {
-      return const SaveTextResult(error: 'io saver used on web');
-    }
-
     try {
       final baseDir = _resolveBaseDir();
       final dir = Directory('$baseDir${Platform.pathSeparator}exports');
@@ -44,9 +38,7 @@ class TextFileSaver {
 
     if (Platform.isWindows) {
       final env = Platform.environment;
-      return env['APPDATA'] ??
-          env['USERPROFILE'] ??
-          Directory.current.path;
+      return env['APPDATA'] ?? env['USERPROFILE'] ?? Directory.current.path;
     }
 
     if (Platform.isMacOS || Platform.isLinux) {

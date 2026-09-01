@@ -1,6 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
+import '../../utils/schedule_occurrence.dart';
 import 'scheduling_engine.dart';
 
 class _Interval {
@@ -84,8 +85,12 @@ class HeuristicSchedulingEngine implements SchedulingEngine {
     tasks.sort((a, b) {
       final aDue = a.due;
       final bDue = b.due;
-      final aDueMin = (aDue != null && _isSameDay(aDue, day)) ? aDue.hour * 60 + aDue.minute : null;
-      final bDueMin = (bDue != null && _isSameDay(bDue, day)) ? bDue.hour * 60 + bDue.minute : null;
+      final aDueMin = (aDue != null && sameDay(aDue, day))
+          ? aDue.hour * 60 + aDue.minute
+          : null;
+      final bDueMin = (bDue != null && sameDay(bDue, day))
+          ? bDue.hour * 60 + bDue.minute
+          : null;
 
       if (aDueMin != null && bDueMin != null && aDueMin != bDueMin) {
         return aDueMin.compareTo(bDueMin);
@@ -110,7 +115,7 @@ class HeuristicSchedulingEngine implements SchedulingEngine {
 
     for (final t in tasks) {
       final dur = t.durationMinutes.clamp(1, 24 * 60).toInt();
-      final dueMin = (t.due != null && _isSameDay(t.due!, day))
+      final dueMin = (t.due != null && sameDay(t.due!, day))
           ? (t.due!.hour * 60 + t.due!.minute)
           : null;
 
@@ -166,10 +171,6 @@ class HeuristicSchedulingEngine implements SchedulingEngine {
     out.sort((a, b) => _todToMin(a.time).compareTo(_todToMin(b.time)));
 
     return SchedulingPlan(entries: out, issues: issues);
-  }
-
-  bool _isSameDay(DateTime a, DateTime day) {
-    return a.year == day.year && a.month == day.month && a.day == day.day;
   }
 
   int? _pickSlot({
@@ -248,7 +249,9 @@ class HeuristicSchedulingEngine implements SchedulingEngine {
       case EnergyTier.veryLow:
         // Tuning: when a user consistently struggles with high-load tasks while
         // low-energy, we amplify the penalty and bias away from mornings.
-        final p = tuning.highLoadPenaltyWhenLowEnergy.clamp(1.0, 3.0).toDouble();
+        final p = tuning.highLoadPenaltyWhenLowEnergy
+            .clamp(1.0, 3.0)
+            .toDouble();
         final extra = (p - 1.0).clamp(0.0, 10.0).toDouble();
         if (load == CognitiveLoad.high) {
           score -= 5 * p;

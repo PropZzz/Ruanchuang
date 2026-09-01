@@ -1,12 +1,13 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../services/app_services.dart';
 import '../services/microtask_crystals/microtask_import_parser.dart';
+import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
+import '../widgets/press_scale.dart';
 
 class MicroTaskPage extends StatefulWidget {
   const MicroTaskPage({super.key});
@@ -948,51 +949,31 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
 
   Widget _buildHeaderCard(int doneCount, int totalPoints, int completedPoints) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [
-                  theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
-                  theme.colorScheme.primaryContainer.withValues(alpha: 0.1),
-                ]
-              : [
-                  theme.colorScheme.primaryContainer.withValues(alpha: 0.8),
-                  theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: isDark
-            ? []
-            : [
-                BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+        color: AppWindowTones.surface(context, AppWindowTone.micro),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.colorScheme.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final title = Text(
                 AppStrings.of(context, 'micro_ai_suggestion'),
+                maxLines: constraints.maxWidth < 480 ? 3 : 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: theme.colorScheme.onSurface,
                 ),
-              ),
-              ElevatedButton.icon(
+              );
+              final action = ElevatedButton.icon(
                 onPressed: _fillQuickTasks,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
@@ -1001,8 +982,26 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                 ),
                 icon: const Icon(Icons.auto_awesome, size: 16),
                 label: const Text('AI 填充'),
-              ),
-            ],
+              );
+              if (constraints.maxWidth < 480) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    title,
+                    const SizedBox(height: 12),
+                    Align(alignment: Alignment.centerRight, child: action),
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: title),
+                  const SizedBox(width: 12),
+                  action,
+                ],
+              );
+            },
           ),
           const SizedBox(height: 24),
           Row(
@@ -1033,7 +1032,11 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
         const SizedBox(height: 8),
         Text(
           value,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
         ),
         Text(
           label,
@@ -1061,9 +1064,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     final completedPoints = _completedPoints();
 
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF121212)
-          : const Color(0xFFF2F2F7),
+      backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
       appBar: AppBar(
         title: Text(
           AppStrings.of(context, 'micro_title'),
@@ -1114,16 +1115,18 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _batchMode
           ? _buildBatchActionBar(selectedCount, selectedPoints)
-          : FloatingActionButton.extended(
-              heroTag: 'micro-task-add-fab',
-              onPressed: () => _showAddMicroTaskDialog(context),
-              label: Text(
-                AppStrings.of(context, 'micro_btn_add'),
-                style: const TextStyle(fontWeight: FontWeight.bold),
+          : PressScale(
+              child: FloatingActionButton.extended(
+                heroTag: 'micro-task-add-fab',
+                onPressed: () => _showAddMicroTaskDialog(context),
+                label: Text(
+                  AppStrings.of(context, 'micro_btn_add'),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                icon: const Icon(Icons.add_rounded),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
-              icon: const Icon(Icons.add_rounded),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
     );
   }
@@ -1131,84 +1134,68 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
   Widget _buildBatchActionBar(int count, int points) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.surface.withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: Theme.of(
-                  context,
-                ).colorScheme.outline.withValues(alpha: 0.2),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '已选 $count 项',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    Text(
-                      '可获 +$points ${_pointsUnit(context)}',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                Text(
+                  '已选 $count 项',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        color: Colors.redAccent,
-                      ),
-                      onPressed: count == 0 ? null : _batchDelete,
-                    ),
-                    const SizedBox(width: 4),
-                    ElevatedButton(
-                      onPressed: count == 0 ? null : _batchSchedule,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.tertiary,
-                        foregroundColor: Theme.of(
-                          context,
-                        ).colorScheme.onTertiary,
-                      ),
-                      child: const Text('集中安排'),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: count == 0 ? null : _batchMarkComplete,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(
-                          context,
-                        ).colorScheme.onPrimary,
-                      ),
-                      child: const Text('完成'),
-                    ),
-                  ],
+                Text(
+                  '可获 +$points ${_pointsUnit(context)}',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
-          ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                  ),
+                  onPressed: count == 0 ? null : _batchDelete,
+                ),
+                const SizedBox(width: 4),
+                ElevatedButton(
+                  onPressed: count == 0 ? null : _batchSchedule,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.tertiary,
+                    foregroundColor: Theme.of(context).colorScheme.onTertiary,
+                  ),
+                  child: const Text('集中安排'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: count == 0 ? null : _batchMarkComplete,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                  child: const Text('完成'),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

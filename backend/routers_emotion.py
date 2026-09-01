@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from .auth import current_user_id
 from .repositories import (
     RepositoryConflictError,
-    default_emotion_status,
     get_current_emotion,
     get_current_energy,
     get_energy_profile,

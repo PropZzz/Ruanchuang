@@ -10,6 +10,7 @@ import '../services/emotion/emotion_policy.dart';
 import '../services/scheduling/schedule_rescue.dart';
 import '../services/scheduling/schedule_rescue_persistence.dart';
 import '../services/scheduling/urgent_deadline.dart';
+import '../theme/app_theme.dart';
 import '../utils/helpers.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
@@ -17,6 +18,7 @@ import '../utils/schedule_occurrence.dart';
 import '../widgets/emotion_quick_checkin_card.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/rescue_summary.dart';
+import '../widgets/press_scale.dart';
 import 'emotion_page.dart';
 import 'goals_page.dart';
 import 'integrations_page.dart';
@@ -617,6 +619,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       key: const ValueKey('calendar-today-status'),
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      tint: AppWindowTones.surface(context, AppWindowTone.schedule),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
@@ -715,6 +718,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
           });
 
     return Scaffold(
+      backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
       appBar: AppBar(
         title: Text(AppStrings.of(context, 'calendar_title')),
         actions: [
@@ -932,7 +936,14 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   child: KeyedSubtree(
                     key: const ValueKey('calendar-time-map'),
                     child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
+                      duration: AppMotion.resolve(
+                        context,
+                        const Duration(milliseconds: 220),
+                      ),
+                      reverseDuration: AppMotion.resolve(
+                        context,
+                        AppMotion.exit,
+                      ),
                       switchInCurve: Curves.easeOut,
                       switchOutCurve: Curves.easeIn,
                       child: KeyedSubtree(
@@ -946,18 +957,20 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 ),
               ],
             ),
-      floatingActionButton: _mode == _CalendarMode.manual
-          ? FloatingActionButton(
-              heroTag: 'smart-calendar-add-fab',
-              child: const Icon(Icons.add),
-              onPressed: () => _showAddDialog(context),
-            )
-          : FloatingActionButton.extended(
-              heroTag: 'smart-calendar-replan-fab',
-              icon: const Icon(Icons.bolt),
-              label: Text(AppStrings.of(context, 'calendar_btn_replan')),
-              onPressed: _isLoading ? null : _loadSmartSchedule,
-            ),
+      floatingActionButton: PressScale(
+        child: _mode == _CalendarMode.manual
+            ? FloatingActionButton(
+                heroTag: 'smart-calendar-add-fab',
+                child: const Icon(Icons.add),
+                onPressed: () => _showAddDialog(context),
+              )
+            : FloatingActionButton.extended(
+                heroTag: 'smart-calendar-replan-fab',
+                icon: const Icon(Icons.bolt),
+                label: Text(AppStrings.of(context, 'calendar_btn_replan')),
+                onPressed: _isLoading ? null : _loadSmartSchedule,
+              ),
+      ),
     );
   }
 
@@ -1211,27 +1224,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                         ),
                       ),
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            theme.colorScheme.primary.withAlpha(
-                              (0.08 * 255).round(),
-                            ),
-                            theme.colorScheme.primary.withAlpha(
-                              (0.08 * 255).round(),
-                            ),
-                            theme.colorScheme.tertiary.withAlpha(
-                              (0.08 * 255).round(),
-                            ),
-                            theme.colorScheme.secondary.withAlpha(
-                              (0.08 * 255).round(),
-                            ),
-                          ],
-                        ),
-                      ),
+                    ColoredBox(
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.22),
                     ),
                     ...dayEntries.map((block) {
                       final top = _calculateTopOffset(block.time);
@@ -1316,9 +1311,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         width: 160,
         child: Material(
           color: selected ? Colors.teal.withAlpha(20) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(18),
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(18),
             onTap: () => _jumpToDay(day),
             child: Container(
               padding: const EdgeInsets.all(10),
@@ -1326,7 +1321,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 border: Border.all(
                   color: selected ? Colors.teal : Colors.grey.shade300,
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1783,15 +1778,15 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
           : theme.colorScheme.surfaceContainerLowest.withAlpha(
               inMonth ? 255 : 170,
             ),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         onTap: () => _jumpToDay(day),
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             border: Border.all(color: borderColor),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Opacity(
             opacity: inMonth ? 1.0 : 0.45,

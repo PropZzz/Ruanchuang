@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
 import 'ics_codec.dart';
@@ -108,10 +108,7 @@ class IcsBridge {
   }
 
   static String? _tagFromDescription(String description) {
-    final re = RegExp(
-      r'\btag\s*[:=]\s*([^\n\r]+)',
-      caseSensitive: false,
-    );
+    final re = RegExp(r'\btag\s*[:=]\s*([^\n\r]+)', caseSensitive: false);
     final m = re.firstMatch(description);
     if (m == null) return null;
     final tag = (m.group(1) ?? '').trim();

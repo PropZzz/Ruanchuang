@@ -4,6 +4,8 @@ import '../models/models.dart';
 import '../services/app_services.dart';
 import '../services/mcp/mcp_ingest.dart';
 import '../utils/app_strings.dart';
+import '../utils/schedule_occurrence.dart';
+import '../widgets/press_scale.dart';
 
 double _heightFromMinutes(int minutes) => (minutes / 60.0) * 80.0;
 
@@ -75,7 +77,7 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
     );
     final id = existedEntry?.id ?? normalizedId;
 
-    final day = DateTime(p.start.year, p.start.month, p.start.day);
+    final day = dateOnly(p.start);
     final tod = TimeOfDay(hour: p.start.hour, minute: p.start.minute);
     final entry = existedEntry == null
         ? ScheduleEntry(
@@ -103,19 +105,23 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
     await AppServices.reminderService.scheduleEntry(day: day, entry: entry);
 
     if (!mounted) return;
-    final timeChanged = existedEntry != null &&
-        (existedEntry.time.hour != tod.hour || existedEntry.time.minute != tod.minute);
+    final timeChanged =
+        existedEntry != null &&
+        (existedEntry.time.hour != tod.hour ||
+            existedEntry.time.minute != tod.minute);
     final msg = existedEntry == null
         ? AppStrings.of(context, 'mcp_imported')
         : timeChanged
-            ? AppStrings.of(context, 'mcp_change_synced')
-            : AppStrings.of(context, 'mcp_updated');
+        ? AppStrings.of(context, 'mcp_change_synced')
+        : AppStrings.of(context, 'mcp_updated');
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   String _detectSource(String raw) {
     final s = raw.toLowerCase();
-    if (s.contains('begin:vcalendar') || s.contains('dtstart') || s.contains('dtend')) {
+    if (s.contains('begin:vcalendar') ||
+        s.contains('dtstart') ||
+        s.contains('dtend')) {
       return 'ICS';
     }
     if (s.contains('organizer:') ||
@@ -142,7 +148,10 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
       appBar: AppBar(
         title: Text(AppStrings.of(context, 'mcp_title')),
         actions: [
-          IconButton(onPressed: _doParse, icon: const Icon(Icons.auto_fix_high)),
+          IconButton(
+            onPressed: _doParse,
+            icon: const Icon(Icons.auto_fix_high),
+          ),
         ],
       ),
       body: ListView(
@@ -164,18 +173,22 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _doParse,
-                  icon: const Icon(Icons.search),
-                  label: Text(AppStrings.of(context, 'mcp_btn_parse')),
+                child: PressScale(
+                  child: ElevatedButton.icon(
+                    onPressed: _doParse,
+                    icon: const Icon(Icons.search),
+                    label: Text(AppStrings.of(context, 'mcp_btn_parse')),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: p == null ? null : _import,
-                  icon: const Icon(Icons.download_done),
-                  label: Text(AppStrings.of(context, 'mcp_btn_import')),
+                child: PressScale(
+                  child: OutlinedButton.icon(
+                    onPressed: p == null ? null : _import,
+                    icon: const Icon(Icons.download_done),
+                    label: Text(AppStrings.of(context, 'mcp_btn_import')),
+                  ),
                 ),
               ),
             ],
@@ -193,10 +206,20 @@ class _IntegrationsPageState extends State<IntegrationsPage> {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-                    Text('UID: ${p.uid}'),
-                    Text('${AppStrings.of(context, 'label_title')}: ${p.title}'),
-                    Text('${AppStrings.of(context, 'label_start_time')}: ${p.start}'),
-                    Text('${AppStrings.of(context, 'label_duration')}: ${p.minutes} min'),
+                    Text(
+                      'UID: ${p.uid}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '${AppStrings.of(context, 'label_title')}: ${p.title}',
+                    ),
+                    Text(
+                      '${AppStrings.of(context, 'label_start_time')}: ${p.start}',
+                    ),
+                    Text(
+                      '${AppStrings.of(context, 'label_duration')}: ${p.minutes} min',
+                    ),
                     Text('${AppStrings.of(context, 'label_tag')}: ${p.source}'),
                   ],
                 ),

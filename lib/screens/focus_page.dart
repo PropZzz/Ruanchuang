@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/app_services.dart';
 import '../services/microtask_crystals/microtask_crystal_engine.dart';
+import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/helpers.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 import '../widgets/energy_status_card.dart';
 import '../widgets/focus_task_card.dart';
+import '../widgets/mini_timeline.dart';
 
 class FocusPage extends StatefulWidget {
   const FocusPage({super.key});
@@ -379,107 +381,72 @@ class _FocusPageState extends State<FocusPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isWide = MediaQuery.of(context).size.width >= 1024;
-    final horizontalPadding = isWide ? 28.0 : 16.0;
+    final width = MediaQuery.sizeOf(context).width;
+    final isWide = width >= 1024;
+    final horizontalPadding = width >= 1200 ? 32.0 : 20.0;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppStrings.of(context, 'focus_title')),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadTasks),
-        ],
-      ),
+      backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
+      appBar: null,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    theme.colorScheme.primary.withValues(alpha: 0.08),
-                    theme.colorScheme.surface,
-                  ],
-                ),
-              ),
-              child: SafeArea(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1320),
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        horizontalPadding,
-                        12,
-                        horizontalPadding,
-                        16,
-                      ),
-                      child: isWide
-                          // 修复：添加 crossAxisAlignment.stretch 给双列表提供安全边界高度，防止 Web 抛出无限高度异常
-                          ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
+          : SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1320),
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      22,
+                      horizontalPadding,
+                      40,
+                    ),
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  flex: 11,
-                                  child: ListView(
-                                    padding: EdgeInsets.only(
-                                      bottom:
-                                          MediaQuery.of(
-                                            context,
-                                          ).padding.bottom +
-                                          100,
-                                    ),
-                                    children: [
-                                      _buildEnergyStatusCard(),
-                                      const SizedBox(height: 18),
-                                      _buildSectionTitle(
-                                        context,
-                                        AppStrings.of(
-                                          context,
-                                          'focus_header_current',
-                                        ),
-                                      ),
-                                      const SizedBox(height: 10),
-                                      _buildCurrentTaskCard(context),
-                                    ],
-                                  ),
+                                Text(
+                                  AppStrings.of(context, 'focus_today_label'),
+                                  style: theme.textTheme.bodyMedium,
                                 ),
-                                const SizedBox(width: 18),
-                                Expanded(
-                                  flex: 10,
-                                  child: ListView(
-                                    padding: EdgeInsets.only(
-                                      bottom:
-                                          MediaQuery.of(
-                                            context,
-                                          ).padding.bottom +
-                                          100,
-                                    ),
-                                    children: [_buildPlanningPanel(theme)],
-                                  ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  AppStrings.of(context, 'focus_today'),
+                                  style: theme.textTheme.displaySmall,
                                 ),
-                              ],
-                            )
-                          : ListView(
-                              padding: EdgeInsets.only(
-                                bottom:
-                                    MediaQuery.of(context).padding.bottom + 100,
-                              ),
-                              children: [
-                                _buildEnergyStatusCard(),
-                                const SizedBox(height: 18),
-                                _buildSectionTitle(
-                                  context,
-                                  AppStrings.of(
-                                    context,
-                                    'focus_header_current',
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                _buildCurrentTaskCard(context),
-                                const SizedBox(height: 18),
-                                _buildPlanningPanel(theme),
                               ],
                             ),
-                    ),
+                          ),
+                          IconButton(
+                            tooltip: AppStrings.of(context, 'btn_check'),
+                            onPressed: _loadTasks,
+                            icon: const Icon(Icons.refresh_rounded),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      if (isWide)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildCurrentTaskCard(context)),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildEnergyStatusCard()),
+                          ],
+                        )
+                      else ...[
+                        _buildCurrentTaskCard(context),
+                        const SizedBox(height: 12),
+                        _buildEnergyStatusCard(),
+                      ],
+                      const SizedBox(height: 12),
+                      _buildRhythmPanel(theme),
+                      const SizedBox(height: 12),
+                      _buildPlanningPanel(theme),
+                    ],
                   ),
                 ),
               ),
@@ -487,10 +454,96 @@ class _FocusPageState extends State<FocusPage> {
     );
   }
 
+  Widget _buildRhythmPanel(ThemeData theme) {
+    // Conflict and team-window APIs are not part of the FocusPage data load;
+    // keep the summary truthful until those services provide real values.
+    const conflictCount = 0;
+    const teamCount = 0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        MiniTimeline(
+          title: AppStrings.of(context, 'focus_next_four_hours'),
+          actionLabel: AppStrings.of(context, 'focus_view_calendar'),
+          onAction: () {},
+          segments: [
+            theme.colorScheme.tertiary.withValues(alpha: 0.35),
+            theme.colorScheme.secondary.withValues(alpha: 0.55),
+            theme.colorScheme.outline.withValues(alpha: 0.65),
+            theme.colorScheme.tertiary.withValues(alpha: 0.28),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildSummaryTile(
+                theme,
+                Icons.route_outlined,
+                AppStrings.of(context, 'focus_rescue_title'),
+                conflictCount > 0
+                    ? '${AppStrings.of(context, 'focus_attention')} $conflictCount'
+                    : AppStrings.of(context, 'focus_clear'),
+                conflictCount > 0
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.tertiary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildSummaryTile(
+                theme,
+                Icons.people_outline_rounded,
+                AppStrings.of(context, 'focus_team_window'),
+                teamCount > 0
+                    ? '15:00 · $teamCount ${AppStrings.of(context, 'focus_people_free')}'
+                    : AppStrings.of(context, 'focus_no_window'),
+                theme.colorScheme.primary,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryTile(
+    ThemeData theme,
+    IconData icon,
+    String title,
+    String value,
+    Color accent,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 20, color: accent),
+            const SizedBox(height: 8),
+            Text(title, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: accent,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPlanningPanel(ThemeData theme) {
     return Card(
       elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+      color: theme.colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

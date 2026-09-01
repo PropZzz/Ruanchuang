@@ -17,14 +17,18 @@ class ApiException implements Exception {
 class ApiClient {
   ApiClient({http.Client? httpClient, String? baseUrl})
     : _httpClient = httpClient ?? http.Client(),
-      _baseUrl = (baseUrl ?? AppConfig.apiBaseUrl).replaceAll(RegExp(r'/+$'), '');
+      _baseUrl = (baseUrl ?? AppConfig.apiBaseUrl).replaceAll(
+        RegExp(r'/+$'),
+        '',
+      );
 
   final http.Client _httpClient;
   final String _baseUrl;
   String? _token;
 
   void setToken(String? token) {
-    _token = token?.trim().isEmpty == true ? null : token?.trim();
+    final normalized = token?.trim();
+    _token = normalized?.isEmpty == true ? null : normalized;
   }
 
   Uri _uri(String path) {
@@ -35,13 +39,15 @@ class ApiClient {
   Map<String, String> _headers() {
     return {
       'Content-Type': 'application/json',
-      if (_token != null && _token!.isNotEmpty) 'Authorization': 'Bearer $_token',
+      if (_token != null) 'Authorization': 'Bearer $_token',
     };
   }
 
   Future<Object?> get(String path) => _send('GET', path);
-  Future<Object?> post(String path, Object? body) => _send('POST', path, body: body);
-  Future<Object?> put(String path, Object? body) => _send('PUT', path, body: body);
+  Future<Object?> post(String path, Object? body) =>
+      _send('POST', path, body: body);
+  Future<Object?> put(String path, Object? body) =>
+      _send('PUT', path, body: body);
   Future<Object?> delete(String path) => _send('DELETE', path);
 
   Future<Object?> _send(String method, String path, {Object? body}) async {

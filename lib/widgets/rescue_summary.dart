@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../services/scheduling/schedule_rescue.dart';
+import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import 'glass_surface.dart';
+import 'press_scale.dart';
 
 class RescueSummary extends StatelessWidget {
   const RescueSummary({
@@ -51,6 +53,7 @@ class RescueSummary extends StatelessWidget {
       margin: EdgeInsets.fromLTRB(compact ? 12 : 20, 4, compact ? 12 : 20, 8),
       padding: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(16),
+      tint: AppWindowTones.surface(context, AppWindowTone.schedule),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
@@ -69,10 +72,12 @@ class RescueSummary extends StatelessWidget {
         title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis),
         trailing: hasAccepted && onUndo != null
-            ? TextButton.icon(
-                onPressed: onUndo,
-                icon: const Icon(Icons.undo_rounded, size: 18),
-                label: Text(AppStrings.of(context, 'calendar_rescue_undo')),
+            ? PressScale(
+                child: TextButton.icon(
+                  onPressed: onUndo,
+                  icon: const Icon(Icons.undo_rounded, size: 18),
+                  label: Text(AppStrings.of(context, 'calendar_rescue_undo')),
+                ),
               )
             : Icon(
                 Icons.chevron_right_rounded,

@@ -1,0 +1,42 @@
+<h2>选择首页工作台骨架</h2>
+<p class="subtitle">个人安排是主线，团队协作在需要时进入同一工作区。请选择最符合你日常节奏的一种。</p>
+
+<div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px">
+  <div class="card" data-choice="focus-first" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;background:#f1f4f2">
+      <div style="font-family:system-ui,sans-serif;padding:18px;color:#1d2d31">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-size:11px;color:#6d7e80">周一 · 08 月 31 日</div><div style="font-size:11px;background:#fff;padding:7px 10px;border-radius:9px">能量 72</div></div>
+        <div style="background:#173a3b;color:#f4f7f4;border-radius:14px;padding:18px;margin-bottom:12px"><div style="font-size:11px;opacity:.7">正在进行</div><div style="font-size:24px;font-weight:700;margin:9px 0">产品复盘</div><div style="font-size:12px;color:#c7dfd5">还剩 42:18</div><div style="height:5px;background:#496866;border-radius:8px;margin-top:14px;overflow:hidden"><div style="width:64%;height:100%;background:#e2ab6f"></div></div></div>
+        <div style="background:#fff;padding:13px;border-radius:12px;margin-bottom:10px"><div style="font-size:11px;color:#7c8c8d">下一步</div><div style="font-size:15px;font-weight:650;margin-top:8px">整理用户反馈</div><div style="font-size:11px;color:#9a6a46;margin-top:9px">09:40 · 25 分钟</div></div>
+        <div style="display:flex;gap:9px"><div style="flex:1;background:#dceae4;padding:12px;border-radius:12px;font-size:12px">恢复缓冲<br><b style="font-size:20px">45 分钟</b></div><div style="flex:1;background:#fff;padding:12px;border-radius:12px;font-size:12px">待处理冲突<br><b style="font-size:20px;color:#bb5c4e">1</b></div></div>
+      </div>
+    </div>
+    <div class="card-body"><h3>A · 专注驾驶舱</h3><p>把当前任务放在最前，适合打开应用就开始执行。日历和团队入口作为次级模块。</p></div>
+  </div>
+
+  <div class="card" data-choice="timeline-first" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;background:#eef2f4">
+      <div style="font-family:system-ui,sans-serif;padding:18px;color:#202d31">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-size:11px;color:#6c7c82">MON · 31 AUG</div><div style="font-size:11px;background:#fff;padding:7px 10px;border-radius:9px">周视图⌄</div></div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:12px"><div style="font-size:28px;font-weight:750">今天</div><div style="font-size:12px;color:#728187">可用时间地图</div></div>
+        <div style="background:#fff;border-radius:14px;padding:11px 9px"><div style="display:grid;grid-template-columns:38px 1fr;gap:7px;font-size:10px;color:#8b999d"><div>08:00</div><div style="height:25px;border-top:1px solid #e2e7e8"></div><div>10:00</div><div style="height:42px;border-top:1px solid #e2e7e8;position:relative"><div style="position:absolute;left:5%;top:8px;width:58%;height:24px;border-radius:7px;background:#c7ddd5;color:#365b53;padding:5px 8px;font-size:11px">研究访谈</div></div><div>12:00</div><div style="height:26px;border-top:1px solid #e2e7e8"></div><div>14:00</div><div style="height:45px;border-top:1px solid #e2e7e8;position:relative"><div style="position:absolute;left:28%;top:8px;width:62%;height:24px;border-radius:7px;background:#e5c4a3;color:#76583f;padding:5px 8px;font-size:11px">产品复盘</div></div><div>16:00</div><div style="height:25px;border-top:1px solid #e2e7e8"></div></div></div>
+        <div style="display:flex;gap:8px;margin-top:10px"><div style="flex:1;background:#173a3b;color:#fff;padding:11px;border-radius:11px;font-size:12px">日程救援<br><span style="font-size:11px;color:#bfd4cd">1 个冲突待处理</span></div><div style="flex:1;background:#dceae4;padding:11px;border-radius:11px;font-size:12px">团队窗口<br><span style="font-size:11px;color:#56736d">今天 15:00</span></div></div>
+      </div>
+    </div>
+    <div class="card-body"><h3>B · 时间地图</h3><p>把全天节奏、冲突和协作窗口放在首屏，适合频繁比较与重排。</p></div>
+  </div>
+
+  <div class="card" data-choice="hybrid-workbench" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;background:#f4f1ec">
+      <div style="font-family:system-ui,sans-serif;padding:18px;color:#203034">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div style="font-size:11px;color:#6c7c82">08 月 31 日 · 工作台</div><div style="display:flex;gap:6px"><div style="font-size:11px;background:#fff;padding:6px 8px;border-radius:8px">同步中</div><div style="width:24px;height:24px;border-radius:50%;background:#b9d2c8"></div></div></div>
+        <div style="display:grid;grid-template-columns:1.08fr .92fr;gap:10px;margin-bottom:10px"><div style="background:#173a3b;color:#f4f7f4;border-radius:14px;padding:15px"><div style="font-size:11px;opacity:.7">现在 · 进行中</div><div style="font-size:21px;font-weight:700;margin:8px 0">产品复盘</div><div style="font-size:11px;color:#c7dfd5">42:18 · 深度工作</div><div style="height:4px;background:#4e706d;border-radius:8px;margin-top:12px"><div style="width:64%;height:100%;background:#e2ab6f"></div></div></div><div style="background:#dceae4;border-radius:14px;padding:15px"><div style="font-size:11px;color:#56736d">今天的节奏</div><div style="font-size:27px;font-weight:750;margin:7px 0">72</div><div style="font-size:11px;color:#56736d">适合深度工作</div><div style="font-size:11px;color:#9a6a46;margin-top:9px">1 个冲突</div></div></div>
+        <div style="background:#fff;border-radius:14px;padding:12px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:11px;color:#7c8c8d"><span>接下来 4 小时</span><span style="color:#56736d">查看完整日历 →</span></div><div style="display:flex;gap:6px;margin-top:10px"><div style="height:9px;flex:1;background:#c7ddd5;border-radius:5px"></div><div style="height:9px;flex:.55;background:#e5c4a3;border-radius:5px"></div><div style="height:9px;flex:.7;background:#d5dee0;border-radius:5px"></div><div style="height:9px;flex:.9;background:#c7ddd5;border-radius:5px"></div></div></div>
+        <div style="display:flex;gap:8px"><div style="flex:1;background:#fff;padding:11px;border-radius:11px;font-size:12px">日程救援<br><span style="font-size:11px;color:#bb5c4e">需要处理 1 项</span></div><div style="flex:1;background:#fff;padding:11px;border-radius:11px;font-size:12px">协作窗口<br><span style="font-size:11px;color:#56736d">15:00 · 3 人空闲</span></div></div>
+      </div>
+    </div>
+    <div class="card-body"><h3>C · 双层工作台（推荐）</h3><p>上层负责“现在做什么”，下层给出时间地图、救援和协作入口，兼顾速度与全局感。</p></div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:20px">可以先点击查看选中状态，再告诉我你最终偏好的骨架。</p>

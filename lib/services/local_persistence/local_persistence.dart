@@ -1,4 +1,4 @@
-﻿/// Minimal persistence primitive for LocalDataService.
+/// Minimal persistence primitive for LocalDataService.
 ///
 /// Implemented with File on IO platforms and localStorage on Web.
 abstract class LocalPersistence {
@@ -22,5 +22,3 @@ class InMemoryLocalPersistence implements LocalPersistence {
     _content = content;
   }
 }
-
-

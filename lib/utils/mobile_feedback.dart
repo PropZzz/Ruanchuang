@@ -49,10 +49,7 @@ class MobileFeedback {
     required String zhMessage,
     required String enMessage,
   }) {
-    _showSnackBar(
-      context,
-      localized(context, zh: zhMessage, en: enMessage),
-    );
+    _showSnackBar(context, localized(context, zh: zhMessage, en: enMessage));
   }
 
   static void showError(
@@ -76,10 +73,7 @@ class MobileFeedback {
 
     if (silentOnPhone && isMobilePhone(context)) return;
 
-    _showSnackBar(
-      context,
-      localized(context, zh: zhMessage, en: enMessage),
-    );
+    _showSnackBar(context, localized(context, zh: zhMessage, en: enMessage));
   }
 
   static void _showSnackBar(BuildContext context, String message) {
@@ -88,10 +82,7 @@ class MobileFeedback {
 
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 }

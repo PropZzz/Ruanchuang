@@ -84,7 +84,7 @@ class _ProfilePageState extends State<ProfilePage> {
       barrierDismissible: true,
       barrierLabel: '关闭登录',
       barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 300),
+      transitionDuration: AppMotion.resolve(context, AppMotion.enter),
       pageBuilder: (ctx, anim1, anim2) {
         return AuthDialog(
           onAuthSuccess: () {
@@ -161,13 +161,10 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final deviceSubtitle = _deviceSubtitle();
 
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF121212)
-          : const Color(0xFFF2F2F7),
+      backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
       appBar: AppBar(
         title: Text(
           AppStrings.of(context, 'profile_title'),
@@ -373,16 +370,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(
-                        context,
-                      ).colorScheme.primary.withValues(alpha: 0.5),
-                      Colors.transparent,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.14),
                 ),
                 child: Stack(
                   alignment: Alignment.bottomRight,
@@ -610,7 +600,7 @@ class _ProfilePageState extends State<ProfilePage> {
       barrierDismissible: true,
       barrierLabel: '关闭',
       barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 300),
+      transitionDuration: AppMotion.resolve(context, AppMotion.enter),
       pageBuilder: (ctx, anim1, anim2) {
         return Align(
           alignment: Alignment.centerRight,
@@ -642,10 +632,13 @@ class _ProfilePageState extends State<ProfilePage> {
       },
       transitionBuilder: (ctx, anim1, anim2, child) {
         return SlideTransition(
-          position: Tween(
-            begin: const Offset(1, 0),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: anim1, curve: Curves.easeOutCubic)),
+          position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(
+            CurvedAnimation(
+              parent: anim1,
+              curve: Curves.easeOut,
+              reverseCurve: Curves.easeOut,
+            ),
+          ),
           child: child,
         );
       },

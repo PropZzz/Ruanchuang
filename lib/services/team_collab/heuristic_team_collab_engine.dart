@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
 import '../microtask_crystals/heuristic_microtask_crystal_engine.dart';
@@ -33,8 +33,9 @@ class HeuristicTeamCollabEngine implements TeamCollabEngine {
         .where((p) => p.$2 > p.$1)
         .toList();
 
-    final eligible =
-        calendars.where((c) => _energyOk(c.energy, minEnergy)).toList();
+    final eligible = calendars
+        .where((c) => _energyOk(c.energy, minEnergy))
+        .toList();
 
     if (eligible.isEmpty || workIntervals.isEmpty) {
       return TeamCollabResult(goldenWindows: const [], busyOverlaps: overlaps);

@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/app_services.dart';
 import '../services/emotion/emotion_policy.dart';
+import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
+import 'press_scale.dart';
 
 class EmotionQuickCheckInCard extends StatefulWidget {
   final VoidCallback? onChanged;
@@ -172,7 +174,9 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AnimatedCrossFade(
-      duration: const Duration(milliseconds: 250),
+      duration: AppMotion.resolve(context, const Duration(milliseconds: 250)),
+      firstCurve: Curves.easeOut,
+      secondCurve: Curves.easeOut,
       crossFadeState: _isExpanded
           ? CrossFadeState.showSecond
           : CrossFadeState.showFirst,
@@ -403,25 +407,30 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: () => _quickCheckIn(s),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? baseColor.withValues(alpha: 0.12)
-              : (isDark ? const Color(0xFF3A3A3C) : const Color(0xFFF7F7F6)),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Text(
-          _label(context, s),
-          style: TextStyle(
-            color: isSelected ? baseColor : theme.colorScheme.onSurface,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-            fontSize: 13,
-            letterSpacing: 0.5,
+    return PressScale(
+      child: GestureDetector(
+        onTap: () => _quickCheckIn(s),
+        child: AnimatedContainer(
+          duration: AppMotion.resolve(
+            context,
+            const Duration(milliseconds: 200),
+          ),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? baseColor.withValues(alpha: 0.12)
+                : (isDark ? const Color(0xFF3A3A3C) : const Color(0xFFF7F7F6)),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Text(
+            _label(context, s),
+            style: TextStyle(
+              color: isSelected ? baseColor : theme.colorScheme.onSurface,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              fontSize: 13,
+              letterSpacing: 0.5,
+            ),
           ),
         ),
       ),

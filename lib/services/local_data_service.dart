@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../utils/schedule_occurrence.dart';
 import 'data_service.dart';
 import 'local_persistence/local_persistence.dart';
 import 'local_persistence/local_persistence_io.dart'
@@ -629,14 +630,11 @@ class LocalDataService implements DataService {
     );
   }
 
-  bool _sameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
-
   @override
   Future<EmotionState> getEmotionState() async {
     await _ensureLoaded();
     final now = DateTime.now();
-    final today = _emotion.where((e) => _sameDay(e.at, now)).toList()
+    final today = _emotion.where((e) => sameDay(e.at, now)).toList()
       ..sort((a, b) => a.at.compareTo(b.at));
     if (today.isNotEmpty) {
       return today.last.state;
@@ -653,7 +651,7 @@ class LocalDataService implements DataService {
       await _ensureLoaded();
       final id = checkIn.id.isEmpty ? _newId('emo_') : checkIn.id;
       final day = DateTime(checkIn.at.year, checkIn.at.month, checkIn.at.day);
-      _emotion.removeWhere((e) => _sameDay(e.at, day));
+      _emotion.removeWhere((e) => sameDay(e.at, day));
       final c = EmotionCheckIn(
         id: id,
         at: checkIn.at,
@@ -669,7 +667,7 @@ class LocalDataService implements DataService {
   Future<List<EmotionCheckIn>> getEmotionCheckIns(DateTime day) async {
     await _ensureLoaded();
     final d = DateTime(day.year, day.month, day.day);
-    final out = _emotion.where((e) => _sameDay(e.at, d)).toList()
+    final out = _emotion.where((e) => sameDay(e.at, d)).toList()
       ..sort((a, b) => a.at.compareTo(b.at));
     return out;
   }
@@ -1112,18 +1110,7 @@ class LocalDataService implements DataService {
   @override
   Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day) async {
     await _ensureLoaded();
-    return _teamCalendars
-        .map(
-          (c) => TeamMemberCalendar(
-            memberId: c.memberId,
-            displayName: c.displayName,
-            role: c.role,
-            energy: c.energy,
-            permission: c.permission,
-            busy: List<ScheduleEntry>.from(c.busy),
-          ),
-        )
-        .toList(growable: false);
+    return _teamCalendars.map(_cloneTeamCalendar).toList(growable: false);
   }
 
   @override

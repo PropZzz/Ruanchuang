@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/app_services.dart';
 import '../services/goals/goal_dependency_helper.dart';
+import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/schedule_occurrence.dart';
+import '../widgets/press_scale.dart';
 
 double _heightFromMinutes(int minutes) => (minutes / 60.0) * 80.0;
 
@@ -253,7 +255,7 @@ class _GoalsPageState extends State<GoalsPage> {
     }
 
     final day = DateTime.now();
-    final d = DateTime(day.year, day.month, day.day);
+    final d = dateOnly(day);
     final schedule = entriesForDay(
       day: d,
       allEntries: await _data.getScheduleEntries(),
@@ -429,12 +431,12 @@ class _GoalsPageState extends State<GoalsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final doneRate = _goalTaskCount == 0
         ? 0.0
         : _doneTaskCount / _goalTaskCount;
 
     return Scaffold(
+      backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
       appBar: AppBar(
         title: Text(AppStrings.of(context, 'goal_title')),
         actions: [
@@ -442,16 +444,7 @@ class _GoalsPageState extends State<GoalsPage> {
         ],
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              theme.colorScheme.tertiaryContainer.withValues(alpha: 0.22),
-              theme.colorScheme.surface,
-            ],
-          ),
-        ),
+        color: AppWindowTones.canvas(context, AppWindowTone.neutral),
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -465,7 +458,8 @@ class _GoalsPageState extends State<GoalsPage> {
                           final isWide = constraints.maxWidth >= 940;
                           return ListView(
                             padding: EdgeInsets.only(
-                              bottom: MediaQuery.of(context).padding.bottom + 100,
+                              bottom:
+                                  MediaQuery.of(context).padding.bottom + 100,
                             ),
                             children: [
                               _GoalsOverviewCard(
@@ -483,7 +477,8 @@ class _GoalsPageState extends State<GoalsPage> {
                                   runSpacing: 12,
                                   children: _goals.map((g) {
                                     final cardWidth = isWide
-                                        ? ((constraints.maxWidth - 13) / 2).floorToDouble()
+                                        ? ((constraints.maxWidth - 13) / 2)
+                                              .floorToDouble()
                                         : constraints.maxWidth;
                                     return SizedBox(
                                       width: cardWidth,
@@ -507,11 +502,13 @@ class _GoalsPageState extends State<GoalsPage> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'goals-add-fab',
-        onPressed: _addGoal,
-        icon: const Icon(Icons.add),
-        label: Text(AppStrings.of(context, 'goal_add')),
+      floatingActionButton: PressScale(
+        child: FloatingActionButton.extended(
+          heroTag: 'goals-add-fab',
+          onPressed: _addGoal,
+          icon: const Icon(Icons.add),
+          label: Text(AppStrings.of(context, 'goal_add')),
+        ),
       ),
     );
   }
@@ -535,6 +532,7 @@ class _GoalsOverviewCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Card(
       elevation: 0,
+      color: AppWindowTones.surface(context, AppWindowTone.schedule),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -605,13 +603,19 @@ class _MetricTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
                 Text(
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ],
@@ -696,7 +700,7 @@ class _GoalSummaryCard extends StatelessWidget {
     final percent = (goal.progress * 100).round();
     return Card(
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -725,7 +729,12 @@ class _GoalSummaryCard extends StatelessWidget {
               const SizedBox(height: 10),
               LinearProgressIndicator(value: goal.progress),
               const SizedBox(height: 6),
-              Text('$percent%'),
+              Text(
+                '$percent%',
+                style: const TextStyle(
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
             ],
           ),
         ),

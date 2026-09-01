@@ -45,4 +45,17 @@ void main() {
     expect(find.byKey(const ValueKey('workspace-status-bar')), findsOneWidget);
     tester.view.reset();
   });
+
+  testWidgets('narrow shell floats the navigation bar in a pill', (
+    tester,
+  ) async {
+    await pumpShell(tester, const Size(390, 844));
+
+    final shell = tester.widget<Material>(
+      find.byKey(const ValueKey('shell-floating-navigation')),
+    );
+    expect(shell.shape, isA<StadiumBorder>());
+    expect(tester.takeException(), isNull);
+    tester.view.reset();
+  });
 }

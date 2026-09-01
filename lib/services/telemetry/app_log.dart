@@ -24,14 +24,14 @@ class AppLogEntry {
   });
 
   Map<String, Object?> toJson() => {
-        'at': at.toIso8601String(),
-        'level': level.name,
-        'category': category,
-        'message': message,
-        'data': data,
-        'error': error,
-        'stackTrace': stackTrace,
-      };
+    'at': at.toIso8601String(),
+    'level': level.name,
+    'category': category,
+    'message': message,
+    'data': data,
+    'error': error,
+    'stackTrace': stackTrace,
+  };
 
   static AppLogEntry? fromJson(Object? obj) {
     if (obj is! Map) return null;
@@ -47,7 +47,8 @@ class AppLogEntry {
     final at = DateTime.tryParse(atRaw);
     if (at == null) return null;
 
-    final level = AppLogLevel.values.cast<AppLogLevel?>().firstWhere(
+    final level =
+        AppLogLevel.values.cast<AppLogLevel?>().firstWhere(
           (v) => v?.name == levelRaw,
           orElse: () => null,
         ) ??
@@ -117,14 +118,23 @@ class AppLogStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void debug(String category, String message, {Map<String, Object?> data = const {}}) =>
-      log(AppLogLevel.debug, category, message, data: data);
+  void debug(
+    String category,
+    String message, {
+    Map<String, Object?> data = const {},
+  }) => log(AppLogLevel.debug, category, message, data: data);
 
-  void info(String category, String message, {Map<String, Object?> data = const {}}) =>
-      log(AppLogLevel.info, category, message, data: data);
+  void info(
+    String category,
+    String message, {
+    Map<String, Object?> data = const {},
+  }) => log(AppLogLevel.info, category, message, data: data);
 
-  void warn(String category, String message, {Map<String, Object?> data = const {}}) =>
-      log(AppLogLevel.warn, category, message, data: data);
+  void warn(
+    String category,
+    String message, {
+    Map<String, Object?> data = const {},
+  }) => log(AppLogLevel.warn, category, message, data: data);
 
   void error(
     String category,
@@ -132,15 +142,14 @@ class AppLogStore extends ChangeNotifier {
     Map<String, Object?> data = const {},
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        AppLogLevel.error,
-        category,
-        message,
-        data: data,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    AppLogLevel.error,
+    category,
+    message,
+    data: data,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   String exportText({int maxLines = 800}) {
     final tail = _entries.length <= maxLines

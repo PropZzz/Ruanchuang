@@ -112,12 +112,10 @@ class RemoteDataService implements DataService {
   }
 
   @override
-  Future<Task> getCurrentTask() async =>
-      Future.error(_unavailable('getCurrentTask'));
+  Future<Task> getCurrentTask() async => _unavailable('getCurrentTask');
 
   @override
-  Future<List<Task>> getNextTasks() async =>
-      Future.error(_unavailable('getNextTasks'));
+  Future<List<Task>> getNextTasks() async => _unavailable('getNextTasks');
 
   @override
   Future<List<ScheduleEntry>> getScheduleEntries() async {
@@ -224,11 +222,11 @@ class RemoteDataService implements DataService {
 
   @override
   Future<String?> getFavoriteDevice() async =>
-      Future.error(_unavailable('getFavoriteDevice'));
+      _unavailable('getFavoriteDevice');
 
   @override
   Future<void> setFavoriteDevice(String deviceId) async =>
-      Future.error(_unavailable('setFavoriteDevice'));
+      _unavailable('setFavoriteDevice');
 
   @override
   Future<List<TeamMemberCalendar>> getTeamCalendars(DateTime day) async {
@@ -265,7 +263,7 @@ class RemoteDataService implements DataService {
   Future<void> bookTeamMeeting(
     DateTime day,
     TeamMeetingRequest request,
-  ) async => Future.error(_unavailable('bookTeamMeeting'));
+  ) async => _unavailable('bookTeamMeeting');
 
   @override
   Future<void> setSchedulingTuning(SchedulingTuning tuning) async {
@@ -273,19 +271,17 @@ class RemoteDataService implements DataService {
   }
 
   @override
-  Future<String> getThemeMode() async =>
-      Future.error(_unavailable('getThemeMode'));
+  Future<String> getThemeMode() async => _unavailable('getThemeMode');
 
   @override
   Future<void> setThemeMode(String themeMode) async =>
-      Future.error(_unavailable('setThemeMode'));
+      _unavailable('setThemeMode');
 
   @override
-  Future<String> getLocale() async => Future.error(_unavailable('getLocale'));
+  Future<String> getLocale() async => _unavailable('getLocale');
 
   @override
-  Future<void> setLocale(String locale) async =>
-      Future.error(_unavailable('setLocale'));
+  Future<void> setLocale(String locale) async => _unavailable('setLocale');
 
   @override
   Future<UserAccount?> getCurrentUser() async {
@@ -367,7 +363,9 @@ class RemoteDataService implements DataService {
       (sum, entry) => sum + _durationFromHeight(entry.height),
     );
     final progress = (busyMinutes / 240.0).clamp(0.0, 1.0).toDouble();
-    final task = calendar.busy.isEmpty ? '${calendar.role}规划中' : calendar.busy.first.title;
+    final task = calendar.busy.isEmpty
+        ? '${calendar.role}规划中'
+        : calendar.busy.first.title;
     return TeamMember(
       name: calendar.displayName,
       task: task,

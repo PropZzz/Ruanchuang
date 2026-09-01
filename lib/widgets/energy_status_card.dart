@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import 'glass_surface.dart';
 
@@ -25,44 +26,63 @@ class EnergyStatusCard extends StatelessWidget {
 
     return GlassSurface(
       key: const ValueKey('focus-energy-status'),
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(14),
       padding: const EdgeInsets.all(18),
+      tint: AppWindowTones.surface(context, AppWindowTone.focus),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.battery_charging_full_rounded,
-                color: theme.colorScheme.tertiary,
-                size: 24,
-              ),
-              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '${AppStrings.of(context, 'focus_status_label')}$status',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium,
+                  AppStrings.of(context, 'focus_energy_label'),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
-              Text(
-                '$battery%',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.tertiary,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  SizedBox(
+                    width: 64,
+                    child: Text(
+                      '$battery',
+                      textAlign: TextAlign.right,
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        fontSize: 34,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '$battery%',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
+          const SizedBox(height: 2),
+          Text(
+            status,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: theme.colorScheme.primary,
+            ),
+          ),
           const SizedBox(height: 12),
           ClipRRect(
-            borderRadius: BorderRadius.circular(99),
+            borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: battery / 100,
               minHeight: 7,
               backgroundColor: theme.colorScheme.tertiary.withValues(
-                alpha: 0.18,
+                alpha: 0.16,
               ),
               valueColor: AlwaysStoppedAnimation<Color>(
                 theme.colorScheme.tertiary,
@@ -77,7 +97,7 @@ class EnergyStatusCard extends StatelessWidget {
             style: theme.textTheme.bodyMedium,
           ),
           if (emotion != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 7),
             Text(
               AppStrings.of(
                 context,

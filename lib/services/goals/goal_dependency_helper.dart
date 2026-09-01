@@ -1,13 +1,19 @@
 import '../../models/models.dart';
 
 class GoalDependencyHelper {
+  static GoalTask? _firstById(List<GoalTask> all, String id) {
+    for (final task in all) {
+      if (task.id == id) return task;
+    }
+    return null;
+  }
+
   static bool isReady(GoalTask task, List<GoalTask> all) {
     if (task.done) return false;
     if (task.dependsOn.isEmpty) return true;
     for (final depId in task.dependsOn) {
-      final dep = all.where((t) => t.id == depId).toList();
-      if (dep.isEmpty) return false;
-      if (!dep.first.done) return false;
+      final dependency = _firstById(all, depId);
+      if (dependency == null || !dependency.done) return false;
     }
     return true;
   }
@@ -24,8 +30,8 @@ class GoalDependencyHelper {
     final byId = {for (final t in all) t.id: t.title};
     final blockers = <String>[];
     for (final depId in task.dependsOn) {
-      final dep = all.where((t) => t.id == depId).toList();
-      if (dep.isEmpty || !dep.first.done) {
+      final dependency = _firstById(all, depId);
+      if (dependency == null || !dependency.done) {
         blockers.add(byId[depId] ?? depId);
       }
     }

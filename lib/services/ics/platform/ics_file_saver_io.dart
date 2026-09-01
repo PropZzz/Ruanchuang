@@ -1,7 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
-
 class IcsSaveResult {
   final String label;
   final String? path;
@@ -14,10 +12,6 @@ class IcsFileSaver {
     String ics, {
     required String fileName,
   }) async {
-    if (kIsWeb) {
-      return const IcsSaveResult(label: 'web');
-    }
-
     final baseDir = _resolveBaseDir();
     final dir = Directory('$baseDir${Platform.pathSeparator}exports');
     if (!await dir.exists()) {
@@ -41,9 +35,7 @@ class IcsFileSaver {
 
     if (Platform.isWindows) {
       final env = Platform.environment;
-      return env['APPDATA'] ??
-          env['USERPROFILE'] ??
-          Directory.current.path;
+      return env['APPDATA'] ?? env['USERPROFILE'] ?? Directory.current.path;
     }
 
     if (Platform.isMacOS || Platform.isLinux) {

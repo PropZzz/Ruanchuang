@@ -34,10 +34,7 @@ class AppDiagnostics extends ChangeNotifier {
     notifyListeners();
   }
 
-  void recordPlan({
-    required Duration cost,
-    required String reason,
-  }) {
+  void recordPlan({required Duration cost, required String reason}) {
     lastSchedulePlanCost = cost;
     lastSchedulePlanAt = DateTime.now();
     lastSchedulePlanReason = reason;
@@ -61,11 +58,7 @@ class AppDiagnostics extends ChangeNotifier {
     notifyListeners();
   }
 
-  void recordIcsImport({
-    required bool ok,
-    required int count,
-    String? error,
-  }) {
+  void recordIcsImport({required bool ok, required int count, String? error}) {
     lastIcsImport = IcsTransferRecord(
       at: DateTime.now(),
       ok: ok,

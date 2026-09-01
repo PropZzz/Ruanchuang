@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
 import 'microtask_crystal_engine.dart';
@@ -97,10 +97,7 @@ List<TimeCrystal> computeTimeCrystals({
       final start = f.start < nowMin ? nowMin : f.start;
       if (start >= f.end) continue;
       crystals.add(
-        TimeCrystal(
-          start: _minToTod(start),
-          minutes: f.end - start,
-        ),
+        TimeCrystal(start: _minToTod(start), minutes: f.end - start),
       );
     }
   }
@@ -152,11 +149,16 @@ class HeuristicMicroTaskCrystalEngine implements MicroTaskCrystalEngine {
 
       // Consume the task so we don't recommend it twice.
       candidates.remove(best);
-      recs.add(TimeCrystalRecommendation(crystal: c, task: best, score: bestScore));
+      recs.add(
+        TimeCrystalRecommendation(crystal: c, task: best, score: bestScore),
+      );
     }
 
     // Present in time order.
-    recs.sort((a, b) => _todToMin(a.crystal.start).compareTo(_todToMin(b.crystal.start)));
+    recs.sort(
+      (a, b) =>
+          _todToMin(a.crystal.start).compareTo(_todToMin(b.crystal.start)),
+    );
     return recs;
   }
 

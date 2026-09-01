@@ -204,7 +204,6 @@ def plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
 
                 due = _parse_datetime(task.get("due"))
                 if due is not None:
-                    end_dt = due if due.time().hour == 0 and due.time().minute == 0 else due
                     if day is not None and due.date().isoformat() == day and cursor > due.hour * 60 + due.minute:
                         issues.append(
                             {

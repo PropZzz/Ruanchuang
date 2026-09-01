@@ -124,28 +124,6 @@ class EmotionState:
     irritable = "irritable"
 
 
-class TeamTask(APIModel):
-    name: str
-    role: str
-    task: str
-    progress: float = 0.0
-    is_high_energy: bool = Field(default=False, alias="isHighEnergy")
-    due: datetime | None = None
-
-
-class TeamMember(APIModel):
-    name: str
-    task: str
-    progress: float
-    is_high_energy: bool = Field(alias="isHighEnergy")
-    busy_times: list["TimeRange"] = Field(default_factory=list, alias="busyTimes")
-
-
-class UserProfile(APIModel):
-    display_name: str = Field(alias="displayName")
-    status: str
-
-
 class EmotionCheckIn(APIModel):
     id: str
     at: datetime
@@ -273,24 +251,6 @@ class PlanTask(APIModel):
     tag: str
 
 
-class SchedulingIssue(APIModel):
-    code: str
-    message: str
-    task_id: str | None = Field(default=None, alias="taskId")
-
-
-class SchedulingPlan(APIModel):
-    entries: list[ScheduleEntryOut]
-    issues: list[SchedulingIssue] = Field(default_factory=list)
-
-
-class TaskEventType:
-    start = "start"
-    complete = "complete"
-    postpone = "postpone"
-    interrupt = "interrupt"
-
-
 class TaskEvent(APIModel):
     id: str
     task_id: str = Field(alias="taskId")
@@ -355,10 +315,11 @@ class TuningApplyRequest(APIModel):
     tuning: SchedulingTuning
 
 
-class TeamSharePermission:
-    none = "none"
-    freeBusy = "freeBusy"
-    details = "details"
+def _validate_team_permission(value: str) -> str:
+    allowed = {"none", "freeBusy", "details"}
+    if value not in allowed:
+        raise ValueError(f"permission must be one of: {', '.join(sorted(allowed))}")
+    return value
 
 
 class TeamMemberCalendar(APIModel):
@@ -372,10 +333,7 @@ class TeamMemberCalendar(APIModel):
     @field_validator("permission")
     @classmethod
     def validate_permission(cls, value: str) -> str:
-        allowed = {"none", "freeBusy", "details"}
-        if value not in allowed:
-            raise ValueError(f"permission must be one of: {', '.join(sorted(allowed))}")
-        return value
+        return _validate_team_permission(value)
 
 
 class TeamPermissionUpdate(APIModel):
@@ -384,65 +342,7 @@ class TeamPermissionUpdate(APIModel):
     @field_validator("permission")
     @classmethod
     def validate_permission(cls, value: str) -> str:
-        allowed = {"none", "freeBusy", "details"}
-        if value not in allowed:
-            raise ValueError(f"permission must be one of: {', '.join(sorted(allowed))}")
-        return value
-
-
-class TeamConflict(APIModel):
-    member_a: str = Field(alias="memberA")
-    member_b: str = Field(alias="memberB")
-    start: ClockTime
-    end: ClockTime
-
-
-class TeamMeetingRequest(APIModel):
-    title: str
-    start: ClockTime
-    minutes: int
-    participant_ids: list[str] = Field(default_factory=list, alias="participantIds")
-
-
-class TimeRange(APIModel):
-    start: ClockTime
-    end: ClockTime
-
-    @property
-    def duration_minutes(self) -> int:
-        return (self.end.hour * 60 + self.end.minute) - (self.start.hour * 60 + self.start.minute)
-
-    def contains(self, time: ClockTime) -> bool:
-        time_minutes = time.hour * 60 + time.minute
-        start_minutes = self.start.hour * 60 + self.start.minute
-        end_minutes = self.end.hour * 60 + self.end.minute
-        return start_minutes <= time_minutes <= end_minutes
-
-
-class UserAccount(APIModel):
-    contact_address: str = Field(alias="contactAddress")
-    display_name: str = Field(alias="displayName")
-
-
-class EnergyTier:
-    veryLow = "veryLow"
-    low = "low"
-    medium = "medium"
-    high = "high"
-    veryHigh = "veryHigh"
-
-
-class CognitiveLoad:
-    low = "low"
-    medium = "medium"
-    high = "high"
-
-
-class EmotionState:
-    efficient = "efficient"
-    stable = "stable"
-    tired = "tired"
-    irritable = "irritable"
+        return _validate_team_permission(value)
 
 
 SchedulingRequest.model_rebuild()

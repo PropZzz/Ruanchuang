@@ -1,12 +1,14 @@
-import 'dart:ui';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../services/app_services.dart';
+import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../main.dart';
+import '../widgets/press_scale.dart';
 import 'profile_page.dart';
 
 class AuthDialog extends StatefulWidget {
@@ -60,7 +62,7 @@ class _AuthDialogState extends State<AuthDialog> with TickerProviderStateMixin {
 
     _enterAnimationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: AppMotion.enter,
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
@@ -68,14 +70,19 @@ class _AuthDialogState extends State<AuthDialog> with TickerProviderStateMixin {
         curve: Curves.easeOutCubic,
       ),
     );
-    _scaleAnimation = Tween<double>(begin: 0.90, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _enterAnimationController,
-        curve: Curves.easeOutBack,
-      ),
+    _scaleAnimation = Tween<double>(begin: 0.96, end: 1.0).animate(
+      CurvedAnimation(parent: _enterAnimationController, curve: Curves.easeOut),
     );
 
-    _enterAnimationController.forward();
+    if (WidgetsBinding
+        .instance
+        .platformDispatcher
+        .accessibilityFeatures
+        .disableAnimations) {
+      _enterAnimationController.value = 1;
+    } else {
+      _enterAnimationController.forward();
+    }
   }
 
   @override
@@ -454,314 +461,275 @@ class _AuthDialogState extends State<AuthDialog> with TickerProviderStateMixin {
         ? const Color(0xFFE5E5EA)
         : const Color(0xFF2D2D2D);
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final sigma = (kIsWeb || defaultTargetPlatform == TargetPlatform.android)
-        ? 15.0
-        : 30.0;
     final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-        child: Center(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Container(
-                  width: MediaQuery.of(context).size.width.clamp(320.0, 420.0),
-                  margin: EdgeInsets.fromLTRB(
-                    24,
-                    MediaQuery.of(context).padding.top + 24,
-                    24,
-                    24,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Center(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: Container(
+                width: MediaQuery.of(context).size.width.clamp(320.0, 420.0),
+                margin: EdgeInsets.fromLTRB(
+                  24,
+                  MediaQuery.of(context).padding.top + 24,
+                  24,
+                  24,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline,
                   ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        isDark
-                            ? Colors.white.withValues(alpha: 0.12)
-                            : Colors.white.withValues(alpha: 0.9),
-                        isDark
-                            ? Colors.white.withValues(alpha: 0.04)
-                            : Colors.white.withValues(alpha: 0.5),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(36),
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.15)
-                          : Colors.white,
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(
-                          alpha: isDark ? 0.3 : 0.08,
-                        ),
-                        blurRadius: 60,
-                        spreadRadius: -10,
-                        offset: const Offset(0, 20),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(36),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // 顶部区域
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(32, 36, 24, 24),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: primaryColor.withValues(
-                                        alpha: isDark ? 0.2 : 0.1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(16),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 顶部区域
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(32, 36, 24, 24),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withValues(
+                                      alpha: isDark ? 0.2 : 0.1,
                                     ),
-                                    child: Icon(
-                                      Icons.auto_awesome_rounded,
-                                      color: primaryColor,
-                                      size: 28,
-                                    ),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
-                                  const SizedBox(height: 20),
-                                  Text(
-                                    AppStrings.of(context, 'auth_title'),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineSmall
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                          color: textColor,
-                                          letterSpacing: 0.5,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.language_rounded,
-                                      color: textColor.withValues(alpha: 0.5),
-                                    ),
-                                    onPressed: _showLanguageDialog,
-                                    tooltip: '切换语言',
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: isDark
-                                          ? Colors.white10
-                                          : Colors.black.withValues(
-                                              alpha: 0.05,
-                                            ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.close_rounded,
-                                      color: textColor.withValues(alpha: 0.55),
-                                    ),
-                                    onPressed: _dismiss,
-                                    tooltip: '关闭登录',
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: isDark
-                                          ? Colors.white10
-                                          : Colors.black.withValues(
-                                              alpha: 0.05,
-                                            ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // 定制化分段器
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Container(
-                            height: 52,
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? Colors.black.withValues(alpha: 0.3)
-                                  : Colors.black.withValues(alpha: 0.04),
-                              borderRadius: BorderRadius.circular(26),
-                            ),
-                            child: TabBar(
-                              controller: _tabController,
-                              indicator: BoxDecoration(
-                                borderRadius: BorderRadius.circular(22),
-                                color: isDark
-                                    ? Colors.white.withValues(alpha: 0.15)
-                                    : Colors.white,
-                                boxShadow: isDark
-                                    ? []
-                                    : [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(
-                                            alpha: 0.05,
-                                          ),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                              ),
-                              indicatorSize: TabBarIndicatorSize.tab,
-                              dividerColor: Colors.transparent,
-                              labelColor: isDark
-                                  ? Colors.white
-                                  : Colors.black87,
-                              unselectedLabelColor: textColor.withValues(
-                                alpha: 0.5,
-                              ),
-                              labelStyle: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                              ),
-                              unselectedLabelStyle: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontSize: 15,
-                              ),
-                              tabs: [
-                                Tab(
-                                  text: AppStrings.of(
-                                    context,
-                                    'auth_tab_login',
+                                  child: Icon(
+                                    Icons.auto_awesome_rounded,
+                                    color: primaryColor,
+                                    size: 28,
                                   ),
                                 ),
-                                Tab(
-                                  text: AppStrings.of(
-                                    context,
-                                    'auth_tab_register',
+                                const SizedBox(height: 20),
+                                Text(
+                                  AppStrings.of(context, 'auth_title'),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        color: textColor,
+                                        letterSpacing: 0.5,
+                                      ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.language_rounded,
+                                    color: textColor.withValues(alpha: 0.5),
+                                  ),
+                                  onPressed: _showLanguageDialog,
+                                  tooltip: '切换语言',
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: isDark
+                                        ? Colors.white10
+                                        : Colors.black.withValues(alpha: 0.05),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.close_rounded,
+                                    color: textColor.withValues(alpha: 0.55),
+                                  ),
+                                  onPressed: _dismiss,
+                                  tooltip: '关闭登录',
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: isDark
+                                        ? Colors.white10
+                                        : Colors.black.withValues(alpha: 0.05),
                                   ),
                                 ),
                               ],
                             ),
+                          ],
+                        ),
+                      ),
+
+                      // 定制化分段器
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Container(
+                          height: 52,
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.black.withValues(alpha: 0.3)
+                                : Colors.black.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(26),
+                          ),
+                          child: TabBar(
+                            controller: _tabController,
+                            indicator: BoxDecoration(
+                              borderRadius: BorderRadius.circular(22),
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.15)
+                                  : Colors.white,
+                              boxShadow: isDark
+                                  ? []
+                                  : [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.05,
+                                        ),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                            ),
+                            indicatorSize: TabBarIndicatorSize.tab,
+                            dividerColor: Colors.transparent,
+                            labelColor: isDark ? Colors.white : Colors.black87,
+                            unselectedLabelColor: textColor.withValues(
+                              alpha: 0.5,
+                            ),
+                            labelStyle: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                            ),
+                            unselectedLabelStyle: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: 15,
+                            ),
+                            tabs: [
+                              Tab(
+                                text: AppStrings.of(context, 'auth_tab_login'),
+                              ),
+                              Tab(
+                                text: AppStrings.of(
+                                  context,
+                                  'auth_tab_register',
+                                ),
+                              ),
+                            ],
                           ),
                         ),
+                      ),
 
-                        // 输入表单与按钮区域
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
-                          child: AnimatedSize(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeOutCubic,
-                            alignment: Alignment.topCenter,
-                            child: Column(
-                              children: [
-                                // 注册时显示头像上传控件
-                                if (_tabController.index == 1)
-                                  _buildAvatarPicker(),
+                      // 输入表单与按钮区域
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(32, 32, 32, 24),
+                        child: AnimatedSize(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOutCubic,
+                          alignment: Alignment.topCenter,
+                          child: Column(
+                            children: [
+                              // 注册时显示头像上传控件
+                              if (_tabController.index == 1)
+                                _buildAvatarPicker(),
 
+                              _buildTextField(
+                                controller: _accountController,
+                                focusNode: _accountFocus,
+                                nextFocusNode: _tabController.index == 1
+                                    ? _nicknameFocus
+                                    : _passwordFocus,
+                                labelText: AppStrings.of(
+                                  context,
+                                  'auth_label_contact',
+                                ),
+                                icon: CupertinoIcons.envelope_fill,
+                              ),
+
+                              if (_tabController.index == 1) ...[
                                 _buildTextField(
-                                  controller: _accountController,
-                                  focusNode: _accountFocus,
-                                  nextFocusNode: _tabController.index == 1
-                                      ? _nicknameFocus
-                                      : _passwordFocus,
+                                  controller: _nicknameController,
+                                  focusNode: _nicknameFocus,
+                                  nextFocusNode: _passwordFocus,
                                   labelText: AppStrings.of(
                                     context,
-                                    'auth_label_contact',
+                                    'auth_label_name',
                                   ),
-                                  icon: CupertinoIcons.envelope_fill,
+                                  icon: CupertinoIcons.person_solid,
                                 ),
+                              ],
 
-                                if (_tabController.index == 1) ...[
-                                  _buildTextField(
-                                    controller: _nicknameController,
-                                    focusNode: _nicknameFocus,
-                                    nextFocusNode: _passwordFocus,
-                                    labelText: AppStrings.of(
-                                      context,
-                                      'auth_label_name',
-                                    ),
-                                    icon: CupertinoIcons.person_solid,
-                                  ),
-                                ],
+                              _buildTextField(
+                                controller: _passwordController,
+                                focusNode: _passwordFocus,
+                                nextFocusNode: _tabController.index == 1
+                                    ? _confirmPasswordFocus
+                                    : null,
+                                labelText: isZh ? '密码' : 'Password',
+                                icon: CupertinoIcons.lock_shield_fill,
+                                isPassword: true,
+                                obscureText: _obscurePassword,
+                                onToggleObscure: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
+                              ),
 
+                              if (_tabController.index == 1) ...[
                                 _buildTextField(
-                                  controller: _passwordController,
-                                  focusNode: _passwordFocus,
-                                  nextFocusNode: _tabController.index == 1
-                                      ? _confirmPasswordFocus
-                                      : null,
-                                  labelText: isZh ? '密码' : 'Password',
-                                  icon: CupertinoIcons.lock_shield_fill,
+                                  controller: _confirmPasswordController,
+                                  focusNode: _confirmPasswordFocus,
+                                  labelText: isZh ? '确认密码' : 'Confirm Password',
+                                  icon: CupertinoIcons.lock_rotation,
                                   isPassword: true,
-                                  obscureText: _obscurePassword,
+                                  obscureText: _obscureConfirmPassword,
                                   onToggleObscure: () => setState(
-                                    () => _obscurePassword = !_obscurePassword,
+                                    () => _obscureConfirmPassword =
+                                        !_obscureConfirmPassword,
                                   ),
                                 ),
+                              ],
 
-                                if (_tabController.index == 1) ...[
-                                  _buildTextField(
-                                    controller: _confirmPasswordController,
-                                    focusNode: _confirmPasswordFocus,
-                                    labelText: isZh
-                                        ? '确认密码'
-                                        : 'Confirm Password',
-                                    icon: CupertinoIcons.lock_rotation,
-                                    isPassword: true,
-                                    obscureText: _obscureConfirmPassword,
-                                    onToggleObscure: () => setState(
-                                      () => _obscureConfirmPassword =
-                                          !_obscureConfirmPassword,
-                                    ),
+                              // 错误提示区
+                              if (_errorMessage != null) ...[
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: 4,
+                                    bottom: 12,
                                   ),
-                                ],
-
-                                // 错误提示区
-                                if (_errorMessage != null) ...[
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      top: 4,
-                                      bottom: 12,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          CupertinoIcons
-                                              .exclamationmark_circle_fill,
-                                          color: Colors.red.shade400,
-                                          size: 16,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            _errorMessage!,
-                                            style: TextStyle(
-                                              color: Colors.red.shade400,
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        CupertinoIcons
+                                            .exclamationmark_circle_fill,
+                                        color: Colors.red.shade400,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _errorMessage!,
+                                          style: TextStyle(
+                                            color: Colors.red.shade400,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                                const SizedBox(height: 8),
+                                ),
+                              ],
+                              const SizedBox(height: 8),
 
-                                // 主操作按钮
-                                SizedBox(
+                              // 主操作按钮
+                              PressScale(
+                                child: SizedBox(
                                   width: double.infinity,
                                   height: 56,
                                   child: ElevatedButton(
@@ -819,39 +787,36 @@ class _AuthDialogState extends State<AuthDialog> with TickerProviderStateMixin {
                                           ),
                                   ),
                                 ),
+                              ),
 
-                                // 新增：游客登录按钮
-                                const SizedBox(height: 12),
-                                TextButton(
-                                  onPressed: _isLoading
-                                      ? null
-                                      : _handleGuestLogin,
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: textColor.withValues(
-                                      alpha: 0.6,
-                                    ),
-                                    minimumSize: const Size(
-                                      double.infinity,
-                                      48,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
+                              // 新增：游客登录按钮
+                              const SizedBox(height: 12),
+                              TextButton(
+                                onPressed: _isLoading
+                                    ? null
+                                    : _handleGuestLogin,
+                                style: TextButton.styleFrom(
+                                  foregroundColor: textColor.withValues(
+                                    alpha: 0.6,
                                   ),
-                                  child: Text(
-                                    isZh ? '游客身份体验' : 'Continue as Guest',
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                  minimumSize: const Size(double.infinity, 48),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
                                 ),
-                              ],
-                            ),
+                                child: Text(
+                                  isZh ? '游客身份体验' : 'Continue as Guest',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),

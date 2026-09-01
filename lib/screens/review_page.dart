@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../services/app_services.dart';
+import '../theme/app_theme.dart';
 import '../services/review/review_rules.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
+import '../utils/schedule_occurrence.dart';
+import '../widgets/press_scale.dart';
 
 enum _ReviewRange { week, month }
 
@@ -38,7 +41,7 @@ class _ReviewPageState extends State<ReviewPage> {
   }
 
   static DateTime _mondayOf(DateTime d) {
-    final day = DateTime(d.year, d.month, d.day);
+    final day = dateOnly(d);
     final delta = (day.weekday + 6) % 7; // Monday=0
     return day.subtract(Duration(days: delta));
   }
@@ -317,6 +320,7 @@ class _ReviewPageState extends State<ReviewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
       appBar: AppBar(
         title: Text(AppStrings.of(context, 'review_title')),
         actions: [
@@ -379,21 +383,25 @@ class _ReviewPageState extends State<ReviewPage> {
               Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _loading ? null : _simulateWeek,
-                      icon: const Icon(Icons.science_outlined),
-                      label: Text(
-                        AppStrings.of(context, 'review_btn_simulate_week'),
+                    child: PressScale(
+                      child: ElevatedButton.icon(
+                        onPressed: _loading ? null : _simulateWeek,
+                        icon: const Icon(Icons.science_outlined),
+                        label: Text(
+                          AppStrings.of(context, 'review_btn_simulate_week'),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _loading ? null : _generate,
-                      icon: const Icon(Icons.refresh),
-                      label: Text(
-                        AppStrings.of(context, 'review_btn_generate_report'),
+                    child: PressScale(
+                      child: OutlinedButton.icon(
+                        onPressed: _loading ? null : _generate,
+                        icon: const Icon(Icons.refresh),
+                        label: Text(
+                          AppStrings.of(context, 'review_btn_generate_report'),
+                        ),
                       ),
                     ),
                   ),
@@ -726,7 +734,17 @@ class _ReviewPageState extends State<ReviewPage> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            Text(value),
+            Flexible(
+              child: Text(
+                value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
           ],
         ),
       ),

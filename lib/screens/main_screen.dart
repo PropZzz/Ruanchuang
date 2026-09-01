@@ -1,9 +1,8 @@
 // lib/screens/main_screen.dart
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../services/app_services.dart';
+import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
 import '../widgets/workspace_status_bar.dart';
@@ -22,6 +21,8 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  // Keep the logical-width breakpoint aligned with existing Flutter test and
+  // desktop behavior; phones remain below this threshold in production.
   static const double _wideBreakpoint = 1024;
   int _selectedIndex = 0;
   bool _startupAuthPromptShown = false;
@@ -71,7 +72,7 @@ class _MainScreenState extends State<MainScreen> {
         barrierDismissible: true,
         barrierLabel: '关闭登录',
         barrierColor: Colors.transparent,
-        transitionDuration: const Duration(milliseconds: 300),
+        transitionDuration: AppMotion.resolve(context, AppMotion.enter),
         pageBuilder: (ctx, anim1, anim2) {
           return AuthDialog(
             onAuthSuccess: () {
@@ -134,7 +135,8 @@ class _MainScreenState extends State<MainScreen> {
         top: false,
         bottom: false,
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
+          duration: AppMotion.resolve(context, AppMotion.enter),
+          reverseDuration: AppMotion.resolve(context, AppMotion.exit),
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
           child: isWide
@@ -190,7 +192,6 @@ class _NarrowShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final compactLabels = MobileFeedback.isNarrow(context, breakpoint: 420);
 
     return Column(
@@ -201,35 +202,35 @@ class _NarrowShell extends StatelessWidget {
           compact: true,
           onSettings: () => onSelect(4),
         ),
-        Expanded(child: ClipRRect(child: child)),
-        Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-                blurRadius: 20,
-                offset: const Offset(0, -6),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                color: theme.colorScheme.surface.withValues(
-                  alpha: isDark ? 0.75 : 0.85,
+        Expanded(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: 92 + MediaQuery.paddingOf(context).bottom,
+                  ),
+                  child: ClipRRect(child: child),
                 ),
-                child: SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0,
-                      vertical: 4.0,
-                    ),
+              ),
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 10 + MediaQuery.paddingOf(context).bottom,
+                child: Material(
+                  key: const ValueKey('shell-floating-navigation'),
+                  color: theme.colorScheme.surface.withValues(alpha: 0.96),
+                  elevation: 7,
+                  shadowColor: Colors.black.withValues(
+                    alpha: theme.brightness == Brightness.dark ? 0.28 : 0.14,
+                  ),
+                  shape: const StadiumBorder(),
+                  clipBehavior: Clip.antiAlias,
+                  child: SizedBox(
+                    height: compactLabels ? 68 : 72,
                     child: NavigationBar(
                       backgroundColor: Colors.transparent,
                       elevation: 0,
-                      height: compactLabels ? 68 : null,
                       labelBehavior: compactLabels
                           ? NavigationDestinationLabelBehavior.onlyShowSelected
                           : NavigationDestinationLabelBehavior.alwaysShow,
@@ -251,7 +252,7 @@ class _NarrowShell extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ],
@@ -282,21 +283,13 @@ class _WideShell extends StatelessWidget {
     final theme = Theme.of(context);
     final text = theme.textTheme;
     final railExtended = MediaQuery.sizeOf(context).width >= 1220;
-    final isDark = theme.brightness == Brightness.dark;
-
     return Row(
       children: [
         Container(
           width: railExtended ? 260 : 100,
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.02),
-                blurRadius: 40,
-                offset: const Offset(10, 0),
-              ),
-            ],
+            border: Border(right: BorderSide(color: theme.colorScheme.outline)),
           ),
           child: SafeArea(
             right: false,
@@ -305,10 +298,10 @@ class _WideShell extends StatelessWidget {
               children: [
                 Padding(
                   padding: EdgeInsets.fromLTRB(
-                    railExtended ? 32 : 0,
-                    40,
-                    0,
-                    40,
+                    railExtended ? 24 : 0,
+                    24,
+                    railExtended ? 24 : 0,
+                    24,
                   ),
                   child: Row(
                     mainAxisAlignment: railExtended
@@ -316,11 +309,17 @@ class _WideShell extends StatelessWidget {
                         : MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: 12,
-                        height: 12,
+                        width: 28,
+                        height: 28,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: theme.colorScheme.onSurface,
+                          color: theme.colorScheme.primary,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.schedule_rounded,
+                          size: 17,
+                          color: Colors.white,
                         ),
                       ),
                       if (railExtended) ...[
@@ -332,7 +331,7 @@ class _WideShell extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: text.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
-                              letterSpacing: 1.0,
+                              letterSpacing: 0,
                             ),
                           ),
                         ),
@@ -382,13 +381,14 @@ class _WideShell extends StatelessWidget {
                   child: WorkspaceStatusBar(
                     brand: title,
                     title: activeLabel,
+                    compact: !railExtended,
                     onSettings: () => onSelect(4),
                   ),
                 ),
                 Expanded(
                   child: ClipRRect(
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(40),
+                      topLeft: Radius.circular(14),
                     ),
                     child: Container(
                       decoration: BoxDecoration(

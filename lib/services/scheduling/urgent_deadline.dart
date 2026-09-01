@@ -1,9 +1,11 @@
+import '../../utils/schedule_occurrence.dart';
+
 DateTime defaultUrgentDeadline({
   required DateTime now,
   required DateTime scheduleDay,
 }) {
-  final day = _dateOnly(scheduleDay);
-  final today = _dateOnly(now);
+  final day = dateOnly(scheduleDay);
+  final today = dateOnly(now);
   if (day.isAfter(today)) {
     return DateTime(day.year, day.month, day.day, 17);
   }
@@ -15,9 +17,9 @@ bool isUrgentDeadlineValid({
   required DateTime scheduleDay,
   required DateTime deadline,
 }) {
-  final today = _dateOnly(now);
-  final plannedDay = _dateOnly(scheduleDay);
-  final deadlineDay = _dateOnly(deadline);
+  final today = dateOnly(now);
+  final plannedDay = dateOnly(scheduleDay);
+  final deadlineDay = dateOnly(deadline);
   if (plannedDay.isBefore(today) ||
       deadlineDay.isBefore(plannedDay) ||
       deadlineDay.isBefore(today)) {
@@ -28,6 +30,3 @@ bool isUrgentDeadlineValid({
 
 DateTime urgentDeadlinePickerLastDate({required DateTime firstDate}) =>
     DateTime(firstDate.year + 5, firstDate.month, firstDate.day);
-
-DateTime _dateOnly(DateTime value) =>
-    DateTime(value.year, value.month, value.day);

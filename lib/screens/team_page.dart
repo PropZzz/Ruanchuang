@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../services/app_services.dart';
+import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
+import '../utils/schedule_occurrence.dart';
 
 class TeamPage extends StatefulWidget {
   const TeamPage({super.key});
@@ -94,7 +96,7 @@ class _TeamPageState extends State<TeamPage> {
   void _recomputeCollab() {
     final day = DateTime.now();
     final result = AppServices.teamCollabEngine.compute(
-      day: DateTime(day.year, day.month, day.day),
+      day: dateOnly(day),
       windows: _defaultWindows(),
       calendars: _calendars,
       minParticipants: _minParticipants,
@@ -189,7 +191,7 @@ class _TeamPageState extends State<TeamPage> {
 
       final day = DateTime.now();
       await _dataService.bookTeamMeeting(
-        DateTime(day.year, day.month, day.day),
+        dateOnly(day),
         TeamMeetingRequest(
           title: AppStrings.of(context, 'team_meeting_title'),
           start: w.start,
@@ -361,7 +363,7 @@ class _TeamPageState extends State<TeamPage> {
               onPressed: () {
                 final day = DateTime.now();
                 final conflicts = AppServices.teamCollabEngine.conflictsFor(
-                  day: DateTime(day.year, day.month, day.day),
+                  day: dateOnly(day),
                   start: start,
                   minutes: minutes,
                   calendars: _calendars,
@@ -585,9 +587,7 @@ class _TeamPageState extends State<TeamPage> {
     final kpiConflictsLabel = isZh ? '冲突数' : 'Conflicts';
 
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF121212)
-          : const Color(0xFFF2F2F7),
+      backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
       appBar: AppBar(
         title: Text(
           AppStrings.of(context, 'team_title'),
@@ -650,18 +650,7 @@ class _TeamPageState extends State<TeamPage> {
       body: _loading
           ? const _TeamLoadingState()
           : Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    theme.colorScheme.secondaryContainer.withValues(
-                      alpha: 0.26,
-                    ),
-                    theme.colorScheme.surface,
-                  ],
-                ),
-              ),
+              color: AppWindowTones.canvas(context, AppWindowTone.neutral),
               child: SafeArea(
                 child: Center(
                   child: ConstrainedBox(
@@ -682,9 +671,10 @@ class _TeamPageState extends State<TeamPage> {
                           children: [
                             Card(
                               elevation: 0,
-                              color: isDark
-                                  ? const Color(0xFF1E1E1E)
-                                  : Colors.white,
+                              color: AppWindowTones.surface(
+                                context,
+                                AppWindowTone.team,
+                              ),
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
                                 child: Wrap(
@@ -792,7 +782,12 @@ class _TeamPageState extends State<TeamPage> {
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
-                Text('${(avgProgress * 100).round()}%'),
+                Text(
+                  '${(avgProgress * 100).round()}%',
+                  style: const TextStyle(
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -875,6 +870,9 @@ class _TeamPageState extends State<TeamPage> {
                                   fontSize: 12,
                                   color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.bold,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
                                 ),
                               ),
                             ),

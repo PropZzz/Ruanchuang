@@ -1,27 +1,36 @@
 import 'package:flutter/material.dart';
 
 enum EmotionType {
-  highEfficiency,   // 高效
-  stable,           // 平稳
-  fatigue,          // 疲惫
-  irritable,        // 烦躁
+  highEfficiency, // 高效
+  stable, // 平稳
+  fatigue, // 疲惫
+  irritable, // 烦躁
 }
 
 extension EmotionTypeExtension on EmotionType {
   String get label {
     switch (this) {
-      case EmotionType.highEfficiency: return '高效';
-      case EmotionType.stable: return '平稳';
-      case EmotionType.fatigue: return '疲惫';
-      case EmotionType.irritable: return '烦躁';
+      case EmotionType.highEfficiency:
+        return '高效';
+      case EmotionType.stable:
+        return '平稳';
+      case EmotionType.fatigue:
+        return '疲惫';
+      case EmotionType.irritable:
+        return '烦躁';
     }
   }
+
   Color get color {
     switch (this) {
-      case EmotionType.highEfficiency: return Colors.green;
-      case EmotionType.stable: return Colors.blue;
-      case EmotionType.fatigue: return Colors.orange;
-      case EmotionType.irritable: return Colors.red;
+      case EmotionType.highEfficiency:
+        return Colors.green;
+      case EmotionType.stable:
+        return Colors.blue;
+      case EmotionType.fatigue:
+        return Colors.orange;
+      case EmotionType.irritable:
+        return Colors.red;
     }
   }
 }
@@ -124,7 +133,8 @@ class ScheduleEntry {
       height: height ?? this.height,
       color: color ?? this.color,
       time: time ?? this.time,
-      reminderMinutesBefore: reminderMinutesBefore ?? this.reminderMinutesBefore,
+      reminderMinutesBefore:
+          reminderMinutesBefore ?? this.reminderMinutesBefore,
       repeat: repeat ?? this.repeat,
       repeatUntil: repeatUntil ?? this.repeatUntil,
     );
@@ -152,14 +162,22 @@ class ScheduleEntry {
     final loadStr = json['load'] as String?;
     final load = (loadStr == null)
         ? null
-        : CognitiveLoad.values.firstWhere((e) => e.name == loadStr, orElse: () => CognitiveLoad.medium);
+        : CognitiveLoad.values.firstWhere(
+            (e) => e.name == loadStr,
+            orElse: () => CognitiveLoad.medium,
+          );
 
     final repeatStr = json['repeat'] as String?;
     final repeat = (repeatStr == null)
         ? RepeatFrequency.none
-        : RepeatFrequency.values.firstWhere((e) => e.name == repeatStr, orElse: () => RepeatFrequency.none);
+        : RepeatFrequency.values.firstWhere(
+            (e) => e.name == repeatStr,
+            orElse: () => RepeatFrequency.none,
+          );
 
-    final repeatUntil = repeat == RepeatFrequency.none ? null : _dateFromJson(json['repeatUntil']);
+    final repeatUntil = repeat == RepeatFrequency.none
+        ? null
+        : _dateFromJson(json['repeatUntil']);
 
     return ScheduleEntry(
       id: json['id'] as String?,
@@ -170,9 +188,12 @@ class ScheduleEntry {
       goalId: json['goalId'] as String?,
       goalTaskId: json['goalTaskId'] as String?,
       height: ((json['height'] as num?)?.toDouble()) ?? 60.0,
-      color: Color(((json['color'] as num?)?.toInt()) ?? Colors.teal.toARGB32()),
+      color: Color(
+        ((json['color'] as num?)?.toInt()) ?? Colors.teal.toARGB32(),
+      ),
       time: _timeFromJson(json['time']),
-      reminderMinutesBefore: (json['reminderMinutesBefore'] as num?)?.toInt() ?? 10,
+      reminderMinutesBefore:
+          (json['reminderMinutesBefore'] as num?)?.toInt() ?? 10,
       repeat: repeat,
       repeatUntil: repeatUntil,
     );
@@ -183,9 +204,9 @@ class EnergyStatus {
   final String status;
   final String description;
   final int batteryPercent;
-  final String level; 
+  final String level;
   final EmotionType emotion;
-  final String flowState; 
+  final String flowState;
   const EnergyStatus({
     required this.status,
     required this.description,
@@ -201,7 +222,7 @@ class EnergyStatus {
     'batteryPercent': batteryPercent,
   };
 
- static EnergyStatus fromJson(Map<String, Object?> json) => EnergyStatus(
+  static EnergyStatus fromJson(Map<String, Object?> json) => EnergyStatus(
     level: (json['level'] as String?) ?? 'medium',
     emotion: EmotionType.stable,
     flowState: (json['flowState'] as String?) ?? 'normal',
@@ -244,7 +265,7 @@ class MicroTask {
   String title;
   String tag;
   int minutes;
-  int priority; 
+  int priority;
   String? requirement;
   bool done;
 
@@ -285,42 +306,6 @@ class MicroTask {
   MicroTask clone() => MicroTask.fromJson(toJson());
 }
 
-class TeamTask {
-  String name;
-  String role;
-  String task;
-  double progress;
-  bool isHighEnergy;
-  DateTime? due;
-
-  TeamTask({
-    required this.name,
-    required this.role,
-    required this.task,
-    this.progress = 0.0,
-    this.isHighEnergy = false,
-    this.due,
-  });
-
-  Map<String, Object?> toJson() => {
-    'name': name,
-    'role': role,
-    'task': task,
-    'progress': progress,
-    'isHighEnergy': isHighEnergy,
-    'due': due?.toIso8601String(),
-  };
-
-  static TeamTask fromJson(Map<String, Object?> json) => TeamTask(
-    name: (json['name'] as String?) ?? '',
-    role: (json['role'] as String?) ?? '',
-    task: (json['task'] as String?) ?? '',
-    progress: ((json['progress'] as num?)?.toDouble()) ?? 0.0,
-    isHighEnergy: (json['isHighEnergy'] as bool?) ?? false,
-    due: (json['due'] is String) ? DateTime.tryParse(json['due'] as String) : null,
-  );
-}
-
 class TeamMember {
   final String name;
   final String task;
@@ -349,7 +334,11 @@ class TeamMember {
     task: (json['task'] as String?) ?? '',
     progress: ((json['progress'] as num?)?.toDouble()) ?? 0.0,
     isHighEnergy: (json['isHighEnergy'] as bool?) ?? false,
-    busyTimes: ((json['busyTimes'] as List?)?.map((t) => TimeRange.fromJson(t as Map<String, Object?>)).toList()) ?? [],
+    busyTimes:
+        ((json['busyTimes'] as List?)
+            ?.map((t) => TimeRange.fromJson(t as Map<String, Object?>))
+            .toList()) ??
+        [],
   );
 }
 
@@ -396,7 +385,10 @@ class EmotionCheckIn {
     final atStr = (json['at'] as String?) ?? '';
     final at = DateTime.tryParse(atStr) ?? DateTime.now();
     final stateStr = (json['state'] as String?) ?? EmotionState.stable.name;
-    final state = EmotionState.values.firstWhere((e) => e.name == stateStr, orElse: () => EmotionState.stable);
+    final state = EmotionState.values.firstWhere(
+      (e) => e.name == stateStr,
+      orElse: () => EmotionState.stable,
+    );
     return EmotionCheckIn(
       id: (json['id'] as String?) ?? '',
       at: at,
@@ -406,7 +398,8 @@ class EmotionCheckIn {
   }
 }
 
-String timeToString(TimeOfDay time) => '${_two(time.hour)}:${_two(time.minute)}';
+String timeToString(TimeOfDay time) =>
+    '${_two(time.hour)}:${_two(time.minute)}';
 
 enum EnergyTier { veryLow, low, medium, high, veryHigh }
 
@@ -463,10 +456,15 @@ class GoalTask {
 
   static GoalTask fromJson(Map<String, Object?> json) {
     final loadStr = (json['load'] as String?) ?? CognitiveLoad.medium.name;
-    final load = CognitiveLoad.values.firstWhere((e) => e.name == loadStr, orElse: () => CognitiveLoad.medium);
+    final load = CognitiveLoad.values.firstWhere(
+      (e) => e.name == loadStr,
+      orElse: () => CognitiveLoad.medium,
+    );
 
     final depsRaw = json['dependsOn'];
-    final deps = (depsRaw is List) ? depsRaw.whereType<String>().where((s) => s.trim().isNotEmpty).toList() : const <String>[];
+    final deps = (depsRaw is List)
+        ? depsRaw.whereType<String>().where((s) => s.trim().isNotEmpty).toList()
+        : const <String>[];
 
     return GoalTask(
       id: (json['id'] as String?) ?? '',
@@ -484,7 +482,7 @@ class Goal {
   final String id;
   final String title;
   final DateTime due;
-  final int priority; 
+  final int priority;
   final List<GoalTask> tasks;
 
   const Goal({
@@ -511,11 +509,16 @@ class Goal {
 
   static Goal fromJson(Map<String, Object?> json) {
     final dueStr = (json['due'] as String?) ?? '';
-    final due = DateTime.tryParse(dueStr) ?? DateTime.now().add(const Duration(days: 7));
+    final due =
+        DateTime.tryParse(dueStr) ??
+        DateTime.now().add(const Duration(days: 7));
 
     final tasksRaw = json['tasks'];
     final tasks = (tasksRaw is List)
-        ? tasksRaw.whereType<Map>().map((m) => GoalTask.fromJson(Map<String, Object?>.from(m))).toList()
+        ? tasksRaw
+              .whereType<Map>()
+              .map((m) => GoalTask.fromJson(Map<String, Object?>.from(m)))
+              .toList()
         : <GoalTask>[];
 
     return Goal(
@@ -559,7 +562,10 @@ class PlanTask {
 
   static PlanTask fromJson(Map<String, Object?> json) {
     final loadStr = (json['load'] as String?) ?? CognitiveLoad.medium.name;
-    final load = CognitiveLoad.values.firstWhere((e) => e.name == loadStr, orElse: () => CognitiveLoad.medium);
+    final load = CognitiveLoad.values.firstWhere(
+      (e) => e.name == loadStr,
+      orElse: () => CognitiveLoad.medium,
+    );
 
     final dueRaw = json['due'];
     DateTime? due;
@@ -627,7 +633,10 @@ class SchedulingRequest {
     final day = DateTime.tryParse(dayStr) ?? DateTime.now();
 
     final energyStr = (json['energy'] as String?) ?? EnergyTier.medium.name;
-    final energy = EnergyTier.values.firstWhere((e) => e.name == energyStr, orElse: () => EnergyTier.medium);
+    final energy = EnergyTier.values.firstWhere(
+      (e) => e.name == energyStr,
+      orElse: () => EnergyTier.medium,
+    );
 
     final tasksRaw = json['tasks'];
     final windowsRaw = json['windows'];
@@ -635,15 +644,24 @@ class SchedulingRequest {
     final tuningRaw = json['tuning'];
 
     final tasks = (tasksRaw is List)
-        ? tasksRaw.whereType<Map>().map((m) => PlanTask.fromJson(Map<String, Object?>.from(m))).toList()
+        ? tasksRaw
+              .whereType<Map>()
+              .map((m) => PlanTask.fromJson(Map<String, Object?>.from(m)))
+              .toList()
         : <PlanTask>[];
 
     final windows = (windowsRaw is List)
-        ? windowsRaw.whereType<Map>().map((m) => TimeWindow.fromJson(Map<String, Object?>.from(m))).toList()
+        ? windowsRaw
+              .whereType<Map>()
+              .map((m) => TimeWindow.fromJson(Map<String, Object?>.from(m)))
+              .toList()
         : <TimeWindow>[];
 
     final fixed = (fixedRaw is List)
-        ? fixedRaw.whereType<Map>().map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m))).toList()
+        ? fixedRaw
+              .whereType<Map>()
+              .map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m)))
+              .toList()
         : <ScheduleEntry>[];
 
     final tuning = (tuningRaw is Map)
@@ -701,11 +719,19 @@ class SchedulingPlan {
     final issuesRaw = json['issues'];
 
     final entries = (entriesRaw is List)
-        ? entriesRaw.whereType<Map>().map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m))).toList()
+        ? entriesRaw
+              .whereType<Map>()
+              .map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m)))
+              .toList()
         : <ScheduleEntry>[];
 
     final issues = (issuesRaw is List)
-        ? issuesRaw.whereType<Map>().map((m) => SchedulingIssue.fromJson(Map<String, Object?>.from(m))).toList()
+        ? issuesRaw
+              .whereType<Map>()
+              .map(
+                (m) => SchedulingIssue.fromJson(Map<String, Object?>.from(m)),
+              )
+              .toList()
         : <SchedulingIssue>[];
 
     return SchedulingPlan(entries: entries, issues: issues);
@@ -763,17 +789,26 @@ class TaskEvent {
 
   static TaskEvent fromJson(Map<String, Object?> json) {
     final typeStr = (json['type'] as String?) ?? TaskEventType.start.name;
-    final type = TaskEventType.values.firstWhere((e) => e.name == typeStr, orElse: () => TaskEventType.start);
+    final type = TaskEventType.values.firstWhere(
+      (e) => e.name == typeStr,
+      orElse: () => TaskEventType.start,
+    );
 
     final loadStr = json['load'] as String?;
     final load = (loadStr == null)
         ? null
-        : CognitiveLoad.values.firstWhere((e) => e.name == loadStr, orElse: () => CognitiveLoad.medium);
+        : CognitiveLoad.values.firstWhere(
+            (e) => e.name == loadStr,
+            orElse: () => CognitiveLoad.medium,
+          );
 
     final energyStr = json['energy'] as String?;
     final energy = (energyStr == null)
         ? null
-        : EnergyTier.values.firstWhere((e) => e.name == energyStr, orElse: () => EnergyTier.medium);
+        : EnergyTier.values.firstWhere(
+            (e) => e.name == energyStr,
+            orElse: () => EnergyTier.medium,
+          );
 
     final atStr = (json['at'] as String?) ?? DateTime.now().toIso8601String();
     final at = DateTime.tryParse(atStr) ?? DateTime.now();
@@ -831,9 +866,11 @@ class SchedulingTuning {
     }
 
     return SchedulingTuning(
-      defaultDurationMultiplier: (json['defaultDurationMultiplier'] as num?)?.toDouble() ?? 1.0,
+      defaultDurationMultiplier:
+          (json['defaultDurationMultiplier'] as num?)?.toDouble() ?? 1.0,
       tagDurationMultiplier: map,
-      highLoadPenaltyWhenLowEnergy: (json['highLoadPenaltyWhenLowEnergy'] as num?)?.toDouble() ?? 1.0,
+      highLoadPenaltyWhenLowEnergy:
+          (json['highLoadPenaltyWhenLowEnergy'] as num?)?.toDouble() ?? 1.0,
     );
   }
 }
@@ -886,8 +923,11 @@ class ReviewReport {
   };
 
   static ReviewReport fromJson(Map<String, Object?> json) {
-    final ws = DateTime.tryParse((json['weekStart'] as String?) ?? '') ?? DateTime.now();
-    final we = DateTime.tryParse((json['weekEnd'] as String?) ?? '') ?? DateTime.now();
+    final ws =
+        DateTime.tryParse((json['weekStart'] as String?) ?? '') ??
+        DateTime.now();
+    final we =
+        DateTime.tryParse((json['weekEnd'] as String?) ?? '') ?? DateTime.now();
 
     Map<String, int> mapInt(Object? raw) {
       final out = <String, int>{};
@@ -902,7 +942,9 @@ class ReviewReport {
     }
 
     final suggRaw = json['suggestions'];
-    final suggestions = (suggRaw is List) ? suggRaw.whereType<String>().toList() : <String>[];
+    final suggestions = (suggRaw is List)
+        ? suggRaw.whereType<String>().toList()
+        : <String>[];
 
     final tuningRaw = json['tuning'];
     final tuning = (tuningRaw is Map)
@@ -957,14 +999,24 @@ class TeamMemberCalendar {
 
   static TeamMemberCalendar fromJson(Map<String, Object?> json) {
     final energyStr = (json['energy'] as String?) ?? EnergyTier.medium.name;
-    final energy = EnergyTier.values.firstWhere((e) => e.name == energyStr, orElse: () => EnergyTier.medium);
+    final energy = EnergyTier.values.firstWhere(
+      (e) => e.name == energyStr,
+      orElse: () => EnergyTier.medium,
+    );
 
-    final permStr = (json['permission'] as String?) ?? TeamSharePermission.freeBusy.name;
-    final permission = TeamSharePermission.values.firstWhere((e) => e.name == permStr, orElse: () => TeamSharePermission.freeBusy);
+    final permStr =
+        (json['permission'] as String?) ?? TeamSharePermission.freeBusy.name;
+    final permission = TeamSharePermission.values.firstWhere(
+      (e) => e.name == permStr,
+      orElse: () => TeamSharePermission.freeBusy,
+    );
 
     final busyRaw = json['busy'];
     final busy = (busyRaw is List)
-        ? busyRaw.whereType<Map>().map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m))).toList()
+        ? busyRaw
+              .whereType<Map>()
+              .map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m)))
+              .toList()
         : <ScheduleEntry>[];
 
     return TeamMemberCalendar(
@@ -1042,7 +1094,8 @@ class TimeRange {
     ),
   );
 
-  int get durationMinutes => (end.hour * 60 + end.minute) - (start.hour * 60 + start.minute);
+  int get durationMinutes =>
+      (end.hour * 60 + end.minute) - (start.hour * 60 + start.minute);
 
   bool contains(TimeOfDay time) {
     final timeMinutes = time.hour * 60 + time.minute;
@@ -1057,18 +1110,15 @@ class UserAccount {
   final String contactAddress;
   final String displayName;
 
-  const UserAccount({
-    required this.contactAddress,
-    required this.displayName,
-  });
+  const UserAccount({required this.contactAddress, required this.displayName});
 
   Map<String, Object?> toJson() => {
-        'contactAddress': contactAddress,
-        'displayName': displayName,
-      };
+    'contactAddress': contactAddress,
+    'displayName': displayName,
+  };
 
   static UserAccount fromJson(Map<String, Object?> json) => UserAccount(
-        contactAddress: (json['contactAddress'] as String?) ?? '',
-        displayName: (json['displayName'] as String?) ?? '',
-      );
+    contactAddress: (json['contactAddress'] as String?) ?? '',
+    displayName: (json['displayName'] as String?) ?? '',
+  );
 }

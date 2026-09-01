@@ -2,16 +2,14 @@ import 'dart:async';
 import 'dart:math';
 
 import '../models/models.dart';
+import '../utils/schedule_occurrence.dart';
 import 'data_service.dart';
 
 /// In-memory mock implementation of [DataService].
 class MockDataService implements DataService {
   static final MockDataService _instance = MockDataService._internal();
   factory MockDataService() => _instance;
-  MockDataService._internal() {
-    // 模拟网络延迟
-    Future.delayed(const Duration(milliseconds: 80));
-  }
+  MockDataService._internal();
 
   @override
   Future<EmotionType> getCurrentEmotion() async {
@@ -87,8 +85,6 @@ class MockDataService implements DataService {
   Future<void> addEmotionCheckIn(EmotionCheckIn checkIn) async {
     await _delay();
     final id = checkIn.id.isEmpty ? _newId('emo_') : checkIn.id;
-    bool sameDay(DateTime a, DateTime b) =>
-        a.year == b.year && a.month == b.month && a.day == b.day;
     final day = DateTime(checkIn.at.year, checkIn.at.month, checkIn.at.day);
     _emotion.removeWhere((e) => sameDay(e.at, day));
     _emotion.add(
@@ -104,8 +100,6 @@ class MockDataService implements DataService {
   @override
   Future<List<EmotionCheckIn>> getEmotionCheckIns(DateTime day) async {
     await _delay();
-    bool sameDay(DateTime a, DateTime b) =>
-        a.year == b.year && a.month == b.month && a.day == b.day;
     final d = DateTime(day.year, day.month, day.day);
     final out = _emotion.where((e) => sameDay(e.at, d)).toList()
       ..sort((a, b) => a.at.compareTo(b.at));

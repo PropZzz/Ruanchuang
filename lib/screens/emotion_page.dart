@@ -5,6 +5,7 @@ import '../models/models.dart';
 import '../services/app_services.dart';
 import '../services/emotion/emotion_policy.dart';
 import '../utils/app_strings.dart';
+import '../widgets/press_scale.dart';
 
 class EmotionPage extends StatefulWidget {
   const EmotionPage({super.key});
@@ -276,10 +277,12 @@ class _EmotionPageState extends State<EmotionPage> {
   }
 
   Widget _chip(BuildContext context, EmotionState s) {
-    return ActionChip(
-      backgroundColor: _color(s).withAlpha(26),
-      label: Text(_label(context, s)),
-      onPressed: () => _checkIn(s),
+    return PressScale(
+      child: ActionChip(
+        backgroundColor: _color(s).withAlpha(26),
+        label: Text(_label(context, s)),
+        onPressed: () => _checkIn(s),
+      ),
     );
   }
 }
