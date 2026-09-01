@@ -578,6 +578,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         : AppStrings.of(context, 'calendar_mode_manual');
     return GlassSurface(
       key: const ValueKey('calendar-today-status'),
+      level: AppMaterialLevel.surface,
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       tint: AppWindowTones.surface(context, AppWindowTone.schedule),
@@ -1311,6 +1312,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     required List<ScheduleEntry> allEntries,
   }) {
     final ml = MaterialLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final weekdayLabel = ml.narrowWeekdays[day.weekday % 7];
     final dateLabel = '${day.month}/${day.day}';
     final selected = sameDay(day, _selectedDay);
@@ -1327,7 +1329,9 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       child: SizedBox(
         width: 160,
         child: Material(
-          color: selected ? Colors.teal.withAlpha(20) : Colors.transparent,
+          color: selected
+              ? scheme.primary.withValues(alpha: 0.08)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
           child: InkWell(
             borderRadius: BorderRadius.circular(18),
@@ -1336,7 +1340,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: selected ? Colors.teal : Colors.grey.shade300,
+                  color: selected ? scheme.primary : scheme.outline,
                 ),
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -1352,7 +1356,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: selected ? Colors.teal.shade700 : null,
+                            color: selected ? scheme.primary : null,
                           ),
                         ),
                       ),
@@ -1360,7 +1364,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                         Icon(
                           Icons.circle,
                           size: 8,
-                          color: Colors.teal.shade400,
+                          color: scheme.primary.withValues(alpha: 0.72),
                         ),
                     ],
                   ),
@@ -1372,7 +1376,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                         AppStrings.of(context, 'calendar_week_empty'),
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.grey.shade500,
+                          color: scheme.onSurfaceVariant,
                           fontSize: 12,
                         ),
                       ),
@@ -2660,7 +2664,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             children: [
               Text(
                 AppStrings.of(ctx, 'calendar_ics_import_help'),
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -2845,7 +2852,8 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     final titleCtrl = TextEditingController();
     final tagCtrl = TextEditingController();
     double height = 60;
-    Color color = Colors.teal;
+    final scheme = Theme.of(context).colorScheme;
+    Color color = scheme.primary;
     TimeOfDay selectedTime = TimeOfDay.now();
     int reminderMinutesBefore = 10;
     RepeatFrequency repeat = RepeatFrequency.none;
@@ -2898,15 +2906,15 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                         value: color,
                         items: [
                           DropdownMenuItem(
-                            value: Colors.teal,
+                            value: scheme.primary,
                             child: Text(AppStrings.of(context, 'color_green')),
                           ),
                           DropdownMenuItem(
-                            value: Colors.blue,
+                            value: scheme.secondary,
                             child: Text(AppStrings.of(context, 'color_blue')),
                           ),
                           DropdownMenuItem(
-                            value: Colors.orange,
+                            value: scheme.tertiary,
                             child: Text(AppStrings.of(context, 'color_orange')),
                           ),
                         ],

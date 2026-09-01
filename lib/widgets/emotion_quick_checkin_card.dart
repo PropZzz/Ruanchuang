@@ -88,16 +88,17 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
     }
   }
 
-  Color _color(EmotionState s) {
+  Color _color(BuildContext context, EmotionState s) {
+    final scheme = Theme.of(context).colorScheme;
     switch (s) {
       case EmotionState.efficient:
-        return const Color(0xFF81B29A);
+        return scheme.secondary;
       case EmotionState.stable:
-        return const Color(0xFF8D99AE);
+        return scheme.primary;
       case EmotionState.tired:
-        return const Color(0xFFE07A5F);
+        return scheme.tertiary;
       case EmotionState.irritable:
-        return const Color(0xFFD68C89);
+        return scheme.error;
     }
   }
 
@@ -133,7 +134,10 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
           ),
           content: Text(
             _careHint!,
-            style: const TextStyle(height: 1.6, color: Color(0xFF8E8E93)),
+            style: TextStyle(
+              height: 1.6,
+              color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+            ),
           ),
           actions: [
             TextButton(
@@ -156,7 +160,7 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const SizedBox(
+      return SizedBox(
         height: 48,
         child: Center(
           child: SizedBox(
@@ -164,7 +168,7 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
             height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: Color(0xFFE5E5EA),
+              color: Theme.of(context).colorScheme.outline,
             ),
           ),
         ),
@@ -205,12 +209,12 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _color(_current).withValues(alpha: 0.1),
+                color: _color(context, _current).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.monitor_heart_outlined,
-                color: _color(_current),
+                color: _color(context, _current),
                 size: 18,
               ),
             ),
@@ -234,9 +238,9 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                       '${AppStrings.of(context, 'emo_current')} · ${_today!.at.toLocal().toString().substring(11, 16)}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF8E8E93),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                 ],
@@ -262,17 +266,17 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
           if (_careHint != null) ...[
             Container(
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF3A3A3C)
-                    : const Color(0xFFF7F7F6),
+                color: Theme.of(
+                  context,
+                ).colorScheme.surface.withValues(alpha: isDark ? 0.86 : 0.72),
                 borderRadius: BorderRadius.circular(16),
               ),
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.favorite_rounded,
-                    color: Color(0xFFD68C89),
+                    color: Theme.of(context).colorScheme.error,
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -312,12 +316,12 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: _color(_current).withValues(alpha: 0.1),
+                        color: _color(context, _current).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         Icons.monitor_heart_outlined,
-                        color: _color(_current),
+                        color: _color(context, _current),
                         size: 18,
                       ),
                     ),
@@ -330,9 +334,11 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                             AppStrings.of(context, 'emo_current'),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF8E8E93),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -353,8 +359,8 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
                     if (_today != null)
                       Text(
                         _today!.at.toLocal().toString().substring(11, 16),
-                        style: const TextStyle(
-                          color: Color(0xFFC7C7CC),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.outline,
                           fontSize: 12,
                         ),
                       ),
@@ -374,10 +380,10 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
 
                 Text(
                   AppStrings.of(context, 'emo_quick'),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF8E8E93),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -403,7 +409,7 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
 
   Widget _minimalButton(BuildContext context, EmotionState s) {
     final isSelected = _current == s;
-    final baseColor = _color(s);
+    final baseColor = _color(context, s);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -420,7 +426,9 @@ class _EmotionQuickCheckInCardState extends State<EmotionQuickCheckInCard> {
           decoration: BoxDecoration(
             color: isSelected
                 ? baseColor.withValues(alpha: 0.12)
-                : (isDark ? const Color(0xFF3A3A3C) : const Color(0xFFF7F7F6)),
+                : theme.colorScheme.surface.withValues(
+                    alpha: isDark ? 0.86 : 0.72,
+                  ),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Text(

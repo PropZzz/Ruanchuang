@@ -49,6 +49,7 @@ class FocusTaskCard extends StatelessWidget {
     if (current == null) {
       return GlassSurface(
         key: const ValueKey('focus-task-empty'),
+        level: AppMaterialLevel.surface,
         padding: const EdgeInsets.all(24),
         tint: AppWindowTones.surface(context, AppWindowTone.focus),
         child: Column(
@@ -80,6 +81,7 @@ class FocusTaskCard extends StatelessWidget {
     final accent = current.color;
     return GlassSurface(
       key: const ValueKey('focus-current-task'),
+      level: AppMaterialLevel.surface,
       padding: EdgeInsets.zero,
       borderRadius: BorderRadius.circular(14),
       tint: AppWindowTones.surface(context, AppWindowTone.focus),

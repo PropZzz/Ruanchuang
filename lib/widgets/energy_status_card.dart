@@ -26,6 +26,7 @@ class EnergyStatusCard extends StatelessWidget {
 
     return GlassSurface(
       key: const ValueKey('focus-energy-status'),
+      level: AppMaterialLevel.surface,
       borderRadius: BorderRadius.circular(14),
       padding: const EdgeInsets.all(18),
       tint: AppWindowTones.surface(context, AppWindowTone.focus),
