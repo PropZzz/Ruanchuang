@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
+import 'glass_surface.dart';
 
 /// Shared title bar for desktop and mobile workspaces.
 class WorkspaceStatusBar extends StatelessWidget {
@@ -25,18 +27,17 @@ class WorkspaceStatusBar extends StatelessWidget {
       context,
     ).formatMediumDate(DateTime.now());
 
-    return Container(
+    return GlassSurface(
       key: const ValueKey('workspace-status-bar'),
+      level: AppMaterialLevel.chrome,
+      borderRadius: BorderRadius.zero,
       padding: EdgeInsets.fromLTRB(
         compact ? 20 : 28,
         compact ? 14 : 18,
         compact ? 16 : 28,
         compact ? 12 : 16,
       ),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(bottom: BorderSide(color: theme.colorScheme.outline)),
-      ),
+      showShadow: false,
       child: Row(
         children: [
           if (compact) ...[

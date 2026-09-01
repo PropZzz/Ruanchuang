@@ -197,7 +197,7 @@ abstract final class AppTheme {
       scaffoldBackgroundColor: canvas,
       colorScheme: scheme,
       dividerColor: divider,
-      fontFamily: 'PingFang SC',
+      fontFamilyFallback: const ['PingFang SC', 'Noto Sans SC'],
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
       visualDensity: VisualDensity.standard,
@@ -256,7 +256,7 @@ abstract final class AppTheme {
         toolbarHeight: 64,
         titleTextStyle: TextStyle(
           color: ink,
-          fontFamily: 'PingFang SC',
+          fontFamilyFallback: const ['PingFang SC', 'Noto Sans SC'],
           fontSize: 22,
           fontWeight: FontWeight.w700,
           letterSpacing: 0,

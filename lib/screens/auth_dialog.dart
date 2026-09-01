@@ -294,13 +294,10 @@ class _AuthDialogState extends State<AuthDialog> with TickerProviderStateMixin {
     VoidCallback? onToggleObscure,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark
-        ? const Color(0xFFE5E5EA)
-        : const Color(0xFF2D2D2D);
-    final fillColor = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.03);
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final scheme = Theme.of(context).colorScheme;
+    final textColor = scheme.onSurface;
+    final fillColor = scheme.onSurface.withValues(alpha: isDark ? 0.06 : 0.03);
+    final primaryColor = scheme.primary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -458,10 +455,9 @@ class _AuthDialogState extends State<AuthDialog> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark
-        ? const Color(0xFFE5E5EA)
-        : const Color(0xFF2D2D2D);
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final scheme = Theme.of(context).colorScheme;
+    final textColor = scheme.onSurface;
+    final primaryColor = scheme.primary;
     final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
 
     return Scaffold(

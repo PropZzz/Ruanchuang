@@ -71,16 +71,17 @@ class _EmotionPageState extends State<EmotionPage> {
     }
   }
 
-  Color _color(EmotionState s) {
+  Color _color(BuildContext context, EmotionState s) {
+    final scheme = Theme.of(context).colorScheme;
     switch (s) {
       case EmotionState.efficient:
-        return const Color(0xFF81B29A);
+        return scheme.secondary;
       case EmotionState.stable:
-        return const Color(0xFF8D99AE);
+        return scheme.primary;
       case EmotionState.tired:
-        return const Color(0xFFE07A5F);
+        return scheme.tertiary;
       case EmotionState.irritable:
-        return const Color(0xFFD68C89);
+        return scheme.error;
     }
   }
 
@@ -138,16 +139,18 @@ class _EmotionPageState extends State<EmotionPage> {
               children: [
                 if (_careHint != null) ...[
                   Card(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF3A3A3C)
-                        : const Color(0xFFF7F7F6),
+                    color: Theme.of(context).colorScheme.surface.withValues(
+                      alpha: Theme.of(context).brightness == Brightness.dark
+                          ? 0.86
+                          : 0.72,
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.favorite_rounded,
-                            color: Color(0xFFD68C89),
+                            color: Theme.of(context).colorScheme.error,
                           ),
                           const SizedBox(width: 10),
                           Expanded(child: Text(_careHint!)),
@@ -164,7 +167,7 @@ class _EmotionPageState extends State<EmotionPage> {
                       children: [
                         Icon(
                           Icons.monitor_heart,
-                          color: _color(_state),
+                          color: _color(context, _state),
                           size: 28,
                         ),
                         const SizedBox(width: 10),
@@ -192,7 +195,10 @@ class _EmotionPageState extends State<EmotionPage> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.tips_and_updates, color: _color(_state)),
+                            Icon(
+                              Icons.tips_and_updates,
+                              color: _color(context, _state),
+                            ),
                             const SizedBox(width: 8),
                             const Expanded(
                               child: Text(
@@ -251,7 +257,9 @@ class _EmotionPageState extends State<EmotionPage> {
                 if (_today.isEmpty)
                   Text(
                     AppStrings.of(context, 'emo_today_empty'),
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   )
                 else
                   ..._today.map(
@@ -260,7 +268,7 @@ class _EmotionPageState extends State<EmotionPage> {
                       leading: Icon(
                         Icons.circle,
                         size: 12,
-                        color: _color(e.state),
+                        color: _color(context, e.state),
                       ),
                       title: Text(_label(context, e.state)),
                       subtitle: Text(
@@ -279,7 +287,7 @@ class _EmotionPageState extends State<EmotionPage> {
   Widget _chip(BuildContext context, EmotionState s) {
     return PressScale(
       child: ActionChip(
-        backgroundColor: _color(s).withAlpha(26),
+        backgroundColor: _color(context, s).withValues(alpha: 0.1),
         label: Text(_label(context, s)),
         onPressed: () => _checkIn(s),
       ),

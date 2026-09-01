@@ -9,6 +9,7 @@ import '../services/app_services.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
+import '../widgets/glass_surface.dart';
 import '../widgets/responsive_page_frame.dart';
 import 'bluetooth_page.dart';
 import 'debug/diagnostics_page.dart';
@@ -663,203 +664,210 @@ class _ProfilePageState extends State<ProfilePage> {
     required VoidCallback onSwitchAccount,
   }) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark
-            ? Theme.of(context).colorScheme.surface
-            : Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
+    return GlassSurface(
+      key: const ValueKey('profile-settings-material'),
+      level: AppMaterialLevel.overlay,
+      padding: EdgeInsets.zero,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      showShadow: false,
+      child: Container(
+        color: Colors.transparent,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(width: 48),
+                  Expanded(
+                    child: Text(
+                      AppStrings.of(context, 'settings_title'),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.1,
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, size: 20),
+                    ),
+                    onPressed: onClose,
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const SizedBox(width: 48),
-                Expanded(
-                  child: Text(
-                    AppStrings.of(context, 'settings_title'),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close, size: 20),
-                  ),
-                  onPressed: onClose,
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              physics: const BouncingScrollPhysics(),
-              children: [
-                _buildActionGroup(
-                  context,
-                  children: [
-                    _profileActionTile(
-                      context,
-                      icon: Icons.switch_account_rounded,
-                      iconColor: theme.colorScheme.primary,
-                      title: AppStrings.of(context, 'profile_switch_account'),
-                      onTap: onSwitchAccount,
-                    ),
-                    _buildDivider(context),
-                    _profileActionTile(
-                      context,
-                      icon: Icons.language_rounded,
-                      iconColor: theme.colorScheme.primary,
-                      title: AppStrings.of(context, 'settings_language'),
-                      onTap: () => _showLanguageDialog(context),
-                    ),
-                    _buildDivider(context),
-                    _profileActionTile(
-                      context,
-                      icon: Icons.notifications_rounded,
-                      iconColor: theme.colorScheme.tertiary,
-                      title: AppStrings.of(context, 'settings_notify'),
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildActionGroup(
-                  context,
-                  children: [
-                    ExpansionTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.15,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.dark_mode_rounded,
-                          color: theme.colorScheme.primary,
-                          size: 22,
-                        ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  _buildActionGroup(
+                    context,
+                    children: [
+                      _profileActionTile(
+                        context,
+                        icon: Icons.switch_account_rounded,
+                        iconColor: theme.colorScheme.primary,
+                        title: AppStrings.of(context, 'profile_switch_account'),
+                        onTap: onSwitchAccount,
                       ),
-                      title: Builder(
-                        builder: (context) {
-                          final currentThemeMode = _getCurrentThemeMode(
-                            context,
-                          );
-                          String themeModeName =
-                              currentThemeMode == ThemeMode.system
-                              ? AppStrings.of(context, 'theme_system')
-                              : currentThemeMode == ThemeMode.light
-                              ? AppStrings.of(context, 'theme_light')
-                              : AppStrings.of(context, 'theme_dark');
-                          return Text(
-                            '${AppStrings.of(context, 'settings_dark')}: $themeModeName',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          );
-                        },
+                      _buildDivider(context),
+                      _profileActionTile(
+                        context,
+                        icon: Icons.language_rounded,
+                        iconColor: theme.colorScheme.primary,
+                        title: AppStrings.of(context, 'settings_language'),
+                        onTap: () => _showLanguageDialog(context),
                       ),
-                      shape: const Border(),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                          child: SegmentedButton<ThemeMode>(
-                            segments: [
-                              ButtonSegment<ThemeMode>(
-                                value: ThemeMode.system,
-                                icon: const Icon(
-                                  Icons.settings_suggest_outlined,
-                                ),
-                                label: Text(
-                                  AppStrings.of(context, 'theme_system'),
-                                ),
-                              ),
-                              ButtonSegment<ThemeMode>(
-                                value: ThemeMode.light,
-                                icon: const Icon(Icons.light_mode_outlined),
-                                label: Text(
-                                  AppStrings.of(context, 'theme_light'),
-                                ),
-                              ),
-                              ButtonSegment<ThemeMode>(
-                                value: ThemeMode.dark,
-                                icon: const Icon(Icons.dark_mode_outlined),
-                                label: Text(
-                                  AppStrings.of(context, 'theme_dark'),
-                                ),
-                              ),
-                            ],
-                            selected: {_getCurrentThemeMode(context)},
-                            showSelectedIcon: false,
-                            style: ButtonStyle(
-                              visualDensity: VisualDensity.compact,
-                              tapTargetSize: MaterialTapTargetSize.padded,
-                              padding: const WidgetStatePropertyAll(
-                                EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 10,
-                                ),
-                              ),
+                      _buildDivider(context),
+                      _profileActionTile(
+                        context,
+                        icon: Icons.notifications_rounded,
+                        iconColor: theme.colorScheme.tertiary,
+                        title: AppStrings.of(context, 'settings_notify'),
+                        onTap: () {},
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _buildActionGroup(
+                    context,
+                    children: [
+                      ExpansionTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.15,
                             ),
-                            onSelectionChanged: (selection) {
-                              if (selection.isNotEmpty) {
-                                BattleManApp.setThemeMode(
-                                  context,
-                                  selection.first,
-                                );
-                              }
-                            },
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.dark_mode_rounded,
+                            color: theme.colorScheme.primary,
+                            size: 22,
                           ),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildActionGroup(
-                  context,
-                  children: [
-                    _profileActionTile(
-                      context,
-                      icon: Icons.bug_report_rounded,
-                      iconColor: Theme.of(context).colorScheme.onSurfaceVariant,
-                      title: AppStrings.of(context, 'diag_title'),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const DiagnosticsPage(),
+                        title: Builder(
+                          builder: (context) {
+                            final currentThemeMode = _getCurrentThemeMode(
+                              context,
+                            );
+                            String themeModeName =
+                                currentThemeMode == ThemeMode.system
+                                ? AppStrings.of(context, 'theme_system')
+                                : currentThemeMode == ThemeMode.light
+                                ? AppStrings.of(context, 'theme_light')
+                                : AppStrings.of(context, 'theme_dark');
+                            return Text(
+                              '${AppStrings.of(context, 'settings_dark')}: $themeModeName',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            );
+                          },
+                        ),
+                        shape: const Border(),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                            child: SegmentedButton<ThemeMode>(
+                              segments: [
+                                ButtonSegment<ThemeMode>(
+                                  value: ThemeMode.system,
+                                  icon: const Icon(
+                                    Icons.settings_suggest_outlined,
+                                  ),
+                                  label: Text(
+                                    AppStrings.of(context, 'theme_system'),
+                                  ),
+                                ),
+                                ButtonSegment<ThemeMode>(
+                                  value: ThemeMode.light,
+                                  icon: const Icon(Icons.light_mode_outlined),
+                                  label: Text(
+                                    AppStrings.of(context, 'theme_light'),
+                                  ),
+                                ),
+                                ButtonSegment<ThemeMode>(
+                                  value: ThemeMode.dark,
+                                  icon: const Icon(Icons.dark_mode_outlined),
+                                  label: Text(
+                                    AppStrings.of(context, 'theme_dark'),
+                                  ),
+                                ),
+                              ],
+                              selected: {_getCurrentThemeMode(context)},
+                              showSelectedIcon: false,
+                              style: ButtonStyle(
+                                visualDensity: VisualDensity.compact,
+                                tapTargetSize: MaterialTapTargetSize.padded,
+                                padding: const WidgetStatePropertyAll(
+                                  EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 10,
+                                  ),
+                                ),
+                              ),
+                              onSelectionChanged: (selection) {
+                                if (selection.isNotEmpty) {
+                                  BattleManApp.setThemeMode(
+                                    context,
+                                    selection.first,
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _buildActionGroup(
+                    context,
+                    children: [
+                      _profileActionTile(
+                        context,
+                        icon: Icons.bug_report_rounded,
+                        iconColor: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant,
+                        title: AppStrings.of(context, 'diag_title'),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const DiagnosticsPage(),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
