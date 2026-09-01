@@ -127,7 +127,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('schedule-timeline-gantt-bar-gantt-1')),
+      find.byKey(const ValueKey('schedule-timeline-gantt-bar-gantt-1-0')),
       findsOneWidget,
     );
   });
@@ -163,8 +163,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Month task'), findsOneWidget);
-    expect(find.text('Planning'), findsOneWidget);
-    expect(find.text('15m'), findsOneWidget);
+    expect(find.textContaining('Planning'), findsOneWidget);
+    expect(find.textContaining('15m'), findsOneWidget);
   });
 
   testWidgets('gantt has a dedicated label lane and bounds late bars', (
@@ -199,7 +199,7 @@ void main() {
     );
     expect(find.text('Late task'), findsNWidgets(2));
     final lateBar = tester.widget<Positioned>(
-      find.byKey(const ValueKey('schedule-timeline-gantt-bar-late-1')),
+      find.byKey(const ValueKey('schedule-timeline-gantt-bar-late-1-0')),
     );
     expect(lateBar.width, 48);
     expect(lateBar.left, 712);
@@ -238,10 +238,10 @@ void main() {
 
     await pumpView(ScheduleTimelineView.day);
     expect(find.text('Localized Raw title'), findsOneWidget);
-    expect(find.text('Localized Raw tag'), findsOneWidget);
+    expect(find.textContaining('Localized Raw tag'), findsOneWidget);
     await pumpView(ScheduleTimelineView.month);
     expect(find.text('Localized Raw title'), findsOneWidget);
-    expect(find.text('Localized Raw tag'), findsOneWidget);
+    expect(find.textContaining('Localized Raw tag'), findsOneWidget);
   });
 
   testWidgets('gantt uses a full-day domain for early and late entries', (
@@ -275,11 +275,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey('schedule-timeline-gantt-bar-early-1')),
+      find.byKey(const ValueKey('schedule-timeline-gantt-bar-early-1-0')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const ValueKey('schedule-timeline-gantt-bar-late-2')),
+      find.byKey(const ValueKey('schedule-timeline-gantt-bar-late-2-1')),
       findsOneWidget,
     );
   });
@@ -344,6 +344,111 @@ void main() {
     expect(
       find.byKey(const ValueKey('schedule-timeline-gantt-bar-Duplicate-1')),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('month metadata stays bounded in compact cells', (tester) async {
+    final entry = ScheduleEntry(
+      id: 'compact-month',
+      day: day,
+      title: 'Compact month task',
+      tag: 'Deep Work',
+      goalId: 'goal-1',
+      height: 80,
+      color: Colors.teal,
+      time: const TimeOfDay(hour: 9, minute: 0),
+      reminderMinutesBefore: 15,
+    );
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ScheduleTimeline(
+            view: ScheduleTimelineView.month,
+            selectedDay: day,
+            entries: [entry],
+            visibleFields: const {
+              ScheduleTimelineField.time,
+              ScheduleTimelineField.tag,
+              ScheduleTimelineField.status,
+              ScheduleTimelineField.reminder,
+              ScheduleTimelineField.goal,
+            },
+            statusByTaskId: const {'compact-month': 'In progress'},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('narrow gantt bars use compact event layout', (tester) async {
+    final entry = ScheduleEntry(
+      id: 'compact-gantt',
+      day: day,
+      title: 'Compact gantt task',
+      tag: 'Deep Work',
+      height: 30,
+      color: Colors.teal,
+      time: const TimeOfDay(hour: 23, minute: 59),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ScheduleTimeline(
+            view: ScheduleTimelineView.gantt,
+            selectedDay: day,
+            entries: [entry],
+            visibleFields: const {ScheduleTimelineField.tag},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('schedule-timeline-gantt-bar-compact-gantt-0')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('late delete-enabled day cards reserve compact height', (
+    tester,
+  ) async {
+    final entry = ScheduleEntry(
+      id: 'near-end',
+      day: day,
+      title: 'Near end',
+      tag: '',
+      height: 30,
+      color: Colors.teal,
+      time: const TimeOfDay(hour: 19, minute: 59),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: ScheduleTimeline(
+            view: ScheduleTimelineView.day,
+            selectedDay: day,
+            entries: [entry],
+            onDelete: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('schedule-entry-card-near-end')))
+          .height,
+      greaterThanOrEqualTo(52),
     );
   });
 }

@@ -203,25 +203,29 @@ class ScheduleTimeline extends StatelessWidget {
             ),
           ),
         ...entries.map((entry) {
-          final top = _topFor(entry);
-          final height = math.max(48.0, entry.height);
+          final minHeight = onDelete == null ? 48.0 : 52.0;
+          final top = _topFor(entry, minHeight: minHeight);
+          final height = math.max(96.0, entry.height);
+          final renderHeight = math.min(height, totalHeight - top);
           return Positioned(
             top: top,
             left: 8,
             right: 8,
-            height: math.min(height, totalHeight - top),
-            child: _buildEvent(context, entry),
+            height: renderHeight,
+            child: renderHeight < 96
+                ? _buildCompactEventBar(context, entry)
+                : _buildEvent(context, entry),
           );
         }),
       ],
     );
   }
 
-  double _topFor(ScheduleEntry entry) {
+  double _topFor(ScheduleEntry entry, {double minHeight = 48}) {
     final minutes = entry.time.hour * 60 + entry.time.minute;
     final startMinutes = startHour * 60;
     return ((minutes - startMinutes) / 60 * _hourHeight)
-        .clamp(0.0, (endHour - startHour) * _hourHeight - 48.0)
+        .clamp(0.0, (endHour - startHour) * _hourHeight - minHeight)
         .toDouble();
   }
 
@@ -245,6 +249,7 @@ class ScheduleTimeline extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           onTap: onEntryTap == null ? null : () => onEntryTap!(entry),
           child: Container(
+            key: ValueKey('schedule-entry-card-${entry.id ?? entry.title}'),
             decoration: BoxDecoration(
               border: Border.all(color: theme.colorScheme.outlineVariant),
               borderRadius: BorderRadius.circular(8),
@@ -303,39 +308,122 @@ class ScheduleTimeline extends StatelessWidget {
     );
   }
 
+  Widget _buildCompactEventBar(
+    BuildContext context,
+    ScheduleEntry entry, {
+    bool includeDelete = true,
+  }) {
+    final theme = Theme.of(context);
+    final title = titleBuilder?.call(context, entry) ?? entry.title;
+    final surface = Color.alphaBlend(
+      entry.color.withValues(alpha: .12),
+      theme.colorScheme.surface,
+    );
+    return Semantics(
+      container: true,
+      label: title,
+      button: onEntryTap != null,
+      child: Tooltip(
+        message: title,
+        child: Material(
+          color: surface,
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: onEntryTap == null ? null : () => onEntryTap!(entry),
+            child: Container(
+              key: ValueKey('schedule-entry-card-${entry.id ?? entry.title}'),
+              height: includeDelete ? 52 : 40,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: entry.color,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  if (includeDelete && onDelete != null)
+                    Tooltip(
+                      message: deleteLabel,
+                      child: IconButton(
+                        key: const ValueKey('schedule-entry-delete'),
+                        onPressed: () => onDelete!(entry),
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        constraints: const BoxConstraints(
+                          minWidth: 44,
+                          minHeight: 44,
+                        ),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   List<Widget> _metadata(
     BuildContext context,
     ScheduleEntry entry,
     String? status,
+  ) => _metadataLabels(context, entry, status).map(_metaText).toList();
+
+  List<String> _metadataLabels(
+    BuildContext context,
+    ScheduleEntry entry,
+    String? status,
   ) {
-    final result = <Widget>[];
+    final result = <String>[];
     if (visibleFields.contains(ScheduleTimelineField.time)) {
-      result.add(_metaText(entry.time.format(context)));
+      result.add(entry.time.format(context));
     }
     if (visibleFields.contains(ScheduleTimelineField.tag) &&
         entry.tag.isNotEmpty) {
-      result.add(_metaText(tagBuilder?.call(context, entry.tag) ?? entry.tag));
+      result.add(tagBuilder?.call(context, entry.tag) ?? entry.tag);
     }
     if (visibleFields.contains(ScheduleTimelineField.status) &&
         status != null) {
-      result.add(_metaText(statusBuilder?.call(context, status) ?? status));
+      result.add(statusBuilder?.call(context, status) ?? status);
     }
     if (visibleFields.contains(ScheduleTimelineField.reminder) &&
         entry.reminderMinutesBefore > 0) {
       result.add(
-        _metaText(
-          reminderBuilder?.call(context, entry.reminderMinutesBefore) ??
-              '${entry.reminderMinutesBefore}m',
-        ),
+        reminderBuilder?.call(context, entry.reminderMinutesBefore) ??
+            '${entry.reminderMinutesBefore}m',
       );
     }
     if (visibleFields.contains(ScheduleTimelineField.goal) &&
         ((entry.goalId?.isNotEmpty ?? false) ||
             (entry.goalTaskId?.isNotEmpty ?? false))) {
-      result.add(_metaText(goalLabel));
+      result.add(goalLabel);
     }
     return result;
   }
+
+  String _compactMetadataSummary(
+    BuildContext context,
+    ScheduleEntry entry,
+    String? status,
+  ) => _metadataLabels(context, entry, status).join(' · ');
 
   Widget _metaText(String value) => Text(
     value,
@@ -543,11 +631,11 @@ class ScheduleTimeline extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11),
                 ),
-                ..._metadata(context, firstEntry, firstStatus).map(
-                  (meta) => DefaultTextStyle.merge(
-                    style: const TextStyle(fontSize: 10),
-                    child: meta,
-                  ),
+                Text(
+                  _compactMetadataSummary(context, firstEntry, firstStatus),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 10),
                 ),
                 if (dayEntries.length > 1)
                   Text(
@@ -622,8 +710,8 @@ class ScheduleTimeline extends StatelessWidget {
                 final dayEntries = _forDay(day);
                 final selected = sameDay(day, selectedDay);
                 final rowHeight = math.max(
-                  128.0,
-                  24.0 + dayEntries.length * 100.0,
+                  148.0,
+                  24.0 + dayEntries.length * 120.0,
                 );
                 return SizedBox(
                   height: rowHeight,
@@ -682,7 +770,7 @@ class ScheduleTimeline extends StatelessWidget {
                               ),
                               ...dayEntries.map(
                                 (entry) => SizedBox(
-                                  height: 100,
+                                  height: 120,
                                   child: Padding(
                                     padding: const EdgeInsets.fromLTRB(
                                       8,
@@ -788,12 +876,18 @@ class ScheduleTimeline extends StatelessWidget {
                               return <Widget>[
                                 Positioned(
                                   key: ValueKey(
-                                    'schedule-timeline-gantt-bar-${entry.id ?? '${entry.title}-$entryIndex'}',
+                                    'schedule-timeline-gantt-bar-${entry.id ?? entry.title}-$entryIndex',
                                   ),
                                   left: barLeft,
-                                  top: 24.0 + entryIndex * 100.0,
+                                  top: 24.0 + entryIndex * 120.0,
                                   width: width,
-                                  child: _buildEvent(context, entry),
+                                  child: width < 140
+                                      ? _buildCompactEventBar(
+                                          context,
+                                          entry,
+                                          includeDelete: false,
+                                        )
+                                      : _buildEvent(context, entry),
                                 ),
                               ];
                             }),
