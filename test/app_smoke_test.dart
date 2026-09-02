@@ -810,7 +810,9 @@ void main() {
       await tester.tap(find.byTooltip('切换到手动模式'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byTooltip('导入 iCal（ICS）'));
+      await tester.tap(find.byTooltip('更多'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('导入 iCal（ICS）'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), _validIcsFor(importDay));
       await tester.tap(find.text('导入'));
@@ -869,6 +871,49 @@ void main() {
       expect(find.text('复盘'), findsOneWidget);
       expect(find.byTooltip('设置'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    } finally {
+      _resetSurface(tester);
+    }
+  });
+
+  testWidgets('profile reserved features explain their pending state', (
+    tester,
+  ) async {
+    _setSurface(tester, const Size(390, 844));
+    try {
+      await tester.pumpWidget(const BattleManApp());
+      await tester.pumpAndSettle();
+      await _dismissStartupAuthIfShown(tester);
+      await tester.tap(find.byKey(const ValueKey('shell-nav-profile')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('AI 认知效率画像（每周更新）'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.textContaining('功能暂未接入'), findsOneWidget);
+      expect(find.text('关闭'), findsOneWidget);
+    } finally {
+      _resetSurface(tester);
+    }
+  });
+
+  testWidgets('calendar keeps secondary operations behind the more menu', (
+    tester,
+  ) async {
+    _setWideSurface(tester);
+    try {
+      await _openSmartCalendar(tester);
+
+      expect(find.byTooltip('导出 iCal（ICS）'), findsNothing);
+      expect(find.byTooltip('导入 iCal（ICS）'), findsNothing);
+      expect(find.byTooltip('显示字段'), findsNothing);
+      expect(find.byTooltip('更多'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('更多'));
+      await tester.pumpAndSettle();
+      expect(find.text('导出 iCal（ICS）'), findsOneWidget);
+      expect(find.text('导入 iCal（ICS）'), findsOneWidget);
+      expect(find.text('时间'), findsOneWidget);
     } finally {
       _resetSurface(tester);
     }

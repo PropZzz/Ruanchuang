@@ -67,6 +67,13 @@ void main() {
     expect(ratio, greaterThanOrEqualTo(4.5));
   });
 
+  test('floating feedback reserves space above mobile navigation', () {
+    expect(
+      AppTheme.light.snackBarTheme.insetPadding?.bottom,
+      greaterThanOrEqualTo(88),
+    );
+  });
+
   testWidgets(
     'window tones stay distinct while glass surfaces keep semantics',
     (tester) async {

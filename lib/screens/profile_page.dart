@@ -100,6 +100,25 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  void _showPendingFeatureDialog({
+    required String title,
+    required String message,
+  }) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(AppStrings.of(ctx, 'btn_close')),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _pickAvatar() async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -207,7 +226,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     iconColor: theme.colorScheme.primary,
                     title: AppStrings.of(context, 'profile_model_card'),
                     showTrailing: false,
-                    onTap: () {},
+                    onTap: () => _showPendingFeatureDialog(
+                      title: AppStrings.of(context, 'profile_model_card'),
+                      message: AppStrings.of(context, 'profile_model_pending'),
+                    ),
                   ),
                 ],
               ),
@@ -744,7 +766,13 @@ class _ProfilePageState extends State<ProfilePage> {
                         icon: Icons.notifications_rounded,
                         iconColor: theme.colorScheme.tertiary,
                         title: AppStrings.of(context, 'settings_notify'),
-                        onTap: () {},
+                        onTap: () => _showPendingFeatureDialog(
+                          title: AppStrings.of(context, 'settings_notify'),
+                          message: AppStrings.of(
+                            context,
+                            'settings_notify_pending',
+                          ),
+                        ),
                       ),
                     ],
                   ),

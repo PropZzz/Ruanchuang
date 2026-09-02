@@ -686,16 +686,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       appBar: AppBar(
         title: Text(AppStrings.of(context, 'calendar_title')),
         actions: [
-          if (!isCompactAppBar)
-            IconButton(
-              tooltip: AppStrings.of(context, 'goal_title'),
-              icon: const Icon(Icons.flag_outlined),
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const GoalsPage()));
-              },
-            ),
           IconButton(
             tooltip: _mode == _CalendarMode.manual
                 ? AppStrings.of(context, 'calendar_tooltip_switch_to_smart')
@@ -719,51 +709,6 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               tooltip: AppStrings.of(context, 'calendar_tooltip_insert_urgent'),
               icon: const Icon(Icons.add_alert),
               onPressed: _isLoading ? null : _showInsertUrgentDialog,
-            ),
-          if (!isCompactAppBar)
-            PopupMenuButton<_CalendarField>(
-              tooltip: '显示字段',
-              icon: const Icon(Icons.tune),
-              onSelected: _toggleField,
-              itemBuilder: (ctx) => [
-                CheckedPopupMenuItem(
-                  value: _CalendarField.time,
-                  checked: _visibleFields.contains(_CalendarField.time),
-                  child: Text(_fieldLabel(ctx, _CalendarField.time)),
-                ),
-                CheckedPopupMenuItem(
-                  value: _CalendarField.tag,
-                  checked: _visibleFields.contains(_CalendarField.tag),
-                  child: Text(_fieldLabel(ctx, _CalendarField.tag)),
-                ),
-                CheckedPopupMenuItem(
-                  value: _CalendarField.status,
-                  checked: _visibleFields.contains(_CalendarField.status),
-                  child: Text(_fieldLabel(ctx, _CalendarField.status)),
-                ),
-                CheckedPopupMenuItem(
-                  value: _CalendarField.reminder,
-                  checked: _visibleFields.contains(_CalendarField.reminder),
-                  child: Text(_fieldLabel(ctx, _CalendarField.reminder)),
-                ),
-                CheckedPopupMenuItem(
-                  value: _CalendarField.goal,
-                  checked: _visibleFields.contains(_CalendarField.goal),
-                  child: Text(_fieldLabel(ctx, _CalendarField.goal)),
-                ),
-              ],
-            ),
-          if (!isCompactAppBar)
-            IconButton(
-              tooltip: AppStrings.of(context, 'calendar_tooltip_export_ics'),
-              icon: const Icon(Icons.upload_file),
-              onPressed: _exportIcs,
-            ),
-          if (!isCompactAppBar)
-            IconButton(
-              tooltip: AppStrings.of(context, 'calendar_tooltip_import_ics'),
-              icon: const Icon(Icons.download),
-              onPressed: _isLoading ? null : _importIcs,
             ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -803,11 +748,10 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               }
             },
             itemBuilder: (ctx) => [
-              if (isCompactAppBar)
-                PopupMenuItem(
-                  value: 'goals',
-                  child: Text(AppStrings.of(ctx, 'goal_title')),
-                ),
+              PopupMenuItem(
+                value: 'goals',
+                child: Text(AppStrings.of(ctx, 'goal_title')),
+              ),
               if (isCompactAppBar && _mode == _CalendarMode.smart)
                 PopupMenuItem(
                   value: 'urgent',
@@ -816,59 +760,44 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                     AppStrings.of(ctx, 'calendar_tooltip_insert_urgent'),
                   ),
                 ),
-              if (isCompactAppBar)
-                CheckedPopupMenuItem(
-                  value: 'field_time',
-                  checked: _visibleFields.contains(_CalendarField.time),
-                  child: Text(_fieldLabel(ctx, _CalendarField.time)),
-                ),
-              if (isCompactAppBar)
-                CheckedPopupMenuItem(
-                  value: 'field_tag',
-                  checked: _visibleFields.contains(_CalendarField.tag),
-                  child: Text(_fieldLabel(ctx, _CalendarField.tag)),
-                ),
-              if (isCompactAppBar)
-                CheckedPopupMenuItem(
-                  value: 'field_status',
-                  checked: _visibleFields.contains(_CalendarField.status),
-                  child: Text(_fieldLabel(ctx, _CalendarField.status)),
-                ),
-              if (isCompactAppBar)
-                CheckedPopupMenuItem(
-                  value: 'field_reminder',
-                  checked: _visibleFields.contains(_CalendarField.reminder),
-                  child: Text(_fieldLabel(ctx, _CalendarField.reminder)),
-                ),
-              if (isCompactAppBar)
-                CheckedPopupMenuItem(
-                  value: 'field_goal',
-                  checked: _visibleFields.contains(_CalendarField.goal),
-                  child: Text(_fieldLabel(ctx, _CalendarField.goal)),
-                ),
-              if (isCompactAppBar)
-                PopupMenuItem(
-                  value: 'export',
-                  child: Text(
-                    AppStrings.of(ctx, 'calendar_tooltip_export_ics'),
-                  ),
-                ),
-              if (isCompactAppBar)
-                PopupMenuItem(
-                  value: 'import',
-                  child: Text(
-                    AppStrings.of(ctx, 'calendar_tooltip_import_ics'),
-                  ),
-                ),
+              CheckedPopupMenuItem(
+                value: 'field_time',
+                checked: _visibleFields.contains(_CalendarField.time),
+                child: Text(_fieldLabel(ctx, _CalendarField.time)),
+              ),
+              CheckedPopupMenuItem(
+                value: 'field_tag',
+                checked: _visibleFields.contains(_CalendarField.tag),
+                child: Text(_fieldLabel(ctx, _CalendarField.tag)),
+              ),
+              CheckedPopupMenuItem(
+                value: 'field_status',
+                checked: _visibleFields.contains(_CalendarField.status),
+                child: Text(_fieldLabel(ctx, _CalendarField.status)),
+              ),
+              CheckedPopupMenuItem(
+                value: 'field_reminder',
+                checked: _visibleFields.contains(_CalendarField.reminder),
+                child: Text(_fieldLabel(ctx, _CalendarField.reminder)),
+              ),
+              CheckedPopupMenuItem(
+                value: 'field_goal',
+                checked: _visibleFields.contains(_CalendarField.goal),
+                child: Text(_fieldLabel(ctx, _CalendarField.goal)),
+              ),
+              PopupMenuItem(
+                value: 'export',
+                child: Text(AppStrings.of(ctx, 'calendar_tooltip_export_ics')),
+              ),
+              PopupMenuItem(
+                value: 'import',
+                enabled: !_isLoading,
+                child: Text(AppStrings.of(ctx, 'calendar_tooltip_import_ics')),
+              ),
               PopupMenuItem(
                 value: 'emotion',
                 child: Text(AppStrings.of(ctx, 'emo_title')),
               ),
-              if (!isCompactAppBar)
-                PopupMenuItem(
-                  value: 'goals',
-                  child: Text(AppStrings.of(ctx, 'goal_title')),
-                ),
               PopupMenuItem(
                 value: 'mcp',
                 child: Text(AppStrings.of(ctx, 'mcp_title')),

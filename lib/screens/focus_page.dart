@@ -18,6 +18,15 @@ import '../widgets/responsive_page_frame.dart';
 import '../widgets/workbench_surface.dart';
 import 'smart_calendar_page.dart';
 
+int completedMinutesForTimer({
+  required int plannedMinutes,
+  required int remainingSeconds,
+}) {
+  final planned = plannedMinutes.clamp(1, 24 * 60);
+  final remaining = (remainingSeconds / 60).round().clamp(0, planned);
+  return (planned - remaining).clamp(1, planned);
+}
+
 class FocusPage extends StatefulWidget {
   const FocusPage({super.key});
 
@@ -350,11 +359,10 @@ class _FocusPageState extends State<FocusPage> {
         1,
         24 * 60,
       );
-      final remainingMinutes = (_remainingSeconds / 60.0).round().clamp(
-        0,
-        planned,
+      final actual = completedMinutesForTimer(
+        plannedMinutes: planned,
+        remainingSeconds: _remainingSeconds,
       );
-      final actual = (planned - remainingMinutes).clamp(1, planned);
       _logComplete(current, actualMinutes: actual);
     }
 
@@ -724,7 +732,6 @@ class _FocusPageState extends State<FocusPage> {
       onStart: _startTimer,
       onPause: _pauseTimer,
       onFinish: () {
-        _resetTimer();
         _startNextTask();
       },
       onRefresh: () {

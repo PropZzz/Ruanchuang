@@ -12,12 +12,14 @@ class WorkspaceStatusBar extends StatelessWidget {
     required this.title,
     this.compact = false,
     this.onSettings,
+    this.onSearch,
   });
 
   final String brand;
   final String title;
   final bool compact;
   final VoidCallback? onSettings;
+  final VoidCallback? onSearch;
 
   @override
   Widget build(BuildContext context) {
@@ -105,15 +107,19 @@ class WorkspaceStatusBar extends StatelessWidget {
               style: theme.textTheme.labelMedium?.copyWith(color: secondary),
             ),
             const SizedBox(width: 8),
-            Tooltip(
-              message: AppStrings.of(context, 'workspace_search'),
-              child: IconButton(
-                tooltip: AppStrings.of(context, 'workspace_search'),
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                onPressed: () {},
-                icon: const Icon(Icons.search_rounded),
+            if (onSearch != null)
+              Tooltip(
+                message: AppStrings.of(context, 'workspace_search'),
+                child: IconButton(
+                  tooltip: AppStrings.of(context, 'workspace_search'),
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  onPressed: onSearch,
+                  icon: const Icon(Icons.search_rounded),
+                ),
               ),
-            ),
           ],
           if (onSettings != null && !compact)
             Tooltip(

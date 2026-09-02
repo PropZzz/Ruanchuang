@@ -30,6 +30,7 @@ class AppStrings {
       'btn_completed': '已完成',
       'btn_incomplete': '未完成',
       'btn_ok': '确定',
+      'btn_close': '关闭',
       'btn_check': '检查',
       'btn_import': '导入',
 
@@ -233,9 +234,11 @@ class AppStrings {
       'profile_auth': '第三方授权（MCP）',
       'profile_switch_account': '切换账户',
       'profile_model_card': 'AI 认知效率画像（每周更新）',
+      'profile_model_pending': '功能暂未接入。当前不会生成或展示模型分析。',
       'settings_title': '设置',
       'settings_language': '语言',
       'settings_notify': '通知',
+      'settings_notify_pending': '功能暂未接入。当前不会发送提醒。',
       'settings_dark': '外观模式',
       'theme_system': '跟随系统',
       'theme_light': '浅色模式',
@@ -402,6 +405,7 @@ class AppStrings {
       'btn_completed': 'Completed',
       'btn_incomplete': 'Incomplete',
       'btn_ok': 'OK',
+      'btn_close': 'Close',
       'btn_check': 'Check',
       'btn_import': 'Import',
 
@@ -618,9 +622,13 @@ class AppStrings {
       'profile_auth': 'Third-Party Auth (MCP)',
       'profile_switch_account': 'Switch Account',
       'profile_model_card': 'Cognitive Profile Model (Weekly)',
+      'profile_model_pending':
+          'This feature is not integrated yet. No model analysis is generated or shown.',
       'settings_title': 'Settings',
       'settings_language': 'Language',
       'settings_notify': 'Notifications',
+      'settings_notify_pending':
+          'This feature is not integrated yet. No reminders are sent.',
       'settings_dark': 'Appearance',
       'theme_system': 'System',
       'theme_light': 'Light',
