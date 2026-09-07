@@ -8,6 +8,7 @@ import sqlite3
 import uuid
 
 from .database import get_connection
+from .services_rescue import build_rescue_event, compute_baseline_hash
 
 
 class TaskEventConflictError(Exception):
@@ -308,6 +309,23 @@ def init_db(db_path: str | Path | None = None, connection: sqlite3.Connection | 
             )
             """
         )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS rescue_snapshots (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                day TEXT NOT NULL,
+                strategy TEXT NOT NULL,
+                baseline_hash TEXT NOT NULL,
+                urgent_json TEXT,
+                before_json TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'active',
+                created_at TEXT NOT NULL,
+                undone_at TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
         connection.commit()
     finally:
         if owns_connection:
@@ -426,7 +444,9 @@ def _schedule_row_to_dict(row: sqlite3.Row) -> dict[str, object]:
     }
 
 
-def upsert_schedule(db_path: str | Path | None, user_id: str, payload: dict[str, object]) -> dict[str, object]:
+def _normalize_schedule_values(
+    payload: dict[str, object],
+) -> tuple[object, ...]:
     schedule_id = str(_first_non_none(payload, "id", default=uuid.uuid4().hex))
     day = _parse_date(payload.get("day"))
     title = str(_first_non_none(payload, "title", default=""))
@@ -446,6 +466,41 @@ def upsert_schedule(db_path: str | Path | None, user_id: str, payload: dict[str,
     )
     repeat = str(_first_non_none(payload, "repeat", default="none"))
     repeat_until = _parse_date(_first_non_none(payload, "repeatUntil", "repeat_until"))
+    return (
+        schedule_id,
+        day,
+        title,
+        tag,
+        load,
+        goal_id,
+        goal_task_id,
+        height,
+        color,
+        hour,
+        minute,
+        reminder_minutes_before,
+        repeat,
+        repeat_until,
+    )
+
+
+def upsert_schedule(db_path: str | Path | None, user_id: str, payload: dict[str, object]) -> dict[str, object]:
+    (
+        schedule_id,
+        day,
+        title,
+        tag,
+        load,
+        goal_id,
+        goal_task_id,
+        height,
+        color,
+        hour,
+        minute,
+        reminder_minutes_before,
+        repeat,
+        repeat_until,
+    ) = _normalize_schedule_values(payload)
     now = _now()
 
     with _connect(db_path) as connection:
@@ -1626,3 +1681,207 @@ def delete_team_member(db_path: str | Path | None, user_id: str, member_id: str)
             (member_id, user_id),
         )
         connection.commit()
+
+
+# --- Remote schedule-rescue transaction (P1 item 4) ---
+
+
+def _insert_schedule_on_connection(
+    connection: sqlite3.Connection,
+    user_id: str,
+    payload: dict[str, object],
+    now: str,
+) -> dict[str, object]:
+    (
+        schedule_id,
+        day,
+        title,
+        tag,
+        load,
+        goal_id,
+        goal_task_id,
+        height,
+        color,
+        hour,
+        minute,
+        reminder_minutes_before,
+        repeat,
+        repeat_until,
+    ) = _normalize_schedule_values(payload)
+    _check_global_owner(connection, "schedules", schedule_id, user_id, "Schedule")
+    try:
+        connection.execute(
+            """
+            INSERT INTO schedules (
+                id, user_id, day, title, tag, load, goal_id, goal_task_id, height, color,
+                time_hour, time_minute, reminder_minutes_before, repeat, repeat_until,
+                created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                schedule_id,
+                user_id,
+                day,
+                title,
+                tag,
+                load,
+                goal_id,
+                goal_task_id,
+                height,
+                color,
+                hour,
+                minute,
+                reminder_minutes_before,
+                repeat,
+                repeat_until,
+                now,
+                now,
+            ),
+        )
+    except sqlite3.IntegrityError as exc:
+        raise RepositoryConflictError(f"Schedule id already exists: {schedule_id}") from exc
+    row = connection.execute(
+        "SELECT * FROM schedules WHERE id = ? AND user_id = ?",
+        (schedule_id, user_id),
+    ).fetchone()
+    return _schedule_row_to_dict(row)
+
+
+def _delete_schedules_for_day_on_connection(
+    connection: sqlite3.Connection,
+    user_id: str,
+    day_iso: str,
+) -> None:
+    connection.execute(
+        "DELETE FROM schedules WHERE user_id = ? AND day = ?",
+        (user_id, day_iso),
+    )
+
+
+def _insert_rescue_snapshot_on_connection(
+    connection: sqlite3.Connection,
+    snapshot_id: str,
+    user_id: str,
+    day_iso: str,
+    strategy: str,
+    baseline_hash: str,
+    urgent_json: str | None,
+    before_json: str,
+    now: str,
+) -> None:
+    connection.execute(
+        """
+        INSERT INTO rescue_snapshots (
+            id, user_id, day, strategy, baseline_hash, urgent_json, before_json,
+            status, created_at, undone_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, NULL)
+        """,
+        (snapshot_id, user_id, day_iso, strategy, baseline_hash, urgent_json, before_json, now),
+    )
+
+
+def apply_rescue(
+    db_path: str | Path | None,
+    user_id: str,
+    day_iso: str,
+    strategy: str,
+    baseline_hash: str,
+    after_payloads: list[dict[str, object]],
+    event_payload: dict[str, object],
+    urgent_payload: dict[str, object] | None,
+) -> dict[str, object]:
+    """Atomically apply one rescue option for a single day.
+
+    Verifies the baseline hash against the current database rows, then in one
+    transaction: replaces the day's schedules, writes the `rescue_accept:`
+    task event and saves the pre-apply snapshot. Any failure rolls back every
+    write; a stale baseline raises RepositoryConflictError before any write.
+    """
+    with _connect(db_path) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        rows = connection.execute(
+            "SELECT * FROM schedules WHERE user_id = ? AND day = ? ORDER BY id",
+            (user_id, day_iso),
+        ).fetchall()
+        before = [_schedule_row_to_dict(row) for row in rows]
+        if compute_baseline_hash(before, day_iso) != baseline_hash:
+            raise RepositoryConflictError("Schedule baseline changed; regenerate rescue options")
+        _delete_schedules_for_day_on_connection(connection, user_id, day_iso)
+        now = _now()
+        for payload in after_payloads:
+            _insert_schedule_on_connection(connection, user_id, payload, now)
+        event_payload = dict(event_payload)
+        event_payload.update({"type": "interrupt", "reason": f"rescue_accept:{strategy}", "at": now})
+        event_id = _upsert_task_event_on_connection(connection, user_id, event_payload, now)
+        snapshot_id = uuid.uuid4().hex
+        _insert_rescue_snapshot_on_connection(
+            connection,
+            snapshot_id,
+            user_id,
+            day_iso,
+            strategy,
+            baseline_hash,
+            json.dumps(urgent_payload, ensure_ascii=False) if urgent_payload else None,
+            json.dumps(before, ensure_ascii=False),
+            now,
+        )
+        connection.commit()
+    stored = list_schedules(db_path, user_id)
+    return {
+        "snapshotId": snapshot_id,
+        "entries": [entry for entry in stored if entry.get("day") == day_iso],
+        "eventId": event_id,
+    }
+
+
+def undo_rescue(
+    db_path: str | Path | None,
+    user_id: str,
+    snapshot_id: str,
+    event_id: str | None,
+) -> dict[str, object]:
+    """Atomically undo an applied rescue option.
+
+    Restores the pre-apply snapshot in one transaction and writes the
+    `rescue_undo:` task event. On failure the current plan is kept and the
+    snapshot stays `active`, so the client can retry.
+    """
+    with _connect(db_path) as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        row = connection.execute(
+            "SELECT * FROM rescue_snapshots WHERE id = ?",
+            (snapshot_id,),
+        ).fetchone()
+        if row is None or row["user_id"] != user_id:
+            raise RepositoryNotFoundError(f"Rescue snapshot not found: {snapshot_id}")
+        if row["status"] != "active":
+            raise RepositoryConflictError(f"Rescue snapshot already undone: {snapshot_id}")
+        day_iso = str(row["day"])
+        strategy = str(row["strategy"])
+        try:
+            before = json.loads(row["before_json"])
+        except (TypeError, ValueError):
+            before = []
+        urgent = None
+        if row["urgent_json"]:
+            try:
+                urgent = json.loads(row["urgent_json"])
+            except (TypeError, ValueError):
+                urgent = None
+        _delete_schedules_for_day_on_connection(connection, user_id, day_iso)
+        now = _now()
+        for payload in before:
+            _insert_schedule_on_connection(connection, user_id, payload, now)
+        event_payload = build_rescue_event(urgent, event_id, "medium")
+        event_payload.update({"type": "interrupt", "reason": f"rescue_undo:{strategy}", "at": now})
+        saved_event_id = _upsert_task_event_on_connection(connection, user_id, event_payload, now)
+        connection.execute(
+            "UPDATE rescue_snapshots SET status = 'undone', undone_at = ? WHERE id = ?",
+            (now, snapshot_id),
+        )
+        connection.commit()
+    stored = list_schedules(db_path, user_id)
+    return {
+        "entries": [entry for entry in stored if entry.get("day") == day_iso],
+        "eventId": saved_event_id,
+    }

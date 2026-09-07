@@ -315,6 +315,137 @@ class TuningApplyRequest(APIModel):
     tuning: SchedulingTuning
 
 
+RESCUE_STRATEGIES = ("protectDeadline", "protectRecovery", "minimizeChanges")
+ENERGY_TIERS = ("veryLow", "low", "medium", "high", "veryHigh")
+
+
+def _validate_rescue_strategy(value: str) -> str:
+    if value not in RESCUE_STRATEGIES:
+        raise ValueError(f"strategy must be one of: {', '.join(RESCUE_STRATEGIES)}")
+    return value
+
+
+def _validate_energy_tier(value: str) -> str:
+    if value not in ENERGY_TIERS:
+        raise ValueError(f"energy must be one of: {', '.join(ENERGY_TIERS)}")
+    return value
+
+
+def _validate_entry_ids(value: list[ScheduleEntryIn]) -> list[ScheduleEntryIn]:
+    ids = [entry.id for entry in value]
+    if any(entry_id is None or not entry_id.strip() for entry_id in ids):
+        raise ValueError("entry ids must not be blank")
+    if len(set(ids)) != len(ids):
+        raise ValueError("entry ids must be unique")
+    return value
+
+
+class UrgentTaskIn(APIModel):
+    id: str
+    title: str
+    duration_minutes: int = Field(alias="durationMinutes")
+    priority: int
+    due: datetime
+    load: str
+    tag: str
+
+
+class RescueOptionsRequest(APIModel):
+    day: date
+    urgent_task: UrgentTaskIn = Field(alias="urgentTask")
+    current_entries: list[ScheduleEntryIn] = Field(default_factory=list, alias="currentEntries")
+    energy: str = "medium"
+    strategies: list[str] = Field(default_factory=lambda: list(RESCUE_STRATEGIES))
+    windows: list[TimeWindow] = Field(default_factory=list)
+    tuning: SchedulingTuning = Field(default_factory=SchedulingTuning)
+    fixed: list[ScheduleEntryIn] = Field(default_factory=list)
+    tasks: list[PlanTask] = Field(default_factory=list)
+
+    @field_validator("energy")
+    @classmethod
+    def validate_energy(cls, value: str) -> str:
+        return _validate_energy_tier(value)
+
+    @field_validator("strategies")
+    @classmethod
+    def validate_strategies(cls, value: list[str]) -> list[str]:
+        if not value:
+            raise ValueError("strategies must not be empty")
+        if len(set(value)) != len(value):
+            raise ValueError("strategies must not contain duplicates")
+        for strategy in value:
+            _validate_rescue_strategy(strategy)
+        return value
+
+
+class RescueOptionOut(APIModel):
+    id: str
+    strategy: str
+    title: str
+    recommended: bool
+    rationale: str
+    tradeoff: str
+    moved_entry_count: int = Field(alias="movedEntryCount")
+    recovery_minutes: int = Field(alias="recoveryMinutes")
+    issue_count: int = Field(alias="issueCount")
+    affected_entries: list[str] = Field(alias="affectedEntries")
+    planned_entries: list[ScheduleEntryOut] = Field(alias="plannedEntries")
+
+
+class RescueOptionsOut(APIModel):
+    options: list[RescueOptionOut]
+    baseline_hash: str = Field(alias="baselineHash")
+
+
+class RescueApplyRequest(APIModel):
+    day: date
+    baseline_hash: str = Field(alias="baselineHash")
+    strategy: str
+    before: list[ScheduleEntryIn]
+    after: list[ScheduleEntryIn]
+    urgent_task: UrgentTaskIn | None = Field(default=None, alias="urgentTask")
+    event_id: str | None = Field(default=None, alias="eventId")
+    energy: str = "medium"
+
+    @field_validator("strategy")
+    @classmethod
+    def validate_strategy(cls, value: str) -> str:
+        return _validate_rescue_strategy(value)
+
+    @field_validator("energy")
+    @classmethod
+    def validate_energy(cls, value: str) -> str:
+        return _validate_energy_tier(value)
+
+    @field_validator("before")
+    @classmethod
+    def validate_before(cls, value: list[ScheduleEntryIn]) -> list[ScheduleEntryIn]:
+        return _validate_entry_ids(value)
+
+    @field_validator("after")
+    @classmethod
+    def validate_after(cls, value: list[ScheduleEntryIn]) -> list[ScheduleEntryIn]:
+        if not value:
+            raise ValueError("after must not be empty")
+        return _validate_entry_ids(value)
+
+
+class RescueApplyOut(APIModel):
+    snapshot_id: str = Field(alias="snapshotId")
+    entries: list[ScheduleEntryOut]
+    event_id: str = Field(alias="eventId")
+
+
+class RescueUndoRequest(APIModel):
+    snapshot_id: str = Field(alias="snapshotId")
+    event_id: str | None = Field(default=None, alias="eventId")
+
+
+class RescueUndoOut(APIModel):
+    entries: list[ScheduleEntryOut]
+    event_id: str = Field(alias="eventId")
+
+
 def _validate_team_permission(value: str) -> str:
     allowed = {"none", "freeBusy", "details"}
     if value not in allowed:
