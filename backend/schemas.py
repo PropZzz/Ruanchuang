@@ -448,5 +448,15 @@ class TeamBookMeetingRequest(APIModel):
     participant_ids: list[str] = Field(default_factory=list, alias="participantIds")
 
 
+class SyncChangeIn(APIModel):
+    entity: str
+    operation: str = "upsert"
+    payload: dict[str, object] = Field(default_factory=dict)
+
+
+class SyncPushRequest(APIModel):
+    changes: list[SyncChangeIn] = Field(default_factory=list)
+
+
 SchedulingRequest.model_rebuild()
 CrystalRecommendationRequest.model_rebuild()

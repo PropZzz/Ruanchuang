@@ -38,9 +38,6 @@ RESERVED_ENDPOINTS = [
     ("GET", "/files/file-1"),
     ("DELETE", "/files/file-1"),
     ("POST", "/files/parse-task-list"),
-    ("GET", "/sync/pull"),
-    ("POST", "/sync/push"),
-    ("GET", "/sync/status"),
     ("POST", "/sync/conflicts/conflict-1/resolve"),
 ]
 

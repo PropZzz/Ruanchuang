@@ -16,6 +16,7 @@ from .routers_reserved import router as reserved_router
 from .routers_review import router as review_router
 from .routers_schedule import router as schedule_router
 from .routers_team import router as team_router
+from .routers_sync import router as sync_router
 
 
 VERSION = "0.1.0"
@@ -52,6 +53,7 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
     app.include_router(emotion_router)
     app.include_router(goals_router)
     app.include_router(team_router)
+    app.include_router(sync_router)
     app.include_router(reserved_router)
 
     return app

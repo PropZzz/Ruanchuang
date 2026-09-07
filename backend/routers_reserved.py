@@ -44,9 +44,6 @@ RESERVED_ENDPOINTS: tuple[tuple[str, str, str], ...] = (
     ("GET", "/files/{file_id}", "Download file"),
     ("DELETE", "/files/{file_id}", "Delete file"),
     ("POST", "/files/parse-task-list", "Parse task list from file"),
-    ("GET", "/sync/pull", "Pull sync changes"),
-    ("POST", "/sync/push", "Push sync changes"),
-    ("GET", "/sync/status", "Sync status"),
     ("POST", "/sync/conflicts/{conflict_id}/resolve", "Resolve sync conflict"),
 )
 
