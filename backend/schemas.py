@@ -78,6 +78,15 @@ class ScheduleEntryOut(ScheduleEntryIn):
     id: str
 
 
+class ScheduleImportRequest(APIModel):
+    ics: str
+
+
+class ScheduleConflictsOut(APIModel):
+    baseline_hash: str = Field(alias="baselineHash")
+    conflicts: list[dict[str, object]] = Field(default_factory=list)
+
+
 class MicroTaskIn(APIModel):
     id: str | None = None
     title: str
@@ -270,6 +279,37 @@ class PlanTask(APIModel):
     due: datetime | None = None
     load: str
     tag: str
+
+
+class RescueOptionsRequest(APIModel):
+    day: date
+    urgent_task: PlanTask = Field(alias="urgentTask")
+    current_entries: list[ScheduleEntryIn] = Field(default_factory=list, alias="currentEntries")
+    energy: str = "medium"
+    strategies: list[str] = Field(default_factory=lambda: ["protectDeadline", "protectRecovery", "minimizeChanges"])
+
+
+class RescueOptionsOut(APIModel):
+    baseline_hash: str = Field(alias="baselineHash")
+    options: list[dict[str, object]]
+
+
+class RescueApplyRequest(APIModel):
+    strategy: str
+    baseline_hash: str = Field(alias="baselineHash")
+    before: list[ScheduleEntryIn] = Field(default_factory=list)
+    after: list[ScheduleEntryIn] = Field(default_factory=list)
+
+
+class RescueUndoRequest(APIModel):
+    snapshot_id: str = Field(alias="snapshotId")
+
+
+class RescueSnapshotOut(APIModel):
+    snapshot_id: str = Field(alias="snapshotId")
+    strategy: str
+    status: str
+    entries: list[dict[str, object]] = Field(default_factory=list)
 
 
 class TaskEvent(APIModel):

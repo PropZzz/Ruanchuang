@@ -5,22 +5,9 @@ from backend.main import create_app
 
 
 RESERVED_ENDPOINTS = [
-    ("GET", "/diagnostics/summary"),
-    ("GET", "/version"),
-    ("GET", "/server/time"),
-    ("POST", "/auth/logout"),
     ("POST", "/auth/refresh"),
-    ("PUT", "/auth/profile"),
     ("POST", "/auth/password/reset-request"),
     ("POST", "/auth/password/reset-confirm"),
-    ("POST", "/schedule/import-ics"),
-    ("GET", "/schedule/export-ics"),
-    ("GET", "/schedule/conflicts"),
-    ("POST", "/schedule/batch"),
-    ("POST", "/schedule/rescue/options"),
-    ("POST", "/schedule/rescue/apply"),
-    ("POST", "/schedule/rescue/undo"),
-    ("GET", "/schedule/rescue/history"),
     ("DELETE", "/events/event-1"),
     ("POST", "/microtasks/batch-complete"),
     ("POST", "/microtasks/batch-schedule"),
