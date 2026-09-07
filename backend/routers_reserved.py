@@ -11,12 +11,7 @@ router = APIRouter(tags=["reserved"])
 
 
 RESERVED_ENDPOINTS: tuple[tuple[str, str, str], ...] = (
-    ("GET", "/diagnostics/summary", "Diagnostics summary"),
-    ("GET", "/version", "Client compatibility version"),
-    ("GET", "/server/time", "Server clock"),
-    ("POST", "/auth/logout", "Logout"),
     ("POST", "/auth/refresh", "Refresh token"),
-    ("PUT", "/auth/profile", "Update profile"),
     ("POST", "/auth/password/reset-request", "Password reset request"),
     ("POST", "/auth/password/reset-confirm", "Password reset confirmation"),
     ("POST", "/schedule/import-ics", "Import ICS schedule"),

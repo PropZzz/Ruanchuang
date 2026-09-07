@@ -408,6 +408,53 @@ def verify_user(db_path: str | Path | None, contact_address: str, password: str)
     return user
 
 
+def update_user_profile(
+    db_path: str | Path | None,
+    user_id: str,
+    display_name: str | None = None,
+) -> dict[str, object]:
+    with _connect(db_path) as connection:
+        row = connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        if row is None:
+            raise RepositoryNotFoundError(f"User not found: {user_id}")
+        if display_name is not None:
+            normalized = display_name.strip()
+            if not normalized:
+                raise RepositoryValidationError("displayName must not be blank")
+            connection.execute(
+                "UPDATE users SET display_name = ?, updated_at = ? WHERE id = ?",
+                (normalized, _now(), user_id),
+            )
+        connection.commit()
+        return find_user_by_id(db_path, user_id) or {}
+
+
+def user_diagnostics(db_path: str | Path | None, user_id: str) -> dict[str, object]:
+    tables = (
+        "schedules",
+        "microtasks",
+        "task_events",
+        "emotion_checkins",
+        "energy_samples",
+        "goals",
+        "goal_tasks",
+        "team_members",
+    )
+    with _connect(db_path) as connection:
+        counts = {
+            table: int(
+                connection.execute(
+                    f"SELECT COUNT(*) FROM {table} WHERE user_id = ?", (user_id,)
+                ).fetchone()[0]
+            )
+            for table in tables
+        }
+        last_event = connection.execute(
+            "SELECT MAX(created_at) FROM task_events WHERE user_id = ?", (user_id,)
+        ).fetchone()[0]
+        return {"counts": counts, "lastEventAt": last_event, "database": "sqlite"}
+
+
 def _schedule_row_to_dict(row: sqlite3.Row) -> dict[str, object]:
     return {
         "id": row["id"],

@@ -25,6 +25,10 @@ class UserLogin(APIModel):
     password: str
 
 
+class ProfileUpdate(APIModel):
+    display_name: str | None = Field(default=None, alias="displayName")
+
+
 class UserOut(APIModel):
     id: str
     contact_address: str = Field(alias="contactAddress")
@@ -35,6 +39,23 @@ class TokenResponse(APIModel):
     access_token: str = Field(alias="accessToken")
     token_type: str = Field(default="Bearer", alias="tokenType")
     user: UserOut
+
+
+class VersionOut(APIModel):
+    api_version: str = Field(alias="apiVersion")
+    client_compatibility: str = Field(alias="clientCompatibility")
+
+
+class ServerTimeOut(APIModel):
+    server_time: datetime = Field(alias="serverTime")
+    unix_millis: int = Field(alias="unixMillis")
+    timezone: str = "UTC"
+
+
+class DiagnosticsOut(APIModel):
+    counts: dict[str, int]
+    last_event_at: datetime | None = Field(default=None, alias="lastEventAt")
+    database: str
 
 
 class ScheduleEntryIn(APIModel):
