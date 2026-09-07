@@ -309,7 +309,7 @@
 | --- | --- | --- | --- |
 | 添加/编辑/删除日程 | `DataService` | 远端成功或本地兜底 | `/schedule` POST/PUT/DELETE。 |
 | 重新规划 | `DataService` | 方案草案，确认前不写入 | `/schedule/replan`。 |
-| 生成/采用/撤销救援 | `ScheduleRescueService` | 本地流程可用，写入后可撤销 | `/schedule/rescue/*` 保持 501/预留。 |
+| 生成/采用/撤销救援 | `ScheduleRescueService` | 本地流程可用，写入后可撤销 | `/schedule/rescue/*` 服务端已实现（options/apply/undo/history，含基线哈希与撤销快照）；客户端暂沿用本地闭环。 |
 | 能量/情绪读取与打卡 | `DataService` | 当前数据、空状态或离线 | `/energy/*`、`/emotion/*`。 |
 | 微任务 CRUD/推荐 | `DataService`/本地引擎 | 来源标签为本地或远端 | `/microtasks` 可用；推荐未接入时显示本地来源。 |
 | 目标与目标任务 | `DataService` | 进度/依赖/错误状态 | `/goals` 可用；`goals/{id}/schedule-next` 预留。 |
