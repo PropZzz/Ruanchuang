@@ -843,6 +843,89 @@ def delete_microtask(db_path: str | Path | None, user_id: str, microtask_id: str
         connection.commit()
 
 
+def batch_complete_microtasks(
+    db_path: str | Path | None,
+    user_id: str,
+    task_ids: list[str],
+    done: bool = True,
+) -> list[dict[str, object]]:
+    normalized = list(dict.fromkeys(str(task_id).strip() for task_id in task_ids if str(task_id).strip()))
+    with _connect(db_path) as connection:
+        for task_id in normalized:
+            row = connection.execute("SELECT user_id FROM microtasks WHERE id = ?", (task_id,)).fetchone()
+            if row is None:
+                raise RepositoryNotFoundError(f"Microtask not found: {task_id}")
+            if row["user_id"] != user_id:
+                raise RepositoryConflictError(f"Microtask belongs to another user: {task_id}")
+        now = _now()
+        for task_id in normalized:
+            connection.execute("UPDATE microtasks SET done = ?, updated_at = ? WHERE id = ? AND user_id = ?", (1 if done else 0, now, task_id, user_id))
+        connection.commit()
+        return [_microtask_row_to_dict(connection.execute("SELECT * FROM microtasks WHERE id = ? AND user_id = ?", (task_id, user_id)).fetchone()) for task_id in normalized]
+
+
+def import_microtasks(
+    db_path: str | Path | None,
+    user_id: str,
+    text: str,
+) -> list[dict[str, object]]:
+    payloads: list[dict[str, object]] = []
+    for line in text.splitlines():
+        title = line.strip()
+        if not title:
+            continue
+        tag = "Imported"
+        if " #" in title:
+            title, tag = title.rsplit(" #", 1)
+            title = title.strip()
+            tag = tag.strip() or "Imported"
+        payloads.append({"title": title, "tag": tag, "minutes": 15, "priority": 3, "done": False})
+    if not payloads:
+        raise RepositoryValidationError("Import text must contain at least one task.")
+    results: list[dict[str, object]] = []
+    with _connect(db_path) as connection:
+        now = _now()
+        for payload in payloads:
+            task_id = uuid.uuid4().hex
+            connection.execute("INSERT INTO microtasks (id, user_id, title, tag, minutes, priority, requirement, done, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (task_id, user_id, payload["title"], payload["tag"], 15, 3, None, 0, now, now))
+            results.append(_microtask_row_to_dict(connection.execute("SELECT * FROM microtasks WHERE id = ? AND user_id = ?", (task_id, user_id)).fetchone()))
+        connection.commit()
+    return results
+
+
+def batch_schedule_microtasks(
+    db_path: str | Path | None,
+    user_id: str,
+    task_ids: list[str],
+    day: str,
+    start: dict[str, object],
+) -> list[dict[str, object]]:
+    tasks = []
+    with _connect(db_path) as connection:
+        for task_id in dict.fromkeys(task_ids):
+            row = connection.execute("SELECT * FROM microtasks WHERE id = ?", (task_id,)).fetchone()
+            if row is None:
+                raise RepositoryNotFoundError(f"Microtask not found: {task_id}")
+            if row["user_id"] != user_id:
+                raise RepositoryConflictError(f"Microtask belongs to another user: {task_id}")
+            tasks.append(dict(row))
+    start_minute = _parse_time(start)[0] * 60 + _parse_time(start)[1]
+    payloads: list[dict[str, object]] = []
+    for task in tasks:
+        payloads.append({
+            "id": f"microtask-schedule-{task['id']}",
+            "day": day,
+            "title": task["title"],
+            "tag": task["tag"],
+            "goalTaskId": task["id"],
+            "height": _parse_float(task["minutes"], 15) * 80 / 60,
+            "color": 0,
+            "time": {"hour": start_minute // 60, "minute": start_minute % 60},
+        })
+        start_minute += int(task["minutes"])
+    return upsert_schedules_batch(db_path, user_id, payloads)
+
+
 def _task_event_row_to_dict(row: sqlite3.Row | None) -> dict[str, object] | None:
     if row is None:
         return None
@@ -1704,6 +1787,45 @@ def update_goal_task(
         )
         connection.commit()
         return _goal_row_to_dict(connection, goal)
+
+
+def schedule_next_goal_task(
+    db_path: str | Path | None,
+    user_id: str,
+    goal_id: str,
+    day: str,
+    start: dict[str, object],
+) -> dict[str, object]:
+    with _connect(db_path) as connection:
+        goal = connection.execute("SELECT * FROM goals WHERE id = ? AND user_id = ?", (goal_id, user_id)).fetchone()
+        if goal is None:
+            if connection.execute("SELECT user_id FROM goals WHERE id = ?", (goal_id,)).fetchone() is not None:
+                raise RepositoryConflictError(f"Goal belongs to another user: {goal_id}")
+            raise RepositoryNotFoundError(f"Goal not found: {goal_id}")
+        tasks = _list_goal_tasks_on_connection(connection, user_id, goal_id)
+    completed = {str(task["id"]) for task in tasks if task.get("done")}
+    selected = next(
+        (task for task in tasks if not task.get("done") and set(_depends_on_list(task.get("dependsOn"))).issubset(completed)),
+        None,
+    )
+    if selected is None:
+        raise RepositoryValidationError("No executable goal task is available.")
+    return upsert_schedule(
+        db_path,
+        user_id,
+        {
+            "id": f"goal-schedule-{selected['id']}",
+            "day": day,
+            "title": selected["title"],
+            "tag": selected["tag"],
+            "load": selected["load"],
+            "goalId": goal_id,
+            "goalTaskId": selected["id"],
+            "height": int(selected["durationMinutes"]) * 80 / 60,
+            "color": 0,
+            "time": start,
+        },
+    )
 
 
 def _filter_busy_by_day(busy: object, day: str | None = None) -> list[dict[str, object]]:

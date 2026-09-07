@@ -1,14 +1,27 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 from .auth import current_user_id
-from .repositories import delete_microtask, list_microtasks, upsert_microtask
+from .repositories import (
+    RepositoryConflictError,
+    RepositoryNotFoundError,
+    RepositoryValidationError,
+    batch_complete_microtasks,
+    batch_schedule_microtasks,
+    delete_microtask,
+    import_microtasks,
+    list_microtasks,
+    upsert_microtask,
+)
 from .schemas import (
     CrystalRecommendationOut,
     CrystalRecommendationRequest,
     MicroTaskIn,
     MicroTaskOut,
+    MicroTaskBatchCompleteRequest,
+    MicroTaskBatchScheduleRequest,
+    MicroTaskImportRequest,
 )
 from .services_microtask import recommend_crystals
 
@@ -59,3 +72,35 @@ def remove_microtask(
 @router.post("/recommend-crystals", response_model=list[CrystalRecommendationOut])
 def recommend(payload: CrystalRecommendationRequest, user_id: str = Depends(current_user_id)) -> list[dict[str, object]]:
     return recommend_crystals(payload.model_dump(mode="json", by_alias=True))
+
+
+def _map_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, RepositoryNotFoundError):
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    if isinstance(exc, RepositoryConflictError):
+        return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+
+
+@router.post("/batch-complete", response_model=list[MicroTaskOut])
+def batch_complete(payload: MicroTaskBatchCompleteRequest, request: Request, user_id: str = Depends(current_user_id)) -> list[dict[str, object]]:
+    try:
+        return batch_complete_microtasks(_db_path(request), user_id, payload.task_ids, payload.done)
+    except (RepositoryNotFoundError, RepositoryConflictError) as exc:
+        raise _map_error(exc) from exc
+
+
+@router.post("/batch-schedule", response_model=list[dict[str, object]])
+def batch_schedule(payload: MicroTaskBatchScheduleRequest, request: Request, user_id: str = Depends(current_user_id)) -> list[dict[str, object]]:
+    try:
+        return batch_schedule_microtasks(_db_path(request), user_id, payload.task_ids, payload.day.isoformat(), payload.start.model_dump())
+    except (RepositoryNotFoundError, RepositoryConflictError) as exc:
+        raise _map_error(exc) from exc
+
+
+@router.post("/import", response_model=list[MicroTaskOut])
+def import_tasks(payload: MicroTaskImportRequest, request: Request, user_id: str = Depends(current_user_id)) -> list[dict[str, object]]:
+    try:
+        return import_microtasks(_db_path(request), user_id, payload.text)
+    except RepositoryValidationError as exc:
+        raise _map_error(exc) from exc

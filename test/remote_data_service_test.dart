@@ -10,6 +10,98 @@ import 'package:shixuzhipei/services/api_client.dart';
 import 'package:shixuzhipei/services/remote_data_service.dart';
 
 void main() {
+  test('RemoteDataService logs out through the server before clearing token', () async {
+    var logoutCalled = false;
+    final client = MockClient((request) async {
+      if (request.url.path == '/auth/login') {
+        return http.Response(
+          jsonEncode({
+            'accessToken': 'logout-token',
+            'tokenType': 'Bearer',
+            'user': {
+              'id': 'user-logout',
+              'contactAddress': 'logout@example.com',
+              'displayName': 'Logout',
+            },
+          }),
+          200,
+        );
+      }
+      if (request.url.path == '/auth/logout') {
+        logoutCalled = true;
+        expect(request.headers['authorization'], 'Bearer logout-token');
+        return http.Response('', 204);
+      }
+      return http.Response('not found', 404);
+    });
+    final service = RemoteDataService(
+      apiClient: ApiClient(httpClient: client, baseUrl: 'http://server.test'),
+    );
+
+    await service.login('logout@example.com', 'secret123');
+    await service.logout();
+
+    expect(logoutCalled, isTrue);
+  });
+
+  test('RemoteDataService books a team meeting through the server', () async {
+    var booked = false;
+    final client = MockClient((request) async {
+      if (request.url.path == '/auth/login') {
+        return http.Response(
+          jsonEncode({
+            'accessToken': 'meeting-token',
+            'tokenType': 'Bearer',
+            'user': {
+              'id': 'user-meeting',
+              'contactAddress': 'meeting@example.com',
+              'displayName': 'Meeting',
+            },
+          }),
+          200,
+        );
+      }
+      if (request.url.path == '/team/book-meeting') {
+        booked = true;
+        expect(request.headers['authorization'], 'Bearer meeting-token');
+        final body = jsonDecode(request.body) as Map;
+        expect(body['day'], '2026-09-07');
+        expect(body['participantIds'], ['member-1']);
+        return http.Response(
+          jsonEncode({
+            'id': 'meeting-1',
+            'day': '2026-09-07',
+            'title': 'Planning',
+            'tag': 'Team meeting',
+            'height': 40,
+            'color': 0,
+            'time': {'hour': 14, 'minute': 0},
+            'repeat': 'none',
+            'reminderMinutesBefore': 10,
+          }),
+          200,
+        );
+      }
+      return http.Response('not found', 404);
+    });
+    final service = RemoteDataService(
+      apiClient: ApiClient(httpClient: client, baseUrl: 'http://server.test'),
+    );
+
+    await service.login('meeting@example.com', 'secret123');
+    await service.bookTeamMeeting(
+      DateTime(2026, 9, 7),
+      const TeamMeetingRequest(
+        title: 'Planning',
+        start: TimeOfDay(hour: 14, minute: 0),
+        minutes: 30,
+        participantIds: ['member-1'],
+      ),
+    );
+
+    expect(booked, isTrue);
+  });
+
   test('RemoteDataService handles auth and schedule/microtask CRUD', () async {
     final schedules = <Map<String, Object?>>[];
     final microTasks = <Map<String, Object?>>[];
@@ -76,6 +168,11 @@ void main() {
           }),
           200,
         );
+      }
+
+      if (path == '/auth/logout' && method == 'POST') {
+        expect(auth, 'Bearer $token');
+        return http.Response('', 204);
       }
 
       if (path == '/schedule' && method == 'GET') {

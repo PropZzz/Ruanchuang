@@ -12,8 +12,9 @@ from .repositories import (
     list_goals,
     update_goal_task,
     upsert_goal,
+    schedule_next_goal_task,
 )
-from .schemas import Goal, GoalTask
+from .schemas import Goal, GoalTask, GoalScheduleNextRequest, ScheduleEntryOut
 
 
 router = APIRouter(prefix="/goals", tags=["goals"])
@@ -112,5 +113,18 @@ def update_goal_task_route(
             task_id,
             payload.model_dump(mode="json", by_alias=True),
         )
+    except (RepositoryConflictError, RepositoryNotFoundError, RepositoryValidationError) as exc:
+        raise _map_repository_error(exc) from exc
+
+
+@router.post("/{goal_id}/schedule-next", response_model=ScheduleEntryOut)
+def schedule_next(
+    goal_id: str,
+    payload: GoalScheduleNextRequest,
+    request: Request,
+    user_id: str = Depends(current_user_id),
+) -> dict[str, object]:
+    try:
+        return schedule_next_goal_task(_db_path(request), user_id, goal_id, payload.day.isoformat(), payload.start.model_dump())
     except (RepositoryConflictError, RepositoryNotFoundError, RepositoryValidationError) as exc:
         raise _map_repository_error(exc) from exc

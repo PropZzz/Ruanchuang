@@ -101,6 +101,21 @@ class MicroTaskOut(MicroTaskIn):
     id: str
 
 
+class MicroTaskBatchCompleteRequest(APIModel):
+    task_ids: list[str] = Field(alias="taskIds")
+    done: bool = True
+
+
+class MicroTaskBatchScheduleRequest(APIModel):
+    task_ids: list[str] = Field(alias="taskIds")
+    day: date
+    start: ClockTime = Field(default_factory=lambda: ClockTime(hour=9, minute=0))
+
+
+class MicroTaskImportRequest(APIModel):
+    text: str
+
+
 class TimeWindow(APIModel):
     start: ClockTime
     end: ClockTime
@@ -271,6 +286,11 @@ class Goal(APIModel):
         return len([t for t in self.tasks if t.done]) / len(self.tasks)
 
 
+class GoalScheduleNextRequest(APIModel):
+    day: date
+    start: ClockTime = Field(default_factory=lambda: ClockTime(hour=9, minute=0))
+
+
 class PlanTask(APIModel):
     id: str
     title: str
@@ -404,6 +424,28 @@ class TeamPermissionUpdate(APIModel):
     @classmethod
     def validate_permission(cls, value: str) -> str:
         return _validate_team_permission(value)
+
+
+class TeamConflictsRequest(APIModel):
+    member_ids: list[str] = Field(alias="memberIds")
+    day: date
+    start: ClockTime
+    minutes: int
+
+
+class TeamGoldenWindowsRequest(APIModel):
+    member_ids: list[str] = Field(alias="memberIds")
+    day: date
+    windows: list[TimeWindow]
+    minutes: int = 30
+
+
+class TeamBookMeetingRequest(APIModel):
+    day: date
+    title: str
+    start: ClockTime
+    minutes: int
+    participant_ids: list[str] = Field(default_factory=list, alias="participantIds")
 
 
 SchedulingRequest.model_rebuild()

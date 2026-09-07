@@ -12,8 +12,11 @@ from .repositories import (
     list_team_members,
     update_team_member_permission,
     upsert_team_member,
+    list_schedules,
+    upsert_schedule,
 )
-from .schemas import TeamMemberCalendar, TeamPermissionUpdate
+from .schemas import TeamBookMeetingRequest, TeamConflictsRequest, TeamGoldenWindowsRequest, TeamMemberCalendar, TeamPermissionUpdate, ScheduleEntryOut
+from .services_team import conflicts as calculate_conflicts, golden_windows
 
 
 router = APIRouter(prefix="/team", tags=["team"])
@@ -108,3 +111,34 @@ def get_team_calendars(
     user_id: str = Depends(current_user_id),
 ) -> list[dict[str, object]]:
     return list_team_members(_db_path(request), user_id, day=day.isoformat())
+
+
+def _members_for_ids(request: Request, user_id: str, member_ids: list[str], day: str) -> list[dict[str, object]]:
+    members = list_team_members(_db_path(request), user_id, day=day)
+    selected = [member for member in members if member["memberId"] in member_ids]
+    if len(selected) != len(set(member_ids)):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="One or more team members were not found")
+    return selected
+
+
+@router.post("/conflicts")
+def team_conflicts(payload: TeamConflictsRequest, request: Request, user_id: str = Depends(current_user_id)) -> dict[str, object]:
+    members = _members_for_ids(request, user_id, payload.member_ids, payload.day.isoformat())
+    start = payload.start.hour * 60 + payload.start.minute
+    return {"conflicts": calculate_conflicts(members, payload.day.isoformat(), start, payload.minutes)}
+
+
+@router.post("/golden-windows")
+def team_golden_windows(payload: TeamGoldenWindowsRequest, request: Request, user_id: str = Depends(current_user_id)) -> dict[str, object]:
+    members = _members_for_ids(request, user_id, payload.member_ids, payload.day.isoformat())
+    return {"windows": golden_windows(members, payload.day.isoformat(), [window.model_dump(mode="json") for window in payload.windows], payload.minutes)}
+
+
+@router.post("/book-meeting", response_model=ScheduleEntryOut)
+def book_team_meeting(payload: TeamBookMeetingRequest, request: Request, user_id: str = Depends(current_user_id)) -> dict[str, object]:
+    members = _members_for_ids(request, user_id, payload.participant_ids, payload.day.isoformat())
+    start = payload.start.hour * 60 + payload.start.minute
+    conflicts = calculate_conflicts(members, payload.day.isoformat(), start, payload.minutes)
+    if conflicts:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"message": "Meeting overlaps a member busy block", "conflicts": conflicts})
+    return upsert_schedule(_db_path(request), user_id, {"id": f"meeting-{payload.day.isoformat()}-{start}", "day": payload.day.isoformat(), "title": payload.title, "tag": "Team meeting", "height": payload.minutes * 80 / 60, "color": 0, "time": payload.start.model_dump()})
