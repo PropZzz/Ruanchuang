@@ -25,6 +25,10 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 - `GET|POST /schedule`
 - `PUT|DELETE /schedule/{entry_id}`
 - `POST /schedule/replan`
+- `POST /schedule/rescue/options`
+- `POST /schedule/rescue/apply`
+- `POST /schedule/rescue/undo`
+- `GET /schedule/rescue/history`
 - `GET|POST /events`
 - `POST /events/batch`
 - `GET /review/weekly`
