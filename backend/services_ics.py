@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import re
 from typing import Any
 
@@ -109,7 +109,7 @@ def export_ics(entries: list[dict[str, Any]]) -> str:
         minute = int(time.get("minute", 0))
         duration = max(1, round(float(entry.get("height") or 60.0) / 80 * 60))
         start = datetime.strptime(f"{day}{hour:02d}{minute:02d}", "%Y%m%d%H%M")
-        end = start.fromtimestamp(start.timestamp() + duration * 60)
+        end = start + timedelta(minutes=duration)
         lines.extend(
             [
                 "BEGIN:VEVENT",

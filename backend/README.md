@@ -50,7 +50,11 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 - `PUT /team/members/{member_id}/permission`
 - `GET /team/calendars`
 
-默认 SQLite 数据库文件保存在 `backend/data/app.sqlite3`。
+默认 SQLite 数据库文件保存在 `backend/data/shixuzhipei.db`。生产部署使用 `SHIXUZHIPEI_DB_PATH` 指向持久化数据目录。
+
+当前已实现平台诊断、账号退出/昵称更新、ICS 导入导出、日程批量/冲突/救援、微任务批量操作、目标下一任务、团队冲突/黄金窗口/会议预约和基础 `/sync/*` 游标同步。
+
+AI、设备、第三方集成、文件、推送和密码重置仍返回结构化 HTTP 501 `RESERVED_ENDPOINT`，直到对应外部服务或硬件完成接入。
 
 ## Flutter 连接后端
 

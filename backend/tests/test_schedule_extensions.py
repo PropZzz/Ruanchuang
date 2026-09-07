@@ -54,7 +54,7 @@ def test_ics_import_and_export_round_trip(tmp_path):
             "UID:ics-1",
             "DTSTART:20260907T090000",
             "DTEND:20260907T100000",
-            "SUMMARY:Imported\, task",
+            "SUMMARY:Imported\\, task",
             "CATEGORIES:Focus",
             "END:VEVENT",
             "END:VCALENDAR",
@@ -70,6 +70,7 @@ def test_ics_import_and_export_round_trip(tmp_path):
         assert exported.status_code == 200
         assert "BEGIN:VCALENDAR" in exported.text
         assert "SUMMARY:Imported\\, task" in exported.text
+        assert "DTEND:20260907T100000" in exported.text
 
 
 def test_rescue_apply_undo_and_stale_baseline_are_transactional(tmp_path):
