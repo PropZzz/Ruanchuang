@@ -84,7 +84,7 @@ The canonical request has this shape:
 
 - `schemaVersion` is the string `"1"` in canonical payloads. The API adapter treats a missing value as legacy version 1 during migration.
 - `day` is a date-only string in `YYYY-MM-DD` form.
-- `due`, `earliestStart` and future deadline fields use ISO 8601 date-times. Canonical fixtures include an explicit offset; legacy naive values are normalized at the API edge as UTC and are never emitted by the canonical serializer.
+- `due` and `earliestStart` use ISO 8601 date-times. Inputs may include an explicit offset; canonical serializers normalize instants to UTC with a `Z` suffix. Legacy naive values are normalized at the API edge as UTC and are never emitted by the canonical serializer. Cross-language tests compare parsed instants, not the original offset spelling.
 - `ClockTime.hour` is `0..23`; `ClockTime.minute` is `0..59`.
 - A window must have `end` strictly after `start` and applies within the requested day.
 - `durationMinutes` is an integer from `1` through `1440`.
