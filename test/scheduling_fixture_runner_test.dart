@@ -2,9 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shixuzhipei/models/models.dart';
 import 'package:shixuzhipei/services/scheduling/scheduler_core.dart';
-import 'package:shixuzhipei/services/scheduling/scheduling_contract.dart';
 
 import 'support/scheduling_fixture_runner.dart';
 
