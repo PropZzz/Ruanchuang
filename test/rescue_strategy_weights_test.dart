@@ -6,16 +6,26 @@ import 'package:shixuzhipei/services/scheduling/rescue_strategy_weights.dart';
 
 void main() {
   test('Dart rescue weights match the versioned JSON contract', () {
-    final payload = jsonDecode(
-      File('contracts/scheduling/v1/rescue-strategies.json').readAsStringSync(),
-    ) as Map<String, dynamic>;
+    final payload =
+        jsonDecode(
+              File(
+                'contracts/scheduling/v1/rescue-strategies.json',
+              ).readAsStringSync(),
+            )
+            as Map<String, dynamic>;
     expect(payload['schemaVersion'], '1');
-    expect(payload['recoveryBufferMinutes'], RescueStrategyWeights.recoveryBufferMinutes);
+    expect(
+      payload['recoveryBufferMinutes'],
+      RescueStrategyWeights.recoveryBufferMinutes,
+    );
 
     final strategies = payload['strategies'] as Map<String, dynamic>;
     for (final entry in RescueStrategyWeights.strategies.entries) {
       final expected = (strategies[entry.key] as Map<String, dynamic>);
-      expect(entry.value, expected.map((key, value) => MapEntry(key, (value as num).toDouble())));
+      expect(
+        entry.value,
+        expected.map((key, value) => MapEntry(key, (value as num).toDouble())),
+      );
     }
   });
 
