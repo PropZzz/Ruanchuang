@@ -1,0 +1,205 @@
+{
+  "schemaVersion": "1",
+  "summary": {
+    "fixtures": 2,
+    "matched": 2,
+    "mismatched": 0,
+    "invalid": 0
+  },
+  "fixtures": [
+    {
+      "name": "basic.json",
+      "status": "matched",
+      "differences": [],
+      "python": {
+        "schemaVersion": "1",
+        "entries": [
+          {
+            "id": "fixed-standup",
+            "day": "2026-09-14",
+            "title": "Daily standup",
+            "tag": "Meeting",
+            "load": "medium",
+            "durationMinutes": 60,
+            "time": {
+              "hour": 9,
+              "minute": 0
+            },
+            "source": "fixed",
+            "explanationCodes": []
+          },
+          {
+            "id": "task-offset",
+            "day": "2026-09-14",
+            "title": "Prepare release notes",
+            "tag": "Writing",
+            "load": "medium",
+            "durationMinutes": 30,
+            "time": {
+              "hour": 10,
+              "minute": 0
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "deadline_proximity"
+            ]
+          },
+          {
+            "id": "task-alpha",
+            "day": "2026-09-14",
+            "title": "Check metrics",
+            "tag": "Planning",
+            "load": "low",
+            "durationMinutes": 20,
+            "time": {
+              "hour": 10,
+              "minute": 30
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "priority"
+            ]
+          },
+          {
+            "id": "task-beta",
+            "day": "2026-09-14",
+            "title": "Review backlog",
+            "tag": "Planning",
+            "load": "low",
+            "durationMinutes": 20,
+            "time": {
+              "hour": 10,
+              "minute": 50
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "priority"
+            ]
+          }
+        ],
+        "issues": [
+          {
+            "code": "miss_due",
+            "message": "Task scheduled past due time: Prepare release notes",
+            "taskId": "task-offset",
+            "explanationCodes": [
+              "deadline_proximity"
+            ]
+          }
+        ]
+      },
+      "dart": {
+        "schemaVersion": "1",
+        "entries": [
+          {
+            "id": "fixed-standup",
+            "title": "Daily standup",
+            "tag": "Meeting",
+            "load": "medium",
+            "durationMinutes": 60,
+            "time": {
+              "hour": 9,
+              "minute": 0
+            },
+            "source": "fixed",
+            "explanationCodes": [],
+            "day": "2026-09-14"
+          },
+          {
+            "id": "task-offset",
+            "title": "Prepare release notes",
+            "tag": "Writing",
+            "load": "medium",
+            "durationMinutes": 30,
+            "time": {
+              "hour": 10,
+              "minute": 0
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "deadline_proximity"
+            ],
+            "day": "2026-09-14"
+          },
+          {
+            "id": "task-alpha",
+            "title": "Check metrics",
+            "tag": "Planning",
+            "load": "low",
+            "durationMinutes": 20,
+            "time": {
+              "hour": 10,
+              "minute": 30
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "priority"
+            ],
+            "day": "2026-09-14"
+          },
+          {
+            "id": "task-beta",
+            "title": "Review backlog",
+            "tag": "Planning",
+            "load": "low",
+            "durationMinutes": 20,
+            "time": {
+              "hour": 10,
+              "minute": 50
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "priority"
+            ],
+            "day": "2026-09-14"
+          }
+        ],
+        "issues": [
+          {
+            "code": "miss_due",
+            "message": "Task scheduled past due time: Prepare release notes",
+            "taskId": "task-offset",
+            "explanationCodes": [
+              "deadline_proximity"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "dependency-blocked.json",
+      "status": "matched",
+      "differences": [],
+      "python": {
+        "schemaVersion": "1",
+        "entries": [],
+        "issues": [
+          {
+            "code": "dependency_blocked",
+            "message": "Task cannot be scheduled until its dependency is placed",
+            "taskId": "blocked-task",
+            "blockedBy": [
+              "missing-task"
+            ],
+            "explanationCodes": []
+          }
+        ]
+      },
+      "dart": {
+        "schemaVersion": "1",
+        "entries": [],
+        "issues": [
+          {
+            "code": "dependency_blocked",
+            "message": "Task cannot be scheduled until its dependency is placed",
+            "taskId": "blocked-task",
+            "explanationCodes": [],
+            "blockedBy": [
+              "missing-task"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
