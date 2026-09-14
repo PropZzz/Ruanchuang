@@ -1,7 +1,7 @@
 # Scheduling Parity, SchedulerCore, and Rescue Scoring Design
 
 > **Status:** Design approved by user; implementation pending
-> **Owner:** Member A  
+> **Owner:** Member A
 > **Scope:** Shared fixture execution, pure scheduler decomposition, and rescue strategy scoring
 
 ## Goal
