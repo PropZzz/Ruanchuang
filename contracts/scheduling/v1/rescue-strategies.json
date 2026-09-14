@@ -1,8 +1,31 @@
 {
   "schemaVersion": "1",
+  "policyVersion": "1",
   "recoveryBufferMinutes": 15,
+  "hardConstraintOrder": [
+    "normalize",
+    "fixedSchedule",
+    "workWindows",
+    "dependencies",
+    "deadline"
+  ],
+  "explanationCodeOrder": [
+    "deadline_proximity",
+    "priority",
+    "energy_fit",
+    "kept_baseline",
+    "fixed_conflict"
+  ],
   "strategies": {
     "protectDeadline": {
+      "scenario": "deadlineFirst",
+      "fixedSchedule": "preserve",
+      "baselinePolicy": "reflowNonFixed",
+      "deadlinePolicy": "prioritizeDueDates",
+      "lowEnergyPolicy": "preferMatchingLoad",
+      "movementPolicy": "reflowNonFixedBaseline",
+      "recoveryPolicy": "none",
+      "overdueRiskPolicy": "deadlineIssues",
       "urgency": 0.55,
       "priority": 0.25,
       "energyFit": 0.10,
@@ -10,6 +33,14 @@
       "recovery": 0.00
     },
     "protectRecovery": {
+      "scenario": "recoveryFirst",
+      "fixedSchedule": "preserve",
+      "baselinePolicy": "reflowNonFixed",
+      "deadlinePolicy": "preserveHardDeadlines",
+      "lowEnergyPolicy": "lowerTargetEnergy",
+      "movementPolicy": "reflowNonFixedBaseline",
+      "recoveryPolicy": "insert15MinuteBuffer",
+      "overdueRiskPolicy": "deadlineIssues",
       "urgency": 0.20,
       "priority": 0.10,
       "energyFit": 0.35,
@@ -17,6 +48,14 @@
       "recovery": 0.25
     },
     "minimizeChanges": {
+      "scenario": "baselineFirst",
+      "fixedSchedule": "preserveAndLockBaseline",
+      "baselinePolicy": "lockAll",
+      "deadlinePolicy": "hardDeadlineNoLateFallback",
+      "lowEnergyPolicy": "softPreferenceOnly",
+      "movementPolicy": "preserveBaseline",
+      "recoveryPolicy": "none",
+      "overdueRiskPolicy": "deadlineIssues",
       "urgency": 0.25,
       "priority": 0.15,
       "energyFit": 0.05,

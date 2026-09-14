@@ -42,3 +42,56 @@ def test_config_file_contains_the_runtime_contract() -> None:
     )
     assert payload["schemaVersion"] == "1"
     assert payload["recoveryBufferMinutes"] == 15
+
+
+def test_strategy_policy_matrix_is_versioned_and_complete() -> None:
+    config = load_strategy_config()
+    assert config.policy_version == "1"
+    assert config.hard_constraint_order == (
+        "normalize",
+        "fixedSchedule",
+        "workWindows",
+        "dependencies",
+        "deadline",
+    )
+    assert config.explanation_code_order == (
+        "deadline_proximity",
+        "priority",
+        "energy_fit",
+        "kept_baseline",
+        "fixed_conflict",
+    )
+    expected_fields = {
+        "scenario",
+        "fixedSchedule",
+        "baselinePolicy",
+        "deadlinePolicy",
+        "lowEnergyPolicy",
+        "movementPolicy",
+        "recoveryPolicy",
+        "overdueRiskPolicy",
+    }
+    assert all(set(policy) == expected_fields for policy in config.policies.values())
+
+
+@pytest.mark.parametrize("field", ["hardConstraintOrder", "explanationCodeOrder"])
+def test_invalid_policy_order_is_rejected(tmp_path: Path, field: str) -> None:
+    source = json.loads(
+        (ROOT / "contracts/scheduling/v1/rescue-strategies.json").read_text(encoding="utf-8")
+    )
+    source[field] = ["unknown"]
+    path = tmp_path / "rescue-strategies.json"
+    path.write_text(json.dumps(source), encoding="utf-8")
+    with pytest.raises(ValueError):
+        load_strategy_config(path)
+
+
+def test_unknown_strategy_policy_value_is_rejected(tmp_path: Path) -> None:
+    source = json.loads(
+        (ROOT / "contracts/scheduling/v1/rescue-strategies.json").read_text(encoding="utf-8")
+    )
+    source["strategies"]["protectDeadline"]["scenario"] = "unknown"
+    path = tmp_path / "rescue-strategies.json"
+    path.write_text(json.dumps(source), encoding="utf-8")
+    with pytest.raises(ValueError):
+        load_strategy_config(path)

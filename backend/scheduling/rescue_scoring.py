@@ -3,12 +3,45 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Mapping
 
 
 STRATEGY_NAMES = ("protectDeadline", "protectRecovery", "minimizeChanges")
 METRIC_NAMES = ("urgency", "priority", "energyFit", "stability", "recovery")
 _WEIGHT_TOLERANCE = 0.000001
+_POLICY_FIELDS = (
+    "scenario",
+    "fixedSchedule",
+    "baselinePolicy",
+    "deadlinePolicy",
+    "lowEnergyPolicy",
+    "movementPolicy",
+    "recoveryPolicy",
+    "overdueRiskPolicy",
+)
+_HARD_CONSTRAINT_ORDER = ("normalize", "fixedSchedule", "workWindows", "dependencies", "deadline")
+_EXPLANATION_CODE_ORDER = (
+    "deadline_proximity",
+    "priority",
+    "energy_fit",
+    "kept_baseline",
+    "fixed_conflict",
+)
+_POLICY_VALUES = {
+    "scenario": {"deadlineFirst", "recoveryFirst", "baselineFirst"},
+    "fixedSchedule": {"preserve", "preserveAndLockBaseline"},
+    "baselinePolicy": {"reflowNonFixed", "lockAll"},
+    "deadlinePolicy": {
+        "prioritizeDueDates",
+        "preserveHardDeadlines",
+        "hardDeadlineNoLateFallback",
+    },
+    "lowEnergyPolicy": {"preferMatchingLoad", "lowerTargetEnergy", "softPreferenceOnly"},
+    "movementPolicy": {"reflowNonFixedBaseline", "preserveBaseline"},
+    "recoveryPolicy": {"none", "insert15MinuteBuffer"},
+    "overdueRiskPolicy": {"deadlineIssues"},
+}
 
 
 @dataclass(frozen=True)
@@ -32,7 +65,11 @@ class PlanMetrics:
 @dataclass(frozen=True)
 class RescueStrategyConfig:
     recovery_buffer_minutes: int
-    strategies: dict[str, dict[str, float]]
+    strategies: Mapping[str, Mapping[str, float]]
+    policy_version: str
+    hard_constraint_order: tuple[str, ...]
+    explanation_code_order: tuple[str, ...]
+    policies: Mapping[str, Mapping[str, str]]
 
 
 def _config_path() -> Path:
@@ -44,6 +81,18 @@ def load_strategy_config(path: Path | None = None) -> RescueStrategyConfig:
     payload = json.loads(config_path.read_text(encoding="utf-8"))
     if payload.get("schemaVersion") != "1":
         raise ValueError("rescue strategy schemaVersion must be 1")
+    if payload.get("policyVersion") != "1":
+        raise ValueError("rescue strategy policyVersion must be 1")
+    hard_order = payload.get("hardConstraintOrder")
+    if not isinstance(hard_order, list) or hard_order != list(_HARD_CONSTRAINT_ORDER):
+        raise ValueError("hardConstraintOrder does not match the contract")
+    if len(hard_order) != len(set(hard_order)):
+        raise ValueError("hardConstraintOrder must not contain duplicates")
+    explanation_order = payload.get("explanationCodeOrder")
+    if not isinstance(explanation_order, list) or explanation_order != list(_EXPLANATION_CODE_ORDER):
+        raise ValueError("explanationCodeOrder does not match the contract")
+    if len(explanation_order) != len(set(explanation_order)):
+        raise ValueError("explanationCodeOrder must not contain duplicates")
     buffer_minutes = payload.get("recoveryBufferMinutes")
     if not isinstance(buffer_minutes, int) or buffer_minutes <= 0:
         raise ValueError("recoveryBufferMinutes must be a positive integer")
@@ -52,9 +101,21 @@ def load_strategy_config(path: Path | None = None) -> RescueStrategyConfig:
         raise ValueError("rescue strategy names do not match the contract")
 
     strategies: dict[str, dict[str, float]] = {}
+    policies: dict[str, dict[str, str]] = {}
     for name in STRATEGY_NAMES:
         raw_weights = raw_strategies[name]
-        if not isinstance(raw_weights, dict) or set(raw_weights) != set(METRIC_NAMES):
+        if not isinstance(raw_weights, dict):
+            raise ValueError(f"{name} must define a strategy object")
+        raw_policy = {key: raw_weights.get(key) for key in _POLICY_FIELDS}
+        if set(raw_policy) != set(_POLICY_FIELDS) or any(value is None for value in raw_policy.values()):
+            raise ValueError(f"{name} must define every rescue policy field")
+        unknown_policy_values = [
+            key for key, value in raw_policy.items()
+            if not isinstance(value, str) or value not in _POLICY_VALUES[key]
+        ]
+        if unknown_policy_values:
+            raise ValueError(f"{name} contains an unknown policy value")
+        if set(raw_weights) != set(METRIC_NAMES) | set(_POLICY_FIELDS):
             raise ValueError(f"{name} must define every rescue metric")
         weights = {key: float(raw_weights[key]) for key in METRIC_NAMES}
         if any(value < 0 for value in weights.values()):
@@ -62,7 +123,15 @@ def load_strategy_config(path: Path | None = None) -> RescueStrategyConfig:
         if abs(sum(weights.values()) - 1.0) > _WEIGHT_TOLERANCE:
             raise ValueError(f"{name} weights must sum to 1")
         strategies[name] = weights
-    return RescueStrategyConfig(buffer_minutes, strategies)
+        policies[name] = raw_policy
+    return RescueStrategyConfig(
+        recovery_buffer_minutes=buffer_minutes,
+        strategies=MappingProxyType({name: MappingProxyType(values) for name, values in strategies.items()}),
+        policy_version="1",
+        hard_constraint_order=_HARD_CONSTRAINT_ORDER,
+        explanation_code_order=_EXPLANATION_CODE_ORDER,
+        policies=MappingProxyType({name: MappingProxyType(values) for name, values in policies.items()}),
+    )
 
 
 def _clamp(value: float) -> float:
