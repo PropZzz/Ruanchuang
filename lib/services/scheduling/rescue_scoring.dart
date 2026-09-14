@@ -7,6 +7,7 @@ class RescuePlanMetrics {
   final double energyFit;
   final double stability;
   final double recovery;
+  final double overdueRisk;
 
   const RescuePlanMetrics({
     required this.urgency,
@@ -14,6 +15,7 @@ class RescuePlanMetrics {
     required this.energyFit,
     required this.stability,
     required this.recovery,
+    this.overdueRisk = 0.0,
   });
 
   Map<String, double> toJson() => {
@@ -22,6 +24,7 @@ class RescuePlanMetrics {
     'energyFit': energyFit,
     'stability': stability,
     'recovery': recovery,
+    'overdueRisk': overdueRisk,
   };
 }
 
@@ -35,18 +38,25 @@ RescuePlanMetrics metricsForRescuePlan({
 }) {
   final taskById = <String, PlanTask>{for (final task in tasks) task.id: task};
   final placed = plan.entries
-      .where(
-        (entry) => entry.source == 'planned' && taskById.containsKey(entry.id),
-      )
+      .where((entry) {
+        if (entry.source != 'planned') return false;
+        final id = _baseTaskId(entry.id, taskById);
+        return id != null;
+      })
       .toList(growable: false);
   final dueCount = tasks.where((task) => task.due != null).length;
   final missedCount = plan.issues
       .where((issue) => issue.code == 'miss_due' || issue.code == 'overdue')
       .length;
   final urgency = _clamp(1.0 - missedCount / (dueCount > 0 ? dueCount : 1));
-  final prioritySum = placed.fold<int>(
+  final placedTaskIds = <String>{};
+  for (final entry in placed) {
+    final id = _baseTaskId(entry.id, taskById);
+    if (id != null) placedTaskIds.add(id);
+  }
+  final prioritySum = placedTaskIds.fold<int>(
     0,
-    (sum, entry) => sum + (taskById[entry.id]?.priority ?? 0),
+    (sum, id) => sum + (taskById[id]?.priority ?? 0),
   );
   final priority = _clamp(
     prioritySum / (5 * (tasks.isEmpty ? 1 : tasks.length)),
@@ -59,7 +69,8 @@ RescuePlanMetrics metricsForRescuePlan({
   };
   var mismatch = 0.0;
   for (final entry in placed) {
-    final load = taskById[entry.id]?.load.index ?? targetLoad;
+    final taskId = _baseTaskId(entry.id, taskById);
+    final load = taskId == null ? targetLoad : taskById[taskId]!.load.index;
     mismatch += (load - targetLoad).abs() / 2.0;
   }
   final energyFit = _clamp(
@@ -71,12 +82,14 @@ RescuePlanMetrics metricsForRescuePlan({
   final recovery = _clamp(
     recoveryMinutes / RescueStrategyWeights.recoveryBufferMinutes,
   );
+  final overdueRisk = _clamp(missedCount / (dueCount > 0 ? dueCount : 1));
   return RescuePlanMetrics(
     urgency: urgency,
     priority: priority,
     energyFit: energyFit,
     stability: stability,
     recovery: recovery,
+    overdueRisk: overdueRisk,
   );
 }
 
@@ -94,8 +107,20 @@ double scoreRescuePlan(String strategy, RescuePlanMetrics metrics) {
 
 int rescueHardIssueCount(SchedulingPlan plan) => plan.issues
     .where(
-      (issue) => issue.code == 'no_slot' || issue.code == 'dependency_blocked',
+      (issue) =>
+          issue.code == 'no_slot' ||
+          issue.code == 'dependency_blocked' ||
+          issue.code == 'fixed_conflict',
     )
     .length;
+
+String? _baseTaskId(String? entryId, Map<String, PlanTask> taskById) {
+  if (entryId == null || entryId.isEmpty) return null;
+  if (taskById.containsKey(entryId)) return entryId;
+  final separator = entryId.lastIndexOf('#');
+  if (separator <= 0) return null;
+  final base = entryId.substring(0, separator);
+  return taskById.containsKey(base) ? base : null;
+}
 
 double _clamp(double value) => value.clamp(0.0, 1.0).toDouble();

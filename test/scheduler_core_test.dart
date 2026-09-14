@@ -1,9 +1,226 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shixuzhipei/models/models.dart';
+import 'package:shixuzhipei/services/scheduling/schedule_rescue.dart';
 import 'package:shixuzhipei/services/scheduling/scheduler_core.dart';
 
 void main() {
+  test('empty work windows do not create a default slot', () {
+    final plan = const SchedulerCore().plan(
+      SchedulingRequest(
+        day: DateTime(2026, 9, 14),
+        tasks: [
+          PlanTask(
+            id: 'task',
+            title: 'Task',
+            durationMinutes: 30,
+            priority: 3,
+            load: CognitiveLoad.medium,
+            tag: 'Task',
+          ),
+        ],
+        windows: [],
+        energy: EnergyTier.medium,
+      ),
+    );
+
+    expect(plan.entries, isEmpty);
+    expect(plan.issues.single.code, 'no_slot');
+  });
+
+  test('earliestStart shift must still fit inside the interval', () {
+    final plan = const SchedulerCore().plan(
+      SchedulingRequest(
+        day: DateTime(2026, 9, 14),
+        tasks: [
+          PlanTask(
+            id: 'task',
+            title: 'Task',
+            durationMinutes: 30,
+            priority: 3,
+            load: CognitiveLoad.medium,
+            tag: 'Task',
+            earliestStart: DateTime(2026, 9, 14, 10, 50),
+          ),
+        ],
+        windows: [
+          TimeWindow(
+            start: TimeOfDay(hour: 10, minute: 0),
+            end: TimeOfDay(hour: 11, minute: 0),
+          ),
+        ],
+        energy: EnergyTier.medium,
+      ),
+    );
+
+    expect(plan.entries, isEmpty);
+    expect(plan.issues.single.code, 'no_slot');
+  });
+
+  test(
+    'fixed entries remain and report overlap and out-of-window conflicts',
+    () {
+      final day = DateTime(2026, 9, 14);
+      final fixed = [
+        ScheduleEntry(
+          id: 'fixed-a',
+          day: day,
+          title: 'A',
+          tag: 'Fixed',
+          height: 40,
+          color: Colors.blue,
+          time: const TimeOfDay(hour: 9, minute: 0),
+        ),
+        ScheduleEntry(
+          id: 'fixed-b',
+          day: day,
+          title: 'B',
+          tag: 'Fixed',
+          height: 40,
+          color: Colors.blue,
+          time: const TimeOfDay(hour: 9, minute: 15),
+        ),
+        ScheduleEntry(
+          id: 'fixed-out',
+          day: day,
+          title: 'Out',
+          tag: 'Fixed',
+          height: 40,
+          color: Colors.blue,
+          time: const TimeOfDay(hour: 12, minute: 0),
+        ),
+      ];
+      final plan = const SchedulerCore().plan(
+        SchedulingRequest(
+          day: day,
+          tasks: [],
+          windows: [
+            TimeWindow(
+              start: TimeOfDay(hour: 9, minute: 0),
+              end: TimeOfDay(hour: 10, minute: 0),
+            ),
+          ],
+          energy: EnergyTier.medium,
+          fixed: fixed,
+        ),
+      );
+
+      expect(
+        plan.entries.map((entry) => entry.id),
+        containsAll(['fixed-a', 'fixed-b', 'fixed-out']),
+      );
+      expect(
+        plan.issues.where((issue) => issue.code == 'fixed_conflict'),
+        hasLength(2),
+      );
+    },
+  );
+
+  test(
+    'hard deadline does not fall back to a late slot while soft due emits miss_due',
+    () {
+      final day = DateTime(2026, 9, 14);
+      final hard = const SchedulerCore().plan(
+        SchedulingRequest(
+          day: day,
+          tasks: [
+            PlanTask(
+              id: 'hard',
+              title: 'Hard',
+              durationMinutes: 30,
+              priority: 3,
+              load: CognitiveLoad.medium,
+              tag: 'Task',
+              due: DateTime(2026, 9, 14, 9, 30),
+              hardDeadline: true,
+            ),
+          ],
+          windows: [
+            TimeWindow(
+              start: TimeOfDay(hour: 10, minute: 0),
+              end: TimeOfDay(hour: 11, minute: 0),
+            ),
+          ],
+          energy: EnergyTier.medium,
+        ),
+      );
+      expect(hard.entries, isEmpty);
+      expect(hard.issues.single.code, 'no_slot');
+      expect(hard.issues.single.explanationCodes, ['deadline_proximity']);
+
+      final soft = const SchedulerCore().plan(
+        SchedulingRequest(
+          day: day,
+          tasks: [
+            PlanTask(
+              id: 'soft',
+              title: 'Soft',
+              durationMinutes: 30,
+              priority: 3,
+              load: CognitiveLoad.medium,
+              tag: 'Task',
+              due: DateTime(2026, 9, 14, 9, 30),
+            ),
+          ],
+          windows: [
+            TimeWindow(
+              start: TimeOfDay(hour: 10, minute: 0),
+              end: TimeOfDay(hour: 11, minute: 0),
+            ),
+          ],
+          energy: EnergyTier.medium,
+        ),
+      );
+      expect(soft.entries, hasLength(1));
+      expect(soft.issues.single.code, 'miss_due');
+    },
+  );
+
+  test('recovery buffer is only inserted into a legal free interval', () {
+    final day = DateTime(2026, 9, 14);
+    final options = ScheduleRescueService(engine: const SchedulerCore())
+        .propose(
+          base: SchedulingRequest(
+            day: day,
+            tasks: const [],
+            windows: const [
+              TimeWindow(
+                start: TimeOfDay(hour: 9, minute: 0),
+                end: TimeOfDay(hour: 12, minute: 0),
+              ),
+            ],
+            energy: EnergyTier.medium,
+            fixed: [
+              ScheduleEntry(
+                id: 'busy',
+                day: day,
+                title: 'Busy',
+                tag: 'Fixed',
+                height: 240,
+                color: Colors.blue,
+                time: TimeOfDay(hour: 9, minute: 0),
+              ),
+            ],
+          ),
+          baseline: const [],
+          urgent: const PlanTask(
+            id: 'urgent',
+            title: 'Urgent',
+            durationMinutes: 15,
+            priority: 5,
+            load: CognitiveLoad.low,
+            tag: 'Urgent',
+          ),
+        );
+
+    final recovery = options[1];
+    expect(recovery.recoveryMinutes, 0);
+    expect(
+      recovery.plan.entries.where((entry) => entry.tag == 'Recovery'),
+      isEmpty,
+    );
+  });
+
   test(
     'SchedulerCore preserves deterministic ordering and dependency issues',
     () {

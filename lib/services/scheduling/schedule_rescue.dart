@@ -17,6 +17,8 @@ class ScheduleRescueOption {
   final double score;
   final Map<String, double> scoreBreakdown;
   final int hardIssueCount;
+  final double overdueRisk;
+  final List<String> movedEntryIds;
 
   const ScheduleRescueOption({
     required this.strategy,
@@ -28,6 +30,8 @@ class ScheduleRescueOption {
     this.score = 0.0,
     this.scoreBreakdown = const {},
     this.hardIssueCount = 0,
+    this.overdueRisk = 0.0,
+    this.movedEntryIds = const [],
   });
 
   String get title => switch (strategy) {
@@ -56,17 +60,21 @@ class ScheduleRescueService {
 
     final deadlinePlan = engine.plan(_request(base, tasks: allTasks));
 
+    final recoveryBuffer = _recoveryBuffer(base);
     final recoveryPlan = engine.plan(
       _request(
         base,
         tasks: allTasks,
         energy: _lowerEnergy(base.energy),
-        fixed: [...base.fixed, _recoveryBuffer(base)],
+        fixed: [...base.fixed, if (recoveryBuffer != null) recoveryBuffer],
       ),
     );
 
-    final minimalPlan = engine.plan(
-      _request(base, tasks: [urgent], fixed: [...base.fixed, ...baseline]),
+    final minimalPlan = _annotateKeptBaseline(
+      engine.plan(
+        _request(base, tasks: [urgent], fixed: [...base.fixed, ...baseline]),
+      ),
+      baseline,
     );
 
     final deadlineScore = _score(
@@ -83,7 +91,9 @@ class ScheduleRescueService {
       tasks: allTasks,
       baseline: baseline,
       energy: _lowerEnergy(base.energy),
-      recoveryMinutes: RescueStrategyWeights.recoveryBufferMinutes,
+      recoveryMinutes: recoveryBuffer == null
+          ? 0
+          : RescueStrategyWeights.recoveryBufferMinutes,
     );
     final minimalScore = _score(
       strategy: RescueStrategy.minimizeChanges,
@@ -100,31 +110,39 @@ class ScheduleRescueService {
         plan: deadlinePlan,
         rationale: '先安排紧急事项，再重新分配其余任务，优先降低逾期风险。',
         tradeoff: '可能移动更多原有任务，恢复时间取决于当前能量状态。',
-        movedEntryCount: _movedEntryCount(baseline, deadlinePlan.entries),
+        movedEntryCount: _movedEntryIds(baseline, deadlinePlan.entries).length,
+        movedEntryIds: _movedEntryIds(baseline, deadlinePlan.entries),
         score: deadlineScore.score,
         scoreBreakdown: deadlineScore.breakdown,
         hardIssueCount: deadlineScore.hardIssues,
+        overdueRisk: deadlineScore.overdueRisk,
       ),
       ScheduleRescueOption(
         strategy: RescueStrategy.protectRecovery,
         plan: recoveryPlan,
         rationale: '降低高负荷任务的安排倾向，并预留 15 分钟恢复缓冲。',
         tradeoff: '部分低优先级任务可能顺延，适合疲劳或连续被打断的场景。',
-        movedEntryCount: _movedEntryCount(baseline, recoveryPlan.entries),
-        recoveryMinutes: RescueStrategyWeights.recoveryBufferMinutes,
+        movedEntryCount: _movedEntryIds(baseline, recoveryPlan.entries).length,
+        movedEntryIds: _movedEntryIds(baseline, recoveryPlan.entries),
+        recoveryMinutes: recoveryBuffer == null
+            ? 0
+            : RescueStrategyWeights.recoveryBufferMinutes,
         score: recoveryScore.score,
         scoreBreakdown: recoveryScore.breakdown,
         hardIssueCount: recoveryScore.hardIssues,
+        overdueRisk: recoveryScore.overdueRisk,
       ),
       ScheduleRescueOption(
         strategy: RescueStrategy.minimizeChanges,
         plan: minimalPlan,
         rationale: '锁定当前已排日程，只在现有空档中放入紧急事项。',
         tradeoff: '如果空档不足，紧急事项可能无法在截止时间前安排。',
-        movedEntryCount: _movedEntryCount(baseline, minimalPlan.entries),
+        movedEntryCount: _movedEntryIds(baseline, minimalPlan.entries).length,
+        movedEntryIds: _movedEntryIds(baseline, minimalPlan.entries),
         score: minimalScore.score,
         scoreBreakdown: minimalScore.breakdown,
         hardIssueCount: minimalScore.hardIssues,
+        overdueRisk: minimalScore.overdueRisk,
       ),
     ];
   }
@@ -155,6 +173,7 @@ class ScheduleRescueService {
       score: scoreRescuePlan(name, metrics),
       breakdown: metrics.toJson(),
       hardIssues: rescueHardIssueCount(plan),
+      overdueRisk: metrics.overdueRisk,
     );
   }
 
@@ -174,16 +193,73 @@ class ScheduleRescueService {
     );
   }
 
-  ScheduleEntry _recoveryBuffer(SchedulingRequest base) {
-    final preferred = base.windows.firstWhere(
-      (window) => window.start.hour >= 12,
-      orElse: () => base.windows.isNotEmpty
-          ? base.windows.first
-          : const TimeWindow(
-              start: TimeOfDay(hour: 15, minute: 0),
-              end: TimeOfDay(hour: 15, minute: 15),
-            ),
+  SchedulingPlan _annotateKeptBaseline(
+    SchedulingPlan plan,
+    List<ScheduleEntry> baseline,
+  ) {
+    final baselineIds = baseline
+        .map((entry) => entry.id)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    if (baselineIds.isEmpty) return plan;
+    return SchedulingPlan(
+      schemaVersion: plan.schemaVersion,
+      risk: plan.risk,
+      issues: plan.issues,
+      entries: plan.entries
+          .map(
+            (entry) => baselineIds.contains(entry.id)
+                ? entry.copyWith(explanationCodes: const ['kept_baseline'])
+                : entry,
+          )
+          .toList(growable: false),
     );
+  }
+
+  ScheduleEntry? _recoveryBuffer(SchedulingRequest base) {
+    final free = <_RecoveryInterval>[];
+    for (final window in base.windows) {
+      final start = _todToMin(window.start);
+      final end = _todToMin(window.end);
+      if (end <= start) continue;
+      final cuts =
+          base.fixed
+              .map((entry) {
+                final fixedStart = _todToMin(entry.time);
+                final fixedEnd = fixedStart + _durationFromHeight(entry.height);
+                if (fixedEnd <= start || fixedStart >= end) return null;
+                return _RecoveryInterval(
+                  fixedStart.clamp(start, end).toInt(),
+                  fixedEnd.clamp(start, end).toInt(),
+                );
+              })
+              .whereType<_RecoveryInterval>()
+              .toList()
+            ..sort((a, b) => a.start.compareTo(b.start));
+      var cursor = start;
+      for (final cut in cuts) {
+        if (cut.start > cursor) free.add(_RecoveryInterval(cursor, cut.start));
+        if (cut.end > cursor) cursor = cut.end;
+      }
+      if (cursor < end) free.add(_RecoveryInterval(cursor, end));
+    }
+    final afternoon = free
+        .map(
+          (slot) => _RecoveryInterval(
+            slot.start < 12 * 60 ? 12 * 60 : slot.start,
+            slot.end,
+          ),
+        )
+        .where((slot) => slot.end - slot.start >= 15)
+        .toList();
+    final legal = afternoon.isNotEmpty
+        ? afternoon.first
+        : free.firstWhere(
+            (slot) => slot.end - slot.start >= 15,
+            orElse: () => const _RecoveryInterval(0, 0),
+          );
+    if (legal.end - legal.start < 15) return null;
     return ScheduleEntry(
       id: 'rescue_recovery_${base.day.toIso8601String().split('T').first}',
       day: base.day,
@@ -192,7 +268,7 @@ class ScheduleRescueService {
       load: CognitiveLoad.low,
       height: 20,
       color: const Color(0xFF80CBC4),
-      time: preferred.start,
+      time: _minToTod(legal.start),
     );
   }
 
@@ -205,11 +281,18 @@ class ScheduleRescueService {
     List<ScheduleEntry> baseline,
     List<ScheduleEntry> candidate,
   ) {
+    return _movedEntryIds(baseline, candidate).length;
+  }
+
+  List<String> _movedEntryIds(
+    List<ScheduleEntry> baseline,
+    List<ScheduleEntry> candidate,
+  ) {
     final candidateById = <String, ScheduleEntry>{
       for (final entry in candidate)
         if (entry.id != null && entry.id!.isNotEmpty) entry.id!: entry,
     };
-    var moved = 0;
+    final moved = <String>[];
     for (final entry in baseline) {
       final id = entry.id;
       if (id == null || id.isEmpty) continue;
@@ -217,7 +300,7 @@ class ScheduleRescueService {
       if (next == null ||
           next.time != entry.time ||
           (next.height - entry.height).abs() > 0.1) {
-        moved++;
+        moved.add(id);
       }
     }
     return moved;
@@ -228,10 +311,29 @@ class _RescueScore {
   final double score;
   final Map<String, double> breakdown;
   final int hardIssues;
+  final double overdueRisk;
 
   const _RescueScore({
     required this.score,
     required this.breakdown,
     required this.hardIssues,
+    required this.overdueRisk,
   });
 }
+
+class _RecoveryInterval {
+  final int start;
+  final int end;
+
+  const _RecoveryInterval(this.start, this.end);
+}
+
+int _todToMin(TimeOfDay time) => time.hour * 60 + time.minute;
+
+TimeOfDay _minToTod(int minutes) {
+  final value = minutes.clamp(0, 24 * 60 - 1).toInt();
+  return TimeOfDay(hour: value ~/ 60, minute: value % 60);
+}
+
+int _durationFromHeight(double height) =>
+    (height / 80.0 * 60.0).round().clamp(1, 24 * 60).toInt();

@@ -125,6 +125,42 @@ class SchedulerCore implements SchedulingEngine {
       free.add(_Interval(s, e));
     }
 
+    // Fixed entries are immutable hard constraints. Keep them in the output,
+    // but report overlaps and entries that do not belong to any work window.
+    for (var index = 0; index < fixed.length; index++) {
+      final entry = fixed[index];
+      final start = _todToMin(entry.time);
+      final end = (start + _durationFromHeight(entry.height))
+          .clamp(0, 24 * 60)
+          .toInt();
+      final overlaps = fixed.take(index).any((other) {
+        final otherStart = _todToMin(other.time);
+        final otherEnd = (otherStart + _durationFromHeight(other.height))
+            .clamp(0, 24 * 60)
+            .toInt();
+        return start < otherEnd && otherStart < end;
+      });
+      final inWindow = request.windows.any((window) {
+        final windowStart = _todToMin(window.start);
+        final windowEnd = _todToMin(window.end);
+        return windowEnd > windowStart &&
+            start >= windowStart &&
+            end <= windowEnd;
+      });
+      if (overlaps || !inWindow) {
+        issues.add(
+          SchedulingIssue(
+            code: 'fixed_conflict',
+            message: overlaps
+                ? 'Fixed entries overlap: ${entry.title}'
+                : 'Fixed entry is outside all work windows: ${entry.title}',
+            taskId: entry.id,
+            explanationCodes: const ['fixed_conflict'],
+          ),
+        );
+      }
+    }
+
     // Subtract fixed blocks (hard constraints).
     for (final f in fixed) {
       final s = _todToMin(f.time);
@@ -181,8 +217,12 @@ class SchedulerCore implements SchedulingEngine {
         final dur = t.durationMinutes.clamp(1, 24 * 60).toInt();
         final splittable = t.splittable;
         final minimumChunk = t.minimumChunkMinutes ?? 15;
-        final dueMin = (t.due != null && sameDay(t.due!, day))
+        final dueMin = t.due == null
+            ? null
+            : sameDay(t.due!, day)
             ? (t.due!.hour * 60 + t.due!.minute)
+            : t.due!.isBefore(day)
+            ? -1
             : null;
         final earliestMin = _earliestStartMinutes(t, day);
 
@@ -357,12 +397,12 @@ class SchedulerCore implements SchedulingEngine {
     double bestScore = double.negativeInfinity;
 
     for (final it in free) {
-      if (it.length < duration) continue;
-
       final start = earliestMin == null
           ? it.startMin
           : (it.startMin > earliestMin ? it.startMin : earliestMin);
       final end = start + duration;
+
+      if (start < it.startMin || end > it.endMin) continue;
 
       if (dueMin != null && end > dueMin) {
         // For P0 we only try interval starts; if that misses due, skip.
@@ -391,7 +431,7 @@ class SchedulerCore implements SchedulingEngine {
       final start = earliestMin == null
           ? it.startMin
           : (it.startMin > earliestMin ? it.startMin : earliestMin);
-      if (start + duration <= it.endMin) {
+      if (start >= it.startMin && start + duration <= it.endMin) {
         return start;
       }
     }
