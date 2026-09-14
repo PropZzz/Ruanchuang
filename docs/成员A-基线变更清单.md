@@ -65,4 +65,32 @@ docs: freeze member A baseline
 - [x] 每个当前变更都有责任人和去留结论。
 - [x] 业务代码、资源和删除项没有混入本次文档提交。
 - [x] 已规划可回滚的文档基线提交。
-- [ ] E 完成三组基线测试并保存输出。
+- [x] 三组基线测试已执行并记录结果。
+
+## 7. 验证证据
+
+以下命令均在 `member-a` 基线工作树执行：
+
+```text
+flutter analyze
+```
+
+结果：`No issues found!`
+
+```text
+flutter test -r compact
+```
+
+结果：`All tests passed!`，共 179 项测试通过。
+
+```text
+python -m pytest backend/tests -q
+```
+
+结果：`71 passed, 4 warnings`。警告均为依赖库弃用提示，没有测试失败。
+
+```text
+git diff HEAD^ HEAD --check
+```
+
+结果：通过，无空白错误。
