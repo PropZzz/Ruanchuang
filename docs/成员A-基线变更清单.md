@@ -114,4 +114,15 @@ python -m pytest backend/tests -q -> 98 passed, 4 dependency deprecation warning
 git diff --check                 -> clean
 ```
 
-尚未完成的 P1 后续项：自动执行全部共享 fixture 并生成 Dart/Python 差异报告、完整 `SchedulerCore` 模块拆分，以及救援策略权重计算的统一实现。
+## 9. 调度 parity、SchedulerCore 和救援评分实施记录
+
+已完成：
+
+- Python 编排器 `scripts/scheduling_parity.py` 会启动专用 Flutter runner，执行全部共享 fixture 并生成 `reports/scheduling-parity-2026-09-14.json`。
+- Python 和 Dart 均有独立的 `SchedulerCore` 纯计算入口，原有服务/引擎接口保留为兼容门面。
+- 三种救援策略使用 `contracts/scheduling/v1/rescue-strategies.json` 中的统一权重和 15 分钟恢复缓冲。
+- 救援方案按硬问题数、加权分数和稳定策略顺序推荐，并返回 `score`、`scoreBreakdown`。
+
+最终 parity 结果：2 个 fixture、2 个匹配、0 个差异、0 个无效项。
+
+剩余范围：更细粒度 helper 模块拆分和生产规模性能基准不属于本次行为验收，后续单独排期。

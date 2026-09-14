@@ -1,6 +1,6 @@
 # Scheduling Parity, SchedulerCore, and Rescue Scoring Design
 
-> **Status:** Design approved by user; implementation pending
+> **Status:** Implemented and verified on `member-a`
 > **Owner:** Member A
 > **Scope:** Shared fixture execution, pure scheduler decomposition, and rescue strategy scoring
 
@@ -247,3 +247,27 @@ The implementation is accepted only when:
 - No offline sync or third-party calendar work.
 - No automatic fixture rewriting or tolerance that hides semantic differences.
 - No change to the existing rescue transaction's atomicity, baseline hash, snapshot, undo, or event behavior.
+
+## Implementation Evidence
+
+Implemented commits:
+
+- `1370d3f`: versioned rescue strategy weights and pure Python/Dart weight validation.
+- `b0c6efb`: Python and Dart `SchedulerCore` entry points with compatibility facades.
+- `276dd72`: UTC `Z` parsing compatibility in the Python core.
+- `4d0c6b6`: Dart fixture runner and canonical request execution.
+- `754caeb`: Python orchestrator and committed parity report.
+- `1c8102e`: weighted rescue metrics, option scores, hard-issue precedence, and UI recommendation alignment.
+
+Final evidence:
+
+```text
+flutter analyze                  -> No issues found
+flutter test -r compact          -> 188 tests passed
+python -m pytest backend/tests -q -> 103 tests passed, 4 dependency deprecation warnings
+python scripts/scheduling_parity.py -> 2 fixtures, 2 matched, 0 mismatched, 0 invalid
+dart format --set-exit-if-changed (touched files) -> clean
+git diff --check                 -> clean
+```
+
+The report is stored at `reports/scheduling-parity-2026-09-14.json`. The two runtime cores are now separated behind compatibility facades. Further decomposition into smaller helper modules and production-scale performance benchmarking remain optional follow-up work; they are outside this verified behavior change.
