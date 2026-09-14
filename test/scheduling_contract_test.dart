@@ -160,6 +160,34 @@ void main() {
     );
   });
 
+  test('fixed conflict is accepted as a hard canonical issue', () {
+    final plan = SchedulingPlan(
+      entries: const [],
+      issues: const [
+        SchedulingIssue(
+          code: 'fixed_conflict',
+          message: 'Fixed entry conflict',
+          taskId: 'fixed-a',
+          explanationCodes: ['fixed_conflict'],
+        ),
+      ],
+    );
+
+    final json = SchedulingContract.planToJson(plan);
+    expect(json['issues'], isNotEmpty);
+    expect(json['risk'], {
+      'level': 'high',
+      'issueCount': 1,
+      'hardIssueCount': 1,
+    });
+    expect(
+      SchedulingContract.planFromJson(
+        Map<String, Object?>.from(json),
+      ).issues.single.code,
+      'fixed_conflict',
+    );
+  });
+
   test('adapter rejects non-minute datetime values', () {
     expect(
       () => SchedulingContract.taskFromJson({

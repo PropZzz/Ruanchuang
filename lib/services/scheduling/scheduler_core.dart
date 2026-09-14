@@ -85,12 +85,32 @@ int? _earliestStartMinutes(PlanTask task, DateTime day) {
 }
 
 List<String> _explanationCodes(PlanTask task, EnergyTier energy) {
-  final codes = <String>[task.due == null ? 'priority' : 'deadline_proximity'];
-  if ((energy == EnergyTier.low || energy == EnergyTier.veryLow) &&
-      task.load == CognitiveLoad.low) {
-    codes.add('energy_fit');
-  }
-  return codes;
+  final codes = <String>[
+    if (task.due != null) 'deadline_proximity',
+    'priority',
+  ];
+  final targetLoad = switch (energy) {
+    EnergyTier.veryLow || EnergyTier.low => CognitiveLoad.low,
+    EnergyTier.medium => CognitiveLoad.medium,
+    EnergyTier.high || EnergyTier.veryHigh => CognitiveLoad.high,
+  };
+  if (task.load == targetLoad) codes.add('energy_fit');
+  return _orderedExplanationCodes(codes);
+}
+
+List<String> _orderedExplanationCodes(Iterable<String> codes) {
+  const order = [
+    'deadline_proximity',
+    'priority',
+    'energy_fit',
+    'kept_baseline',
+    'fixed_conflict',
+  ];
+  final unique = codes.toSet();
+  return [
+    for (final code in order)
+      if (unique.contains(code)) code,
+  ];
 }
 
 /// P0 heuristic scheduling engine.
@@ -125,6 +145,9 @@ class SchedulerCore implements SchedulingEngine {
       free.add(_Interval(s, e));
     }
 
+    final fixedConflictIds = <String>{};
+    final validFixed = <ScheduleEntry>[];
+
     // Fixed entries are immutable hard constraints. Keep them in the output,
     // but report overlaps and entries that do not belong to any work window.
     for (var index = 0; index < fixed.length; index++) {
@@ -148,6 +171,9 @@ class SchedulerCore implements SchedulingEngine {
             end <= windowEnd;
       });
       if (overlaps || !inWindow) {
+        if (entry.id != null && entry.id!.isNotEmpty) {
+          fixedConflictIds.add(entry.id!);
+        }
         issues.add(
           SchedulingIssue(
             code: 'fixed_conflict',
@@ -159,10 +185,18 @@ class SchedulerCore implements SchedulingEngine {
           ),
         );
       }
+      final intersectsWindow = request.windows.any((window) {
+        final windowStart = _todToMin(window.start);
+        final windowEnd = _todToMin(window.end);
+        return windowEnd > windowStart &&
+            start < windowEnd &&
+            end > windowStart;
+      });
+      if (intersectsWindow) validFixed.add(entry);
     }
 
     // Subtract fixed blocks (hard constraints).
-    for (final f in fixed) {
+    for (final f in validFixed) {
       final s = _todToMin(f.time);
       final d = _durationFromHeight(f.height);
       final e = (s + d).clamp(0, 24 * 60).toInt();
@@ -189,6 +223,11 @@ class SchedulerCore implements SchedulingEngine {
       final nextPending = <PlanTask>[];
 
       for (final t in pending) {
+        if (fixedIds.contains(t.id)) {
+          placedIds.add(t.id);
+          progressed = true;
+          continue;
+        }
         final blockedBy = t.dependsOn
             .where((id) => !placedIds.contains(id))
             .toList(growable: false);
@@ -233,14 +272,19 @@ class SchedulerCore implements SchedulingEngine {
         var remaining = dur;
         while (remaining > 0) {
           final chunkDuration = splittable
-              ? _nextChunkDuration(remaining, minimumChunk, free)
+              ? _nextChunkDuration(
+                  remaining,
+                  minimumChunk,
+                  free,
+                  earliestMin: earliestMin,
+                )
               : remaining;
           if (chunkDuration == null) break;
           final placement = _pickSlot(
             free: free,
             duration: chunkDuration,
             dueMin: dueMin,
-            earliestMin: placements.isEmpty ? earliestMin : null,
+            earliestMin: earliestMin,
             hardDeadline: t.hardDeadline,
             energy: energy,
             load: t.load,
@@ -269,6 +313,16 @@ class SchedulerCore implements SchedulingEngine {
                   : const ['deadline_proximity'],
             ),
           );
+          if (dueMin != null && dueMin < 0) {
+            issues.add(
+              SchedulingIssue(
+                code: 'overdue',
+                message: 'Task due before the requested day: ${t.title}',
+                taskId: t.id,
+                explanationCodes: const ['deadline_proximity'],
+              ),
+            );
+          }
           failedIds.add(t.id);
           progressed = true;
           continue;
@@ -342,8 +396,14 @@ class SchedulerCore implements SchedulingEngine {
     // Final output: fixed blocks + planned, sorted.
     final fixedOutput = fixed
         .map(
-          (entry) =>
-              entry.copyWith(source: 'fixed', explanationCodes: const []),
+          (entry) => entry.copyWith(
+            source: 'fixed',
+            explanationCodes: _orderedExplanationCodes([
+              ...entry.explanationCodes,
+              if (entry.id != null && fixedConflictIds.contains(entry.id))
+                'fixed_conflict',
+            ]),
+          ),
         )
         .toList(growable: false);
     final out = <ScheduleEntry>[...fixedOutput, ...planned];
@@ -363,15 +423,25 @@ class SchedulerCore implements SchedulingEngine {
   int? _nextChunkDuration(
     int remaining,
     int minimumChunk,
-    List<_Interval> intervals,
-  ) {
-    if (intervals.any((interval) => interval.length >= remaining)) {
+    List<_Interval> intervals, {
+    int? earliestMin,
+  }) {
+    final lengths = intervals
+        .map(
+          (interval) =>
+              interval.endMin -
+              (earliestMin == null || interval.startMin > earliestMin
+                  ? interval.startMin
+                  : earliestMin),
+        )
+        .where((length) => length > 0)
+        .toList(growable: false);
+    if (lengths.any((length) => length >= remaining)) {
       return remaining;
     }
-    final largest = intervals.fold<int>(
+    final largest = lengths.fold<int>(
       0,
-      (maxLength, interval) =>
-          interval.length > maxLength ? interval.length : maxLength,
+      (maxLength, length) => length > maxLength ? length : maxLength,
     );
     if (largest < minimumChunk) return null;
     var candidate = remaining < largest ? remaining : largest;

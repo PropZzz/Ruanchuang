@@ -123,8 +123,16 @@ def _task_id(task: dict[str, Any], index: int) -> str:
 
 
 def _explanation_codes(task: dict[str, Any], energy: object) -> list[str]:
-    codes = ["deadline_proximity" if task.get("due") else "priority"]
-    if energy in {"low", "veryLow"} and task.get("load") == "low":
+    codes = ["deadline_proximity"] if task.get("due") else []
+    codes.append("priority")
+    target_load = {
+        "veryLow": "low",
+        "low": "low",
+        "medium": "medium",
+        "high": "high",
+        "veryHigh": "high",
+    }.get(str(energy))
+    if target_load is not None and task.get("load") == target_load:
         codes.append("energy_fit")
     return _ordered_explanation_codes(codes)
 

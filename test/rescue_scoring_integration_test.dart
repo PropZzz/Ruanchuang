@@ -67,6 +67,40 @@ void main() {
     },
   );
 
+  test('hard deadline no-slot contributes to overdue risk', () {
+    final metrics = metricsForRescuePlan(
+      plan: const SchedulingPlan(
+        entries: [],
+        issues: [
+          SchedulingIssue(
+            code: 'no_slot',
+            message: 'blocked',
+            taskId: 'urgent',
+          ),
+        ],
+      ),
+      tasks: [
+        PlanTask(
+          id: 'urgent',
+          title: 'Urgent',
+          durationMinutes: 30,
+          priority: 5,
+          due: DateTime(2026, 9, 14, 10),
+          load: CognitiveLoad.high,
+          tag: 'Urgent',
+          hardDeadline: true,
+        ),
+      ],
+      movedEntryCount: 0,
+      baselineEntryCount: 0,
+      energy: EnergyTier.medium,
+      recoveryMinutes: 0,
+    );
+
+    expect(metrics.urgency, closeTo(0.0, 0.000001));
+    expect(metrics.overdueRisk, closeTo(1.0, 0.000001));
+  });
+
   test('local rescue options expose the five weighted score metrics', () {
     final day = DateTime(2026, 9, 14);
     final options =

@@ -41,7 +41,9 @@
             },
             "source": "planned",
             "explanationCodes": [
-              "deadline_proximity"
+              "deadline_proximity",
+              "priority",
+              "energy_fit"
             ]
           },
           {
@@ -122,7 +124,9 @@
             },
             "source": "planned",
             "explanationCodes": [
-              "deadline_proximity"
+              "deadline_proximity",
+              "priority",
+              "energy_fit"
             ],
             "day": "2026-09-14"
           },
@@ -241,7 +245,8 @@
             },
             "source": "planned",
             "explanationCodes": [
-              "priority"
+              "priority",
+              "energy_fit"
             ]
           },
           {
@@ -257,7 +262,8 @@
             },
             "source": "planned",
             "explanationCodes": [
-              "priority"
+              "priority",
+              "energy_fit"
             ]
           }
         ],
@@ -283,7 +289,8 @@
             },
             "source": "planned",
             "explanationCodes": [
-              "priority"
+              "priority",
+              "energy_fit"
             ],
             "day": "2026-09-14"
           },
@@ -299,7 +306,8 @@
             },
             "source": "planned",
             "explanationCodes": [
-              "priority"
+              "priority",
+              "energy_fit"
             ],
             "day": "2026-09-14"
           }

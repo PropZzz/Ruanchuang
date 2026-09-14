@@ -330,7 +330,10 @@ void main() {
         'no-due-a',
         'no-due-short',
       ]);
-      expect(plan.entries.first.explanationCodes, ['deadline_proximity']);
+      expect(plan.entries.first.explanationCodes, [
+        'deadline_proximity',
+        'priority',
+      ]);
       expect(plan.entries[2].explanationCodes, ['priority']);
       expect(plan.entries.every((entry) => entry.source == 'planned'), isTrue);
     });

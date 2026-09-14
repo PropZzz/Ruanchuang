@@ -838,7 +838,9 @@ class SchedulingRisk {
     final hard = issues
         .where(
           (issue) =>
-              issue.code == 'no_slot' || issue.code == 'dependency_blocked',
+              issue.code == 'no_slot' ||
+              issue.code == 'dependency_blocked' ||
+              issue.code == 'fixed_conflict',
         )
         .length;
     return SchedulingRisk(

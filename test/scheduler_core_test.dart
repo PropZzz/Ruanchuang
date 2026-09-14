@@ -57,6 +57,168 @@ void main() {
     expect(plan.issues.single.code, 'no_slot');
   });
 
+  test('split task applies earliestStart to every chunk', () {
+    final plan = const SchedulerCore().plan(
+      SchedulingRequest(
+        day: DateTime(2026, 9, 14),
+        tasks: [
+          PlanTask(
+            id: 'split',
+            title: 'Split',
+            durationMinutes: 30,
+            priority: 3,
+            load: CognitiveLoad.medium,
+            tag: 'Task',
+            splittable: true,
+            minimumChunkMinutes: 15,
+            earliestStart: DateTime(2026, 9, 14, 10),
+          ),
+        ],
+        windows: [
+          TimeWindow(
+            start: TimeOfDay(hour: 9, minute: 0),
+            end: TimeOfDay(hour: 9, minute: 30),
+          ),
+          TimeWindow(
+            start: TimeOfDay(hour: 10, minute: 0),
+            end: TimeOfDay(hour: 10, minute: 15),
+          ),
+          TimeWindow(
+            start: TimeOfDay(hour: 10, minute: 30),
+            end: TimeOfDay(hour: 10, minute: 45),
+          ),
+        ],
+        energy: EnergyTier.medium,
+      ),
+    );
+
+    expect(plan.entries, hasLength(2));
+    expect(plan.entries.map((entry) => entry.time), [
+      const TimeOfDay(hour: 10, minute: 0),
+      const TimeOfDay(hour: 10, minute: 30),
+    ]);
+  });
+
+  test('fixed blocks outside windows do not consume a valid window', () {
+    final day = DateTime(2026, 9, 14);
+    final plan = const SchedulerCore().plan(
+      SchedulingRequest(
+        day: day,
+        tasks: [
+          PlanTask(
+            id: 'task',
+            title: 'Task',
+            durationMinutes: 30,
+            priority: 3,
+            load: CognitiveLoad.medium,
+            tag: 'Task',
+          ),
+        ],
+        windows: [
+          TimeWindow(
+            start: TimeOfDay(hour: 9, minute: 0),
+            end: TimeOfDay(hour: 10, minute: 0),
+          ),
+        ],
+        energy: EnergyTier.medium,
+        fixed: [
+          ScheduleEntry(
+            id: 'out',
+            day: day,
+            title: 'Out',
+            tag: 'Fixed',
+            height: 80,
+            color: Colors.blue,
+            time: const TimeOfDay(hour: 12, minute: 0),
+            explanationCodes: ['priority'],
+          ),
+        ],
+      ),
+    );
+
+    expect(plan.entries.any((entry) => entry.id == 'task'), isTrue);
+    final fixed = plan.entries.singleWhere((entry) => entry.id == 'out');
+    expect(fixed.explanationCodes, ['priority', 'fixed_conflict']);
+  });
+
+  test(
+    'partially overlapping fixed blocks still occupy the intersecting window',
+    () {
+      final day = DateTime(2026, 9, 14);
+      final plan = const SchedulerCore().plan(
+        SchedulingRequest(
+          day: day,
+          tasks: [
+            PlanTask(
+              id: 'task',
+              title: 'Task',
+              durationMinutes: 15,
+              priority: 3,
+              load: CognitiveLoad.medium,
+              tag: 'Task',
+            ),
+          ],
+          windows: [
+            TimeWindow(
+              start: TimeOfDay(hour: 9, minute: 0),
+              end: TimeOfDay(hour: 10, minute: 0),
+            ),
+          ],
+          energy: EnergyTier.medium,
+          fixed: [
+            ScheduleEntry(
+              id: 'partial',
+              day: day,
+              title: 'Partial',
+              tag: 'Fixed',
+              height: 160,
+              color: Colors.blue,
+              time: const TimeOfDay(hour: 8, minute: 30),
+            ),
+          ],
+        ),
+      );
+
+      expect(plan.entries.where((entry) => entry.id == 'task'), isEmpty);
+      expect(
+        plan.issues.any((issue) => issue.code == 'fixed_conflict'),
+        isTrue,
+      );
+    },
+  );
+
+  test('planned explanation codes are ordered and include energy fit', () {
+    final plan = const SchedulerCore().plan(
+      SchedulingRequest(
+        day: DateTime(2026, 9, 14),
+        tasks: [
+          PlanTask(
+            id: 'task',
+            title: 'Task',
+            durationMinutes: 15,
+            priority: 3,
+            load: CognitiveLoad.low,
+            tag: 'Task',
+            due: DateTime(2026, 9, 14, 12),
+          ),
+        ],
+        windows: [
+          TimeWindow(
+            start: TimeOfDay(hour: 9, minute: 0),
+            end: TimeOfDay(hour: 10, minute: 0),
+          ),
+        ],
+        energy: EnergyTier.low,
+      ),
+    );
+
+    expect(plan.entries.single.explanationCodes, [
+      'deadline_proximity',
+      'priority',
+      'energy_fit',
+    ]);
+  });
+
   test(
     'fixed entries remain and report overlap and out-of-window conflicts',
     () {
@@ -175,6 +337,36 @@ void main() {
       expect(soft.issues.single.code, 'miss_due');
     },
   );
+
+  test('hard overdue tasks report overdue risk in addition to no_slot', () {
+    final plan = const SchedulerCore().plan(
+      SchedulingRequest(
+        day: DateTime(2026, 9, 14),
+        tasks: [
+          PlanTask(
+            id: 'overdue',
+            title: 'Overdue',
+            durationMinutes: 15,
+            priority: 3,
+            load: CognitiveLoad.medium,
+            tag: 'Task',
+            due: DateTime(2026, 9, 13, 9),
+            hardDeadline: true,
+          ),
+        ],
+        windows: [
+          TimeWindow(
+            start: TimeOfDay(hour: 9, minute: 0),
+            end: TimeOfDay(hour: 10, minute: 0),
+          ),
+        ],
+        energy: EnergyTier.medium,
+      ),
+    );
+
+    expect(plan.entries, isEmpty);
+    expect(plan.issues.map((issue) => issue.code), ['no_slot', 'overdue']);
+  });
 
   test('recovery buffer is only inserted into a legal free interval', () {
     final day = DateTime(2026, 9, 14);

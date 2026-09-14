@@ -350,7 +350,13 @@ class SchedulingContract {
   }
 
   static void _issueCode(String code) {
-    const allowed = {'no_slot', 'miss_due', 'overdue', 'dependency_blocked'};
+    const allowed = {
+      'no_slot',
+      'miss_due',
+      'overdue',
+      'dependency_blocked',
+      'fixed_conflict',
+    };
     if (!allowed.contains(code))
       throw FormatException('invalid issue code: $code');
   }

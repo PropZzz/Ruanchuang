@@ -47,7 +47,7 @@
         "durationMinutes": 60,
         "time": {"hour": 9, "minute": 0},
         "source": "planned",
-        "explanationCodes": ["priority"]
+        "explanationCodes": ["priority", "energy_fit"]
       },
       {
         "id": "split-task#2",
@@ -58,7 +58,7 @@
         "durationMinutes": 30,
         "time": {"hour": 11, "minute": 0},
         "source": "planned",
-        "explanationCodes": ["priority"]
+        "explanationCodes": ["priority", "energy_fit"]
       }
     ],
     "issues": [],

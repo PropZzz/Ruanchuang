@@ -40,6 +40,13 @@ RESCUE_TRADEOFFS = {
 RECOVERY_BUFFER_COLOR = 0xFF80CBC4
 RECOVERY_BUFFER_MINUTES = 15
 RECOVERY_BUFFER_HEIGHT = 20.0
+EXPLANATION_CODE_ORDER = (
+    "deadline_proximity",
+    "priority",
+    "energy_fit",
+    "kept_baseline",
+    "fixed_conflict",
+)
 
 
 def _iso_day(value: object) -> str | None:
@@ -233,6 +240,75 @@ def _moved_ids(
     return moved
 
 
+def _annotate_kept_baseline(
+    plan: dict[str, Any],
+    baseline: list[dict[str, Any]],
+) -> dict[str, Any]:
+    baseline_by_id = {
+        str(entry.get("id")): entry
+        for entry in baseline
+        if isinstance(entry, dict) and entry.get("id")
+    }
+    if not baseline_by_id:
+        return plan
+    entries: list[dict[str, Any]] = []
+    for raw in plan.get("entries") or []:
+        entry = dict(raw)
+        original = baseline_by_id.get(str(entry.get("id")))
+        if original is not None:
+            unchanged = entry.get("time") == original.get("time")
+            try:
+                unchanged = unchanged and abs(
+                    float(entry.get("height") or 0.0)
+                    - float(original.get("height") or 0.0)
+                ) <= 0.1
+            except (TypeError, ValueError):
+                unchanged = False
+            if unchanged:
+                codes = list(entry.get("explanationCodes") or [])
+                if "kept_baseline" not in codes:
+                    codes.append("kept_baseline")
+                code_set = set(codes)
+                entry["explanationCodes"] = [
+                    code for code in EXPLANATION_CODE_ORDER if code in code_set
+                ]
+        entries.append(entry)
+    return {**plan, "entries": entries}
+
+
+def _baseline_tasks(
+    baseline: list[dict[str, Any]],
+    existing_tasks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    known_ids = {
+        str(task.get("id"))
+        for task in existing_tasks
+        if isinstance(task, dict) and task.get("id")
+    }
+    derived: list[dict[str, Any]] = []
+    for entry in baseline:
+        if not isinstance(entry, dict) or not entry.get("id"):
+            continue
+        entry_id = str(entry["id"])
+        if entry_id in known_ids:
+            continue
+        try:
+            duration = max(1, round(float(entry.get("height") or 80.0) / 80.0 * 60.0))
+        except (TypeError, ValueError):
+            duration = 60
+        derived.append(
+            {
+                "id": entry_id,
+                "title": str(entry.get("title") or ""),
+                "durationMinutes": duration,
+                "priority": 3,
+                "load": entry.get("load") or "medium",
+                "tag": str(entry.get("tag") or "Task"),
+            }
+        )
+    return derived
+
+
 def build_options(request: dict[str, Any]) -> dict[str, Any]:
     """Generate the three rescue options plus the baseline hash."""
     day_iso = _iso_day(request.get("day")) or ""
@@ -259,20 +335,22 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
         baseline_fixed.append(baseline_entry)
 
     no_window_baseline = baseline if not windows else []
+    baseline_tasks = _baseline_tasks(baseline, tasks)
+    all_tasks = [*tasks, *baseline_tasks, urgent]
 
     compositions = {
         "protectDeadline": {
-            "tasks": [*tasks, urgent],
+            "tasks": all_tasks,
             "energy": energy,
             "fixed": [*fixed, *no_window_baseline],
         },
         "protectRecovery": {
-            "tasks": [*tasks, urgent],
+            "tasks": all_tasks,
             "energy": _lower_energy(energy),
             "fixed": [*fixed, *no_window_baseline],
         },
         "minimizeChanges": {
-            "tasks": [*tasks, urgent],
+            "tasks": all_tasks,
             "energy": energy,
             "fixed": [*fixed, *baseline_fixed],
         },
@@ -291,6 +369,7 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
                 "fixed": composition["fixed"],
             }
         )
+        plan = _annotate_kept_baseline(plan, baseline)
         if strategy == "protectRecovery":
             selected_recovery = _recovery_buffer(
                 day_iso,
@@ -298,7 +377,10 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
                 [*composition["fixed"], *plan.get("entries", [])],
             )
             if selected_recovery is not None:
-                plan["entries"].append(selected_recovery | {"source": "fixed", "explanationCodes": []})
+                plan["entries"].append(
+                    selected_recovery
+                    | {"source": "recovery", "explanationCodes": []}
+                )
                 plan["entries"].sort(
                     key=lambda entry: (
                         int((entry.get("time") or {}).get("hour") or 0) * 60
@@ -315,7 +397,7 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
         )
         metrics = metrics_for_plan(
             plan,
-            [*tasks, urgent],
+            all_tasks,
             moved_entry_count=len(moved_ids),
             baseline_entry_count=len(baseline),
             energy=composition["energy"],

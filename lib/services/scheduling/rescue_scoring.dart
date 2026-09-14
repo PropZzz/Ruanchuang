@@ -24,7 +24,6 @@ class RescuePlanMetrics {
     'energyFit': energyFit,
     'stability': stability,
     'recovery': recovery,
-    'overdueRisk': overdueRisk,
   };
 }
 
@@ -44,22 +43,42 @@ RescuePlanMetrics metricsForRescuePlan({
         return id != null;
       })
       .toList(growable: false);
-  final dueCount = tasks.where((task) => task.due != null).length;
-  final missedCount = plan.issues
-      .where((issue) => issue.code == 'miss_due' || issue.code == 'overdue')
-      .length;
-  final urgency = _clamp(1.0 - missedCount / (dueCount > 0 ? dueCount : 1));
+  final missedTaskIds = <String>{};
+  for (final issue in plan.issues) {
+    final taskId = _baseTaskId(issue.taskId, taskById);
+    if (taskId == null) continue;
+    final task = taskById[taskId];
+    if (task == null) continue;
+    if (issue.code == 'miss_due' ||
+        issue.code == 'overdue' ||
+        (issue.code == 'no_slot' && task.due != null)) {
+      missedTaskIds.add(taskId);
+    }
+  }
+  final missedCount = missedTaskIds.length;
   final placedTaskIds = <String>{};
   for (final entry in placed) {
     final id = _baseTaskId(entry.id, taskById);
     if (id != null) placedTaskIds.add(id);
   }
+  final evaluatedTaskIds = <String>{...placedTaskIds};
+  for (final issue in plan.issues) {
+    final id = _baseTaskId(issue.taskId, taskById);
+    if (id != null) evaluatedTaskIds.add(id);
+  }
+  final evaluatedTaskCount = evaluatedTaskIds.length;
+  final dueCount = evaluatedTaskIds
+      .map((id) => taskById[id])
+      .whereType<PlanTask>()
+      .where((task) => task.due != null)
+      .length;
+  final urgency = _clamp(1.0 - missedCount / (dueCount > 0 ? dueCount : 1));
   final prioritySum = placedTaskIds.fold<int>(
     0,
     (sum, id) => sum + (taskById[id]?.priority ?? 0),
   );
   final priority = _clamp(
-    prioritySum / (5 * (tasks.isEmpty ? 1 : tasks.length)),
+    prioritySum / (5 * (evaluatedTaskCount > 0 ? evaluatedTaskCount : 1)),
   );
 
   final targetLoad = switch (energy) {

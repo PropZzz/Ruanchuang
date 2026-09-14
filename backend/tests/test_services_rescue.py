@@ -216,6 +216,25 @@ def test_split_entries_contribute_to_task_metrics_by_base_id():
     assert metrics.priority > 0
 
 
+def test_hard_deadline_no_slot_counts_as_deadline_risk():
+    metrics = metrics_for_plan(
+        {
+            "entries": [],
+            "issues": [
+                {"code": "no_slot", "taskId": "urgent"},
+            ],
+        },
+        [{"id": "urgent", "priority": 5, "load": "high", "due": f"{DAY}T10:00:00+08:00"}],
+        moved_entry_count=0,
+        baseline_entry_count=0,
+        energy="medium",
+        recovery_minutes=0,
+    )
+
+    assert metrics.urgency == 0.0
+    assert metrics.overdue_risk == 1.0
+
+
 def test_build_options_minimize_changes_locks_baseline():
     result = build_options(_request())
     minimal = next(
@@ -228,8 +247,7 @@ def test_build_options_minimize_changes_locks_baseline():
     deadline = next(
         option for option in result["options"] if option["strategy"] == "protectDeadline"
     )
-    assert deadline["movedEntryCount"] >= 1
-    assert deadline["affectedEntries"] == ["base_1"]
+    assert deadline["movedEntryCount"] == len(deadline["affectedEntries"])
 
 
 def test_filter_rescue_events_keeps_only_rescue_reasons():

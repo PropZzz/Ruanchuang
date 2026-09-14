@@ -377,7 +377,8 @@
             "no_slot",
             "miss_due",
             "overdue",
-            "dependency_blocked"
+            "dependency_blocked",
+            "fixed_conflict"
           ]
         },
         "message": {

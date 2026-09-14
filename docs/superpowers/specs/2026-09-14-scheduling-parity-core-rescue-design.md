@@ -198,7 +198,7 @@ The normalized plan metrics are:
 - `stability`: `1 - movedEntryCount / max(1, baselineEntryCount)`.
 - `recovery`: `min(recoveryMinutes / recoveryBufferMinutes, 1.0)`.
 
-The total score is the weighted sum of these five values. Strategy selection first minimizes hard issue count (`no_slot`, `dependency_blocked`, and hard-deadline failures), then maximizes total score, then uses the fixed strategy order `protectDeadline`, `protectRecovery`, `minimizeChanges` as a stable tie-break.
+The total score is the weighted sum of these five values. Strategy selection first minimizes hard issue count (`fixed_conflict`, `no_slot`, `dependency_blocked`, and hard-deadline failures), then maximizes total score, then uses the fixed strategy order `protectDeadline`, `protectRecovery`, `minimizeChanges` as a stable tie-break.
 
 Each rescue option exposes:
 

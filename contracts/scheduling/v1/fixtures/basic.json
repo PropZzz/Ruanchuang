@@ -116,7 +116,9 @@
         },
         "source": "planned",
         "explanationCodes": [
-          "deadline_proximity"
+          "deadline_proximity",
+          "priority",
+          "energy_fit"
         ]
       },
       {

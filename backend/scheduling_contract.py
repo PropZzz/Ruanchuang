@@ -37,6 +37,7 @@ class IssueCode(str, Enum):
     miss_due = "miss_due"
     overdue = "overdue"
     dependency_blocked = "dependency_blocked"
+    fixed_conflict = "fixed_conflict"
 
 
 class Source(str, Enum):
@@ -291,7 +292,9 @@ def to_contract_response(result: dict[str, Any], request: SchedulingRequest) -> 
             issue["blockedBy"] = list(raw["blockedBy"])
         issues.append(issue)
     hard_issue_count = sum(
-        1 for issue in issues if issue.get("code") in {"no_slot", "dependency_blocked"}
+        1
+        for issue in issues
+        if issue.get("code") in {"no_slot", "dependency_blocked", "fixed_conflict"}
     )
     issue_count = len(issues)
     level = "high" if hard_issue_count else "medium" if issue_count else "none"

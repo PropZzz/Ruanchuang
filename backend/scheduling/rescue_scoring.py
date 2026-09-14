@@ -183,9 +183,17 @@ def metrics_for_plan(
     )
     evaluated_tasks = [task for task_id, task in task_by_id.items() if task_id in evaluated_ids]
     due_count = sum(1 for task in evaluated_tasks if task.get("due"))
-    missed_count = sum(
-        1 for issue in issues if issue.get("code") in {"miss_due", "overdue"}
-    )
+    missed_task_ids: set[str] = set()
+    for issue in issues:
+        task_id = base_task_id(issue.get("taskId"))
+        task = task_by_id.get(task_id)
+        if task is None:
+            continue
+        if issue.get("code") in {"miss_due", "overdue"}:
+            missed_task_ids.add(task_id)
+        elif issue.get("code") == "no_slot" and task.get("due"):
+            missed_task_ids.add(task_id)
+    missed_count = len(missed_task_ids)
     urgency = 1.0 - missed_count / max(1, due_count)
     priority_sum = sum(int(task.get("priority") or 0) for task in placed_tasks)
     priority = priority_sum / (5 * max(1, len(evaluated_tasks)))

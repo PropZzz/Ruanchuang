@@ -109,6 +109,29 @@ def test_response_adapter_emits_schema_shape_without_height_or_optional_blocked_
     SchedulingResponse.model_validate(body)
 
 
+def test_fixed_conflict_is_a_hard_canonical_issue() -> None:
+    request = SchedulingRequest.model_validate(_fixture_request())
+    result = {
+        "entries": [],
+        "issues": [
+            {
+                "code": "fixed_conflict",
+                "message": "Fixed entry conflict",
+                "taskId": "fixed-a",
+                "explanationCodes": ["fixed_conflict"],
+            }
+        ],
+    }
+
+    body = to_contract_response(result, request).model_dump(
+        mode="json", by_alias=True, exclude_none=True
+    )
+
+    assert body["risk"]["level"] == "high"
+    assert body["risk"]["hardIssueCount"] == 1
+    assert _schema_validator().is_valid(body)
+
+
 def test_replan_api_accepts_missing_schema_version_and_returns_canonical_response(tmp_path) -> None:
     reset_token_store()
     with TestClient(create_app(tmp_path / "contract.sqlite3")) as client:

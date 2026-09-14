@@ -56,23 +56,36 @@ class ScheduleRescueService {
     required PlanTask urgent,
   }) {
     RescueStrategyWeights.validate();
-    final allTasks = [...base.tasks, urgent];
+    final allTasks = [
+      ...base.tasks,
+      ..._baselineTasks(baseline, base.tasks),
+      urgent,
+    ];
 
-    final deadlinePlan = engine.plan(_request(base, tasks: allTasks));
-
-    final recoveryBuffer = _recoveryBuffer(base);
-    final recoveryPlan = engine.plan(
-      _request(
-        base,
-        tasks: allTasks,
-        energy: _lowerEnergy(base.energy),
-        fixed: [...base.fixed, if (recoveryBuffer != null) recoveryBuffer],
-      ),
+    final deadlinePlan = _annotateKeptBaseline(
+      engine.plan(_request(base, tasks: allTasks)),
+      baseline,
     );
+
+    final recoveryInitialPlan = engine.plan(
+      _request(base, tasks: allTasks, energy: _lowerEnergy(base.energy)),
+    );
+    final recoveryBuffer = _recoveryBuffer(base, recoveryInitialPlan);
+    final recoveryPlan = recoveryBuffer == null
+        ? _annotateKeptBaseline(recoveryInitialPlan, baseline)
+        : _annotateKeptBaseline(
+            _appendRecovery(recoveryInitialPlan, recoveryBuffer),
+            baseline,
+          );
+    final recoveryMinutes =
+        recoveryBuffer != null &&
+            recoveryPlan.entries.any((entry) => entry.id == recoveryBuffer.id)
+        ? RescueStrategyWeights.recoveryBufferMinutes
+        : 0;
 
     final minimalPlan = _annotateKeptBaseline(
       engine.plan(
-        _request(base, tasks: [urgent], fixed: [...base.fixed, ...baseline]),
+        _request(base, tasks: allTasks, fixed: [...base.fixed, ...baseline]),
       ),
       baseline,
     );
@@ -91,14 +104,12 @@ class ScheduleRescueService {
       tasks: allTasks,
       baseline: baseline,
       energy: _lowerEnergy(base.energy),
-      recoveryMinutes: recoveryBuffer == null
-          ? 0
-          : RescueStrategyWeights.recoveryBufferMinutes,
+      recoveryMinutes: recoveryMinutes,
     );
     final minimalScore = _score(
       strategy: RescueStrategy.minimizeChanges,
       plan: minimalPlan,
-      tasks: [urgent],
+      tasks: allTasks,
       baseline: baseline,
       energy: base.energy,
       recoveryMinutes: 0,
@@ -124,9 +135,7 @@ class ScheduleRescueService {
         tradeoff: '部分低优先级任务可能顺延，适合疲劳或连续被打断的场景。',
         movedEntryCount: _movedEntryIds(baseline, recoveryPlan.entries).length,
         movedEntryIds: _movedEntryIds(baseline, recoveryPlan.entries),
-        recoveryMinutes: recoveryBuffer == null
-            ? 0
-            : RescueStrategyWeights.recoveryBufferMinutes,
+        recoveryMinutes: recoveryMinutes,
         score: recoveryScore.score,
         scoreBreakdown: recoveryScore.breakdown,
         hardIssueCount: recoveryScore.hardIssues,
@@ -193,38 +202,98 @@ class ScheduleRescueService {
     );
   }
 
+  List<PlanTask> _baselineTasks(
+    List<ScheduleEntry> baseline,
+    List<PlanTask> existing,
+  ) {
+    final knownIds = existing.map((task) => task.id).toSet();
+    return baseline
+        .where((entry) {
+          final id = entry.id;
+          return id != null && id.isNotEmpty && !knownIds.contains(id);
+        })
+        .map(
+          (entry) => PlanTask(
+            id: entry.id!,
+            title: entry.title,
+            durationMinutes: _durationFromHeight(entry.height),
+            priority: 3,
+            load: entry.load ?? CognitiveLoad.medium,
+            tag: entry.tag,
+          ),
+        )
+        .toList(growable: false);
+  }
+
   SchedulingPlan _annotateKeptBaseline(
     SchedulingPlan plan,
     List<ScheduleEntry> baseline,
   ) {
-    final baselineIds = baseline
-        .map((entry) => entry.id)
-        .whereType<String>()
-        .where((id) => id.isNotEmpty)
-        .toSet();
-    if (baselineIds.isEmpty) return plan;
+    final baselineById = <String, ScheduleEntry>{
+      for (final entry in baseline)
+        if (entry.id != null && entry.id!.isNotEmpty) entry.id!: entry,
+    };
+    if (baselineById.isEmpty) return plan;
     return SchedulingPlan(
       schemaVersion: plan.schemaVersion,
       risk: plan.risk,
       issues: plan.issues,
       entries: plan.entries
-          .map(
-            (entry) => baselineIds.contains(entry.id)
-                ? entry.copyWith(explanationCodes: const ['kept_baseline'])
-                : entry,
-          )
+          .map((entry) {
+            final original = baselineById[entry.id];
+            if (original == null) return entry;
+            final unchanged =
+                entry.time == original.time &&
+                (entry.height - original.height).abs() <= 0.1;
+            if (!unchanged) return entry;
+            return entry.copyWith(
+              explanationCodes: _orderedExplanationCodes([
+                ...entry.explanationCodes,
+                'kept_baseline',
+              ]),
+            );
+          })
           .toList(growable: false),
     );
   }
 
-  ScheduleEntry? _recoveryBuffer(SchedulingRequest base) {
+  SchedulingPlan _appendRecovery(SchedulingPlan plan, ScheduleEntry recovery) {
+    final entries = [...plan.entries, recovery.copyWith(source: 'recovery')]
+      ..sort((a, b) {
+        final timeA = _todToMin(a.time);
+        final timeB = _todToMin(b.time);
+        if (timeA != timeB) return timeA.compareTo(timeB);
+        final sourceA = a.source == 'fixed' ? 0 : 1;
+        final sourceB = b.source == 'fixed' ? 0 : 1;
+        if (sourceA != sourceB) return sourceA.compareTo(sourceB);
+        return (a.id ?? '').compareTo(b.id ?? '');
+      });
+    return SchedulingPlan(
+      schemaVersion: plan.schemaVersion,
+      entries: entries,
+      issues: plan.issues,
+      risk: plan.risk,
+    );
+  }
+
+  ScheduleEntry? _recoveryBuffer(
+    SchedulingRequest base,
+    SchedulingPlan planned,
+  ) {
     final free = <_RecoveryInterval>[];
+    final blocks = <ScheduleEntry>[];
+    final seenIds = <String>{};
+    for (final entry in [...base.fixed, ...planned.entries]) {
+      final id = entry.id;
+      if (id != null && id.isNotEmpty && !seenIds.add(id)) continue;
+      blocks.add(entry);
+    }
     for (final window in base.windows) {
       final start = _todToMin(window.start);
       final end = _todToMin(window.end);
       if (end <= start) continue;
       final cuts =
-          base.fixed
+          blocks
               .map((entry) {
                 final fixedStart = _todToMin(entry.time);
                 final fixedEnd = fixedStart + _durationFromHeight(entry.height);
@@ -337,3 +406,18 @@ TimeOfDay _minToTod(int minutes) {
 
 int _durationFromHeight(double height) =>
     (height / 80.0 * 60.0).round().clamp(1, 24 * 60).toInt();
+
+List<String> _orderedExplanationCodes(Iterable<String> codes) {
+  const order = [
+    'deadline_proximity',
+    'priority',
+    'energy_fit',
+    'kept_baseline',
+    'fixed_conflict',
+  ];
+  final unique = codes.toSet();
+  return [
+    for (final code in order)
+      if (unique.contains(code)) code,
+  ];
+}
