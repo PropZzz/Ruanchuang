@@ -1,6 +1,6 @@
 # Scheduling Contract v1 Design
 
-> **Status:** Approved direction, implementation pending  
+> **Status:** v1 contract boundary implemented; full SchedulerCore convergence remains follow-up  
 > **Owner:** Member A  
 > **Scope:** `/schedule/replan` input/output and the Dart/Python scheduling boundary
 
@@ -209,3 +209,24 @@ The API test additionally verifies that the response validates against the same 
 - This change does not implement the full `SchedulerCore` refactor or rescue strategy weight calculations.
 - This change does not alter schedule CRUD storage semantics.
 - This change does not add offline sync, third-party calendars or new device integrations.
+
+## Implementation Evidence
+
+The v1 boundary is implemented across the JSON Schema, Python API adapter, Dart adapter, and both heuristic engines:
+
+- `3cbe46d`, `9919c60`, `047b2db`: Schema, fixtures, strict schema validation and reserved-field rules.
+- `2ad5988`: strict FastAPI `/schedule/replan` request/response adapter with legacy `height` input conversion.
+- `22d08f6`: Dart canonical adapter and persistence compatibility tests.
+- `bb0f1db`: matching ordering, dependency blocking, hard-deadline behavior and explanation metadata in Dart/Python.
+- `5452dd5`: public API and backend rule documentation.
+
+Verification on the final implementation:
+
+```text
+flutter analyze                 -> No issues found
+flutter test -r compact         -> 188 tests passed
+python -m pytest backend/tests -q -> 98 passed, 4 dependency deprecation warnings
+git diff --check                -> clean
+```
+
+The shared fixtures are schema-validated and the equivalent Dart/Python behaviors are covered by mirrored tests. An automated runner that executes every fixture through both runtimes and emits a machine-generated difference report is still a follow-up item, together with the full `SchedulerCore` module split and rescue strategy weight calculations.

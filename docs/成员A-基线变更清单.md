@@ -94,3 +94,24 @@ git diff HEAD^ HEAD --check
 ```
 
 结果：通过，无空白错误。
+
+## 8. P1 契约实施记录
+
+基线之后，成员 A 在 `member-a` 分支完成了调度契约 v1 的第一阶段实施：
+
+- 新增 `contracts/scheduling/v1/scheduling.schema.json` 和共享 fixtures。
+- FastAPI `/schedule/replan` 使用严格请求/响应适配器；CRUD 的 `height` 存储格式保持不变。
+- Dart 调度 adapter 输出 `schemaVersion`、日期-only `day`、UTC `Z` 时间和 `durationMinutes`。
+- Dart/Python 启发式引擎统一了任务排序、依赖阻塞、硬截止处理和解释码。
+- 公共接口文档和后端守则已更新。
+
+本阶段最终验证：
+
+```text
+flutter analyze                  -> No issues found
+flutter test -r compact          -> 188 tests passed
+python -m pytest backend/tests -q -> 98 passed, 4 dependency deprecation warnings
+git diff --check                 -> clean
+```
+
+尚未完成的 P1 后续项：自动执行全部共享 fixture 并生成 Dart/Python 差异报告、完整 `SchedulerCore` 模块拆分，以及救援策略权重计算的统一实现。
