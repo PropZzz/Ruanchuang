@@ -131,3 +131,108 @@ def test_unresolved_dependency_blocks_task() -> None:
 
     assert result["entries"] == []
     assert result["issues"][0]["code"] == "dependency_blocked"
+
+
+def test_task_with_fixed_id_is_not_scheduled_twice() -> None:
+    request = _request()
+    request["tasks"] = [
+        {
+            "id": "fixed-task",
+            "title": "Duplicate task",
+            "durationMinutes": 20,
+            "priority": 5,
+        }
+    ]
+    request["fixed"] = [
+        {
+            "id": "fixed-task",
+            "title": "Already fixed",
+            "time": {"hour": 9, "minute": 0},
+            "height": 20.0,
+        }
+    ]
+    result = SchedulerCore().plan(request)
+
+    assert [entry["id"] for entry in result["entries"]] == ["fixed-task"]
+    assert not [issue for issue in result["issues"] if issue["code"] == "no_slot"]
+
+
+def test_split_chunks_never_start_before_earliest_start() -> None:
+    request = _request()
+    request["windows"] = [
+        {"start": {"hour": 9, "minute": 0}, "end": {"hour": 10, "minute": 0}},
+        {"start": {"hour": 11, "minute": 0}, "end": {"hour": 12, "minute": 0}},
+    ]
+    request["tasks"] = [
+        {
+            "id": "split-late",
+            "title": "Split late",
+            "durationMinutes": 60,
+            "priority": 5,
+            "splittable": True,
+            "minimumChunkMinutes": 30,
+            "earliestStart": "2026-09-14T10:30:00+08:00",
+        }
+    ]
+    result = SchedulerCore().plan(request)
+
+    assert result["entries"]
+    assert all(
+        entry["time"]["hour"] * 60 + entry["time"]["minute"] >= 10 * 60 + 30
+        for entry in result["entries"]
+    )
+
+
+def test_conflicted_fixed_entries_still_block_ordinary_tasks() -> None:
+    request = _request()
+    request["windows"] = [
+        {"start": {"hour": 9, "minute": 0}, "end": {"hour": 10, "minute": 0}}
+    ]
+    request["fixed"] = [
+        {"id": "fixed-a", "title": "A", "time": {"hour": 9, "minute": 0}, "height": 80},
+        {"id": "fixed-b", "title": "B", "time": {"hour": 9, "minute": 30}, "height": 40},
+    ]
+    request["tasks"] = [
+        {"id": "task", "title": "Task", "durationMinutes": 30, "priority": 5}
+    ]
+    result = SchedulerCore().plan(request)
+
+    assert not [entry for entry in result["entries"] if entry["id"] == "task"]
+    assert any(issue["code"] == "no_slot" for issue in result["issues"])
+
+
+def test_explanation_codes_are_deterministic_and_deduplicated() -> None:
+    request = _request()
+    request["tasks"] = []
+    request["fixed"] = [
+        {
+            "id": "baseline",
+            "title": "Baseline",
+            "time": {"hour": 9, "minute": 0},
+            "height": 20.0,
+            "explanationCodes": ["kept_baseline", "priority", "kept_baseline", "unknown"],
+        }
+    ]
+    result = SchedulerCore().plan(request)
+
+    assert result["entries"][0]["explanationCodes"] == ["priority", "kept_baseline"]
+
+
+def test_hard_overdue_task_reports_overdue_even_when_no_slot_exists() -> None:
+    request = _request()
+    request["windows"] = [
+        {"start": {"hour": 10, "minute": 0}, "end": {"hour": 10, "minute": 15}}
+    ]
+    request["tasks"] = [
+        {
+            "id": "hard-overdue",
+            "title": "Hard overdue",
+            "durationMinutes": 30,
+            "priority": 5,
+            "due": "2026-09-13T09:30:00+08:00",
+            "hardDeadline": True,
+        }
+    ]
+    result = SchedulerCore().plan(request)
+
+    assert {issue["code"] for issue in result["issues"]} >= {"no_slot", "overdue"}

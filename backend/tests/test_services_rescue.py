@@ -171,6 +171,31 @@ def test_build_options_recovery_buffer_is_not_synthetic_when_no_15_minute_slot_e
     assert recovery["scoreBreakdown"]["recovery"] == 0.0
 
 
+def test_recovery_buffer_does_not_reserve_noon_before_urgent_task_placement():
+    request = _request(
+        currentEntries=[],
+        fixed=[
+            {
+                "id": "morning-meeting",
+                "title": "Meeting",
+                "time": {"hour": 8, "minute": 0},
+                "height": 320.0,
+            }
+        ],
+        windows=[
+            {"start": {"hour": 8, "minute": 0}, "end": {"hour": 10, "minute": 0}},
+            {"start": {"hour": 12, "minute": 0}, "end": {"hour": 13, "minute": 12}},
+        ],
+    )
+    result = build_options(request)
+    recovery = next(
+        option for option in result["options"] if option["strategy"] == "protectRecovery"
+    )
+
+    assert any(entry["id"] == "urgent_1" for entry in recovery["plannedEntries"])
+    assert recovery["recoveryMinutes"] == 0
+
+
 def test_split_entries_contribute_to_task_metrics_by_base_id():
     plan = {
         "entries": [

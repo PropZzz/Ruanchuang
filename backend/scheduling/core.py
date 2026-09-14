@@ -4,6 +4,22 @@ from datetime import date, datetime
 from typing import Any
 
 
+_EXPLANATION_CODE_ORDER = (
+    "deadline_proximity",
+    "priority",
+    "energy_fit",
+    "kept_baseline",
+    "fixed_conflict",
+)
+
+
+def _ordered_explanation_codes(codes: object) -> list[str]:
+    if not isinstance(codes, list):
+        return []
+    values = {str(code) for code in codes}
+    return [code for code in _EXPLANATION_CODE_ORDER if code in values]
+
+
 def _time_to_minutes(value: object) -> int:
     if isinstance(value, dict):
         hour = int(value.get("hour", 0) or 0)
@@ -110,7 +126,7 @@ def _explanation_codes(task: dict[str, Any], energy: object) -> list[str]:
     codes = ["deadline_proximity" if task.get("due") else "priority"]
     if energy in {"low", "veryLow"} and task.get("load") == "low":
         codes.append("energy_fit")
-    return codes
+    return _ordered_explanation_codes(codes)
 
 
 def _due_minutes_for_day(task: dict[str, Any], current_day: str | None) -> int | None:
@@ -247,10 +263,9 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
             if index != other_index and start < other_end and other_start < end:
                 fixed_conflicts.add(index)
 
-    valid_fixed_blocks = [
-        block for index, block in enumerate(fixed_blocks) if index not in fixed_conflicts
-    ]
-    busy_blocks.extend(valid_fixed_blocks)
+    # A conflicting fixed entry remains immutable and continues to occupy time;
+    # diagnostics must not make ordinary tasks overlap it.
+    busy_blocks.extend(fixed_blocks)
 
     slots: list[tuple[int, int]] = []
     for start, end in supplied_windows:
@@ -282,6 +297,9 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
         next_pending: list[tuple[int, dict[str, Any]]] = []
         for index, task in pending:
             task_id = _task_id(task, index)
+            if task_id in fixed_ids:
+                progressed = True
+                continue
             dependencies = [str(dep) for dep in (task.get("dependsOn") or [])]
             blocked_by = [dep for dep in dependencies if dep not in placed_ids]
             unknown = [dep for dep in blocked_by if dep not in task_by_id and dep not in fixed_ids]
@@ -328,7 +346,7 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
                 start = _pick_slot(
                     slots,
                     chunk_duration,
-                    earliest_minutes if not chunks else None,
+                    earliest_minutes,
                     due_minutes,
                     bool(task.get("hardDeadline")),
                 )
@@ -349,6 +367,15 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
                     "hard": bool(task.get("hardDeadline")),
                 }
                 issues.append(issue)
+                if due_minutes is not None and due_minutes < 0:
+                    issues.append(
+                        {
+                            "code": "overdue",
+                            "message": f"Task due before the requested day: {task.get('title', '')}",
+                            "taskId": task_id,
+                            "explanationCodes": ["deadline_proximity"],
+                        }
+                    )
                 failed_ids.add(task_id)
                 progressed = True
                 continue
@@ -437,9 +464,7 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
                 ["fixed_conflict"]
                 if index in fixed_conflicts
                 else (
-                    list(entry.get("explanationCodes") or [])
-                    if isinstance(entry.get("explanationCodes"), list)
-                    else []
+                    _ordered_explanation_codes(entry.get("explanationCodes"))
                 )
             ),
         }
