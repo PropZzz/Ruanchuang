@@ -21,7 +21,12 @@ void main() {
     stdout.writeln('SCHEDULING_PARITY_RESULT_END');
 
     expect(result['fixtures'], isA<List<dynamic>>());
-    expect((result['fixtures'] as List).length, 3);
+    final expectedCount = Directory(directory)
+        .listSync()
+        .whereType<File>()
+        .where((file) => file.path.toLowerCase().endsWith('.json'))
+        .length;
+    expect((result['fixtures'] as List).length, expectedCount);
     expect(result['invalid'], 0);
     expect(result['mismatched'], 0);
   });
