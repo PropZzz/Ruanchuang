@@ -51,9 +51,7 @@
         "blockedBy": [
           "missing-task"
         ],
-        "explanationCodes": [
-          "fixed_conflict"
-        ]
+        "explanationCodes": []
       }
     ]
   }

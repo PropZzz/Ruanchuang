@@ -26,6 +26,15 @@ class SchedulingContract {
     'splittable',
     'minimumChunkMinutes',
   };
+  static const _requestKeys = {
+    'schemaVersion',
+    'day',
+    'tasks',
+    'windows',
+    'energy',
+    'tuning',
+    'fixed',
+  };
   static const _entryKeys = {
     'id',
     'day',
@@ -71,6 +80,36 @@ class SchedulingContract {
       'splittable': false,
       'minimumChunkMinutes': null,
     };
+  }
+
+  static SchedulingRequest requestFromJson(Map<String, Object?> json) {
+    _rejectUnknown(json, _requestKeys, 'request');
+    if ((json['schemaVersion'] ?? schemaVersion) != schemaVersion) {
+      throw const FormatException('schemaVersion must be "1"');
+    }
+    final day = _parseDateOnly(json['day'], 'day');
+    if (day == null) throw const FormatException('day is required');
+    final tasks = _mapList(
+      json['tasks'],
+      'tasks',
+    ).map(taskFromJson).toList(growable: false);
+    final windows = _mapList(
+      json['windows'],
+      'windows',
+    ).map(_windowFromJson).toList(growable: false);
+    final fixed = _mapList(
+      json['fixed'] ?? const [],
+      'fixed',
+    ).map(fixedEntryFromJson).toList(growable: false);
+    return SchedulingRequest(
+      schemaVersion: schemaVersion,
+      day: day,
+      tasks: tasks,
+      windows: windows,
+      energy: _energy(json['energy'] ?? 'medium'),
+      tuning: _tuning(json['tuning'] ?? const {}),
+      fixed: fixed,
+    );
   }
 
   static PlanTask taskFromJson(Map<String, Object?> json) {
@@ -292,6 +331,65 @@ class SchedulingContract {
     const allowed = {'no_slot', 'miss_due', 'overdue', 'dependency_blocked'};
     if (!allowed.contains(code))
       throw FormatException('invalid issue code: $code');
+  }
+
+  static EnergyTier _energy(Object? value) {
+    if (value is! String)
+      throw const FormatException('energy must be a string');
+    return EnergyTier.values.firstWhere(
+      (energy) => energy.name == value,
+      orElse: () => throw FormatException('invalid energy: $value'),
+    );
+  }
+
+  static TimeWindow _windowFromJson(Map<String, Object?> json) {
+    _rejectUnknown(json, {'start', 'end'}, 'window');
+    final start = _time(json['start']);
+    final end = _time(json['end']);
+    final startMinute = start.hour * 60 + start.minute;
+    final endMinute = end.hour * 60 + end.minute;
+    if (endMinute <= startMinute) {
+      throw const FormatException('window end must be after start');
+    }
+    return TimeWindow(start: start, end: end);
+  }
+
+  static SchedulingTuning _tuning(Object? value) {
+    if (value is! Map) throw const FormatException('tuning must be an object');
+    final json = Map<String, Object?>.from(value);
+    _rejectUnknown(json, {
+      'defaultDurationMultiplier',
+      'tagDurationMultiplier',
+      'highLoadPenaltyWhenLowEnergy',
+    }, 'tuning');
+    double number(Object? raw, String field) {
+      if (raw is! num || raw <= 0) {
+        throw FormatException('$field must be greater than zero');
+      }
+      return raw.toDouble();
+    }
+
+    final rawTags = json['tagDurationMultiplier'] ?? const {};
+    if (rawTags is! Map) {
+      throw const FormatException('tagDurationMultiplier must be an object');
+    }
+    final tags = <String, double>{};
+    for (final entry in rawTags.entries) {
+      if (entry.key is! String)
+        throw const FormatException('tag must be a string');
+      tags[entry.key as String] = number(entry.value, 'tagDurationMultiplier');
+    }
+    return SchedulingTuning(
+      defaultDurationMultiplier: number(
+        json['defaultDurationMultiplier'] ?? 1.0,
+        'defaultDurationMultiplier',
+      ),
+      tagDurationMultiplier: tags,
+      highLoadPenaltyWhenLowEnergy: number(
+        json['highLoadPenaltyWhenLowEnergy'] ?? 1.0,
+        'highLoadPenaltyWhenLowEnergy',
+      ),
+    );
   }
 
   static int _intValue(Object? value, String field) {

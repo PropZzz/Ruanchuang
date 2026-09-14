@@ -156,6 +156,13 @@
         ]
       }
     ],
-    "issues": []
+    "issues": [
+      {
+        "code": "miss_due",
+        "message": "Task scheduled past due time: Prepare release notes",
+        "taskId": "task-offset",
+        "explanationCodes": ["deadline_proximity"]
+      }
+    ]
   }
 }
