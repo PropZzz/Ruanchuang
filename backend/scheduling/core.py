@@ -36,6 +36,8 @@ def _minutes_to_time(minutes: int) -> dict[str, int]:
 def _parse_day(value: object) -> str | None:
     if value is None:
         return None
+    if isinstance(value, datetime):
+        return value.date().isoformat()
     if isinstance(value, date):
         return value.isoformat()
     if isinstance(value, str):
@@ -154,6 +156,9 @@ def _pick_slot(
     earliest_start: int | None,
     due_minutes: int | None,
     hard_deadline: bool,
+    energy: object,
+    load: object,
+    tuning: dict[str, Any],
 ) -> int | None:
     def first_candidate() -> int | None:
         for start, end in free:
@@ -162,16 +167,71 @@ def _pick_slot(
                 return candidate
         return None
 
+    best_start: int | None = None
+    best_score = float("-inf")
     for start, end in free:
         candidate = max(start, earliest_start if earliest_start is not None else start)
         if candidate + duration > end:
             continue
         if due_minutes is not None and (due_minutes < 0 or candidate + duration > due_minutes):
             continue
-        return candidate
+        score = _score_placement(candidate, energy, load, tuning)
+        if score > best_score:
+            best_score = score
+            best_start = candidate
+    if best_start is not None:
+        return best_start
     if hard_deadline and due_minutes is not None:
         return None
-    return first_candidate()
+    best_start: int | None = None
+    best_score = float("-inf")
+    for start, end in free:
+        candidate = max(start, earliest_start if earliest_start is not None else start)
+        if candidate + duration > end:
+            continue
+        score = _score_placement(candidate, energy, load, tuning)
+        if score > best_score:
+            best_score = score
+            best_start = candidate
+    return best_start if best_start is not None else first_candidate()
+
+
+def _score_placement(
+    start_minutes: int,
+    energy: object,
+    load: object,
+    tuning: dict[str, Any],
+) -> float:
+    hour = start_minutes // 60
+    is_morning = hour < 12
+    is_afternoon = 12 <= hour < 17
+    score = -start_minutes / 1000.0
+    if energy in {"high", "veryHigh"}:
+        if load == "high" and is_morning:
+            score += 5
+        if load == "medium" and is_afternoon:
+            score += 2
+        if load == "low":
+            score += 0.5
+    elif energy == "medium":
+        if load == "high" and is_morning:
+            score += 2
+        if load == "medium":
+            score += 2
+        if load == "low":
+            score += 1
+    else:
+        penalty = min(3.0, max(1.0, float(tuning.get("highLoadPenaltyWhenLowEnergy") or 1.0)))
+        extra = max(0.0, penalty - 1.0)
+        if load == "high":
+            score -= 5 * penalty
+            if is_morning:
+                score -= 2.0 * (1.0 + extra)
+        if load == "medium":
+            score -= 1
+        if load == "low":
+            score += 3
+    return score
 
 
 def _merge_busy(blocks: list[tuple[int, int]]) -> list[tuple[int, int]]:
@@ -220,10 +280,20 @@ def _palette(load: object) -> int:
     return palette.get(str(load or ""), 0xFF334155)
 
 
-def _next_chunk_duration(remaining: int, minimum_chunk: int, slots: list[tuple[int, int]]) -> int | None:
-    if any(end - start >= remaining for start, end in slots):
+def _next_chunk_duration(
+    remaining: int,
+    minimum_chunk: int,
+    slots: list[tuple[int, int]],
+    earliest_start: int | None = None,
+) -> int | None:
+    lengths = [
+        end - (start if earliest_start is None or start > earliest_start else earliest_start)
+        for start, end in slots
+    ]
+    lengths = [length for length in lengths if length > 0]
+    if any(length >= remaining for length in lengths):
         return remaining
-    largest = max((end - start for start, end in slots), default=0)
+    largest = max(lengths, default=0)
     if largest < minimum_chunk:
         return None
     candidate = min(remaining, largest)
@@ -345,7 +415,12 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
             remaining = duration
             while remaining > 0:
                 chunk_duration = (
-                    _next_chunk_duration(remaining, minimum_chunk, slots)
+                    _next_chunk_duration(
+                        remaining,
+                        minimum_chunk,
+                        slots,
+                        earliest_start=earliest_minutes,
+                    )
                     if splittable
                     else remaining
                 )
@@ -357,6 +432,9 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
                     earliest_minutes,
                     due_minutes,
                     bool(task.get("hardDeadline")),
+                    energy,
+                    task.get("load"),
+                    tuning,
                 )
                 if start is None:
                     break

@@ -97,6 +97,7 @@ class ScheduleRescueService {
       baseline: baseline,
       energy: base.energy,
       recoveryMinutes: 0,
+      day: base.day,
     );
     final recoveryScore = _score(
       strategy: RescueStrategy.protectRecovery,
@@ -105,6 +106,7 @@ class ScheduleRescueService {
       baseline: baseline,
       energy: _lowerEnergy(base.energy),
       recoveryMinutes: recoveryMinutes,
+      day: base.day,
     );
     final minimalScore = _score(
       strategy: RescueStrategy.minimizeChanges,
@@ -113,6 +115,7 @@ class ScheduleRescueService {
       baseline: baseline,
       energy: base.energy,
       recoveryMinutes: 0,
+      day: base.day,
     );
 
     return [
@@ -163,6 +166,7 @@ class ScheduleRescueService {
     required List<ScheduleEntry> baseline,
     required EnergyTier energy,
     required int recoveryMinutes,
+    required DateTime day,
   }) {
     final moved = _movedEntryCount(baseline, plan.entries);
     final metrics = metricsForRescuePlan(
@@ -172,6 +176,7 @@ class ScheduleRescueService {
       baselineEntryCount: baseline.length,
       energy: energy,
       recoveryMinutes: recoveryMinutes,
+      day: day,
     );
     final name = switch (strategy) {
       RescueStrategy.protectDeadline => 'protectDeadline',

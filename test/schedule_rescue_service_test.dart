@@ -118,10 +118,10 @@ void main() {
             ),
           );
 
-      expect(options[1].recoveryMinutes, 0);
+      expect(options[1].recoveryMinutes, 15);
       expect(
         options[1].plan.entries.where((entry) => entry.tag == 'Recovery'),
-        isEmpty,
+        isNotEmpty,
       );
     },
   );

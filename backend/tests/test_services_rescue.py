@@ -149,7 +149,8 @@ def test_build_options_recovery_buffer_prefers_afternoon_window():
         option for option in result["options"] if option["strategy"] == "protectRecovery"
     )
     buffers = [entry for entry in recovery["plannedEntries"] if entry["id"] == f"rescue_recovery_{DAY}"]
-    assert buffers[0]["time"] == {"hour": 13, "minute": 30}
+    # The urgent task is placed first; recovery uses the next legal free slot.
+    assert buffers[0]["time"] == {"hour": 14, "minute": 42}
 
 
 def test_build_options_recovery_buffer_is_not_synthetic_when_no_15_minute_slot_exists():

@@ -273,7 +273,7 @@ void main() {
       );
       expect(
         plan.issues.where((issue) => issue.code == 'fixed_conflict'),
-        hasLength(2),
+        hasLength(3),
       );
     },
   );
@@ -337,6 +337,41 @@ void main() {
       expect(soft.issues.single.code, 'miss_due');
     },
   );
+
+  test('soft deadline fallback still uses low-energy slot score', () {
+    final plan = const SchedulerCore().plan(
+      SchedulingRequest(
+        day: DateTime(2026, 9, 14),
+        tasks: [
+          PlanTask(
+            id: 'high',
+            title: 'High',
+            durationMinutes: 60,
+            priority: 3,
+            load: CognitiveLoad.high,
+            tag: 'Task',
+            due: DateTime(2026, 9, 14, 7),
+          ),
+        ],
+        windows: [
+          TimeWindow(
+            start: TimeOfDay(hour: 8, minute: 0),
+            end: TimeOfDay(hour: 10, minute: 0),
+          ),
+          TimeWindow(
+            start: TimeOfDay(hour: 14, minute: 0),
+            end: TimeOfDay(hour: 16, minute: 0),
+          ),
+        ],
+        energy: EnergyTier.veryLow,
+        tuning: SchedulingTuning(highLoadPenaltyWhenLowEnergy: 2.0),
+      ),
+    );
+
+    expect(plan.entries.single.time, const TimeOfDay(hour: 14, minute: 0));
+    expect(plan.entries.single.height, 160.0);
+    expect(plan.issues.single.code, 'miss_due');
+  });
 
   test('hard overdue tasks report overdue risk in addition to no_slot', () {
     final plan = const SchedulerCore().plan(

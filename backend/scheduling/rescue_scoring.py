@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime
 import json
 from pathlib import Path
 from types import MappingProxyType
@@ -143,6 +144,30 @@ def _clamp(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
 
 
+def _metric_day(value: object) -> str | None:
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, str) and value.strip():
+        return value.strip().split("T", 1)[0]
+    return None
+
+
+def _metric_datetime(value: object) -> datetime | None:
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str) and value.strip():
+        text = value.strip()
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        try:
+            return datetime.fromisoformat(text)
+        except ValueError:
+            return None
+    return None
+
+
 def score_plan(weights: dict[str, float], metrics: PlanMetrics) -> float:
     values = metrics.as_contract_dict()
     score = sum(weights[name] * _clamp(values[name]) for name in METRIC_NAMES)
@@ -158,6 +183,7 @@ def metrics_for_plan(
     energy: str,
     recovery_minutes: int,
     recovery_buffer_minutes: int | None = None,
+    current_day: str | None = None,
 ) -> PlanMetrics:
     task_by_id = {
         str(task.get("id")): task
@@ -166,7 +192,13 @@ def metrics_for_plan(
     }
     entries = [entry for entry in plan.get("entries") or [] if isinstance(entry, dict)]
     def base_task_id(value: object) -> str:
-        return str(value or "").split("#", 1)[0]
+        raw = str(value or "")
+        if raw in task_by_id:
+            return raw
+        prefix, separator, suffix = raw.rpartition("#")
+        if separator and suffix.isdigit() and prefix in task_by_id:
+            return prefix
+        return raw
 
     placed_ids: list[str] = []
     for entry in entries:
@@ -182,16 +214,31 @@ def metrics_for_plan(
         if issue.get("taskId")
     )
     evaluated_tasks = [task for task_id, task in task_by_id.items() if task_id in evaluated_ids]
-    due_count = sum(1 for task in evaluated_tasks if task.get("due"))
+    if current_day is None:
+        current_day = next(
+            (_metric_day(entry.get("day")) for entry in entries if entry.get("day")),
+            None,
+        )
+    due_count = 0
+    due_task_ids: set[str] = set()
+    for task_id, task in task_by_id.items():
+        if task_id not in evaluated_ids:
+            continue
+        due = _metric_datetime(task.get("due"))
+        if due is not None and (
+            current_day is None or due.date().isoformat() <= current_day
+        ):
+            due_count += 1
+            due_task_ids.add(task_id)
     missed_task_ids: set[str] = set()
     for issue in issues:
         task_id = base_task_id(issue.get("taskId"))
         task = task_by_id.get(task_id)
         if task is None:
             continue
-        if issue.get("code") in {"miss_due", "overdue"}:
+        if issue.get("code") in {"miss_due", "overdue"} and task_id in due_task_ids:
             missed_task_ids.add(task_id)
-        elif issue.get("code") == "no_slot" and task.get("due"):
+        elif issue.get("code") == "no_slot" and task_id in due_task_ids:
             missed_task_ids.add(task_id)
     missed_count = len(missed_task_ids)
     urgency = 1.0 - missed_count / max(1, due_count)

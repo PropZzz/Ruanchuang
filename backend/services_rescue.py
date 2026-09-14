@@ -52,6 +52,8 @@ EXPLANATION_CODE_ORDER = (
 def _iso_day(value: object) -> str | None:
     if value is None:
         return None
+    if isinstance(value, datetime):
+        return value.date().isoformat()
     if isinstance(value, date):
         return value.isoformat()
     if isinstance(value, datetime):
@@ -403,6 +405,7 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
             energy=composition["energy"],
             recovery_minutes=recovery_minutes,
             recovery_buffer_minutes=score_config.recovery_buffer_minutes,
+            current_day=day_iso,
         )
         options.append(
             {

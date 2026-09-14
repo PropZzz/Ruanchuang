@@ -1,8 +1,8 @@
 {
   "schemaVersion": "1",
   "summary": {
-    "fixtures": 3,
-    "matched": 3,
+    "fixtures": 4,
+    "matched": 4,
     "mismatched": 0,
     "invalid": 0
   },
@@ -222,6 +222,85 @@
           "level": "high",
           "issueCount": 1,
           "hardIssueCount": 1
+        }
+      }
+    },
+    {
+      "name": "low-energy-tuning.json",
+      "status": "matched",
+      "differences": [],
+      "python": {
+        "schemaVersion": "1",
+        "entries": [
+          {
+            "id": "high",
+            "day": "2026-09-14",
+            "title": "High load",
+            "tag": "Task",
+            "load": "high",
+            "durationMinutes": 120,
+            "time": {
+              "hour": 14,
+              "minute": 0
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "deadline_proximity",
+              "priority"
+            ]
+          }
+        ],
+        "issues": [
+          {
+            "code": "miss_due",
+            "message": "Task scheduled past due time: High load",
+            "taskId": "high",
+            "explanationCodes": [
+              "deadline_proximity"
+            ]
+          }
+        ],
+        "risk": {
+          "level": "medium",
+          "issueCount": 1,
+          "hardIssueCount": 0
+        }
+      },
+      "dart": {
+        "schemaVersion": "1",
+        "entries": [
+          {
+            "id": "high",
+            "title": "High load",
+            "tag": "Task",
+            "load": "high",
+            "durationMinutes": 120,
+            "time": {
+              "hour": 14,
+              "minute": 0
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "deadline_proximity",
+              "priority"
+            ],
+            "day": "2026-09-14"
+          }
+        ],
+        "issues": [
+          {
+            "code": "miss_due",
+            "message": "Task scheduled past due time: High load",
+            "taskId": "high",
+            "explanationCodes": [
+              "deadline_proximity"
+            ]
+          }
+        ],
+        "risk": {
+          "level": "medium",
+          "issueCount": 1,
+          "hardIssueCount": 0
         }
       }
     },

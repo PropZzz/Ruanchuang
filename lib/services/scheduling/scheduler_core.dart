@@ -38,6 +38,26 @@ double _heightFromDuration(int minutes) {
   return h.clamp(20.0, 24 * 60 * 80.0).toDouble();
 }
 
+int _taskDuration(PlanTask task, EnergyTier energy, SchedulingTuning tuning) {
+  var duration = task.durationMinutes <= 0 ? 15 : task.durationMinutes;
+  final tagMultiplier = tuning.tagDurationMultiplier[task.tag] ?? 1.0;
+  var loadPenalty = 1.0;
+  if (energy == EnergyTier.low || energy == EnergyTier.veryLow) {
+    if (task.load == CognitiveLoad.high) {
+      loadPenalty = tuning.highLoadPenaltyWhenLowEnergy;
+    } else if (task.load == CognitiveLoad.medium) {
+      loadPenalty = 1.05;
+    }
+  }
+  duration =
+      (duration *
+              tuning.defaultDurationMultiplier *
+              tagMultiplier *
+              loadPenalty)
+          .round();
+  return duration.clamp(1, 24 * 60).toInt();
+}
+
 Color _colorForLoad(CognitiveLoad load) {
   switch (load) {
     case CognitiveLoad.high:
@@ -156,7 +176,9 @@ class SchedulerCore implements SchedulingEngine {
       final end = (start + _durationFromHeight(entry.height))
           .clamp(0, 24 * 60)
           .toInt();
-      final overlaps = fixed.take(index).any((other) {
+      final overlaps = fixed.asMap().entries.any((otherEntry) {
+        if (otherEntry.key == index) return false;
+        final other = otherEntry.value;
         final otherStart = _todToMin(other.time);
         final otherEnd = (otherStart + _durationFromHeight(other.height))
             .clamp(0, 24 * 60)
@@ -253,7 +275,7 @@ class SchedulerCore implements SchedulingEngine {
           continue;
         }
 
-        final dur = t.durationMinutes.clamp(1, 24 * 60).toInt();
+        final dur = _taskDuration(t, energy, tuning);
         final splittable = t.splittable;
         final minimumChunk = t.minimumChunkMinutes ?? 15;
         final dueMin = t.due == null
@@ -496,17 +518,28 @@ class SchedulerCore implements SchedulingEngine {
 
     if (hardDeadline && dueMin != null) return null;
 
-    // Fallback: if dueMin blocks everything, schedule at earliest available.
+    // Soft-deadline fallback still honors the placement score.
+    int? fallbackStart;
+    var fallbackScore = double.negativeInfinity;
     for (final it in free) {
       final start = earliestMin == null
           ? it.startMin
           : (it.startMin > earliestMin ? it.startMin : earliestMin);
       if (start >= it.startMin && start + duration <= it.endMin) {
-        return start;
+        final score = _scorePlacement(
+          startMin: start,
+          energy: energy,
+          load: load,
+          tuning: tuning,
+        );
+        if (score > fallbackScore) {
+          fallbackScore = score;
+          fallbackStart = start;
+        }
       }
     }
 
-    return null;
+    return fallbackStart;
   }
 
   double _scorePlacement({

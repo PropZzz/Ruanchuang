@@ -133,6 +133,37 @@ def test_unresolved_dependency_blocks_task() -> None:
     assert result["issues"][0]["code"] == "dependency_blocked"
 
 
+def test_soft_deadline_fallback_still_uses_low_energy_slot_score() -> None:
+    request = _request()
+    request["energy"] = "veryLow"
+    request["tuning"] = {
+        "defaultDurationMultiplier": 1.0,
+        "tagDurationMultiplier": {},
+        "highLoadPenaltyWhenLowEnergy": 2.0,
+    }
+    request["windows"] = [
+        {"start": {"hour": 8, "minute": 0}, "end": {"hour": 10, "minute": 0}},
+        {"start": {"hour": 14, "minute": 0}, "end": {"hour": 16, "minute": 0}},
+    ]
+    request["tasks"] = [
+        {
+            "id": "high",
+            "title": "High",
+            "durationMinutes": 60,
+            "priority": 3,
+            "load": "high",
+            "tag": "Task",
+            "due": "2026-09-14T07:00:00+08:00",
+        }
+    ]
+
+    result = SchedulerCore().plan(request)
+
+    assert result["entries"][0]["time"] == {"hour": 14, "minute": 0}
+    assert result["entries"][0]["height"] == 160.0
+    assert result["issues"][0]["code"] == "miss_due"
+
+
 def test_task_with_fixed_id_is_not_scheduled_twice() -> None:
     request = _request()
     request["tasks"] = [

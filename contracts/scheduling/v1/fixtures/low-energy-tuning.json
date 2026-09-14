@@ -1,0 +1,70 @@
+{
+  "request": {
+    "schemaVersion": "1",
+    "day": "2026-09-14",
+    "tasks": [
+      {
+        "id": "high",
+        "title": "High load",
+        "durationMinutes": 60,
+        "priority": 3,
+        "due": "2026-09-14T08:00:00+08:00",
+        "load": "high",
+        "tag": "Task",
+        "goalId": null,
+        "goalTaskId": null,
+        "hardDeadline": false,
+        "earliestStart": null,
+        "dependsOn": []
+      }
+    ],
+    "windows": [
+      {
+        "start": {"hour": 8, "minute": 0},
+        "end": {"hour": 10, "minute": 0}
+      },
+      {
+        "start": {"hour": 14, "minute": 0},
+        "end": {"hour": 16, "minute": 0}
+      }
+    ],
+    "energy": "veryLow",
+    "tuning": {
+      "defaultDurationMultiplier": 1.0,
+      "tagDurationMultiplier": {},
+      "highLoadPenaltyWhenLowEnergy": 2.0
+    },
+    "fixed": []
+  },
+  "response": {
+    "schemaVersion": "1",
+    "entries": [
+      {
+        "id": "high",
+        "day": "2026-09-14",
+        "title": "High load",
+        "tag": "Task",
+        "load": "high",
+        "goalId": null,
+        "goalTaskId": null,
+        "durationMinutes": 120,
+        "time": {"hour": 14, "minute": 0},
+        "source": "planned",
+        "explanationCodes": ["deadline_proximity", "priority"]
+      }
+    ],
+    "issues": [
+      {
+        "code": "miss_due",
+        "message": "Task scheduled past due time: High load",
+        "taskId": "high",
+        "explanationCodes": ["deadline_proximity"]
+      }
+    ],
+    "risk": {
+      "level": "medium",
+      "issueCount": 1,
+      "hardIssueCount": 0
+    }
+  }
+}

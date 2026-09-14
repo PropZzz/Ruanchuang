@@ -34,6 +34,7 @@ RescuePlanMetrics metricsForRescuePlan({
   required int baselineEntryCount,
   required EnergyTier energy,
   required int recoveryMinutes,
+  DateTime? day,
 }) {
   final taskById = <String, PlanTask>{for (final task in tasks) task.id: task};
   final placed = plan.entries
@@ -43,15 +44,22 @@ RescuePlanMetrics metricsForRescuePlan({
         return id != null;
       })
       .toList(growable: false);
+  final requestDay = day == null
+      ? null
+      : DateTime(day.year, day.month, day.day);
   final missedTaskIds = <String>{};
   for (final issue in plan.issues) {
     final taskId = _baseTaskId(issue.taskId, taskById);
     if (taskId == null) continue;
     final task = taskById[taskId];
     if (task == null) continue;
-    if (issue.code == 'miss_due' ||
-        issue.code == 'overdue' ||
-        (issue.code == 'no_slot' && task.due != null)) {
+    if (task.due == null) continue;
+    final dueDay = DateTime(task.due!.year, task.due!.month, task.due!.day);
+    final countsForDay = requestDay == null || !dueDay.isAfter(requestDay);
+    if (countsForDay &&
+        (issue.code == 'miss_due' ||
+            issue.code == 'overdue' ||
+            issue.code == 'no_slot')) {
       missedTaskIds.add(taskId);
     }
   }
@@ -70,7 +78,16 @@ RescuePlanMetrics metricsForRescuePlan({
   final dueCount = evaluatedTaskIds
       .map((id) => taskById[id])
       .whereType<PlanTask>()
-      .where((task) => task.due != null)
+      .where(
+        (task) =>
+            task.due != null &&
+            (requestDay == null ||
+                !DateTime(
+                  task.due!.year,
+                  task.due!.month,
+                  task.due!.day,
+                ).isAfter(requestDay)),
+      )
       .length;
   final urgency = _clamp(1.0 - missedCount / (dueCount > 0 ? dueCount : 1));
   final prioritySum = placedTaskIds.fold<int>(
@@ -87,13 +104,12 @@ RescuePlanMetrics metricsForRescuePlan({
     EnergyTier.high || EnergyTier.veryHigh => 2,
   };
   var mismatch = 0.0;
-  for (final entry in placed) {
-    final taskId = _baseTaskId(entry.id, taskById);
-    final load = taskId == null ? targetLoad : taskById[taskId]!.load.index;
+  for (final taskId in placedTaskIds) {
+    final load = taskById[taskId]!.load.index;
     mismatch += (load - targetLoad).abs() / 2.0;
   }
   final energyFit = _clamp(
-    1.0 - mismatch / (placed.isEmpty ? 1 : placed.length),
+    1.0 - mismatch / (placedTaskIds.isEmpty ? 1 : placedTaskIds.length),
   );
   final stability = _clamp(
     1.0 - movedEntryCount / (baselineEntryCount > 0 ? baselineEntryCount : 1),
@@ -138,6 +154,8 @@ String? _baseTaskId(String? entryId, Map<String, PlanTask> taskById) {
   if (taskById.containsKey(entryId)) return entryId;
   final separator = entryId.lastIndexOf('#');
   if (separator <= 0) return null;
+  final suffix = entryId.substring(separator + 1);
+  if (suffix.isEmpty || int.tryParse(suffix) == null) return null;
   final base = entryId.substring(0, separator);
   return taskById.containsKey(base) ? base : null;
 }
