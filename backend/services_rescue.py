@@ -15,6 +15,7 @@ import json
 from typing import Any
 
 from .schemas import ENERGY_TIERS, RESCUE_STRATEGIES
+from .scheduling.rescue_scoring import load_strategy_config, metrics_for_plan, score_plan
 from .services_scheduling import plan_schedule
 
 
@@ -200,6 +201,7 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
     tuning = request.get("tuning") or {}
     fixed = request.get("fixed") or []
     tasks = request.get("tasks") or []
+    score_config = load_strategy_config()
 
     baseline = [
         entry
@@ -239,6 +241,16 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
             }
         )
         moved_ids = _moved_ids(baseline, plan["entries"])
+        recovery_minutes = RECOVERY_BUFFER_MINUTES if strategy == "protectRecovery" else 0
+        metrics = metrics_for_plan(
+            plan,
+            [*tasks, urgent],
+            moved_entry_count=len(moved_ids),
+            baseline_entry_count=len(baseline),
+            energy=composition["energy"],
+            recovery_minutes=recovery_minutes,
+            recovery_buffer_minutes=score_config.recovery_buffer_minutes,
+        )
         options.append(
             {
                 "id": f"option_{index:03d}",
@@ -248,8 +260,15 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
                 "rationale": RESCUE_RATIONALES[strategy],
                 "tradeoff": RESCUE_TRADEOFFS[strategy],
                 "movedEntryCount": len(moved_ids),
-                "recoveryMinutes": RECOVERY_BUFFER_MINUTES if strategy == "protectRecovery" else 0,
+                "recoveryMinutes": recovery_minutes,
                 "issueCount": len(plan.get("issues") or []),
+                "hardIssueCount": sum(
+                    1
+                    for issue in plan.get("issues") or []
+                    if issue.get("code") in {"no_slot", "dependency_blocked"}
+                ),
+                "score": score_plan(score_config.strategies[strategy], metrics),
+                "scoreBreakdown": metrics.as_contract_dict(),
                 "affectedEntries": moved_ids,
                 "plannedEntries": plan["entries"],
             }
@@ -258,7 +277,11 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
     if options:
         recommended_index = min(
             range(len(options)),
-            key=lambda i: (options[i]["issueCount"], options[i]["movedEntryCount"], i),
+            key=lambda i: (
+                options[i]["hardIssueCount"],
+                -options[i]["score"],
+                i,
+            ),
         )
         options[recommended_index]["recommended"] = True
 

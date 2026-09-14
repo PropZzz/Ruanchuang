@@ -28,7 +28,13 @@ class RescueStrategyWeights {
   };
 
   static void validate() {
-    const expected = {'urgency', 'priority', 'energyFit', 'stability', 'recovery'};
+    const expected = {
+      'urgency',
+      'priority',
+      'energyFit',
+      'stability',
+      'recovery',
+    };
     if (strategies.length != 3) {
       throw StateError('unexpected rescue strategy count');
     }
@@ -40,7 +46,10 @@ class RescueStrategyWeights {
       if (entry.value.values.any((value) => value < 0)) {
         throw StateError('negative rescue weight for ${entry.key}');
       }
-      final total = entry.value.values.fold<double>(0, (sum, value) => sum + value);
+      final total = entry.value.values.fold<double>(
+        0,
+        (sum, value) => sum + value,
+      );
       if ((total - 1.0).abs() > 0.000001) {
         throw StateError('weights for ${entry.key} must sum to 1');
       }

@@ -1,0 +1,101 @@
+import '../../models/models.dart';
+import 'rescue_strategy_weights.dart';
+
+class RescuePlanMetrics {
+  final double urgency;
+  final double priority;
+  final double energyFit;
+  final double stability;
+  final double recovery;
+
+  const RescuePlanMetrics({
+    required this.urgency,
+    required this.priority,
+    required this.energyFit,
+    required this.stability,
+    required this.recovery,
+  });
+
+  Map<String, double> toJson() => {
+    'urgency': urgency,
+    'priority': priority,
+    'energyFit': energyFit,
+    'stability': stability,
+    'recovery': recovery,
+  };
+}
+
+RescuePlanMetrics metricsForRescuePlan({
+  required SchedulingPlan plan,
+  required List<PlanTask> tasks,
+  required int movedEntryCount,
+  required int baselineEntryCount,
+  required EnergyTier energy,
+  required int recoveryMinutes,
+}) {
+  final taskById = <String, PlanTask>{for (final task in tasks) task.id: task};
+  final placed = plan.entries
+      .where(
+        (entry) => entry.source == 'planned' && taskById.containsKey(entry.id),
+      )
+      .toList(growable: false);
+  final dueCount = tasks.where((task) => task.due != null).length;
+  final missedCount = plan.issues
+      .where((issue) => issue.code == 'miss_due' || issue.code == 'overdue')
+      .length;
+  final urgency = _clamp(1.0 - missedCount / (dueCount > 0 ? dueCount : 1));
+  final prioritySum = placed.fold<int>(
+    0,
+    (sum, entry) => sum + (taskById[entry.id]?.priority ?? 0),
+  );
+  final priority = _clamp(
+    prioritySum / (5 * (tasks.isEmpty ? 1 : tasks.length)),
+  );
+
+  final targetLoad = switch (energy) {
+    EnergyTier.veryLow || EnergyTier.low => 0,
+    EnergyTier.medium => 1,
+    EnergyTier.high || EnergyTier.veryHigh => 2,
+  };
+  var mismatch = 0.0;
+  for (final entry in placed) {
+    final load = taskById[entry.id]?.load.index ?? targetLoad;
+    mismatch += (load - targetLoad).abs() / 2.0;
+  }
+  final energyFit = _clamp(
+    1.0 - mismatch / (placed.isEmpty ? 1 : placed.length),
+  );
+  final stability = _clamp(
+    1.0 - movedEntryCount / (baselineEntryCount > 0 ? baselineEntryCount : 1),
+  );
+  final recovery = _clamp(
+    recoveryMinutes / RescueStrategyWeights.recoveryBufferMinutes,
+  );
+  return RescuePlanMetrics(
+    urgency: urgency,
+    priority: priority,
+    energyFit: energyFit,
+    stability: stability,
+    recovery: recovery,
+  );
+}
+
+double scoreRescuePlan(String strategy, RescuePlanMetrics metrics) {
+  final weights = RescueStrategyWeights.strategies[strategy];
+  if (weights == null)
+    throw ArgumentError('unknown rescue strategy: $strategy');
+  final values = metrics.toJson();
+  final score = values.entries.fold<double>(
+    0,
+    (sum, entry) => sum + (weights[entry.key] ?? 0) * _clamp(entry.value),
+  );
+  return (score * 1000000).roundToDouble() / 1000000;
+}
+
+int rescueHardIssueCount(SchedulingPlan plan) => plan.issues
+    .where(
+      (issue) => issue.code == 'no_slot' || issue.code == 'dependency_blocked',
+    )
+    .length;
+
+double _clamp(double value) => value.clamp(0.0, 1.0).toDouble();

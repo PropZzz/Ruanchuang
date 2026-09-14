@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../models/models.dart';
+import 'rescue_scoring.dart';
+import 'rescue_strategy_weights.dart';
 import 'scheduling_engine.dart';
 
-enum RescueStrategy {
-  protectDeadline,
-  protectRecovery,
-  minimizeChanges,
-}
+enum RescueStrategy { protectDeadline, protectRecovery, minimizeChanges }
 
 class ScheduleRescueOption {
   final RescueStrategy strategy;
@@ -16,6 +14,9 @@ class ScheduleRescueOption {
   final String tradeoff;
   final int movedEntryCount;
   final int recoveryMinutes;
+  final double score;
+  final Map<String, double> scoreBreakdown;
+  final int hardIssueCount;
 
   const ScheduleRescueOption({
     required this.strategy,
@@ -24,6 +25,9 @@ class ScheduleRescueOption {
     required this.tradeoff,
     required this.movedEntryCount,
     this.recoveryMinutes = 0,
+    this.score = 0.0,
+    this.scoreBreakdown = const {},
+    this.hardIssueCount = 0,
   });
 
   String get title => switch (strategy) {
@@ -47,36 +51,47 @@ class ScheduleRescueService {
     required List<ScheduleEntry> baseline,
     required PlanTask urgent,
   }) {
+    RescueStrategyWeights.validate();
     final allTasks = [...base.tasks, urgent];
 
-    final deadlinePlan = engine.plan(
-      _request(
-        base,
-        tasks: allTasks,
-      ),
-    );
+    final deadlinePlan = engine.plan(_request(base, tasks: allTasks));
 
     final recoveryPlan = engine.plan(
       _request(
         base,
         tasks: allTasks,
         energy: _lowerEnergy(base.energy),
-        fixed: [
-          ...base.fixed,
-          _recoveryBuffer(base),
-        ],
+        fixed: [...base.fixed, _recoveryBuffer(base)],
       ),
     );
 
     final minimalPlan = engine.plan(
-      _request(
-        base,
-        tasks: [urgent],
-        fixed: [
-          ...base.fixed,
-          ...baseline,
-        ],
-      ),
+      _request(base, tasks: [urgent], fixed: [...base.fixed, ...baseline]),
+    );
+
+    final deadlineScore = _score(
+      strategy: RescueStrategy.protectDeadline,
+      plan: deadlinePlan,
+      tasks: allTasks,
+      baseline: baseline,
+      energy: base.energy,
+      recoveryMinutes: 0,
+    );
+    final recoveryScore = _score(
+      strategy: RescueStrategy.protectRecovery,
+      plan: recoveryPlan,
+      tasks: allTasks,
+      baseline: baseline,
+      energy: _lowerEnergy(base.energy),
+      recoveryMinutes: RescueStrategyWeights.recoveryBufferMinutes,
+    );
+    final minimalScore = _score(
+      strategy: RescueStrategy.minimizeChanges,
+      plan: minimalPlan,
+      tasks: [urgent],
+      baseline: baseline,
+      energy: base.energy,
+      recoveryMinutes: 0,
     );
 
     return [
@@ -86,6 +101,9 @@ class ScheduleRescueService {
         rationale: '先安排紧急事项，再重新分配其余任务，优先降低逾期风险。',
         tradeoff: '可能移动更多原有任务，恢复时间取决于当前能量状态。',
         movedEntryCount: _movedEntryCount(baseline, deadlinePlan.entries),
+        score: deadlineScore.score,
+        scoreBreakdown: deadlineScore.breakdown,
+        hardIssueCount: deadlineScore.hardIssues,
       ),
       ScheduleRescueOption(
         strategy: RescueStrategy.protectRecovery,
@@ -93,7 +111,10 @@ class ScheduleRescueService {
         rationale: '降低高负荷任务的安排倾向，并预留 15 分钟恢复缓冲。',
         tradeoff: '部分低优先级任务可能顺延，适合疲劳或连续被打断的场景。',
         movedEntryCount: _movedEntryCount(baseline, recoveryPlan.entries),
-        recoveryMinutes: 15,
+        recoveryMinutes: RescueStrategyWeights.recoveryBufferMinutes,
+        score: recoveryScore.score,
+        scoreBreakdown: recoveryScore.breakdown,
+        hardIssueCount: recoveryScore.hardIssues,
       ),
       ScheduleRescueOption(
         strategy: RescueStrategy.minimizeChanges,
@@ -101,8 +122,40 @@ class ScheduleRescueService {
         rationale: '锁定当前已排日程，只在现有空档中放入紧急事项。',
         tradeoff: '如果空档不足，紧急事项可能无法在截止时间前安排。',
         movedEntryCount: _movedEntryCount(baseline, minimalPlan.entries),
+        score: minimalScore.score,
+        scoreBreakdown: minimalScore.breakdown,
+        hardIssueCount: minimalScore.hardIssues,
       ),
     ];
+  }
+
+  _RescueScore _score({
+    required RescueStrategy strategy,
+    required SchedulingPlan plan,
+    required List<PlanTask> tasks,
+    required List<ScheduleEntry> baseline,
+    required EnergyTier energy,
+    required int recoveryMinutes,
+  }) {
+    final moved = _movedEntryCount(baseline, plan.entries);
+    final metrics = metricsForRescuePlan(
+      plan: plan,
+      tasks: tasks,
+      movedEntryCount: moved,
+      baselineEntryCount: baseline.length,
+      energy: energy,
+      recoveryMinutes: recoveryMinutes,
+    );
+    final name = switch (strategy) {
+      RescueStrategy.protectDeadline => 'protectDeadline',
+      RescueStrategy.protectRecovery => 'protectRecovery',
+      RescueStrategy.minimizeChanges => 'minimizeChanges',
+    };
+    return _RescueScore(
+      score: scoreRescuePlan(name, metrics),
+      breakdown: metrics.toJson(),
+      hardIssues: rescueHardIssueCount(plan),
+    );
   }
 
   SchedulingRequest _request(
@@ -169,4 +222,16 @@ class ScheduleRescueService {
     }
     return moved;
   }
+}
+
+class _RescueScore {
+  final double score;
+  final Map<String, double> breakdown;
+  final int hardIssues;
+
+  const _RescueScore({
+    required this.score,
+    required this.breakdown,
+    required this.hardIssues,
+  });
 }

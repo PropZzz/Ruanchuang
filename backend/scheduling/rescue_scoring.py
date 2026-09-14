@@ -73,3 +73,52 @@ def score_plan(weights: dict[str, float], metrics: PlanMetrics) -> float:
     values = metrics.as_contract_dict()
     score = sum(weights[name] * _clamp(values[name]) for name in METRIC_NAMES)
     return round(score, 6)
+
+
+def metrics_for_plan(
+    plan: dict[str, Any],
+    tasks: list[dict[str, Any]],
+    *,
+    moved_entry_count: int,
+    baseline_entry_count: int,
+    energy: str,
+    recovery_minutes: int,
+    recovery_buffer_minutes: int | None = None,
+) -> PlanMetrics:
+    task_by_id = {
+        str(task.get("id")): task
+        for task in tasks
+        if isinstance(task, dict) and task.get("id")
+    }
+    entries = [entry for entry in plan.get("entries") or [] if isinstance(entry, dict)]
+    placed_tasks = [
+        entry
+        for entry in entries
+        if entry.get("id") in task_by_id and entry.get("source", "planned") == "planned"
+    ]
+    issues = [issue for issue in plan.get("issues") or [] if isinstance(issue, dict)]
+    due_count = sum(1 for task in tasks if isinstance(task, dict) and task.get("due"))
+    missed_count = sum(
+        1 for issue in issues if issue.get("code") in {"miss_due", "overdue"}
+    )
+    urgency = 1.0 - missed_count / max(1, due_count)
+    priority_sum = sum(int(task_by_id[entry["id"]].get("priority") or 0) for entry in placed_tasks)
+    priority = priority_sum / (5 * max(1, len(tasks)))
+
+    target_load = 0 if energy in {"veryLow", "low"} else 1 if energy == "medium" else 2
+    load_index = {"low": 0, "medium": 1, "high": 2}
+    mismatch = 0.0
+    for entry in placed_tasks:
+        load = task_by_id[entry["id"]].get("load")
+        mismatch += abs(load_index.get(str(load), target_load) - target_load) / 2.0
+    energy_fit = 1.0 - mismatch / max(1, len(placed_tasks))
+    stability = 1.0 - moved_entry_count / max(1, baseline_entry_count)
+    buffer = recovery_buffer_minutes or load_strategy_config().recovery_buffer_minutes
+    recovery = min(recovery_minutes / buffer, 1.0)
+    return PlanMetrics(
+        urgency=_clamp(urgency),
+        priority=_clamp(priority),
+        energy_fit=_clamp(energy_fit),
+        stability=_clamp(stability),
+        recovery=_clamp(recovery),
+    )

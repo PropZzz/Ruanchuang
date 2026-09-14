@@ -97,6 +97,15 @@ def test_build_options_returns_three_options_in_requested_order():
     assert len(result["baselineHash"]) == 64
 
 
+def test_build_options_exposes_weighted_scores_and_breakdowns():
+    result = build_options(_request())
+    expected_metrics = {"urgency", "priority", "energyFit", "stability", "recovery"}
+    for option in result["options"]:
+        assert set(option["scoreBreakdown"]) == expected_metrics
+        assert 0.0 <= option["score"] <= 1.0
+        assert option["hardIssueCount"] >= 0
+
+
 def test_build_options_filters_strategies():
     result = build_options(_request(strategies=["minimizeChanges"]))
     assert [option["strategy"] for option in result["options"]] == ["minimizeChanges"]

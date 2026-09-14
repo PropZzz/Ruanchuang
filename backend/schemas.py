@@ -438,6 +438,9 @@ class RescueOptionOut(APIModel):
     moved_entry_count: int = Field(alias="movedEntryCount")
     recovery_minutes: int = Field(alias="recoveryMinutes")
     issue_count: int = Field(alias="issueCount")
+    hard_issue_count: int = Field(default=0, alias="hardIssueCount")
+    score: float = 0.0
+    score_breakdown: dict[str, float] = Field(default_factory=dict, alias="scoreBreakdown")
     affected_entries: list[str] = Field(alias="affectedEntries")
     planned_entries: list[ScheduleEntryOut] = Field(alias="plannedEntries")
 

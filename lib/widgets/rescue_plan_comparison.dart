@@ -41,12 +41,15 @@ class _RescuePlanComparisonState extends State<RescuePlanComparison> {
 
   int get _recommendedIndex {
     var best = 0;
-    var bestScore = 1 << 30;
+    var bestHardIssues = 1 << 30;
+    var bestScore = double.negativeInfinity;
     for (var i = 0; i < widget.options.length; i++) {
       final option = widget.options[i];
-      final score = option.plan.issues.length * 1000 + option.movedEntryCount;
-      if (score < bestScore) {
-        bestScore = score;
+      if (option.hardIssueCount < bestHardIssues ||
+          (option.hardIssueCount == bestHardIssues &&
+              option.score > bestScore)) {
+        bestHardIssues = option.hardIssueCount;
+        bestScore = option.score;
         best = i;
       }
     }
@@ -71,7 +74,9 @@ class _RescuePlanComparisonState extends State<RescuePlanComparison> {
     }
     for (final entry in option.plan.entries) {
       final id = entry.id;
-      if (id != null && id.startsWith('urgent_') && !titles.contains(entry.title)) {
+      if (id != null &&
+          id.startsWith('urgent_') &&
+          !titles.contains(entry.title)) {
         titles.add(entry.title);
       }
     }
@@ -185,10 +190,7 @@ class _RescuePlanComparisonState extends State<RescuePlanComparison> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: borderColor,
-              width: isSelected ? 1.5 : 1,
-            ),
+            border: Border.all(color: borderColor, width: isSelected ? 1.5 : 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,8 +270,7 @@ class _RescuePlanComparisonState extends State<RescuePlanComparison> {
                         label: const Text('采用此方案'),
                       )
                     : OutlinedButton(
-                        onPressed: () =>
-                            setState(() => _selectedIndex = index),
+                        onPressed: () => setState(() => _selectedIndex = index),
                         child: const Text('选择此方案'),
                       ),
               ),
