@@ -145,7 +145,7 @@
         "load": "low",
         "goalId": null,
         "goalTaskId": null,
-        "durationMinutes": 45,
+        "durationMinutes": 20,
         "time": {
           "hour": 10,
           "minute": 50
