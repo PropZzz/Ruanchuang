@@ -25,6 +25,10 @@ class UserLogin(APIModel):
     password: str
 
 
+class ProfileUpdate(APIModel):
+    display_name: str | None = Field(default=None, alias="displayName")
+
+
 class UserOut(APIModel):
     id: str
     contact_address: str = Field(alias="contactAddress")
@@ -35,6 +39,23 @@ class TokenResponse(APIModel):
     access_token: str = Field(alias="accessToken")
     token_type: str = Field(default="Bearer", alias="tokenType")
     user: UserOut
+
+
+class VersionOut(APIModel):
+    api_version: str = Field(alias="apiVersion")
+    client_compatibility: str = Field(alias="clientCompatibility")
+
+
+class ServerTimeOut(APIModel):
+    server_time: datetime = Field(alias="serverTime")
+    unix_millis: int = Field(alias="unixMillis")
+    timezone: str = "UTC"
+
+
+class DiagnosticsOut(APIModel):
+    counts: dict[str, int]
+    last_event_at: datetime | None = Field(default=None, alias="lastEventAt")
+    database: str
 
 
 class ScheduleEntryIn(APIModel):
@@ -57,6 +78,15 @@ class ScheduleEntryOut(ScheduleEntryIn):
     id: str
 
 
+class ScheduleImportRequest(APIModel):
+    ics: str
+
+
+class ScheduleConflictsOut(APIModel):
+    baseline_hash: str = Field(alias="baselineHash")
+    conflicts: list[dict[str, object]] = Field(default_factory=list)
+
+
 class MicroTaskIn(APIModel):
     id: str | None = None
     title: str
@@ -69,6 +99,21 @@ class MicroTaskIn(APIModel):
 
 class MicroTaskOut(MicroTaskIn):
     id: str
+
+
+class MicroTaskBatchCompleteRequest(APIModel):
+    task_ids: list[str] = Field(alias="taskIds")
+    done: bool = True
+
+
+class MicroTaskBatchScheduleRequest(APIModel):
+    task_ids: list[str] = Field(alias="taskIds")
+    day: date
+    start: ClockTime = Field(default_factory=lambda: ClockTime(hour=9, minute=0))
+
+
+class MicroTaskImportRequest(APIModel):
+    text: str
 
 
 class TimeWindow(APIModel):
@@ -239,6 +284,11 @@ class Goal(APIModel):
         if not self.tasks:
             return 0.0
         return len([t for t in self.tasks if t.done]) / len(self.tasks)
+
+
+class GoalScheduleNextRequest(APIModel):
+    day: date
+    start: ClockTime = Field(default_factory=lambda: ClockTime(hour=9, minute=0))
 
 
 class PlanTask(APIModel):
@@ -474,6 +524,38 @@ class TeamPermissionUpdate(APIModel):
     @classmethod
     def validate_permission(cls, value: str) -> str:
         return _validate_team_permission(value)
+
+
+class TeamConflictsRequest(APIModel):
+    member_ids: list[str] = Field(alias="memberIds")
+    day: date
+    start: ClockTime
+    minutes: int
+
+
+class TeamGoldenWindowsRequest(APIModel):
+    member_ids: list[str] = Field(alias="memberIds")
+    day: date
+    windows: list[TimeWindow]
+    minutes: int = 30
+
+
+class TeamBookMeetingRequest(APIModel):
+    day: date
+    title: str
+    start: ClockTime
+    minutes: int
+    participant_ids: list[str] = Field(default_factory=list, alias="participantIds")
+
+
+class SyncChangeIn(APIModel):
+    entity: str
+    operation: str = "upsert"
+    payload: dict[str, object] = Field(default_factory=dict)
+
+
+class SyncPushRequest(APIModel):
+    changes: list[SyncChangeIn] = Field(default_factory=list)
 
 
 SchedulingRequest.model_rebuild()

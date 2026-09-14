@@ -11,27 +11,11 @@ router = APIRouter(tags=["reserved"])
 
 
 RESERVED_ENDPOINTS: tuple[tuple[str, str, str], ...] = (
-    ("GET", "/diagnostics/summary", "Diagnostics summary"),
-    ("GET", "/version", "Client compatibility version"),
-    ("GET", "/server/time", "Server clock"),
-    ("POST", "/auth/logout", "Logout"),
     ("POST", "/auth/refresh", "Refresh token"),
-    ("PUT", "/auth/profile", "Update profile"),
     ("POST", "/auth/password/reset-request", "Password reset request"),
     ("POST", "/auth/password/reset-confirm", "Password reset confirmation"),
-    ("POST", "/schedule/import-ics", "Import ICS schedule"),
-    ("GET", "/schedule/export-ics", "Export ICS schedule"),
-    ("GET", "/schedule/conflicts", "Schedule conflict summary"),
-    ("POST", "/schedule/batch", "Batch schedule upsert"),
     ("DELETE", "/events/{event_id}", "Delete task event"),
-    ("POST", "/microtasks/batch-complete", "Batch complete microtasks"),
-    ("POST", "/microtasks/batch-schedule", "Batch schedule microtasks"),
-    ("POST", "/microtasks/import", "Import microtask list"),
-    ("POST", "/goals/{goal_id}/schedule-next", "Schedule next goal task"),
     ("POST", "/goals/decompose", "Decompose goal with AI"),
-    ("POST", "/team/conflicts", "Detect team conflicts"),
-    ("POST", "/team/golden-windows", "Recommend team golden windows"),
-    ("POST", "/team/book-meeting", "Book team meeting"),
     ("GET", "/reminders", "List reminders"),
     ("POST", "/reminders", "Create reminder"),
     ("PUT", "/reminders/{reminder_id}", "Update reminder"),
@@ -60,9 +44,6 @@ RESERVED_ENDPOINTS: tuple[tuple[str, str, str], ...] = (
     ("GET", "/files/{file_id}", "Download file"),
     ("DELETE", "/files/{file_id}", "Delete file"),
     ("POST", "/files/parse-task-list", "Parse task list from file"),
-    ("GET", "/sync/pull", "Pull sync changes"),
-    ("POST", "/sync/push", "Push sync changes"),
-    ("GET", "/sync/status", "Sync status"),
     ("POST", "/sync/conflicts/{conflict_id}/resolve", "Resolve sync conflict"),
 )
 

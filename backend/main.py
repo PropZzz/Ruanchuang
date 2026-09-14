@@ -11,11 +11,13 @@ from .routers_emotion import router as emotion_router
 from .routers_events import router as events_router
 from .routers_goals import router as goals_router
 from .routers_microtasks import router as microtasks_router
+from .routers_platform import router as platform_router
 from .routers_rescue import router as rescue_router
 from .routers_reserved import router as reserved_router
 from .routers_review import router as review_router
 from .routers_schedule import router as schedule_router
 from .routers_team import router as team_router
+from .routers_sync import router as sync_router
 
 
 VERSION = "0.1.0"
@@ -44,6 +46,7 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
         return {"ok": True, "version": VERSION, "database": "sqlite"}
 
     app.include_router(auth_router)
+    app.include_router(platform_router)
     app.include_router(events_router)
     app.include_router(schedule_router)
     app.include_router(rescue_router)
@@ -52,6 +55,7 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
     app.include_router(emotion_router)
     app.include_router(goals_router)
     app.include_router(team_router)
+    app.include_router(sync_router)
     app.include_router(reserved_router)
 
     return app

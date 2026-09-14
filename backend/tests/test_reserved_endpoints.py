@@ -5,27 +5,11 @@ from backend.main import create_app
 
 
 RESERVED_ENDPOINTS = [
-    ("GET", "/diagnostics/summary"),
-    ("GET", "/version"),
-    ("GET", "/server/time"),
-    ("POST", "/auth/logout"),
     ("POST", "/auth/refresh"),
-    ("PUT", "/auth/profile"),
     ("POST", "/auth/password/reset-request"),
     ("POST", "/auth/password/reset-confirm"),
-    ("POST", "/schedule/import-ics"),
-    ("GET", "/schedule/export-ics"),
-    ("GET", "/schedule/conflicts"),
-    ("POST", "/schedule/batch"),
     ("DELETE", "/events/event-1"),
-    ("POST", "/microtasks/batch-complete"),
-    ("POST", "/microtasks/batch-schedule"),
-    ("POST", "/microtasks/import"),
-    ("POST", "/goals/goal-1/schedule-next"),
     ("POST", "/goals/decompose"),
-    ("POST", "/team/conflicts"),
-    ("POST", "/team/golden-windows"),
-    ("POST", "/team/book-meeting"),
     ("GET", "/reminders"),
     ("POST", "/reminders"),
     ("PUT", "/reminders/reminder-1"),
@@ -54,9 +38,6 @@ RESERVED_ENDPOINTS = [
     ("GET", "/files/file-1"),
     ("DELETE", "/files/file-1"),
     ("POST", "/files/parse-task-list"),
-    ("GET", "/sync/pull"),
-    ("POST", "/sync/push"),
-    ("GET", "/sync/status"),
     ("POST", "/sync/conflicts/conflict-1/resolve"),
 ]
 

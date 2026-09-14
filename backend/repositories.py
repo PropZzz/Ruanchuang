@@ -314,14 +314,30 @@ def init_db(db_path: str | Path | None = None, connection: sqlite3.Connection | 
             CREATE TABLE IF NOT EXISTS rescue_snapshots (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
-                day TEXT NOT NULL,
+                day TEXT NOT NULL DEFAULT '',
                 strategy TEXT NOT NULL,
                 baseline_hash TEXT NOT NULL,
                 urgent_json TEXT,
                 before_json TEXT NOT NULL,
+                after_json TEXT NOT NULL DEFAULT '[]',
                 status TEXT NOT NULL DEFAULT 'active',
                 created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT '',
                 undone_at TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sync_changes (
+                cursor INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                entity TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                operation TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             )
             """
@@ -424,6 +440,53 @@ def verify_user(db_path: str | Path | None, contact_address: str, password: str)
     if expected != user["passwordHash"]:
         return None
     return user
+
+
+def update_user_profile(
+    db_path: str | Path | None,
+    user_id: str,
+    display_name: str | None = None,
+) -> dict[str, object]:
+    with _connect(db_path) as connection:
+        row = connection.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        if row is None:
+            raise RepositoryNotFoundError(f"User not found: {user_id}")
+        if display_name is not None:
+            normalized = display_name.strip()
+            if not normalized:
+                raise RepositoryValidationError("displayName must not be blank")
+            connection.execute(
+                "UPDATE users SET display_name = ?, updated_at = ? WHERE id = ?",
+                (normalized, _now(), user_id),
+            )
+        connection.commit()
+        return find_user_by_id(db_path, user_id) or {}
+
+
+def user_diagnostics(db_path: str | Path | None, user_id: str) -> dict[str, object]:
+    tables = (
+        "schedules",
+        "microtasks",
+        "task_events",
+        "emotion_checkins",
+        "energy_samples",
+        "goals",
+        "goal_tasks",
+        "team_members",
+    )
+    with _connect(db_path) as connection:
+        counts = {
+            table: int(
+                connection.execute(
+                    f"SELECT COUNT(*) FROM {table} WHERE user_id = ?", (user_id,)
+                ).fetchone()[0]
+            )
+            for table in tables
+        }
+        last_event = connection.execute(
+            "SELECT MAX(created_at) FROM task_events WHERE user_id = ?", (user_id,)
+        ).fetchone()[0]
+        return {"counts": counts, "lastEventAt": last_event, "database": "sqlite"}
 
 
 def _schedule_row_to_dict(row: sqlite3.Row) -> dict[str, object]:
@@ -573,6 +636,223 @@ def upsert_schedule(db_path: str | Path | None, user_id: str, payload: dict[str,
         return _schedule_row_to_dict(row)
 
 
+def upsert_schedules_batch(
+    db_path: str | Path | None,
+    user_id: str,
+    payloads: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    now = _now()
+    with _connect(db_path) as connection:
+        results: list[dict[str, object]] = []
+        for payload in payloads:
+            schedule_id = str(_first_non_none(payload, "id", default=uuid.uuid4().hex))
+            day = _parse_date(payload.get("day"))
+            title = str(_first_non_none(payload, "title", default=""))
+            tag = str(_first_non_none(payload, "tag", default=""))
+            load_value = _first_non_none(payload, "load")
+            load = None if load_value is None else str(load_value)
+            goal_id_value = _first_non_none(payload, "goalId", "goal_id")
+            goal_task_id_value = _first_non_none(payload, "goalTaskId", "goal_task_id")
+            height = _parse_float(_first_non_none(payload, "height", default=60.0), 60.0)
+            color = _parse_int(_first_non_none(payload, "color", default=0), 0)
+            hour, minute = _parse_time(payload.get("time") or {})
+            reminder = _parse_int(_first_non_none(payload, "reminderMinutesBefore", "reminder_minutes_before", default=10), 10)
+            repeat = str(_first_non_none(payload, "repeat", default="none"))
+            repeat_until = _parse_date(_first_non_none(payload, "repeatUntil", "repeat_until"))
+            existing = connection.execute("SELECT user_id FROM schedules WHERE id = ?", (schedule_id,)).fetchone()
+            if existing is not None and existing["user_id"] != user_id:
+                raise RepositoryConflictError(f"Schedule belongs to another user: {schedule_id}")
+            connection.execute(
+                """
+                INSERT INTO schedules (
+                    id, user_id, day, title, tag, load, goal_id, goal_task_id, height, color,
+                    time_hour, time_minute, reminder_minutes_before, repeat, repeat_until,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    day = excluded.day, title = excluded.title, tag = excluded.tag, load = excluded.load,
+                    goal_id = excluded.goal_id, goal_task_id = excluded.goal_task_id, height = excluded.height,
+                    color = excluded.color, time_hour = excluded.time_hour, time_minute = excluded.time_minute,
+                    reminder_minutes_before = excluded.reminder_minutes_before, repeat = excluded.repeat,
+                    repeat_until = excluded.repeat_until, updated_at = excluded.updated_at
+                WHERE schedules.user_id = excluded.user_id
+                """,
+                (schedule_id, user_id, day, title, tag, load,
+                 None if goal_id_value is None else str(goal_id_value),
+                 None if goal_task_id_value is None else str(goal_task_id_value),
+                 height, color, hour, minute, reminder, repeat, repeat_until, now, now),
+            )
+            row = connection.execute("SELECT * FROM schedules WHERE id = ? AND user_id = ?", (schedule_id, user_id)).fetchone()
+            results.append(_schedule_row_to_dict(row))
+        connection.commit()
+        return results
+
+
+def schedule_baseline_hash(db_path: str | Path | None, user_id: str) -> str:
+    rows = list_schedules(db_path, user_id)
+    encoded = json.dumps(rows, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def replace_schedules_with_snapshot(
+    db_path: str | Path | None,
+    user_id: str,
+    before: list[dict[str, object]],
+    after: list[dict[str, object]],
+    strategy: str,
+    baseline_hash: str,
+) -> dict[str, object]:
+    now = _now()
+    snapshot_id = uuid.uuid4().hex
+    with _connect(db_path) as connection:
+        current = [
+            _schedule_row_to_dict(row)
+            for row in connection.execute(
+                """
+                SELECT * FROM schedules WHERE user_id = ?
+                ORDER BY CASE WHEN day IS NULL THEN 1 ELSE 0 END, day,
+                    time_hour, time_minute, updated_at DESC, id DESC
+                """,
+                (user_id,),
+            ).fetchall()
+        ]
+        encoded = json.dumps(current, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+        if hashlib.sha256(encoded.encode("utf-8")).hexdigest() != baseline_hash:
+            raise RepositoryConflictError("Schedule baseline changed; refresh before applying rescue.")
+        connection.execute("DELETE FROM schedules WHERE user_id = ?", (user_id,))
+        for payload in after:
+            schedule_id = str(payload.get("id") or uuid.uuid4().hex)
+            day = _parse_date(payload.get("day"))
+            hour, minute = _parse_time(payload.get("time") or {})
+            connection.execute(
+                """
+                INSERT INTO schedules (id, user_id, day, title, tag, load, goal_id, goal_task_id, height, color,
+                    time_hour, time_minute, reminder_minutes_before, repeat, repeat_until, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (schedule_id, user_id, day, str(payload.get("title") or ""), str(payload.get("tag") or ""),
+                 payload.get("load"), payload.get("goalId"), payload.get("goalTaskId"),
+                 _parse_float(payload.get("height"), 60.0), _parse_int(payload.get("color"), 0), hour, minute,
+                 _parse_int(payload.get("reminderMinutesBefore"), 10), str(payload.get("repeat") or "none"),
+                 _parse_date(payload.get("repeatUntil")), now, now),
+            )
+        connection.execute(
+            "INSERT INTO rescue_snapshots (id, user_id, strategy, baseline_hash, before_json, after_json, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (snapshot_id, user_id, strategy, baseline_hash, json.dumps(before, ensure_ascii=False), json.dumps(after, ensure_ascii=False), "applied", now, now),
+        )
+        event_id = uuid.uuid4().hex
+        _upsert_task_event_on_connection(
+            connection,
+            user_id,
+            {"id": event_id, "taskId": f"rescue:{snapshot_id}", "title": "日程救援", "tag": "Rescue", "type": "interrupt", "at": now, "reason": f"rescue_accept:{strategy}"},
+            now,
+        )
+        connection.commit()
+        return {"snapshotId": snapshot_id, "strategy": strategy, "status": "applied", "entries": after}
+
+
+def undo_schedule_snapshot(db_path: str | Path | None, user_id: str, snapshot_id: str) -> dict[str, object]:
+    now = _now()
+    with _connect(db_path) as connection:
+        row = connection.execute("SELECT * FROM rescue_snapshots WHERE id = ? AND user_id = ?", (snapshot_id, user_id)).fetchone()
+        if row is None:
+            raise RepositoryNotFoundError(f"Rescue snapshot not found: {snapshot_id}")
+        if row["status"] != "applied":
+            raise RepositoryConflictError("Rescue snapshot has already been undone.")
+        before = json.loads(row["before_json"])
+        connection.execute("DELETE FROM schedules WHERE user_id = ?", (user_id,))
+        for payload in before:
+            schedule_id = str(payload.get("id") or uuid.uuid4().hex)
+            hour, minute = _parse_time(payload.get("time") or {})
+            connection.execute(
+                """
+                INSERT INTO schedules (id, user_id, day, title, tag, load, goal_id, goal_task_id, height, color,
+                    time_hour, time_minute, reminder_minutes_before, repeat, repeat_until, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (schedule_id, user_id, _parse_date(payload.get("day")), str(payload.get("title") or ""), str(payload.get("tag") or ""),
+                 payload.get("load"), payload.get("goalId"), payload.get("goalTaskId"), _parse_float(payload.get("height"), 60.0),
+                 _parse_int(payload.get("color"), 0), hour, minute, _parse_int(payload.get("reminderMinutesBefore"), 10),
+                 str(payload.get("repeat") or "none"), _parse_date(payload.get("repeatUntil")), now, now),
+            )
+        connection.execute("UPDATE rescue_snapshots SET status = 'undone', updated_at = ? WHERE id = ?", (now, snapshot_id))
+        _upsert_task_event_on_connection(
+            connection, user_id,
+            {"id": uuid.uuid4().hex, "taskId": f"rescue:{snapshot_id}", "title": "撤销日程救援", "tag": "Rescue", "type": "interrupt", "at": now, "reason": f"rescue_undo:{row['strategy']}"},
+            now,
+        )
+        connection.commit()
+        return {"snapshotId": snapshot_id, "strategy": row["strategy"], "status": "undone", "entries": before}
+
+
+def list_rescue_snapshots(db_path: str | Path | None, user_id: str) -> list[dict[str, object]]:
+    with _connect(db_path) as connection:
+        rows = connection.execute("SELECT * FROM rescue_snapshots WHERE user_id = ? ORDER BY created_at DESC", (user_id,)).fetchall()
+        return [{"snapshotId": row["id"], "strategy": row["strategy"], "status": row["status"], "before": json.loads(row["before_json"]), "after": json.loads(row["after_json"]), "baselineHash": row["baseline_hash"]} for row in rows]
+
+
+def record_sync_change(
+    connection: sqlite3.Connection,
+    user_id: str,
+    entity: str,
+    entity_id: str,
+    operation: str,
+    payload: dict[str, object],
+) -> int:
+    cursor = connection.execute(
+        "INSERT INTO sync_changes (user_id, entity, entity_id, operation, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (user_id, entity, entity_id, operation, json.dumps(payload, ensure_ascii=False), _now()),
+    )
+    return int(cursor.lastrowid)
+
+
+def sync_status(db_path: str | Path | None, user_id: str) -> dict[str, object]:
+    with _connect(db_path) as connection:
+        latest = connection.execute("SELECT COALESCE(MAX(cursor), 0) FROM sync_changes WHERE user_id = ?", (user_id,)).fetchone()[0]
+        count = connection.execute("SELECT COUNT(*) FROM sync_changes WHERE user_id = ?", (user_id,)).fetchone()[0]
+        return {"cursor": int(latest), "changeCount": int(count), "pending": 0, "conflicts": 0}
+
+
+def pull_sync_changes(db_path: str | Path | None, user_id: str, since: int) -> dict[str, object]:
+    if since < 0:
+        raise RepositoryValidationError("since must be a non-negative cursor")
+    with _connect(db_path) as connection:
+        rows = connection.execute(
+            "SELECT cursor, entity, entity_id, operation, payload_json, created_at FROM sync_changes WHERE user_id = ? AND cursor > ? ORDER BY cursor ASC",
+            (user_id, since),
+        ).fetchall()
+        changes = [
+            {"cursor": int(row["cursor"]), "entity": row["entity"], "entityId": row["entity_id"], "operation": row["operation"], "payload": json.loads(row["payload_json"]), "createdAt": row["created_at"]}
+            for row in rows
+        ]
+        latest = max([since, *[change["cursor"] for change in changes]])
+        return {"cursor": latest, "changes": changes, "conflicts": []}
+
+
+def push_sync_changes(db_path: str | Path | None, user_id: str, changes: list[dict[str, object]]) -> dict[str, object]:
+    normalized: list[tuple[str, str, str, dict[str, object]]] = []
+    for change in changes:
+        entity = str(change.get("entity") or "")
+        operation = str(change.get("operation") or "upsert")
+        payload = change.get("payload") if isinstance(change.get("payload"), dict) else {}
+        entity_id = str(payload.get("id") or "")
+        if entity not in {"schedule", "microtask"} or operation != "upsert" or not entity_id:
+            raise RepositoryValidationError("sync supports upsert changes for schedule or microtask entities with an id")
+        normalized.append((entity, operation, entity_id, payload))
+    with _connect(db_path) as connection:
+        applied: list[str] = []
+        for entity, operation, entity_id, payload in normalized:
+            if entity == "schedule":
+                upsert_schedule(db_path, user_id, payload)
+            else:
+                upsert_microtask(db_path, user_id, payload)
+            record_sync_change(connection, user_id, entity, entity_id, operation, payload)
+            applied.append(entity_id)
+        connection.commit()
+        latest = connection.execute("SELECT COALESCE(MAX(cursor), 0) FROM sync_changes WHERE user_id = ?", (user_id,)).fetchone()[0]
+        return {"cursor": int(latest), "applied": applied, "conflicts": []}
+
+
 def list_schedules(db_path: str | Path | None, user_id: str) -> list[dict[str, object]]:
     with _connect(db_path) as connection:
         rows = connection.execute(
@@ -678,6 +958,89 @@ def delete_microtask(db_path: str | Path | None, user_id: str, microtask_id: str
             (microtask_id, user_id),
         )
         connection.commit()
+
+
+def batch_complete_microtasks(
+    db_path: str | Path | None,
+    user_id: str,
+    task_ids: list[str],
+    done: bool = True,
+) -> list[dict[str, object]]:
+    normalized = list(dict.fromkeys(str(task_id).strip() for task_id in task_ids if str(task_id).strip()))
+    with _connect(db_path) as connection:
+        for task_id in normalized:
+            row = connection.execute("SELECT user_id FROM microtasks WHERE id = ?", (task_id,)).fetchone()
+            if row is None:
+                raise RepositoryNotFoundError(f"Microtask not found: {task_id}")
+            if row["user_id"] != user_id:
+                raise RepositoryConflictError(f"Microtask belongs to another user: {task_id}")
+        now = _now()
+        for task_id in normalized:
+            connection.execute("UPDATE microtasks SET done = ?, updated_at = ? WHERE id = ? AND user_id = ?", (1 if done else 0, now, task_id, user_id))
+        connection.commit()
+        return [_microtask_row_to_dict(connection.execute("SELECT * FROM microtasks WHERE id = ? AND user_id = ?", (task_id, user_id)).fetchone()) for task_id in normalized]
+
+
+def import_microtasks(
+    db_path: str | Path | None,
+    user_id: str,
+    text: str,
+) -> list[dict[str, object]]:
+    payloads: list[dict[str, object]] = []
+    for line in text.splitlines():
+        title = line.strip()
+        if not title:
+            continue
+        tag = "Imported"
+        if " #" in title:
+            title, tag = title.rsplit(" #", 1)
+            title = title.strip()
+            tag = tag.strip() or "Imported"
+        payloads.append({"title": title, "tag": tag, "minutes": 15, "priority": 3, "done": False})
+    if not payloads:
+        raise RepositoryValidationError("Import text must contain at least one task.")
+    results: list[dict[str, object]] = []
+    with _connect(db_path) as connection:
+        now = _now()
+        for payload in payloads:
+            task_id = uuid.uuid4().hex
+            connection.execute("INSERT INTO microtasks (id, user_id, title, tag, minutes, priority, requirement, done, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (task_id, user_id, payload["title"], payload["tag"], 15, 3, None, 0, now, now))
+            results.append(_microtask_row_to_dict(connection.execute("SELECT * FROM microtasks WHERE id = ? AND user_id = ?", (task_id, user_id)).fetchone()))
+        connection.commit()
+    return results
+
+
+def batch_schedule_microtasks(
+    db_path: str | Path | None,
+    user_id: str,
+    task_ids: list[str],
+    day: str,
+    start: dict[str, object],
+) -> list[dict[str, object]]:
+    tasks = []
+    with _connect(db_path) as connection:
+        for task_id in dict.fromkeys(task_ids):
+            row = connection.execute("SELECT * FROM microtasks WHERE id = ?", (task_id,)).fetchone()
+            if row is None:
+                raise RepositoryNotFoundError(f"Microtask not found: {task_id}")
+            if row["user_id"] != user_id:
+                raise RepositoryConflictError(f"Microtask belongs to another user: {task_id}")
+            tasks.append(dict(row))
+    start_minute = _parse_time(start)[0] * 60 + _parse_time(start)[1]
+    payloads: list[dict[str, object]] = []
+    for task in tasks:
+        payloads.append({
+            "id": f"microtask-schedule-{task['id']}",
+            "day": day,
+            "title": task["title"],
+            "tag": task["tag"],
+            "goalTaskId": task["id"],
+            "height": _parse_float(task["minutes"], 15) * 80 / 60,
+            "color": 0,
+            "time": {"hour": start_minute // 60, "minute": start_minute % 60},
+        })
+        start_minute += int(task["minutes"])
+    return upsert_schedules_batch(db_path, user_id, payloads)
 
 
 def _task_event_row_to_dict(row: sqlite3.Row | None) -> dict[str, object] | None:
@@ -1541,6 +1904,45 @@ def update_goal_task(
         )
         connection.commit()
         return _goal_row_to_dict(connection, goal)
+
+
+def schedule_next_goal_task(
+    db_path: str | Path | None,
+    user_id: str,
+    goal_id: str,
+    day: str,
+    start: dict[str, object],
+) -> dict[str, object]:
+    with _connect(db_path) as connection:
+        goal = connection.execute("SELECT * FROM goals WHERE id = ? AND user_id = ?", (goal_id, user_id)).fetchone()
+        if goal is None:
+            if connection.execute("SELECT user_id FROM goals WHERE id = ?", (goal_id,)).fetchone() is not None:
+                raise RepositoryConflictError(f"Goal belongs to another user: {goal_id}")
+            raise RepositoryNotFoundError(f"Goal not found: {goal_id}")
+        tasks = _list_goal_tasks_on_connection(connection, user_id, goal_id)
+    completed = {str(task["id"]) for task in tasks if task.get("done")}
+    selected = next(
+        (task for task in tasks if not task.get("done") and set(_depends_on_list(task.get("dependsOn"))).issubset(completed)),
+        None,
+    )
+    if selected is None:
+        raise RepositoryValidationError("No executable goal task is available.")
+    return upsert_schedule(
+        db_path,
+        user_id,
+        {
+            "id": f"goal-schedule-{selected['id']}",
+            "day": day,
+            "title": selected["title"],
+            "tag": selected["tag"],
+            "load": selected["load"],
+            "goalId": goal_id,
+            "goalTaskId": selected["id"],
+            "height": int(selected["durationMinutes"]) * 80 / 60,
+            "color": 0,
+            "time": start,
+        },
+    )
 
 
 def _filter_busy_by_day(busy: object, day: str | None = None) -> list[dict[str, object]]:

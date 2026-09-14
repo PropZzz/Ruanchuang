@@ -263,7 +263,15 @@ class RemoteDataService implements DataService {
   Future<void> bookTeamMeeting(
     DateTime day,
     TeamMeetingRequest request,
-  ) async => _unavailable('bookTeamMeeting');
+  ) async {
+    await _api.post('/team/book-meeting', {
+      'day': _dateOnly(day),
+      'title': request.title,
+      'start': {'hour': request.start.hour, 'minute': request.start.minute},
+      'minutes': request.minutes,
+      'participantIds': request.participantIds,
+    });
+  }
 
   @override
   Future<void> setSchedulingTuning(SchedulingTuning tuning) async {
@@ -331,6 +339,11 @@ class RemoteDataService implements DataService {
 
   @override
   Future<void> logout() async {
+    try {
+      await _api.post('/auth/logout', null);
+    } on ApiException catch (error) {
+      if (error.statusCode != 401) rethrow;
+    }
     _api.setToken(null);
     _currentUser = null;
   }

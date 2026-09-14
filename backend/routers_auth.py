@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Header, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
 
-from .auth import extract_bearer_token, issue_token, resolve_token
+from .auth import current_user_id, extract_bearer_token, issue_token, resolve_token, revoke_token
 from .repositories import (
     create_user,
     find_user_by_id,
+    RepositoryNotFoundError,
+    RepositoryValidationError,
+    update_user_profile,
     verify_user,
 )
-from .schemas import TokenResponse, UserCreate, UserLogin, UserOut
+from .schemas import ProfileUpdate, TokenResponse, UserCreate, UserLogin, UserOut
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -66,3 +69,26 @@ def login(payload: UserLogin, request: Request) -> TokenResponse:
 @router.get("/me", response_model=UserOut)
 def me(request: Request, authorization: str | None = Header(default=None)) -> UserOut:
     return _current_user(request, authorization)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(authorization: str | None = Header(default=None)) -> None:
+    token = extract_bearer_token(authorization)
+    if token is None or resolve_token(token) is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    revoke_token(token)
+
+
+@router.put("/profile", response_model=UserOut)
+def profile(
+    payload: ProfileUpdate,
+    request: Request,
+    user_id: str = Depends(current_user_id),
+) -> UserOut:
+    try:
+        user = update_user_profile(_db_path(request), user_id, payload.display_name)
+    except RepositoryNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except RepositoryValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    return _public_user(user)
