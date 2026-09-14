@@ -258,13 +258,15 @@ Implemented commits:
 - `4d0c6b6`: Dart fixture runner and canonical request execution.
 - `754caeb`: Python orchestrator and committed parity report.
 - `1c8102e`: weighted rescue metrics, option scores, hard-issue precedence, and UI recommendation alignment.
+- `acda463`, `0300370`: runner/test cleanup and formatting verification.
+- `13fee36`: public documentation and implementation evidence.
 
 Final evidence:
 
 ```text
 flutter analyze                  -> No issues found
-flutter test -r compact          -> 188 tests passed
-python -m pytest backend/tests -q -> 103 tests passed, 4 dependency deprecation warnings
+flutter test -r compact          -> 193 tests passed
+python -m pytest backend/tests -q -> 106 tests passed, 4 dependency deprecation warnings
 python scripts/scheduling_parity.py -> 2 fixtures, 2 matched, 0 mismatched, 0 invalid
 dart format --set-exit-if-changed (touched files) -> clean
 git diff --check                 -> clean
