@@ -1,6 +1,6 @@
 # Scheduling Contract v1 Design
 
-> **Status:** v1 contract boundary implemented; full SchedulerCore convergence remains follow-up  
+> **Status:** v1 contract boundary implemented; full SchedulerCore convergence remains follow-up
 > **Owner:** Member A  
 > **Scope:** `/schedule/replan` input/output and the Dart/Python scheduling boundary
 
