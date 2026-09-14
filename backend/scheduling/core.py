@@ -323,6 +323,12 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
         duration = int(entry.get("durationMinutes") or entry.get("minutes") or _duration_from_height(float(entry.get("height") or 80.0)))
         fixed_blocks.append((start, start + max(1, duration)))
         fixed_entries.append(entry)
+    fixed_pairs = sorted(
+        zip(fixed_entries, fixed_blocks),
+        key=lambda pair: (pair[1][0], str(pair[0].get("id") or "")),
+    )
+    fixed_entries = [entry for entry, _ in fixed_pairs]
+    fixed_blocks = [block for _, block in fixed_pairs]
 
     supplied_windows: list[tuple[int, int]] = []
     for window in windows_raw:

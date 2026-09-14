@@ -154,7 +154,11 @@ class SchedulerCore implements SchedulingEngine {
     final tuning = request.tuning;
 
     final fixed = List<ScheduleEntry>.from(request.fixed);
-    fixed.sort((a, b) => _todToMin(a.time).compareTo(_todToMin(b.time)));
+    fixed.sort((a, b) {
+      final time = _todToMin(a.time).compareTo(_todToMin(b.time));
+      if (time != 0) return time;
+      return (a.id ?? '').compareTo(b.id ?? '');
+    });
 
     // Build free intervals from windows.
     final free = <_Interval>[];
