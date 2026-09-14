@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1",
+  "recoveryBufferMinutes": 15,
+  "strategies": {
+    "protectDeadline": {
+      "urgency": 0.55,
+      "priority": 0.25,
+      "energyFit": 0.10,
+      "stability": 0.10,
+      "recovery": 0.00
+    },
+    "protectRecovery": {
+      "urgency": 0.20,
+      "priority": 0.10,
+      "energyFit": 0.35,
+      "stability": 0.10,
+      "recovery": 0.25
+    },
+    "minimizeChanges": {
+      "urgency": 0.25,
+      "priority": 0.15,
+      "energyFit": 0.05,
+      "stability": 0.55,
+      "recovery": 0.00
+    }
+  }
+}
