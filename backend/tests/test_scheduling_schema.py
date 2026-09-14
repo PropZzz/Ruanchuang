@@ -80,6 +80,15 @@ def test_schema_rejects_invalid_date_time() -> None:
     assert errors
 
 
+def test_schema_rejects_reserved_task_splitting_options() -> None:
+    fixture = _load_json("contracts/scheduling/v1/fixtures/basic.json")
+    invalid = copy.deepcopy(fixture["request"])
+    invalid["tasks"][0]["splittable"] = True
+    invalid["tasks"][0]["minimumChunkMinutes"] = 15
+    errors = list(_validator().iter_errors(invalid))
+    assert errors
+
+
 def test_schema_rejects_unknown_entry_field() -> None:
     fixture = _load_json("contracts/scheduling/v1/fixtures/basic.json")
     invalid = copy.deepcopy(fixture["response"])
