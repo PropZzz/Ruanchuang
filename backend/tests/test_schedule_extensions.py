@@ -102,6 +102,7 @@ def test_rescue_apply_undo_and_stale_baseline_are_transactional(tmp_path):
             "/schedule/rescue/apply",
             headers=headers,
             json={
+                "day": "2026-09-07",
                 "strategy": option["strategy"],
                 "baselineHash": options_response.json()["baselineHash"],
                 "before": [_entry("baseline", "Baseline", 9)],
@@ -115,7 +116,13 @@ def test_rescue_apply_undo_and_stale_baseline_are_transactional(tmp_path):
         stale = client.post(
             "/schedule/rescue/apply",
             headers=headers,
-            json={"strategy": "protectDeadline", "baselineHash": "stale", "before": [], "after": []},
+            json={
+                "day": "2026-09-07",
+                "strategy": "protectDeadline",
+                "baselineHash": "stale",
+                "before": [],
+                "after": [_entry("new_1", "New", 8)],
+            },
         )
         assert stale.status_code == 409
 

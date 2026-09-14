@@ -18,6 +18,7 @@ from .schemas import (
     TuningApplyRequest,
 )
 from .services_review import monthly_report, weekly_report
+from .services_rescue import filter_rescue_events
 
 
 router = APIRouter(prefix="/review", tags=["review"])
@@ -66,15 +67,7 @@ def get_rescue_history(
         from_at.isoformat() if from_at else None,
         to_at.isoformat() if to_at else None,
     )
-    rescue_events = [
-        event
-        for event in events
-        if isinstance(event.get("reason"), str)
-        and (
-            str(event["reason"]).startswith("rescue_accept:")
-            or str(event["reason"]).startswith("rescue_undo:")
-        )
-    ]
+    rescue_events = filter_rescue_events(events)
     return sorted(rescue_events, key=lambda event: str(event.get("at") or ""), reverse=True)
 
 

@@ -10,20 +10,12 @@ from .repositories import (
     RepositoryConflictError,
     RepositoryNotFoundError,
     delete_schedule,
-    list_rescue_snapshots,
     list_schedules,
-    replace_schedules_with_snapshot,
     schedule_baseline_hash,
-    undo_schedule_snapshot,
     upsert_schedule,
     upsert_schedules_batch,
 )
 from .schemas import (
-    RescueApplyRequest,
-    RescueOptionsOut,
-    RescueOptionsRequest,
-    RescueSnapshotOut,
-    RescueUndoRequest,
     ScheduleConflictsOut,
     ScheduleEntryIn,
     ScheduleEntryOut,
@@ -32,7 +24,6 @@ from .schemas import (
     SchedulingRequest,
 )
 from .services_ics import IcsValidationError, export_ics, parse_ics
-from .services_rescue import build_rescue_options
 from .services_scheduling import plan_schedule
 
 
@@ -171,56 +162,3 @@ def export_schedule_ics(
     if to_date is not None:
         entries = [entry for entry in entries if str(entry.get("day") or "") <= to_date.isoformat()]
     return PlainTextResponse(export_ics(entries), media_type="text/calendar")
-
-
-@router.post("/rescue/options", response_model=RescueOptionsOut)
-def rescue_options(
-    payload: RescueOptionsRequest,
-    request: Request,
-    user_id: str = Depends(current_user_id),
-) -> dict[str, object]:
-    return {
-        "baselineHash": schedule_baseline_hash(_db_path(request), user_id),
-        "options": build_rescue_options(payload.model_dump(mode="json", by_alias=True)),
-    }
-
-
-@router.post("/rescue/apply", response_model=RescueSnapshotOut)
-def rescue_apply(
-    payload: RescueApplyRequest,
-    request: Request,
-    user_id: str = Depends(current_user_id),
-) -> dict[str, object]:
-    try:
-        return replace_schedules_with_snapshot(
-            _db_path(request),
-            user_id,
-            [item.model_dump(mode="json", by_alias=True) for item in payload.before],
-            [item.model_dump(mode="json", by_alias=True) for item in payload.after],
-            payload.strategy,
-            payload.baseline_hash,
-        )
-    except RepositoryConflictError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-
-
-@router.post("/rescue/undo", response_model=RescueSnapshotOut)
-def rescue_undo(
-    payload: RescueUndoRequest,
-    request: Request,
-    user_id: str = Depends(current_user_id),
-) -> dict[str, object]:
-    try:
-        return undo_schedule_snapshot(_db_path(request), user_id, payload.snapshot_id)
-    except RepositoryConflictError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
-    except RepositoryNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
-
-
-@router.get("/rescue/history", response_model=list[dict[str, object]])
-def rescue_history(
-    request: Request,
-    user_id: str = Depends(current_user_id),
-) -> list[dict[str, object]]:
-    return list_rescue_snapshots(_db_path(request), user_id)
