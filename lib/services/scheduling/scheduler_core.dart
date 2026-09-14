@@ -13,6 +13,13 @@ class _Interval {
   int get length => endMin - startMin;
 }
 
+class _Placement {
+  final int startMin;
+  final int duration;
+
+  const _Placement(this.startMin, this.duration);
+}
+
 int _todToMin(TimeOfDay t) => t.hour * 60 + t.minute;
 
 TimeOfDay _minToTod(int minutes) {
@@ -172,23 +179,46 @@ class SchedulerCore implements SchedulingEngine {
         }
 
         final dur = t.durationMinutes.clamp(1, 24 * 60).toInt();
+        final splittable = t.splittable;
+        final minimumChunk = t.minimumChunkMinutes ?? 15;
         final dueMin = (t.due != null && sameDay(t.due!, day))
             ? (t.due!.hour * 60 + t.due!.minute)
             : null;
         final earliestMin = _earliestStartMinutes(t, day);
 
-        final placement = _pickSlot(
-          free: free,
-          duration: dur,
-          dueMin: dueMin,
-          earliestMin: earliestMin,
-          hardDeadline: t.hardDeadline,
-          energy: energy,
-          load: t.load,
-          tuning: tuning,
-        );
+        final freeBeforeTask = free
+            .map((interval) => _Interval(interval.startMin, interval.endMin))
+            .toList(growable: false);
+        final placements = <_Placement>[];
+        var remaining = dur;
+        while (remaining > 0) {
+          final chunkDuration = splittable
+              ? _nextChunkDuration(remaining, minimumChunk, free)
+              : remaining;
+          if (chunkDuration == null) break;
+          final placement = _pickSlot(
+            free: free,
+            duration: chunkDuration,
+            dueMin: dueMin,
+            earliestMin: placements.isEmpty ? earliestMin : null,
+            hardDeadline: t.hardDeadline,
+            energy: energy,
+            load: t.load,
+            tuning: tuning,
+          );
+          if (placement == null) break;
+          placements.add(_Placement(placement, chunkDuration));
+          _subtractInterval(
+            free,
+            _Interval(placement, placement + chunkDuration),
+          );
+          remaining -= chunkDuration;
+        }
 
-        if (placement == null) {
+        if (remaining > 0) {
+          free
+            ..clear()
+            ..addAll(freeBeforeTask);
           issues.add(
             SchedulingIssue(
               code: 'no_slot',
@@ -204,22 +234,22 @@ class SchedulerCore implements SchedulingEngine {
           continue;
         }
 
-        // Allocate.
-        _subtractInterval(free, _Interval(placement, placement + dur));
-
-        planned.add(
-          ScheduleEntry(
-            id: t.id,
-            title: t.title,
-            tag: t.tag,
-            load: t.load,
-            height: _heightFromDuration(dur),
-            color: _colorForLoad(t.load),
-            time: _minToTod(placement),
-            source: 'planned',
-            explanationCodes: _explanationCodes(t, energy),
-          ),
-        );
+        for (var index = 0; index < placements.length; index++) {
+          final placement = placements[index];
+          planned.add(
+            ScheduleEntry(
+              id: splittable ? '${t.id}#${index + 1}' : t.id,
+              title: t.title,
+              tag: t.tag,
+              load: t.load,
+              height: _heightFromDuration(placement.duration),
+              color: _colorForLoad(t.load),
+              time: _minToTod(placement.startMin),
+              source: 'planned',
+              explanationCodes: _explanationCodes(t, energy),
+            ),
+          );
+        }
         placedIds.add(t.id);
         progressed = true;
 
@@ -235,7 +265,8 @@ class SchedulerCore implements SchedulingEngine {
               ),
             );
           }
-        } else if (dueMin != null && placement + dur > dueMin) {
+        } else if (dueMin != null &&
+            placements.last.startMin + placements.last.duration > dueMin) {
           issues.add(
             SchedulingIssue(
               code: 'miss_due',
@@ -287,6 +318,29 @@ class SchedulerCore implements SchedulingEngine {
     });
 
     return SchedulingPlan(entries: out, issues: issues);
+  }
+
+  int? _nextChunkDuration(
+    int remaining,
+    int minimumChunk,
+    List<_Interval> intervals,
+  ) {
+    if (intervals.any((interval) => interval.length >= remaining)) {
+      return remaining;
+    }
+    final largest = intervals.fold<int>(
+      0,
+      (maxLength, interval) =>
+          interval.length > maxLength ? interval.length : maxLength,
+    );
+    if (largest < minimumChunk) return null;
+    var candidate = remaining < largest ? remaining : largest;
+    final remainder = remaining - candidate;
+    if (remainder > 0 && remainder < minimumChunk) {
+      candidate = remaining - minimumChunk;
+    }
+    if (candidate < minimumChunk || candidate > largest) return null;
+    return candidate;
   }
 
   int? _pickSlot({

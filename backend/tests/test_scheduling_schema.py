@@ -23,7 +23,7 @@ def _validator() -> Draft202012Validator:
 
 @pytest.mark.parametrize(
     "fixture_name",
-    ["basic.json", "dependency-blocked.json"],
+    ["basic.json", "dependency-blocked.json", "split-task.json"],
 )
 def test_shared_fixture_matches_schema(fixture_name: str) -> None:
     fixture = _load_json(f"contracts/scheduling/v1/fixtures/{fixture_name}")
@@ -80,10 +80,25 @@ def test_schema_rejects_invalid_date_time() -> None:
     assert errors
 
 
-def test_schema_rejects_reserved_task_splitting_options() -> None:
+def test_schema_rejects_non_minute_datetime() -> None:
     fixture = _load_json("contracts/scheduling/v1/fixtures/basic.json")
     invalid = copy.deepcopy(fixture["request"])
-    invalid["tasks"][0]["splittable"] = True
+    invalid["tasks"][0]["due"] = "2026-09-14T13:30:30+08:00"
+    errors = list(_validator().iter_errors(invalid))
+    assert errors
+
+
+def test_schema_accepts_splittable_task_with_minimum_chunk() -> None:
+    fixture = _load_json("contracts/scheduling/v1/fixtures/basic.json")
+    valid = copy.deepcopy(fixture["request"])
+    valid["tasks"][0]["splittable"] = True
+    valid["tasks"][0]["minimumChunkMinutes"] = 15
+    assert list(_validator().iter_errors(valid)) == []
+
+
+def test_schema_rejects_minimum_chunk_for_unsplittable_task() -> None:
+    fixture = _load_json("contracts/scheduling/v1/fixtures/basic.json")
+    invalid = copy.deepcopy(fixture["request"])
     invalid["tasks"][0]["minimumChunkMinutes"] = 15
     errors = list(_validator().iter_errors(invalid))
     assert errors

@@ -21,7 +21,7 @@ void main() {
     stdout.writeln('SCHEDULING_PARITY_RESULT_END');
 
     expect(result['fixtures'], isA<List<dynamic>>());
-    expect((result['fixtures'] as List).length, 2);
+    expect((result['fixtures'] as List).length, 3);
     expect(result['invalid'], 0);
     expect(result['mismatched'], 0);
   });

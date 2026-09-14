@@ -196,6 +196,21 @@ def _palette(load: object) -> int:
     return palette.get(str(load or ""), 0xFF334155)
 
 
+def _next_chunk_duration(remaining: int, minimum_chunk: int, slots: list[tuple[int, int]]) -> int | None:
+    if any(end - start >= remaining for start, end in slots):
+        return remaining
+    largest = max((end - start for start, end in slots), default=0)
+    if largest < minimum_chunk:
+        return None
+    candidate = min(remaining, largest)
+    remainder = remaining - candidate
+    if 0 < remainder < minimum_chunk:
+        candidate = remaining - minimum_chunk
+    if candidate < minimum_chunk or candidate > largest:
+        return None
+    return candidate
+
+
 def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
     day = _parse_day(request.get("day"))
     windows_raw = request.get("windows") or []
@@ -264,6 +279,8 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
                 continue
 
             duration = _task_duration(task, energy, tuning)
+            splittable = bool(task.get("splittable"))
+            minimum_chunk = int(task.get("minimumChunkMinutes") or 15)
             earliest = _parse_datetime(task.get("earliestStart"))
             earliest_minutes = None
             if earliest is not None and day is not None:
@@ -272,14 +289,32 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
                 elif earliest.date().isoformat() == day:
                     earliest_minutes = earliest.hour * 60 + earliest.minute
             due_minutes = _due_minutes_for_day(task, day)
-            start = _pick_slot(
-                slots,
-                duration,
-                earliest_minutes,
-                due_minutes,
-                bool(task.get("hardDeadline")),
-            )
-            if start is None:
+            slots_before_task = list(slots)
+            chunks: list[tuple[int, int]] = []
+            remaining = duration
+            while remaining > 0:
+                chunk_duration = (
+                    _next_chunk_duration(remaining, minimum_chunk, slots)
+                    if splittable
+                    else remaining
+                )
+                if chunk_duration is None:
+                    break
+                start = _pick_slot(
+                    slots,
+                    chunk_duration,
+                    earliest_minutes if not chunks else None,
+                    due_minutes,
+                    bool(task.get("hardDeadline")),
+                )
+                if start is None:
+                    break
+                chunks.append((start, chunk_duration))
+                _consume_interval(slots, (start, start + chunk_duration))
+                remaining -= chunk_duration
+
+            if remaining > 0:
+                slots[:] = slots_before_task
                 issue_code = "no_slot"
                 issue = {
                     "code": issue_code,
@@ -309,8 +344,12 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
                 "source": "planned",
                 "explanationCodes": _explanation_codes(task, energy),
             }
-            entries.append(entry)
-            _consume_interval(slots, (start, start + duration))
+            for chunk_index, (start, chunk_duration) in enumerate(chunks, start=1):
+                chunk_entry = dict(entry)
+                chunk_entry["id"] = task_id if not splittable else f"{task_id}#{chunk_index}"
+                chunk_entry["height"] = _height_from_duration(chunk_duration)
+                chunk_entry["time"] = _minutes_to_time(start)
+                entries.append(chunk_entry)
             placed_ids.add(task_id)
             progressed = True
 
@@ -325,7 +364,7 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
                             "explanationCodes": ["deadline_proximity"],
                         }
                     )
-                elif start + duration > due_minutes:
+                elif chunks[-1][0] + chunks[-1][1] > due_minutes:
                     issues.append(
                         {
                             "code": "miss_due",

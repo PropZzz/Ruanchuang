@@ -53,6 +53,11 @@
         ],
         "explanationCodes": []
       }
-    ]
+    ],
+    "risk": {
+      "level": "high",
+      "issueCount": 1,
+      "hardIssueCount": 1
+    }
   }
 }

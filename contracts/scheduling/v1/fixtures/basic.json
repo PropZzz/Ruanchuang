@@ -163,6 +163,11 @@
         "taskId": "task-offset",
         "explanationCodes": ["deadline_proximity"]
       }
-    ]
+    ],
+    "risk": {
+      "level": "medium",
+      "issueCount": 1,
+      "hardIssueCount": 0
+    }
   }
 }

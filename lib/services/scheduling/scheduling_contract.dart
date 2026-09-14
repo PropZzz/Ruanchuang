@@ -59,10 +59,12 @@ class SchedulingContract {
   static Map<String, Object?> taskToJson(PlanTask task) {
     _checkRange('durationMinutes', task.durationMinutes, 1, 1440);
     _checkRange('priority', task.priority, 1, 5);
-    if (task.splittable || task.minimumChunkMinutes != null) {
-      throw ArgumentError(
-        'task splitting is reserved in scheduling contract v1',
-      );
+    if (!task.splittable && task.minimumChunkMinutes != null) {
+      throw ArgumentError('minimumChunkMinutes requires splittable=true');
+    }
+    if (task.minimumChunkMinutes != null &&
+        task.minimumChunkMinutes! > task.durationMinutes) {
+      throw ArgumentError('minimumChunkMinutes cannot exceed durationMinutes');
     }
     return <String, Object?>{
       'id': _requiredText('id', task.id),
@@ -77,8 +79,8 @@ class SchedulingContract {
       'hardDeadline': task.hardDeadline,
       'earliestStart': _canonicalDateTime(task.earliestStart),
       'dependsOn': _uniqueIds(task.dependsOn),
-      'splittable': false,
-      'minimumChunkMinutes': null,
+      'splittable': task.splittable,
+      'minimumChunkMinutes': task.minimumChunkMinutes,
     };
   }
 
@@ -127,10 +129,19 @@ class SchedulingContract {
       throw const FormatException('dependsOn must contain unique ids');
     }
     final splittable = json['splittable'] ?? false;
-    if (splittable != false || json['minimumChunkMinutes'] != null) {
+    if (splittable is! bool) {
+      throw const FormatException('splittable must be boolean');
+    }
+    final minimumChunk = json['minimumChunkMinutes'] == null
+        ? null
+        : _intValue(json['minimumChunkMinutes'], 'minimumChunkMinutes');
+    if (!splittable && minimumChunk != null) {
       throw const FormatException(
-        'task splitting is reserved in scheduling contract v1',
+        'minimumChunkMinutes requires splittable=true',
       );
+    }
+    if (minimumChunk != null) {
+      _checkRange('minimumChunkMinutes', minimumChunk, 1, duration);
     }
     return PlanTask(
       id: id,
@@ -145,8 +156,8 @@ class SchedulingContract {
       earliestStart: _parseDateTime(json['earliestStart'], 'earliestStart'),
       hardDeadline: _boolValue(json['hardDeadline'] ?? false, 'hardDeadline'),
       dependsOn: dependsOn,
-      splittable: false,
-      minimumChunkMinutes: null,
+      splittable: splittable,
+      minimumChunkMinutes: minimumChunk,
     );
   }
 
@@ -171,11 +182,17 @@ class SchedulingContract {
       'schemaVersion': schemaVersion,
       'entries': plan.entries.map((entry) => _entryToJson(entry)).toList(),
       'issues': plan.issues.map(issueToJson).toList(),
+      'risk': (plan.risk ?? SchedulingRisk.fromIssues(plan.issues)).toJson(),
     };
   }
 
   static SchedulingPlan planFromJson(Map<String, Object?> json) {
-    _rejectUnknown(json, {'schemaVersion', 'entries', 'issues'}, 'response');
+    _rejectUnknown(json, {
+      'schemaVersion',
+      'entries',
+      'issues',
+      'risk',
+    }, 'response');
     if (json['schemaVersion'] != schemaVersion) {
       throw const FormatException('schemaVersion must be "1"');
     }
@@ -191,6 +208,11 @@ class SchedulingContract {
       schemaVersion: schemaVersion,
       entries: entries,
       issues: issues,
+      risk: json['risk'] is Map
+          ? SchedulingRisk.fromJson(
+              Map<String, Object?>.from(json['risk'] as Map),
+            )
+          : null,
     );
   }
 
@@ -434,6 +456,11 @@ class SchedulingContract {
     final parsed = DateTime.tryParse(value);
     if (parsed == null || !value.contains('T')) {
       throw FormatException('$field must be an ISO date-time');
+    }
+    if (parsed.second != 0 ||
+        parsed.millisecond != 0 ||
+        parsed.microsecond != 0) {
+      throw FormatException('$field must use minute precision');
     }
     return parsed.toUtc();
   }

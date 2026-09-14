@@ -159,4 +159,19 @@ void main() {
       throwsA(anyOf(isA<FormatException>(), isA<ArgumentError>())),
     );
   });
+
+  test('adapter rejects non-minute datetime values', () {
+    expect(
+      () => SchedulingContract.taskFromJson({
+        'id': 'task',
+        'title': 'Task',
+        'durationMinutes': 30,
+        'priority': 3,
+        'load': 'medium',
+        'tag': 'Task',
+        'due': '2026-09-14T13:30:30+08:00',
+      }),
+      throwsA(anyOf(isA<FormatException>(), isA<ArgumentError>())),
+    );
+  });
 }

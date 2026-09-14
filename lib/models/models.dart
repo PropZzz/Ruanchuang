@@ -823,21 +823,66 @@ class SchedulingIssue {
   );
 }
 
+class SchedulingRisk {
+  final String level;
+  final int issueCount;
+  final int hardIssueCount;
+
+  const SchedulingRisk({
+    required this.level,
+    required this.issueCount,
+    required this.hardIssueCount,
+  });
+
+  factory SchedulingRisk.fromIssues(List<SchedulingIssue> issues) {
+    final hard = issues
+        .where(
+          (issue) =>
+              issue.code == 'no_slot' || issue.code == 'dependency_blocked',
+        )
+        .length;
+    return SchedulingRisk(
+      level: hard > 0
+          ? 'high'
+          : issues.isEmpty
+          ? 'none'
+          : 'medium',
+      issueCount: issues.length,
+      hardIssueCount: hard,
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'level': level,
+    'issueCount': issueCount,
+    'hardIssueCount': hardIssueCount,
+  };
+
+  static SchedulingRisk fromJson(Map<String, Object?> json) => SchedulingRisk(
+    level: (json['level'] as String?) ?? 'none',
+    issueCount: (json['issueCount'] as num?)?.toInt() ?? 0,
+    hardIssueCount: (json['hardIssueCount'] as num?)?.toInt() ?? 0,
+  );
+}
+
 class SchedulingPlan {
   final String schemaVersion;
   final List<ScheduleEntry> entries;
   final List<SchedulingIssue> issues;
+  final SchedulingRisk? risk;
 
   const SchedulingPlan({
     required this.entries,
     this.issues = const [],
     this.schemaVersion = '1',
+    this.risk,
   });
 
   Map<String, Object?> toJson() => {
     'schemaVersion': schemaVersion,
     'entries': entries.map(_canonicalPlanEntryToJson).toList(),
     'issues': issues.map((i) => i.toJson()).toList(),
+    'risk': (risk ?? SchedulingRisk.fromIssues(issues)).toJson(),
   };
 
   static SchedulingPlan fromJson(Map<String, Object?> json) {
@@ -868,6 +913,11 @@ class SchedulingPlan {
       entries: entries,
       issues: issues,
       schemaVersion: (json['schemaVersion'] as String?) ?? '1',
+      risk: (json['risk'] is Map)
+          ? SchedulingRisk.fromJson(
+              Map<String, Object?>.from(json['risk'] as Map),
+            )
+          : null,
     );
   }
 }

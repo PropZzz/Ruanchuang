@@ -65,6 +65,8 @@ def _normalise_datetime(value: object) -> datetime:
             raise ValueError("invalid datetime") from exc
     if not isinstance(value, datetime):
         raise ValueError("invalid datetime")
+    if value.second != 0 or value.microsecond != 0:
+        raise ValueError("datetime must use minute precision")
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
@@ -120,8 +122,8 @@ class SchedulingTask(ContractModel):
     earliest_start: datetime | None = Field(default=None, alias="earliestStart")
     hard_deadline: bool = Field(default=False, alias="hardDeadline")
     depends_on: list[str] = Field(default_factory=list, alias="dependsOn")
-    splittable: Literal[False] = False
-    minimum_chunk_minutes: Literal[None] = Field(default=None, alias="minimumChunkMinutes")
+    splittable: bool = False
+    minimum_chunk_minutes: int | None = Field(default=None, alias="minimumChunkMinutes", ge=1, le=1440)
 
     @field_validator("due", "earliest_start", mode="before")
     @classmethod
@@ -134,6 +136,14 @@ class SchedulingTask(ContractModel):
         if any(not dependency for dependency in value) or len(set(value)) != len(value):
             raise ValueError("dependsOn must contain unique non-empty ids")
         return value
+
+    @model_validator(mode="after")
+    def validate_splitting(self) -> SchedulingTask:
+        if not self.splittable and self.minimum_chunk_minutes is not None:
+            raise ValueError("minimumChunkMinutes requires splittable=true")
+        if self.minimum_chunk_minutes is not None and self.minimum_chunk_minutes > self.duration_minutes:
+            raise ValueError("minimumChunkMinutes cannot exceed durationMinutes")
+        return self
 
     @field_serializer("due", "earliest_start", when_used="json")
     def serialize_dates(self, value: datetime | None) -> str | None:
@@ -213,10 +223,17 @@ class SchedulingIssue(ContractModel):
     explanation_codes: list[ExplanationCode] = Field(default_factory=list, alias="explanationCodes")
 
 
+class SchedulingRisk(ContractModel):
+    level: Literal["none", "low", "medium", "high"]
+    issue_count: int = Field(alias="issueCount", ge=0)
+    hard_issue_count: int = Field(alias="hardIssueCount", ge=0)
+
+
 class SchedulingResponse(ContractModel):
     schema_version: Literal["1"] = Field(default="1", alias="schemaVersion")
     entries: list[PlanEntry]
     issues: list[SchedulingIssue] = Field(default_factory=list)
+    risk: SchedulingRisk
 
 
 def _duration_from_height(value: object) -> int:
@@ -273,4 +290,17 @@ def to_contract_response(result: dict[str, Any], request: SchedulingRequest) -> 
         if raw.get("blockedBy") is not None:
             issue["blockedBy"] = list(raw["blockedBy"])
         issues.append(issue)
-    return SchedulingResponse(entries=entries, issues=issues)
+    hard_issue_count = sum(
+        1 for issue in issues if issue.get("code") in {"no_slot", "dependency_blocked"}
+    )
+    issue_count = len(issues)
+    level = "high" if hard_issue_count else "medium" if issue_count else "none"
+    return SchedulingResponse(
+        entries=entries,
+        issues=issues,
+        risk={
+            "level": level,
+            "issueCount": issue_count,
+            "hardIssueCount": hard_issue_count,
+        },
+    )

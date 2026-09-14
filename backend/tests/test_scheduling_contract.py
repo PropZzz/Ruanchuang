@@ -68,6 +68,13 @@ def test_request_model_rejects_invalid_contract_values(mutate) -> None:
         SchedulingRequest.model_validate(payload)
 
 
+def test_request_model_rejects_non_minute_datetime() -> None:
+    payload = _fixture_request()
+    payload["tasks"][0]["due"] = "2026-09-14T13:30:30+08:00"
+    with pytest.raises(ValidationError):
+        SchedulingRequest.model_validate(payload)
+
+
 def test_response_adapter_emits_schema_shape_without_height_or_optional_blocked_by() -> None:
     request = SchedulingRequest.model_validate(_fixture_request())
     result = to_contract_response(

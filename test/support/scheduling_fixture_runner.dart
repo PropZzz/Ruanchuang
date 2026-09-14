@@ -67,6 +67,7 @@ List<Map<String, dynamic>> compareCanonicalResults(
   final differences = <Map<String, dynamic>>[];
   _compareValue(expected['entries'], actual['entries'], 'entries', differences);
   _compareValue(expected['issues'], actual['issues'], 'issues', differences);
+  _compareValue(expected['risk'], actual['risk'], 'risk', differences);
   if (expected['schemaVersion'] != actual['schemaVersion']) {
     differences.add({
       'field': 'schemaVersion',
