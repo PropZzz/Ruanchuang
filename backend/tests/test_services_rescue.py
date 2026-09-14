@@ -6,6 +6,7 @@ from backend.services_rescue import (
     compute_baseline_hash,
     filter_rescue_events,
 )
+from backend.scheduling.rescue_scoring import metrics_for_plan
 
 
 DAY = "2026-08-09"
@@ -133,8 +134,8 @@ def test_build_options_protect_recovery_contains_recovery_buffer():
     buffers = [entry for entry in recovery["plannedEntries"] if entry["id"] == f"rescue_recovery_{DAY}"]
     assert len(buffers) == 1
     assert buffers[0]["height"] == 20.0
-    # The only window starts at 8:00 (< 12:00), so the buffer falls back to its start.
-    assert buffers[0]["time"] == {"hour": 8, "minute": 0}
+    # A free interval at noon is preferred even when the window starts earlier.
+    assert buffers[0]["time"] == {"hour": 12, "minute": 0}
 
 
 def test_build_options_recovery_buffer_prefers_afternoon_window():
@@ -149,6 +150,45 @@ def test_build_options_recovery_buffer_prefers_afternoon_window():
     )
     buffers = [entry for entry in recovery["plannedEntries"] if entry["id"] == f"rescue_recovery_{DAY}"]
     assert buffers[0]["time"] == {"hour": 13, "minute": 30}
+
+
+def test_build_options_recovery_buffer_is_not_synthetic_when_no_15_minute_slot_exists():
+    request = _request(
+        currentEntries=[],
+        windows=[
+            {"start": {"hour": 8, "minute": 0}, "end": {"hour": 8, "minute": 10}},
+        ],
+    )
+    result = build_options(request)
+    recovery = next(
+        option for option in result["options"] if option["strategy"] == "protectRecovery"
+    )
+
+    assert not [
+        entry for entry in recovery["plannedEntries"] if entry["id"] == f"rescue_recovery_{DAY}"
+    ]
+    assert recovery["recoveryMinutes"] == 0
+    assert recovery["scoreBreakdown"]["recovery"] == 0.0
+
+
+def test_split_entries_contribute_to_task_metrics_by_base_id():
+    plan = {
+        "entries": [
+            {"id": "task#1", "source": "planned"},
+            {"id": "task#2", "source": "planned"},
+        ],
+        "issues": [],
+    }
+    metrics = metrics_for_plan(
+        plan,
+        [{"id": "task", "priority": 5, "load": "medium"}],
+        moved_entry_count=0,
+        baseline_entry_count=0,
+        energy="medium",
+        recovery_minutes=0,
+    )
+
+    assert metrics.priority > 0
 
 
 def test_build_options_minimize_changes_locks_baseline():

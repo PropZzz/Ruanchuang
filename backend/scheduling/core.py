@@ -133,13 +133,13 @@ def _pick_slot(
 ) -> int | None:
     def first_candidate() -> int | None:
         for start, end in free:
-            candidate = max(start, earliest_start or start)
+            candidate = max(start, earliest_start if earliest_start is not None else start)
             if candidate + duration <= end:
                 return candidate
         return None
 
     for start, end in free:
-        candidate = max(start, earliest_start or start)
+        candidate = max(start, earliest_start if earliest_start is not None else start)
         if candidate + duration > end:
             continue
         if due_minutes is not None and (due_minutes < 0 or candidate + duration > due_minutes):
@@ -221,32 +221,57 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
 
     busy_blocks: list[tuple[int, int]] = []
     fixed_entries: list[dict[str, Any]] = []
+    fixed_blocks: list[tuple[int, int]] = []
     for entry in fixed_raw:
         if not isinstance(entry, dict):
             continue
         start = _time_to_minutes(entry.get("time"))
         duration = int(entry.get("durationMinutes") or entry.get("minutes") or _duration_from_height(float(entry.get("height") or 80.0)))
-        busy_blocks.append((start, start + max(1, duration)))
+        fixed_blocks.append((start, start + max(1, duration)))
         fixed_entries.append(entry)
 
-    slots: list[tuple[int, int]] = []
+    supplied_windows: list[tuple[int, int]] = []
     for window in windows_raw:
         if not isinstance(window, dict):
             continue
         start = _time_to_minutes(window.get("start"))
         end = _time_to_minutes(window.get("end"))
-        if end <= start:
-            continue
-        slots.extend(_subtract((start, end), _merge_busy(busy_blocks)))
+        if end > start:
+            supplied_windows.append((start, end))
 
-    if not slots:
-        slots = [(8 * 60, 20 * 60)]
+    fixed_conflicts: set[int] = set()
+    for index, (start, end) in enumerate(fixed_blocks):
+        if not any(window_start <= start and end <= window_end for window_start, window_end in supplied_windows):
+            fixed_conflicts.add(index)
+        for other_index, (other_start, other_end) in enumerate(fixed_blocks):
+            if index != other_index and start < other_end and other_start < end:
+                fixed_conflicts.add(index)
+
+    valid_fixed_blocks = [
+        block for index, block in enumerate(fixed_blocks) if index not in fixed_conflicts
+    ]
+    busy_blocks.extend(valid_fixed_blocks)
+
+    slots: list[tuple[int, int]] = []
+    for start, end in supplied_windows:
+        slots.extend(_subtract((start, end), _merge_busy(busy_blocks)))
 
     tasks = [task for task in tasks_raw if isinstance(task, dict)]
     tasks.sort(key=lambda task: _task_priority(task, day))
 
     entries: list[dict[str, Any]] = []
     issues: list[dict[str, Any]] = []
+    for index in sorted(fixed_conflicts):
+        fixed_id = _task_id(fixed_entries[index], index)
+        issues.append(
+            {
+                "code": "fixed_conflict",
+                "message": "Fixed entry overlaps another fixed entry or lies outside every work window",
+                "taskId": fixed_id,
+                "explanationCodes": ["fixed_conflict"],
+                "hard": True,
+            }
+        )
     fixed_ids = {_task_id(entry, index) for index, entry in enumerate(fixed_entries)}
     task_by_id = {_task_id(task, index): task for index, task in enumerate(tasks)}
     pending = list(enumerate(tasks))
@@ -321,6 +346,7 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
                     "message": f"No time slot left for task: {task.get('title', '')}",
                     "taskId": task_id,
                     "explanationCodes": ["deadline_proximity"] if task.get("due") else [],
+                    "hard": bool(task.get("hardDeadline")),
                 }
                 issues.append(issue)
                 failed_ids.add(task_id)
@@ -407,7 +433,15 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
             "repeat": str(entry.get("repeat") or "none"),
             "repeatUntil": entry.get("repeatUntil"),
             "source": "fixed",
-            "explanationCodes": [],
+            "explanationCodes": (
+                ["fixed_conflict"]
+                if index in fixed_conflicts
+                else (
+                    list(entry.get("explanationCodes") or [])
+                    if isinstance(entry.get("explanationCodes"), list)
+                    else []
+                )
+            ),
         }
         for index, entry in enumerate(fixed_entries)
     )

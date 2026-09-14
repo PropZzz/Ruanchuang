@@ -52,6 +52,11 @@ class PlanMetrics:
     stability: float
     recovery: float
 
+    @property
+    def overdue_risk(self) -> float:
+        """Deadline-miss risk paired with the contract's urgency metric."""
+        return round(_clamp(1.0 - self.urgency), 6)
+
     def as_contract_dict(self) -> dict[str, float]:
         return {
             "urgency": self.urgency,
@@ -160,25 +165,36 @@ def metrics_for_plan(
         if isinstance(task, dict) and task.get("id")
     }
     entries = [entry for entry in plan.get("entries") or [] if isinstance(entry, dict)]
-    placed_tasks = [
-        entry
-        for entry in entries
-        if entry.get("id") in task_by_id and entry.get("source", "planned") == "planned"
-    ]
+    def base_task_id(value: object) -> str:
+        return str(value or "").split("#", 1)[0]
+
+    placed_ids: list[str] = []
+    for entry in entries:
+        task_id = base_task_id(entry.get("id"))
+        if task_id in task_by_id and entry.get("source", "planned") == "planned" and task_id not in placed_ids:
+            placed_ids.append(task_id)
+    placed_tasks = [task_by_id[task_id] for task_id in placed_ids]
     issues = [issue for issue in plan.get("issues") or [] if isinstance(issue, dict)]
-    due_count = sum(1 for task in tasks if isinstance(task, dict) and task.get("due"))
+    evaluated_ids = set(placed_ids)
+    evaluated_ids.update(
+        base_task_id(issue.get("taskId"))
+        for issue in issues
+        if issue.get("taskId")
+    )
+    evaluated_tasks = [task for task_id, task in task_by_id.items() if task_id in evaluated_ids]
+    due_count = sum(1 for task in evaluated_tasks if task.get("due"))
     missed_count = sum(
         1 for issue in issues if issue.get("code") in {"miss_due", "overdue"}
     )
     urgency = 1.0 - missed_count / max(1, due_count)
-    priority_sum = sum(int(task_by_id[entry["id"]].get("priority") or 0) for entry in placed_tasks)
-    priority = priority_sum / (5 * max(1, len(tasks)))
+    priority_sum = sum(int(task.get("priority") or 0) for task in placed_tasks)
+    priority = priority_sum / (5 * max(1, len(evaluated_tasks)))
 
     target_load = 0 if energy in {"veryLow", "low"} else 1 if energy == "medium" else 2
     load_index = {"low": 0, "medium": 1, "high": 2}
     mismatch = 0.0
-    for entry in placed_tasks:
-        load = task_by_id[entry["id"]].get("load")
+    for task in placed_tasks:
+        load = task.get("load")
         mismatch += abs(load_index.get(str(load), target_load) - target_load) / 2.0
     energy_fit = 1.0 - mismatch / max(1, len(placed_tasks))
     stability = 1.0 - moved_entry_count / max(1, baseline_entry_count)

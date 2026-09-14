@@ -121,26 +121,69 @@ def _lower_energy(energy: str) -> str:
     return ENERGY_TIERS[max(0, ENERGY_TIERS.index(energy) - 1)]
 
 
-def _recovery_buffer(day_iso: str, windows: list[dict[str, Any]]) -> dict[str, Any]:
-    """Synthetic 15-minute recovery block, mirroring Dart `_recoveryBuffer`.
+def _recovery_buffer(
+    day_iso: str,
+    windows: list[dict[str, Any]],
+    fixed: list[dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
+    """Return a real 15-minute free recovery interval, when one exists."""
+    fixed_blocks: list[tuple[int, int]] = []
+    for entry in fixed or []:
+        if not isinstance(entry, dict):
+            continue
+        start = entry.get("time")
+        if not isinstance(start, dict):
+            continue
+        start_minutes = int(start.get("hour") or 0) * 60 + int(start.get("minute") or 0)
+        try:
+            duration = int(
+                entry.get("durationMinutes")
+                or entry.get("minutes")
+                or round(float(entry.get("height") or 80.0) / 80.0 * 60.0)
+            )
+        except (TypeError, ValueError):
+            duration = 60
+        fixed_blocks.append((start_minutes, start_minutes + max(1, duration)))
 
-    Placed at the start of the first window beginning at/after 12:00, else at
-    the first window's start, else at 15:00 when there are no windows.
-    """
-    preferred: dict[str, Any] | None = None
+    free: list[tuple[int, int]] = []
     for window in windows:
         if not isinstance(window, dict):
             continue
         start = window.get("start")
-        if isinstance(start, dict) and int(start.get("hour") or 0) >= 12:
-            preferred = start
+        end = window.get("end")
+        if not isinstance(start, dict) or not isinstance(end, dict):
+            continue
+        window_start = int(start.get("hour") or 0) * 60 + int(start.get("minute") or 0)
+        window_end = int(end.get("hour") or 0) * 60 + int(end.get("minute") or 0)
+        if window_end <= window_start:
+            continue
+        cursor = window_start
+        for busy_start, busy_end in sorted(fixed_blocks):
+            if busy_end <= cursor:
+                continue
+            if busy_start >= window_end:
+                break
+            if busy_start > cursor:
+                free.append((cursor, min(busy_start, window_end)))
+            cursor = max(cursor, busy_end)
+        if cursor < window_end:
+            free.append((cursor, window_end))
+
+    free.sort()
+    preferred_start: int | None = None
+    for start, end in free:
+        candidate = max(start, 12 * 60)
+        if candidate + RECOVERY_BUFFER_MINUTES <= end:
+            preferred_start = candidate
             break
-    if preferred is None and windows:
-        first_start = windows[0].get("start")
-        if isinstance(first_start, dict):
-            preferred = first_start
-    if preferred is None:
-        preferred = {"hour": 15, "minute": 0}
+    if preferred_start is None:
+        for start, end in free:
+            if start + RECOVERY_BUFFER_MINUTES <= end:
+                preferred_start = start
+                break
+    if preferred_start is None:
+        return None
+    preferred = {"hour": preferred_start // 60, "minute": preferred_start % 60}
     return {
         "id": f"rescue_recovery_{day_iso}",
         "day": day_iso,
@@ -209,21 +252,29 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
         if isinstance(entry, dict) and _iso_day(entry.get("day")) == day_iso
     ]
 
+    baseline_fixed = []
+    for entry in baseline:
+        baseline_entry = dict(entry)
+        baseline_entry["explanationCodes"] = ["kept_baseline"]
+        baseline_fixed.append(baseline_entry)
+
+    no_window_baseline = baseline if not windows else []
+
     compositions = {
         "protectDeadline": {
             "tasks": [*tasks, urgent],
             "energy": energy,
-            "fixed": fixed,
+            "fixed": [*fixed, *no_window_baseline],
         },
         "protectRecovery": {
             "tasks": [*tasks, urgent],
             "energy": _lower_energy(energy),
-            "fixed": [*fixed, _recovery_buffer(day_iso, windows)],
+            "fixed": [*fixed, *no_window_baseline],
         },
         "minimizeChanges": {
-            "tasks": [urgent],
+            "tasks": [*tasks, urgent],
             "energy": energy,
-            "fixed": [*fixed, *baseline],
+            "fixed": [*fixed, *baseline_fixed],
         },
     }
 
@@ -240,8 +291,28 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
                 "fixed": composition["fixed"],
             }
         )
+        if strategy == "protectRecovery":
+            selected_recovery = _recovery_buffer(
+                day_iso,
+                windows,
+                [*composition["fixed"], *plan.get("entries", [])],
+            )
+            if selected_recovery is not None:
+                plan["entries"].append(selected_recovery | {"source": "fixed", "explanationCodes": []})
+                plan["entries"].sort(
+                    key=lambda entry: (
+                        int((entry.get("time") or {}).get("hour") or 0) * 60
+                        + int((entry.get("time") or {}).get("minute") or 0)
+                    )
+                )
         moved_ids = _moved_ids(baseline, plan["entries"])
-        recovery_minutes = RECOVERY_BUFFER_MINUTES if strategy == "protectRecovery" else 0
+        recovery_id = f"rescue_recovery_{day_iso}"
+        recovery_minutes = (
+            RECOVERY_BUFFER_MINUTES
+            if strategy == "protectRecovery"
+            and any(entry.get("id") == recovery_id for entry in plan.get("entries") or [])
+            else 0
+        )
         metrics = metrics_for_plan(
             plan,
             [*tasks, urgent],
@@ -265,10 +336,11 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
                 "hardIssueCount": sum(
                     1
                     for issue in plan.get("issues") or []
-                    if issue.get("code") in {"no_slot", "dependency_blocked"}
+                    if issue.get("code") in {"no_slot", "dependency_blocked", "fixed_conflict"}
                 ),
                 "score": score_plan(score_config.strategies[strategy], metrics),
                 "scoreBreakdown": metrics.as_contract_dict(),
+                "overdueRisk": metrics.overdue_risk,
                 "affectedEntries": moved_ids,
                 "plannedEntries": plan["entries"],
             }
