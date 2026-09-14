@@ -42,6 +42,50 @@ Color _colorForLoad(CognitiveLoad load) {
   }
 }
 
+int _taskDueRank(PlanTask task, DateTime day) {
+  if (task.due == null) return 2;
+  return sameDay(task.due!, day) ? 0 : 1;
+}
+
+int _taskDueValue(PlanTask task, DateTime day) {
+  if (task.due == null) return 1 << 30;
+  if (sameDay(task.due!, day)) {
+    return task.due!.hour * 60 + task.due!.minute;
+  }
+  return task.due!.millisecondsSinceEpoch ~/ 60000;
+}
+
+int _compareTasks(PlanTask a, PlanTask b, DateTime day) {
+  final dueRank = _taskDueRank(a, day).compareTo(_taskDueRank(b, day));
+  if (dueRank != 0) return dueRank;
+  final due = _taskDueValue(a, day).compareTo(_taskDueValue(b, day));
+  if (due != 0) return due;
+  final priority = b.priority.compareTo(a.priority);
+  if (priority != 0) return priority;
+  final duration = b.durationMinutes.compareTo(a.durationMinutes);
+  if (duration != 0) return duration;
+  return a.id.compareTo(b.id);
+}
+
+int? _earliestStartMinutes(PlanTask task, DateTime day) {
+  final earliest = task.earliestStart;
+  if (earliest == null) return null;
+  final startDay = DateTime(earliest.year, earliest.month, earliest.day);
+  final requestDay = DateTime(day.year, day.month, day.day);
+  if (startDay.isAfter(requestDay)) return 24 * 60;
+  if (sameDay(earliest, day)) return earliest.hour * 60 + earliest.minute;
+  return null;
+}
+
+List<String> _explanationCodes(PlanTask task, EnergyTier energy) {
+  final codes = <String>[task.due == null ? 'priority' : 'deadline_proximity'];
+  if ((energy == EnergyTier.low || energy == EnergyTier.veryLow) &&
+      task.load == CognitiveLoad.low) {
+    codes.add('energy_fit');
+  }
+  return codes;
+}
+
 /// P0 heuristic scheduling engine.
 ///
 /// Algorithm overview:
@@ -80,95 +124,165 @@ class HeuristicSchedulingEngine implements SchedulingEngine {
       _subtractInterval(free, _Interval(s, e));
     }
 
-    // Sort tasks by urgency/priority.
+    // Sort tasks by the contract order. Energy affects placement scoring only.
     final tasks = List<PlanTask>.from(request.tasks);
-    tasks.sort((a, b) {
-      final aDue = a.due;
-      final bDue = b.due;
-      final aDueMin = (aDue != null && sameDay(aDue, day))
-          ? aDue.hour * 60 + aDue.minute
-          : null;
-      final bDueMin = (bDue != null && sameDay(bDue, day))
-          ? bDue.hour * 60 + bDue.minute
-          : null;
-
-      if (aDueMin != null && bDueMin != null && aDueMin != bDueMin) {
-        return aDueMin.compareTo(bDueMin);
-      }
-      if (aDueMin != null && bDueMin == null) return -1;
-      if (aDueMin == null && bDueMin != null) return 1;
-
-      final p = b.priority.compareTo(a.priority);
-      if (p != 0) return p;
-
-      // When priorities tie, bias load order based on current energy.
-      if (energy == EnergyTier.veryLow || energy == EnergyTier.low) {
-        // Low energy: place lighter tasks earlier.
-        return a.load.index.compareTo(b.load.index);
-      }
-
-      // Medium/high energy: heavier tasks are harder to place, schedule earlier.
-      return b.load.index.compareTo(a.load.index);
-    });
+    tasks.sort((a, b) => _compareTasks(a, b, day));
 
     final planned = <ScheduleEntry>[];
+    final fixedIds = fixed
+        .map((entry) => entry.id)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    final taskIds = tasks.map((task) => task.id).toSet();
+    final placedIds = <String>{...fixedIds};
+    final failedIds = <String>{};
+    var pending = List<PlanTask>.from(tasks);
 
-    for (final t in tasks) {
-      final dur = t.durationMinutes.clamp(1, 24 * 60).toInt();
-      final dueMin = (t.due != null && sameDay(t.due!, day))
-          ? (t.due!.hour * 60 + t.due!.minute)
-          : null;
+    while (pending.isNotEmpty) {
+      var progressed = false;
+      final nextPending = <PlanTask>[];
 
-      final placement = _pickSlot(
-        free: free,
-        duration: dur,
-        dueMin: dueMin,
-        energy: energy,
-        load: t.load,
-        tuning: tuning,
-      );
-
-      if (placement == null) {
-        issues.add(
-          SchedulingIssue(
-            code: 'no_slot',
-            message: 'No available slot for task: ${t.title}',
-            taskId: t.id,
-          ),
+      for (final t in pending) {
+        final blockedBy = t.dependsOn
+            .where((id) => !placedIds.contains(id))
+            .toList(growable: false);
+        final hasUnresolvableDependency = blockedBy.any(
+          (id) => !taskIds.contains(id) || failedIds.contains(id),
         );
-        continue;
-      }
+        if (hasUnresolvableDependency) {
+          issues.add(
+            SchedulingIssue(
+              code: 'dependency_blocked',
+              message:
+                  'Task cannot be scheduled until its dependency is placed',
+              taskId: t.id,
+              blockedBy: blockedBy,
+            ),
+          );
+          failedIds.add(t.id);
+          progressed = true;
+          continue;
+        }
+        if (blockedBy.isNotEmpty) {
+          nextPending.add(t);
+          continue;
+        }
 
-      // Allocate.
-      _subtractInterval(free, _Interval(placement, placement + dur));
+        final dur = t.durationMinutes.clamp(1, 24 * 60).toInt();
+        final dueMin = (t.due != null && sameDay(t.due!, day))
+            ? (t.due!.hour * 60 + t.due!.minute)
+            : null;
+        final earliestMin = _earliestStartMinutes(t, day);
 
-      planned.add(
-        ScheduleEntry(
-          id: t.id,
-          title: t.title,
-          tag: t.tag,
+        final placement = _pickSlot(
+          free: free,
+          duration: dur,
+          dueMin: dueMin,
+          earliestMin: earliestMin,
+          hardDeadline: t.hardDeadline,
+          energy: energy,
           load: t.load,
-          height: _heightFromDuration(dur),
-          color: _colorForLoad(t.load),
-          time: _minToTod(placement),
-        ),
-      );
+          tuning: tuning,
+        );
 
-      // If we missed a due time, record an issue (still scheduled).
-      if (dueMin != null && placement + dur > dueMin) {
-        issues.add(
-          SchedulingIssue(
-            code: 'miss_due',
-            message: 'Task scheduled past due time: ${t.title}',
-            taskId: t.id,
+        if (placement == null) {
+          issues.add(
+            SchedulingIssue(
+              code: 'no_slot',
+              message: 'No available slot for task: ${t.title}',
+              taskId: t.id,
+              explanationCodes: t.due == null
+                  ? const []
+                  : const ['deadline_proximity'],
+            ),
+          );
+          failedIds.add(t.id);
+          progressed = true;
+          continue;
+        }
+
+        // Allocate.
+        _subtractInterval(free, _Interval(placement, placement + dur));
+
+        planned.add(
+          ScheduleEntry(
+            id: t.id,
+            title: t.title,
+            tag: t.tag,
+            load: t.load,
+            height: _heightFromDuration(dur),
+            color: _colorForLoad(t.load),
+            time: _minToTod(placement),
+            source: 'planned',
+            explanationCodes: _explanationCodes(t, energy),
           ),
         );
+        placedIds.add(t.id);
+        progressed = true;
+
+        // If we missed a due time, record an issue (still scheduled).
+        if (t.due != null && !sameDay(t.due!, day)) {
+          if (t.due!.isBefore(day)) {
+            issues.add(
+              SchedulingIssue(
+                code: 'overdue',
+                message: 'Task due before the requested day: ${t.title}',
+                taskId: t.id,
+                explanationCodes: const ['deadline_proximity'],
+              ),
+            );
+          }
+        } else if (dueMin != null && placement + dur > dueMin) {
+          issues.add(
+            SchedulingIssue(
+              code: 'miss_due',
+              message: 'Task scheduled past due time: ${t.title}',
+              taskId: t.id,
+              explanationCodes: const ['deadline_proximity'],
+            ),
+          );
+        }
       }
+
+      if (!progressed) {
+        for (final t in nextPending) {
+          final blockedBy = t.dependsOn
+              .where((id) => !placedIds.contains(id))
+              .toList(growable: false);
+          issues.add(
+            SchedulingIssue(
+              code: 'dependency_blocked',
+              message:
+                  'Task cannot be scheduled until its dependency is placed',
+              taskId: t.id,
+              blockedBy: blockedBy,
+            ),
+          );
+          failedIds.add(t.id);
+        }
+        break;
+      }
+      pending = nextPending;
     }
 
     // Final output: fixed blocks + planned, sorted.
-    final out = <ScheduleEntry>[...fixed, ...planned];
-    out.sort((a, b) => _todToMin(a.time).compareTo(_todToMin(b.time)));
+    final fixedOutput = fixed
+        .map(
+          (entry) =>
+              entry.copyWith(source: 'fixed', explanationCodes: const []),
+        )
+        .toList(growable: false);
+    final out = <ScheduleEntry>[...fixedOutput, ...planned];
+    out.sort((a, b) {
+      final time = _todToMin(a.time).compareTo(_todToMin(b.time));
+      if (time != 0) return time;
+      final source = (a.source == 'fixed' ? 0 : 1).compareTo(
+        b.source == 'fixed' ? 0 : 1,
+      );
+      if (source != 0) return source;
+      return (a.id ?? '').compareTo(b.id ?? '');
+    });
 
     return SchedulingPlan(entries: out, issues: issues);
   }
@@ -177,6 +291,8 @@ class HeuristicSchedulingEngine implements SchedulingEngine {
     required List<_Interval> free,
     required int duration,
     required int? dueMin,
+    required int? earliestMin,
+    required bool hardDeadline,
     required EnergyTier energy,
     required CognitiveLoad load,
     required SchedulingTuning tuning,
@@ -187,7 +303,9 @@ class HeuristicSchedulingEngine implements SchedulingEngine {
     for (final it in free) {
       if (it.length < duration) continue;
 
-      final start = it.startMin;
+      final start = earliestMin == null
+          ? it.startMin
+          : (it.startMin > earliestMin ? it.startMin : earliestMin);
       final end = start + duration;
 
       if (dueMin != null && end > dueMin) {
@@ -210,10 +328,15 @@ class HeuristicSchedulingEngine implements SchedulingEngine {
 
     if (bestStart != null) return bestStart;
 
+    if (hardDeadline && dueMin != null) return null;
+
     // Fallback: if dueMin blocks everything, schedule at earliest available.
     for (final it in free) {
-      if (it.length >= duration) {
-        return it.startMin;
+      final start = earliestMin == null
+          ? it.startMin
+          : (it.startMin > earliestMin ? it.startMin : earliestMin);
+      if (start + duration <= it.endMin) {
+        return start;
       }
     }
 
@@ -255,7 +378,7 @@ class HeuristicSchedulingEngine implements SchedulingEngine {
         final extra = (p - 1.0).clamp(0.0, 10.0).toDouble();
         if (load == CognitiveLoad.high) {
           score -= 5 * p;
-          if (isMorning) score -= 2.0 * extra;
+          if (isMorning) score -= 2.0 * (1.0 + extra);
         }
         if (load == CognitiveLoad.medium) score -= 1;
         if (load == CognitiveLoad.low) score += 3;

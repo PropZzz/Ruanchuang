@@ -86,16 +86,66 @@ def _task_duration(task: dict[str, Any], energy: object, tuning: dict[str, Any])
 
 def _task_priority(task: dict[str, Any], current_day: str | None) -> tuple:
     priority = int(task.get("priority") or 3)
+    duration = max(1, int(task.get("durationMinutes") or 15))
     due = _parse_datetime(task.get("due"))
-    due_rank = 1
+    due_rank = 2
     due_minutes = 10**9
     if due is not None:
-        due_rank = 0
         if current_day is not None and due.date().isoformat() == current_day:
+            due_rank = 0
             due_minutes = due.hour * 60 + due.minute
         else:
+            due_rank = 1
             due_minutes = int(due.timestamp() // 60)
-    return (-priority, due_rank, due_minutes, _task_duration(task, task.get("energy"), {}), str(task.get("title") or ""))
+    return (due_rank, due_minutes, -priority, -duration, str(task.get("id") or ""))
+
+
+def _task_id(task: dict[str, Any], index: int) -> str:
+    return str(task.get("id") or f"plan_{index}")
+
+
+def _explanation_codes(task: dict[str, Any], energy: object) -> list[str]:
+    codes = ["deadline_proximity" if task.get("due") else "priority"]
+    if energy in {"low", "veryLow"} and task.get("load") == "low":
+        codes.append("energy_fit")
+    return codes
+
+
+def _due_minutes_for_day(task: dict[str, Any], current_day: str | None) -> int | None:
+    due = _parse_datetime(task.get("due"))
+    if due is None or current_day is None:
+        return None
+    if due.date().isoformat() == current_day:
+        return due.hour * 60 + due.minute
+    if due.date().isoformat() < current_day:
+        return -1
+    return None
+
+
+def _pick_slot(
+    free: list[tuple[int, int]],
+    duration: int,
+    earliest_start: int | None,
+    due_minutes: int | None,
+    hard_deadline: bool,
+) -> int | None:
+    def first_candidate() -> int | None:
+        for start, end in free:
+            candidate = max(start, earliest_start or start)
+            if candidate + duration <= end:
+                return candidate
+        return None
+
+    for start, end in free:
+        candidate = max(start, earliest_start or start)
+        if candidate + duration > end:
+            continue
+        if due_minutes is not None and (due_minutes < 0 or candidate + duration > due_minutes):
+            continue
+        return candidate
+    if hard_deadline and due_minutes is not None:
+        return None
+    return first_candidate()
 
 
 def _merge_busy(blocks: list[tuple[int, int]]) -> list[tuple[int, int]]:
@@ -126,6 +176,13 @@ def _subtract(window: tuple[int, int], busy: list[tuple[int, int]]) -> list[tupl
     if cursor < window[1]:
         free.append((cursor, window[1]))
     return free
+
+
+def _consume_interval(intervals: list[tuple[int, int]], used: tuple[int, int]) -> None:
+    remaining: list[tuple[int, int]] = []
+    for interval in intervals:
+        remaining.extend(_subtract(interval, [used]))
+    intervals[:] = remaining
 
 
 def _palette(load: object) -> int:
@@ -173,67 +230,125 @@ def plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
 
     entries: list[dict[str, Any]] = []
     issues: list[dict[str, Any]] = []
-    slot_index = 0
-    cursor = slots[0][0] if slots else 0
+    fixed_ids = {_task_id(entry, index) for index, entry in enumerate(fixed_entries)}
+    task_by_id = {_task_id(task, index): task for index, task in enumerate(tasks)}
+    pending = list(enumerate(tasks))
+    placed_ids = set(fixed_ids)
+    failed_ids: set[str] = set()
+    while pending:
+        progressed = False
+        next_pending: list[tuple[int, dict[str, Any]]] = []
+        for index, task in pending:
+            task_id = _task_id(task, index)
+            dependencies = [str(dep) for dep in (task.get("dependsOn") or [])]
+            blocked_by = [dep for dep in dependencies if dep not in placed_ids]
+            unknown = [dep for dep in blocked_by if dep not in task_by_id and dep not in fixed_ids]
+            failed = [dep for dep in blocked_by if dep in failed_ids]
+            if unknown or failed:
+                issues.append(
+                    {
+                        "code": "dependency_blocked",
+                        "message": "Task cannot be scheduled until its dependency is placed",
+                        "taskId": task_id,
+                        "blockedBy": blocked_by,
+                        "explanationCodes": [],
+                    }
+                )
+                failed_ids.add(task_id)
+                progressed = True
+                continue
+            if blocked_by:
+                next_pending.append((index, task))
+                continue
 
-    for index, task in enumerate(tasks):
-        duration = _task_duration(task, energy, tuning)
-        placed = False
-        while slot_index < len(slots):
-            slot_start, slot_end = slots[slot_index]
-            cursor = max(cursor, slot_start)
-            if cursor + duration <= slot_end:
-                entry = {
-                    "id": str(task.get("id") or f"plan_{index}"),
-                    "day": day,
-                    "title": str(task.get("title") or ""),
-                    "tag": str(task.get("tag") or "Task"),
-                    "load": task.get("load"),
-                    "goalId": task.get("goalId"),
-                    "goalTaskId": task.get("goalTaskId"),
-                    "height": _height_from_duration(duration),
-                    "color": _palette(task.get("load")),
-                    "time": _minutes_to_time(cursor),
-                    "reminderMinutesBefore": 10,
-                    "repeat": "none",
-                    "repeatUntil": None,
-                }
-                entries.append(entry)
-                cursor += duration
-                placed = True
-
-                due = _parse_datetime(task.get("due"))
-                if due is not None:
-                    if day is not None and due.date().isoformat() == day and cursor > due.hour * 60 + due.minute:
-                        issues.append(
-                            {
-                                "code": "miss_due",
-                                "message": f"Task scheduled past due time: {entry['title']}",
-                                "taskId": entry["id"],
-                            }
-                        )
-                    elif day is not None and due.date().isoformat() < day:
-                        issues.append(
-                            {
-                                "code": "overdue",
-                                "message": f"Task due before the requested day: {entry['title']}",
-                                "taskId": entry["id"],
-                            }
-                        )
-                break
-
-            slot_index += 1
-            if slot_index < len(slots):
-                cursor = slots[slot_index][0]
-
-        if not placed:
-            issues.append(
-                {
-                    "code": "no_slot",
-                    "message": f"No time slot left for task: {task.get('title', '')}",
-                    "taskId": task.get("id"),
-                }
+            duration = _task_duration(task, energy, tuning)
+            earliest = _parse_datetime(task.get("earliestStart"))
+            earliest_minutes = None
+            if earliest is not None and day is not None:
+                if earliest.date().isoformat() > day:
+                    earliest_minutes = 24 * 60
+                elif earliest.date().isoformat() == day:
+                    earliest_minutes = earliest.hour * 60 + earliest.minute
+            due_minutes = _due_minutes_for_day(task, day)
+            start = _pick_slot(
+                slots,
+                duration,
+                earliest_minutes,
+                due_minutes,
+                bool(task.get("hardDeadline")),
             )
+            if start is None:
+                issue_code = "no_slot"
+                issue = {
+                    "code": issue_code,
+                    "message": f"No time slot left for task: {task.get('title', '')}",
+                    "taskId": task_id,
+                    "explanationCodes": ["deadline_proximity"] if task.get("due") else [],
+                }
+                issues.append(issue)
+                failed_ids.add(task_id)
+                progressed = True
+                continue
+
+            entry = {
+                "id": task_id,
+                "day": day,
+                "title": str(task.get("title") or ""),
+                "tag": str(task.get("tag") or "Task"),
+                "load": task.get("load"),
+                "goalId": task.get("goalId"),
+                "goalTaskId": task.get("goalTaskId"),
+                "height": _height_from_duration(duration),
+                "color": _palette(task.get("load")),
+                "time": _minutes_to_time(start),
+                "reminderMinutesBefore": 10,
+                "repeat": "none",
+                "repeatUntil": None,
+                "source": "planned",
+                "explanationCodes": _explanation_codes(task, energy),
+            }
+            entries.append(entry)
+            _consume_interval(slots, (start, start + duration))
+            placed_ids.add(task_id)
+            progressed = True
+
+            due = _parse_datetime(task.get("due"))
+            if due is not None and due_minutes is not None:
+                if due_minutes < 0:
+                    issues.append(
+                        {
+                            "code": "overdue",
+                            "message": f"Task due before the requested day: {entry['title']}",
+                            "taskId": task_id,
+                            "explanationCodes": ["deadline_proximity"],
+                        }
+                    )
+                elif start + duration > due_minutes:
+                    issues.append(
+                        {
+                            "code": "miss_due",
+                            "message": f"Task scheduled past due time: {entry['title']}",
+                            "taskId": task_id,
+                            "explanationCodes": ["deadline_proximity"],
+                        }
+                    )
+
+        if not progressed:
+            for index, task in next_pending:
+                task_id = _task_id(task, index)
+                blocked_by = [str(dep) for dep in (task.get("dependsOn") or []) if str(dep) not in placed_ids]
+                issues.append(
+                    {
+                        "code": "dependency_blocked",
+                        "message": "Task cannot be scheduled until its dependency is placed",
+                        "taskId": task_id,
+                        "blockedBy": blocked_by,
+                        "explanationCodes": [],
+                    }
+                )
+                failed_ids.add(task_id)
+            break
+        pending = next_pending
 
     entries.extend(
         {
@@ -250,6 +365,8 @@ def plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
             "reminderMinutesBefore": int(entry.get("reminderMinutesBefore") or 10),
             "repeat": str(entry.get("repeat") or "none"),
             "repeatUntil": entry.get("repeatUntil"),
+            "source": "fixed",
+            "explanationCodes": [],
         }
         for index, entry in enumerate(fixed_entries)
     )

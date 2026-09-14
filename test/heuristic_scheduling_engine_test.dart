@@ -245,6 +245,71 @@ void main() {
       final high = plan.entries.firstWhere((e) => e.id == 'h');
       expect(_startMin(high) >= 14 * 60, isTrue);
     });
+
+    test('uses contract order for due priority duration and id', () {
+      final engine = HeuristicSchedulingEngine();
+      final day = DateTime(2026, 6, 14);
+      final tasks = [
+        const PlanTask(id: 'no-due-short', title: 'Short', durationMinutes: 20, priority: 3, load: CognitiveLoad.low, tag: 'Task'),
+        PlanTask(id: 'due-late', title: 'Late due', durationMinutes: 20, priority: 1, due: DateTime(2026, 6, 14, 12), load: CognitiveLoad.low, tag: 'Task'),
+        const PlanTask(id: 'no-due-long', title: 'Long', durationMinutes: 30, priority: 3, load: CognitiveLoad.low, tag: 'Task'),
+        PlanTask(id: 'due-early', title: 'Early due', durationMinutes: 20, priority: 1, due: DateTime(2026, 6, 14, 10), load: CognitiveLoad.low, tag: 'Task'),
+        const PlanTask(id: 'no-due-high', title: 'High', durationMinutes: 20, priority: 5, load: CognitiveLoad.low, tag: 'Task'),
+        const PlanTask(id: 'no-due-a', title: 'A', durationMinutes: 20, priority: 3, load: CognitiveLoad.low, tag: 'Task'),
+      ];
+
+      final plan = engine.plan(SchedulingRequest(
+        day: day,
+        tasks: tasks,
+        windows: const [TimeWindow(start: TimeOfDay(hour: 8, minute: 0), end: TimeOfDay(hour: 18, minute: 0))],
+        energy: EnergyTier.medium,
+      ));
+
+      expect(plan.entries.map((entry) => entry.id), [
+        'due-early',
+        'due-late',
+        'no-due-high',
+        'no-due-long',
+        'no-due-a',
+        'no-due-short',
+      ]);
+      expect(plan.entries.first.explanationCodes, ['deadline_proximity']);
+      expect(plan.entries[2].explanationCodes, ['priority']);
+      expect(plan.entries.every((entry) => entry.source == 'planned'), isTrue);
+    });
+
+    test('blocks missing dependencies and reports blocked ids', () {
+      final plan = HeuristicSchedulingEngine().plan(SchedulingRequest(
+        day: DateTime(2026, 6, 14),
+        tasks: const [
+          PlanTask(id: 'dependent', title: 'Dependent', durationMinutes: 30, priority: 5, load: CognitiveLoad.high, tag: 'Task', dependsOn: ['missing']),
+        ],
+        windows: const [TimeWindow(start: TimeOfDay(hour: 8, minute: 0), end: TimeOfDay(hour: 12, minute: 0))],
+        energy: EnergyTier.high,
+      ));
+
+      expect(plan.entries, isEmpty);
+      expect(plan.issues.single.code, 'dependency_blocked');
+      expect(plan.issues.single.blockedBy, ['missing']);
+      expect(plan.issues.single.explanationCodes, isEmpty);
+    });
+
+    test('honors earliest start and does not fallback hard deadlines past due', () {
+      final plan = HeuristicSchedulingEngine().plan(SchedulingRequest(
+        day: DateTime(2026, 6, 14),
+        tasks: [
+          PlanTask(id: 'late', title: 'Late', durationMinutes: 30, priority: 2, load: CognitiveLoad.low, tag: 'Task', earliestStart: DateTime(2026, 6, 14, 9)),
+          PlanTask(id: 'hard', title: 'Hard', durationMinutes: 90, priority: 5, load: CognitiveLoad.high, tag: 'Task', due: DateTime(2026, 6, 14, 9), hardDeadline: true),
+        ],
+        windows: const [TimeWindow(start: TimeOfDay(hour: 8, minute: 0), end: TimeOfDay(hour: 10, minute: 0))],
+        energy: EnergyTier.medium,
+      ));
+
+      expect(plan.entries.single.id, 'late');
+      expect(plan.entries.single.time, const TimeOfDay(hour: 9, minute: 0));
+      final issue = plan.issues.singleWhere((issue) => issue.taskId == 'hard');
+      expect(issue.code, 'no_slot');
+    });
   });
 }
 
