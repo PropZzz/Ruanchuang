@@ -40,6 +40,8 @@ def _parse_datetime(value: object | None) -> datetime | None:
         if not text:
             return None
         try:
+            if text.endswith("Z"):
+                text = text[:-1] + "+00:00"
             return datetime.fromisoformat(text)
         except ValueError:
             return None
