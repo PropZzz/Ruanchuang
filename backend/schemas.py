@@ -1,12 +1,32 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class APIModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+
+def _normalize_rescue_datetime(value: object) -> object:
+    if value is None or isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str) and value.strip():
+        text = value.strip()
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        try:
+            parsed = datetime.fromisoformat(text)
+        except ValueError:
+            return value
+    else:
+        return value
+    if not isinstance(parsed, datetime):
+        return parsed
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 class ClockTime(APIModel):
@@ -307,6 +327,11 @@ class PlanTask(APIModel):
     splittable: bool = False
     minimum_chunk_minutes: int | None = Field(default=None, alias="minimumChunkMinutes")
 
+    @field_validator("due", "earliest_start", mode="before")
+    @classmethod
+    def normalize_rescue_dates(cls, value: object) -> object:
+        return _normalize_rescue_datetime(value)
+
 
 class TaskEvent(APIModel):
     id: str
@@ -412,6 +437,11 @@ class UrgentTaskIn(APIModel):
     depends_on: list[str] = Field(default_factory=list, alias="dependsOn")
     splittable: bool = False
     minimum_chunk_minutes: int | None = Field(default=None, alias="minimumChunkMinutes")
+
+    @field_validator("due", "earliest_start", mode="before")
+    @classmethod
+    def normalize_rescue_dates(cls, value: object) -> object:
+        return _normalize_rescue_datetime(value)
 
 
 class RescueOptionsRequest(APIModel):
