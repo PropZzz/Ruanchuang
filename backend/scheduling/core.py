@@ -546,12 +546,15 @@ def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
             "repeat": str(entry.get("repeat") or "none"),
             "repeatUntil": entry.get("repeatUntil"),
             "source": "fixed",
-            "explanationCodes": (
-                ["fixed_conflict"]
-                if index in fixed_conflicts
-                else (
-                    _ordered_explanation_codes(entry.get("explanationCodes"))
-                )
+            "explanationCodes": _ordered_explanation_codes(
+                [
+                    *(
+                        entry.get("explanationCodes")
+                        if isinstance(entry.get("explanationCodes"), list)
+                        else []
+                    ),
+                    *(["fixed_conflict"] if index in fixed_conflicts else []),
+                ]
             ),
         }
         for index, entry in enumerate(fixed_entries)
