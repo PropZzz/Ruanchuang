@@ -74,6 +74,67 @@ String? _dateToJson(DateTime? date) {
   return '${date.year.toString().padLeft(4, '0')}-${_two(date.month)}-${_two(date.day)}';
 }
 
+String _canonicalDateTimeToJson(DateTime value) {
+  final utc = value.toUtc().toIso8601String();
+  return utc.replaceFirst(RegExp(r'\.\d+(?=Z$)'), '');
+}
+
+DateTime? _dateTimeFromJson(Object? value) {
+  if (value is! String || value.trim().isEmpty) return null;
+  return DateTime.tryParse(value.trim());
+}
+
+int _durationFromScheduleHeight(double height) =>
+    (height / 80.0 * 60.0).round().clamp(1, 24 * 60).toInt();
+
+Map<String, Object?> _canonicalFixedEntryToJson(ScheduleEntry entry) => {
+  'id': entry.id ?? '',
+  'day': _dateToJson(entry.day),
+  'title': entry.title,
+  'tag': entry.tag,
+  'load': entry.load?.name,
+  'goalId': entry.goalId,
+  'goalTaskId': entry.goalTaskId,
+  'durationMinutes': _durationFromScheduleHeight(entry.height),
+  'time': _timeToJson(entry.time),
+  'source': 'fixed',
+};
+
+Map<String, Object?> _canonicalPlanEntryToJson(ScheduleEntry entry) => {
+  'id': entry.id ?? '',
+  'day': _dateToJson(entry.day),
+  'title': entry.title,
+  'tag': entry.tag,
+  'load': entry.load?.name,
+  'goalId': entry.goalId,
+  'goalTaskId': entry.goalTaskId,
+  'durationMinutes': _durationFromScheduleHeight(entry.height),
+  'time': _timeToJson(entry.time),
+  'source': entry.source,
+  'explanationCodes': entry.explanationCodes,
+};
+
+ScheduleEntry _scheduleEntryFromCanonicalJson(Map<String, Object?> json) {
+  final load = json['load'] as String?;
+  return ScheduleEntry(
+    id: json['id'] as String?,
+    day: _dateFromJson(json['day']),
+    title: (json['title'] as String?) ?? '',
+    tag: (json['tag'] as String?) ?? '',
+    load: load == null ? null : CognitiveLoad.values.byName(load),
+    goalId: json['goalId'] as String?,
+    goalTaskId: json['goalTaskId'] as String?,
+    height:
+        ((json['durationMinutes'] as num?)?.toDouble() ?? 60.0) / 60.0 * 80.0,
+    color: Colors.teal,
+    time: _timeFromJson(json['time']),
+    source: (json['source'] as String?) ?? 'planned',
+    explanationCodes:
+        (json['explanationCodes'] as List?)?.whereType<String>().toList() ??
+        const [],
+  );
+}
+
 enum RepeatFrequency { none, daily, weekly, monthly }
 
 class ScheduleEntry {
@@ -90,6 +151,8 @@ class ScheduleEntry {
   final int reminderMinutesBefore;
   final RepeatFrequency repeat;
   final DateTime? repeatUntil;
+  final String source;
+  final List<String> explanationCodes;
 
   const ScheduleEntry({
     this.id,
@@ -105,6 +168,8 @@ class ScheduleEntry {
     this.reminderMinutesBefore = 10,
     this.repeat = RepeatFrequency.none,
     this.repeatUntil,
+    this.source = 'planned',
+    this.explanationCodes = const [],
   });
 
   ScheduleEntry copyWith({
@@ -121,6 +186,8 @@ class ScheduleEntry {
     int? reminderMinutesBefore,
     RepeatFrequency? repeat,
     DateTime? repeatUntil,
+    String? source,
+    List<String>? explanationCodes,
   }) {
     return ScheduleEntry(
       id: id ?? this.id,
@@ -137,6 +204,8 @@ class ScheduleEntry {
           reminderMinutesBefore ?? this.reminderMinutesBefore,
       repeat: repeat ?? this.repeat,
       repeatUntil: repeatUntil ?? this.repeatUntil,
+      source: source ?? this.source,
+      explanationCodes: explanationCodes ?? this.explanationCodes,
     );
   }
 
@@ -539,6 +608,13 @@ class PlanTask {
   final DateTime? due;
   final CognitiveLoad load;
   final String tag;
+  final String? goalId;
+  final String? goalTaskId;
+  final DateTime? earliestStart;
+  final bool hardDeadline;
+  final List<String> dependsOn;
+  final bool splittable;
+  final int? minimumChunkMinutes;
 
   const PlanTask({
     required this.id,
@@ -548,6 +624,13 @@ class PlanTask {
     required this.load,
     required this.tag,
     this.due,
+    this.goalId,
+    this.goalTaskId,
+    this.earliestStart,
+    this.hardDeadline = false,
+    this.dependsOn = const [],
+    this.splittable = false,
+    this.minimumChunkMinutes,
   });
 
   Map<String, Object?> toJson() => {
@@ -555,9 +638,18 @@ class PlanTask {
     'title': title,
     'durationMinutes': durationMinutes,
     'priority': priority,
-    'due': due?.toIso8601String(),
+    'due': due == null ? null : _canonicalDateTimeToJson(due!),
     'load': load.name,
     'tag': tag,
+    'goalId': goalId,
+    'goalTaskId': goalTaskId,
+    'earliestStart': earliestStart == null
+        ? null
+        : _canonicalDateTimeToJson(earliestStart!),
+    'hardDeadline': hardDeadline,
+    'dependsOn': dependsOn,
+    'splittable': splittable,
+    'minimumChunkMinutes': minimumChunkMinutes,
   };
 
   static PlanTask fromJson(Map<String, Object?> json) {
@@ -581,6 +673,15 @@ class PlanTask {
       load: load,
       tag: (json['tag'] as String?) ?? '',
       due: due,
+      goalId: json['goalId'] as String?,
+      goalTaskId: json['goalTaskId'] as String?,
+      earliestStart: _dateTimeFromJson(json['earliestStart']),
+      hardDeadline: (json['hardDeadline'] as bool?) ?? false,
+      dependsOn: (json['dependsOn'] is List)
+          ? (json['dependsOn'] as List).whereType<String>().toList()
+          : const <String>[],
+      splittable: (json['splittable'] as bool?) ?? false,
+      minimumChunkMinutes: (json['minimumChunkMinutes'] as num?)?.toInt(),
     );
   }
 }
@@ -603,6 +704,7 @@ class TimeWindow {
 }
 
 class SchedulingRequest {
+  final String schemaVersion;
   final DateTime day;
   final List<PlanTask> tasks;
   final List<TimeWindow> windows;
@@ -617,15 +719,17 @@ class SchedulingRequest {
     required this.energy,
     this.tuning = const SchedulingTuning(),
     this.fixed = const [],
+    this.schemaVersion = '1',
   });
 
   Map<String, Object?> toJson() => {
-    'day': day.toIso8601String(),
+    'schemaVersion': schemaVersion,
+    'day': _dateToJson(day),
     'tasks': tasks.map((t) => t.toJson()).toList(),
     'windows': windows.map((w) => w.toJson()).toList(),
     'energy': energy.name,
     'tuning': tuning.toJson(),
-    'fixed': fixed.map((e) => e.toJson()).toList(),
+    'fixed': fixed.map(_canonicalFixedEntryToJson).toList(),
   };
 
   static SchedulingRequest fromJson(Map<String, Object?> json) {
@@ -675,6 +779,7 @@ class SchedulingRequest {
       energy: energy,
       tuning: tuning,
       fixed: fixed,
+      schemaVersion: (json['schemaVersion'] as String?) ?? '1',
     );
   }
 }
@@ -683,34 +788,55 @@ class SchedulingIssue {
   final String code;
   final String message;
   final String? taskId;
+  final List<String>? blockedBy;
+  final List<String> explanationCodes;
 
   const SchedulingIssue({
     required this.code,
     required this.message,
     this.taskId,
+    this.blockedBy,
+    this.explanationCodes = const [],
   });
 
-  Map<String, Object?> toJson() => {
-    'code': code,
-    'message': message,
-    'taskId': taskId,
-  };
+  Map<String, Object?> toJson() {
+    final json = <String, Object?>{
+      'code': code,
+      'message': message,
+      'taskId': taskId,
+      'explanationCodes': explanationCodes,
+    };
+    if (blockedBy != null) json['blockedBy'] = blockedBy;
+    return json;
+  }
 
   static SchedulingIssue fromJson(Map<String, Object?> json) => SchedulingIssue(
     code: (json['code'] as String?) ?? '',
     message: (json['message'] as String?) ?? '',
     taskId: json['taskId'] as String?,
+    blockedBy: (json['blockedBy'] is List)
+        ? (json['blockedBy'] as List).whereType<String>().toList()
+        : null,
+    explanationCodes: (json['explanationCodes'] is List)
+        ? (json['explanationCodes'] as List).whereType<String>().toList()
+        : const <String>[],
   );
 }
 
 class SchedulingPlan {
+  final String schemaVersion;
   final List<ScheduleEntry> entries;
   final List<SchedulingIssue> issues;
 
-  const SchedulingPlan({required this.entries, this.issues = const []});
+  const SchedulingPlan({
+    required this.entries,
+    this.issues = const [],
+    this.schemaVersion = '1',
+  });
 
   Map<String, Object?> toJson() => {
-    'entries': entries.map((e) => e.toJson()).toList(),
+    'schemaVersion': schemaVersion,
+    'entries': entries.map(_canonicalPlanEntryToJson).toList(),
     'issues': issues.map((i) => i.toJson()).toList(),
   };
 
@@ -721,7 +847,11 @@ class SchedulingPlan {
     final entries = (entriesRaw is List)
         ? entriesRaw
               .whereType<Map>()
-              .map((m) => ScheduleEntry.fromJson(Map<String, Object?>.from(m)))
+              .map(
+                (m) => _scheduleEntryFromCanonicalJson(
+                  Map<String, Object?>.from(m),
+                ),
+              )
               .toList()
         : <ScheduleEntry>[];
 
@@ -734,7 +864,11 @@ class SchedulingPlan {
               .toList()
         : <SchedulingIssue>[];
 
-    return SchedulingPlan(entries: entries, issues: issues);
+    return SchedulingPlan(
+      entries: entries,
+      issues: issues,
+      schemaVersion: (json['schemaVersion'] as String?) ?? '1',
+    );
   }
 }
 
