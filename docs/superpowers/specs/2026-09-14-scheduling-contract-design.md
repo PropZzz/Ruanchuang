@@ -1,6 +1,6 @@
 # Scheduling Contract v1 Design
 
-> **Status:** v1 contract boundary implemented; full SchedulerCore convergence remains follow-up
+> **Status:** v1 contract boundary, splitting, and risk output implemented and verified
 > **Owner:** Member A  
 > **Scope:** `/schedule/replan` input/output and the Dart/Python scheduling boundary
 
@@ -93,7 +93,7 @@ The canonical request has this shape:
 - `energy` is one of `veryLow`, `low`, `medium`, `high`, `veryHigh`.
 - `dependsOn` is an array of task IDs. A dependency must be scheduled before its dependent task can start.
 - `hardDeadline` is optional and defaults to `false`. When true, the task may not finish after `due`.
-- `splittable` and `minimumChunkMinutes` are reserved in v1. Unsupported non-default values must be rejected explicitly rather than silently ignored.
+- `splittable` defaults to `false`. When true, `minimumChunkMinutes` defaults to 15 and must not exceed `durationMinutes`; false tasks require `minimumChunkMinutes: null`. Split entries use deterministic IDs such as `task_001#1`.
 - `fixed` uses the scheduling entry adapter. Its canonical duration is `durationMinutes`; persisted `height` is a legacy storage field and is converted before entering the scheduler.
 
 ## Canonical Response
@@ -136,6 +136,7 @@ The canonical request has this shape:
 - `explanationCodes` uses stable machine codes, not generated prose. Initial codes are `deadline_proximity`, `priority`, `energy_fit`, `kept_baseline` and `fixed_conflict`.
 - Human-readable messages remain informative but are not used for client branching.
 - The response does not expose the persistence-only `height` field.
+- The response includes `risk.level` (`none`, `low`, `medium`, `high`), `risk.issueCount`, and `risk.hardIssueCount`.
 
 ## Ordering and Constraint Semantics
 
@@ -229,4 +230,4 @@ python -m pytest backend/tests -q -> 98 passed, 4 dependency deprecation warning
 git diff --check                -> clean
 ```
 
-The shared fixtures are schema-validated and the equivalent Dart/Python behaviors are covered by mirrored tests. An automated runner that executes every fixture through both runtimes and emits a machine-generated difference report is still a follow-up item, together with the full `SchedulerCore` module split and rescue strategy weight calculations.
+The shared fixtures are schema-validated and the automated runner executes every fixture through both runtimes, compares the canonical risk object, and emits a machine-generated difference report. Current evidence covers three fixtures with zero differences; production-scale performance benchmarking remains separate.

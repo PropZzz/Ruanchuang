@@ -122,7 +122,8 @@ git diff --check                 -> clean
 - Python 和 Dart 均有独立的 `SchedulerCore` 纯计算入口，原有服务/引擎接口保留为兼容门面。
 - 三种救援策略使用 `contracts/scheduling/v1/rescue-strategies.json` 中的统一权重和 15 分钟恢复缓冲。
 - 救援方案按硬问题数、加权分数和稳定策略顺序推荐，并返回 `score`、`scoreBreakdown`。
+- 调度支持可拆分任务、15 分钟默认分片、整分钟时间校验和 `risk` 风险对象。
 
-最终 parity 结果：2 个 fixture、2 个匹配、0 个差异、0 个无效项。
+最终 parity 结果：3 个 fixture、3 个匹配、0 个差异、0 个无效项。
 
 剩余范围：更细粒度 helper 模块拆分和生产规模性能基准不属于本次行为验收，后续单独排期。

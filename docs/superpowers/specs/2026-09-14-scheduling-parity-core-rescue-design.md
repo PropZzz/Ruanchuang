@@ -272,4 +272,4 @@ dart format --set-exit-if-changed (touched files) -> clean
 git diff --check                 -> clean
 ```
 
-The report is stored at `reports/scheduling-parity-2026-09-14.json`. The two runtime cores are now separated behind compatibility facades. Further decomposition into smaller helper modules and production-scale performance benchmarking remain optional follow-up work; they are outside this verified behavior change.
+The report is stored at `reports/scheduling-parity-2026-09-14.json`. The two runtime cores are separated behind compatibility facades, support deterministic task splitting, and emit the same risk object. Production-scale performance benchmarking remains separate from this verified behavior change.
