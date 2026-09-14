@@ -144,14 +144,7 @@
           ]
         },
         "load": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Load"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/Load"
         },
         "tag": {
           "type": "string"
@@ -205,7 +198,8 @@
         "id",
         "title",
         "durationMinutes",
-        "time"
+        "time",
+        "source"
       ],
       "properties": {
         "id": {

@@ -112,7 +112,7 @@ class SchedulingTask(ContractModel):
     title: str = Field(min_length=1)
     duration_minutes: int = Field(alias="durationMinutes", ge=1, le=1440)
     priority: int = Field(ge=1, le=5)
-    load: Load | None
+    load: Load
     tag: str
     goal_id: str | None = Field(default=None, alias="goalId")
     goal_task_id: str | None = Field(default=None, alias="goalTaskId")
