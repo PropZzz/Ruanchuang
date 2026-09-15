@@ -267,6 +267,26 @@ _RunResult _runRescue(SharedJson rawRequest, SchedulingEngine engine) {
   final requestedStrategies = rawRequest['strategies'] == null
       ? null
       : _stringList(rawRequest['strategies'], 'strategies');
+  if (requestedStrategies != null) {
+    const allowedStrategies = {
+      'protectDeadline',
+      'protectRecovery',
+      'minimizeChanges',
+    };
+    if (requestedStrategies.isEmpty) {
+      throw const FormatException('strategies must not be empty');
+    }
+    if (requestedStrategies.toSet().length != requestedStrategies.length) {
+      throw const FormatException('strategies must not contain duplicates');
+    }
+    final unknown = requestedStrategies.firstWhere(
+      (strategy) => !allowedStrategies.contains(strategy),
+      orElse: () => '',
+    );
+    if (unknown.isNotEmpty) {
+      throw FormatException('unsupported rescue strategy: $unknown');
+    }
+  }
   final options = requestedStrategies == null
       ? proposed
       : requestedStrategies

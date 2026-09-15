@@ -203,6 +203,33 @@ void main() {
       throwsA(isA<FormatException>()),
     );
   });
+
+  test('rescue adapter rejects an empty strategy list', () async {
+    await expectLater(
+      runSharedVectorFixture(
+        _rescueFixture(const <String>[]),
+        name: 'empty-strategies.json',
+      ),
+      throwsA(isA<FormatException>()),
+    );
+  });
+
+  test('rescue adapter rejects duplicate or unknown strategies', () async {
+    await expectLater(
+      runSharedVectorFixture(
+        _rescueFixture(const ['protectDeadline', 'protectDeadline']),
+        name: 'duplicate-strategies.json',
+      ),
+      throwsA(isA<FormatException>()),
+    );
+    await expectLater(
+      runSharedVectorFixture(
+        _rescueFixture(const ['notARealStrategy']),
+        name: 'unknown-strategies.json',
+      ),
+      throwsA(isA<FormatException>()),
+    );
+  });
 }
 
 Map<String, Object?> _entry(
@@ -219,5 +246,56 @@ Map<String, Object?> _entry(
     'height': height,
     'color': 4278255360,
     'time': {'hour': hour, 'minute': 0},
+  };
+}
+
+Map<String, Object?> _rescueFixture(List<String> strategies) {
+  return <String, Object?>{
+    'schemaVersion': 'scheduling/v1',
+    'id': 'rescue-input-test',
+    'kind': 'rescue',
+    'tags': ['rescue_strategies'],
+    'request': <String, Object?>{
+      'day': '2026-09-16',
+      'energy': 'medium',
+      'windows': [
+        {
+          'start': {'hour': 8, 'minute': 0},
+          'end': {'hour': 10, 'minute': 0},
+        },
+      ],
+      'fixed': <Object?>[],
+      'tasks': [
+        {
+          'id': 'base',
+          'title': 'Base',
+          'durationMinutes': 30,
+          'priority': 3,
+          'load': 'medium',
+          'tag': 'Work',
+        },
+      ],
+      'urgentTask': {
+        'id': 'urgent',
+        'title': 'Urgent',
+        'durationMinutes': 15,
+        'priority': 5,
+        'load': 'medium',
+        'tag': 'Urgent',
+      },
+      'currentEntries': [_entry('base', hour: 8, height: 40)],
+      'strategies': strategies,
+    },
+    'assertions': <String, Object?>{
+      'taskOrder': <Object?>[],
+      'timeBlocks': <String, Object?>{},
+      'issues': <Object?>[],
+      'explanationCodes': <Object?>[],
+      'strategies': <Object?>[],
+    },
+    'review': <String, Object?>{
+      'classification': 'pending_a_review',
+      'reason': '测试救援策略输入契约',
+    },
   };
 }
