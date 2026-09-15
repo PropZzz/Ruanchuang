@@ -1,12 +1,32 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class APIModel(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+
+def _normalize_rescue_datetime(value: object) -> object:
+    if value is None or isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str) and value.strip():
+        text = value.strip()
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        try:
+            parsed = datetime.fromisoformat(text)
+        except ValueError:
+            return value
+    else:
+        return value
+    if not isinstance(parsed, datetime):
+        return parsed
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 class ClockTime(APIModel):
@@ -299,6 +319,18 @@ class PlanTask(APIModel):
     due: datetime | None = None
     load: str
     tag: str
+    goal_id: str | None = Field(default=None, alias="goalId")
+    goal_task_id: str | None = Field(default=None, alias="goalTaskId")
+    earliest_start: datetime | None = Field(default=None, alias="earliestStart")
+    hard_deadline: bool = Field(default=False, alias="hardDeadline")
+    depends_on: list[str] = Field(default_factory=list, alias="dependsOn")
+    splittable: bool = False
+    minimum_chunk_minutes: int | None = Field(default=None, alias="minimumChunkMinutes")
+
+    @field_validator("due", "earliest_start", mode="before")
+    @classmethod
+    def normalize_rescue_dates(cls, value: object) -> object:
+        return _normalize_rescue_datetime(value)
 
 
 class TaskEvent(APIModel):
@@ -398,6 +430,18 @@ class UrgentTaskIn(APIModel):
     due: datetime
     load: str
     tag: str
+    goal_id: str | None = Field(default=None, alias="goalId")
+    goal_task_id: str | None = Field(default=None, alias="goalTaskId")
+    earliest_start: datetime | None = Field(default=None, alias="earliestStart")
+    hard_deadline: bool = Field(default=False, alias="hardDeadline")
+    depends_on: list[str] = Field(default_factory=list, alias="dependsOn")
+    splittable: bool = False
+    minimum_chunk_minutes: int | None = Field(default=None, alias="minimumChunkMinutes")
+
+    @field_validator("due", "earliest_start", mode="before")
+    @classmethod
+    def normalize_rescue_dates(cls, value: object) -> object:
+        return _normalize_rescue_datetime(value)
 
 
 class RescueOptionsRequest(APIModel):
@@ -438,6 +482,10 @@ class RescueOptionOut(APIModel):
     moved_entry_count: int = Field(alias="movedEntryCount")
     recovery_minutes: int = Field(alias="recoveryMinutes")
     issue_count: int = Field(alias="issueCount")
+    hard_issue_count: int = Field(default=0, alias="hardIssueCount")
+    overdue_risk: float = Field(default=0.0, alias="overdueRisk")
+    score: float = 0.0
+    score_breakdown: dict[str, float] = Field(default_factory=dict, alias="scoreBreakdown")
     affected_entries: list[str] = Field(alias="affectedEntries")
     planned_entries: list[ScheduleEntryOut] = Field(alias="plannedEntries")
 

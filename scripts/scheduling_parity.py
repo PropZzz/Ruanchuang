@@ -17,6 +17,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import textwrap
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
 
@@ -31,6 +32,48 @@ REVIEW_CLASSES = {
     "allowed_difference",
     "pending_a_review",
 }
+
+
+class ParityRunnerError(ValueError):
+    """Backward-compatible parser error used by the original parity tests."""
+
+
+def parse_runner_output(stdout: str) -> dict[str, Any]:
+    """Parse the current shared runner protocol without process metadata."""
+
+    try:
+        legacy = stdout.replace(
+            "SCHEDULING_PARITY_RESULT_BEGIN", RESULT_BEGIN
+        ).replace("SCHEDULING_PARITY_RESULT_END", RESULT_END)
+        return parse_dart_output(textwrap.dedent(legacy))
+    except ValueError as exc:
+        raise ParityRunnerError(str(exc)) from exc
+
+
+def compare_results(
+    expected: Mapping[str, Any],
+    python_result: Mapping[str, Any],
+    dart_result: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Compatibility comparison for the original two-runtime unit test."""
+
+    differences: list[dict[str, Any]] = []
+    for runtime, actual in (("python", python_result), ("dart", dart_result)):
+        for field_name, expected_value, actual_value in _flatten_differences(
+            expected, actual
+        ):
+            differences.append(
+                {
+                    "runtime": runtime,
+                    "field": field_name,
+                    "expected": expected_value,
+                    "actual": actual_value,
+                }
+            )
+    return {
+        "status": "matched" if not differences else "mismatched",
+        "differences": differences,
+    }
 
 # ``python scripts/scheduling_parity.py`` puts only ``scripts/`` on
 # ``sys.path``.  Make the repository package imports explicit for that direct
@@ -81,6 +124,8 @@ def load_fixtures(directory: Path = FIXTURES_DIR) -> list[dict[str, Any]]:
         value = json.loads(raw)
         if not isinstance(value, dict):
             raise ValueError(f"{path.name}: fixture root must be an object")
+        if value.get("schemaVersion") != "scheduling/v1":
+            continue
         fixture = dict(value)
         fixture["_fixtureName"] = path.name
         fixtures.append(fixture)

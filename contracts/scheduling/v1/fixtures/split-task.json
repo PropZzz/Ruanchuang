@@ -1,0 +1,71 @@
+{
+  "request": {
+    "schemaVersion": "1",
+    "day": "2026-09-14",
+    "tasks": [
+      {
+        "id": "split-task",
+        "title": "Split task",
+        "durationMinutes": 90,
+        "priority": 3,
+        "load": "medium",
+        "tag": "Task",
+        "hardDeadline": false,
+        "earliestStart": null,
+        "dependsOn": [],
+        "splittable": true,
+        "minimumChunkMinutes": 30
+      }
+    ],
+    "windows": [
+      {
+        "start": {"hour": 9, "minute": 0},
+        "end": {"hour": 10, "minute": 0}
+      },
+      {
+        "start": {"hour": 11, "minute": 0},
+        "end": {"hour": 12, "minute": 0}
+      }
+    ],
+    "energy": "medium",
+    "tuning": {
+      "defaultDurationMultiplier": 1.0,
+      "tagDurationMultiplier": {},
+      "highLoadPenaltyWhenLowEnergy": 1.0
+    },
+    "fixed": []
+  },
+  "response": {
+    "schemaVersion": "1",
+    "entries": [
+      {
+        "id": "split-task#1",
+        "day": "2026-09-14",
+        "title": "Split task",
+        "tag": "Task",
+        "load": "medium",
+        "durationMinutes": 60,
+        "time": {"hour": 9, "minute": 0},
+        "source": "planned",
+        "explanationCodes": ["priority", "energy_fit"]
+      },
+      {
+        "id": "split-task#2",
+        "day": "2026-09-14",
+        "title": "Split task",
+        "tag": "Task",
+        "load": "medium",
+        "durationMinutes": 30,
+        "time": {"hour": 11, "minute": 0},
+        "source": "planned",
+        "explanationCodes": ["priority", "energy_fit"]
+      }
+    ],
+    "issues": [],
+    "risk": {
+      "level": "none",
+      "issueCount": 0,
+      "hardIssueCount": 0
+    }
+  }
+}

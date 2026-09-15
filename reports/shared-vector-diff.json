@@ -1,8 +1,8 @@
 {
   "classificationCounts": {
     "allowed_difference": 0,
-    "contract_error": 16,
-    "implementation_error": 56,
+    "contract_error": 17,
+    "implementation_error": 65,
     "pending_a_review": 0
   },
   "command": [
@@ -284,7 +284,15 @@
           "actual": 0,
           "classification": "contract_error",
           "expected": 1,
-          "field": "explanationCodes.length",
+          "field": "issues[0].explanationCodes.length",
+          "reason": "两端均按现有 miss_due 语义输出；后端守则列出的稳定问题码没有 deadline_infeasible，原断言使用了未定义问题码和解释码。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": "deadline_proximity",
+          "classification": "contract_error",
+          "expected": "deadline_infeasible",
+          "field": "explanationCodes[0]",
           "reason": "两端均按现有 miss_due 语义输出；后端守则列出的稳定问题码没有 deadline_infeasible，原断言使用了未定义问题码和解释码。",
           "runtime": "python_vs_assertions"
         },
@@ -297,10 +305,10 @@
           "runtime": "python_vs_assertions"
         },
         {
-          "actual": 0,
+          "actual": "deadline_proximity",
           "classification": "contract_error",
-          "expected": 1,
-          "field": "issues[0].explanationCodes.length",
+          "expected": "deadline_infeasible",
+          "field": "issues[0].explanationCodes[0]",
           "reason": "两端均按现有 miss_due 语义输出；后端守则列出的稳定问题码没有 deadline_infeasible，原断言使用了未定义问题码和解释码。",
           "runtime": "python_vs_assertions"
         },
@@ -350,7 +358,9 @@
           {
             "blockedBy": [],
             "code": "miss_due",
-            "explanationCodes": [],
+            "explanationCodes": [
+              "deadline_proximity"
+            ],
             "taskId": "too-late"
           }
         ]
@@ -517,7 +527,7 @@
             "day": "2026-09-16",
             "durationMinutes": 60,
             "explanationCodes": [],
-            "id": "low-load",
+            "id": "high-load",
             "source": "planned",
             "time": {
               "hour": 8,
@@ -528,7 +538,7 @@
             "day": "2026-09-16",
             "durationMinutes": 60,
             "explanationCodes": [],
-            "id": "high-load",
+            "id": "low-load",
             "source": "planned",
             "time": {
               "hour": 9,
@@ -547,22 +557,6 @@
           "classification": "implementation_error",
           "expected": 72,
           "field": "entries[0].durationMinutes",
-          "reason": "Dart 按低负荷优先且保持 60 分钟；Python 按高优先级先排并把 high 任务放大到 72 分钟，违反低精力匹配与跨端规则。",
-          "runtime": "dart_vs_python"
-        },
-        {
-          "actual": "low-load",
-          "classification": "implementation_error",
-          "expected": "high-load",
-          "field": "entries[0].id",
-          "reason": "Dart 按低负荷优先且保持 60 分钟；Python 按高优先级先排并把 high 任务放大到 72 分钟，违反低精力匹配与跨端规则。",
-          "runtime": "dart_vs_python"
-        },
-        {
-          "actual": "high-load",
-          "classification": "implementation_error",
-          "expected": "low-load",
-          "field": "entries[1].id",
           "reason": "Dart 按低负荷优先且保持 60 分钟；Python 按高优先级先排并把 high 任务放大到 72 分钟，违反低精力匹配与跨端规则。",
           "runtime": "dart_vs_python"
         },
@@ -635,6 +629,38 @@
           "classification": "implementation_error",
           "expected": 1,
           "field": "explanationCodes.length",
+          "reason": "Dart 按低负荷优先且保持 60 分钟；Python 按高优先级先排并把 high 任务放大到 72 分钟，违反低精力匹配与跨端规则。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": "high-load",
+          "classification": "implementation_error",
+          "expected": "low-load",
+          "field": "taskOrder[0]",
+          "reason": "Dart 按低负荷优先且保持 60 分钟；Python 按高优先级先排并把 high 任务放大到 72 分钟，违反低精力匹配与跨端规则。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": "low-load",
+          "classification": "implementation_error",
+          "expected": "high-load",
+          "field": "taskOrder[1]",
+          "reason": "Dart 按低负荷优先且保持 60 分钟；Python 按高优先级先排并把 high 任务放大到 72 分钟，违反低精力匹配与跨端规则。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 8,
+          "classification": "implementation_error",
+          "expected": 9,
+          "field": "timeBlocks.high-load.hour",
+          "reason": "Dart 按低负荷优先且保持 60 分钟；Python 按高优先级先排并把 high 任务放大到 72 分钟，违反低精力匹配与跨端规则。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 9,
+          "classification": "implementation_error",
+          "expected": 8,
+          "field": "timeBlocks.low-load.hour",
           "reason": "Dart 按低负荷优先且保持 60 分钟；Python 按高优先级先排并把 high 任务放大到 72 分钟，违反低精力匹配与跨端规则。",
           "runtime": "dart_vs_assertions"
         }
@@ -744,7 +770,7 @@
             "entries": [
               {
                 "day": "2026-09-16",
-                "durationMinutes": 30,
+                "durationMinutes": 32,
                 "explanationCodes": [],
                 "id": "urgent",
                 "source": "planned",
@@ -755,24 +781,24 @@
               },
               {
                 "day": "2026-09-16",
+                "durationMinutes": 63,
+                "explanationCodes": [],
+                "id": "review",
+                "source": "planned",
+                "time": {
+                  "hour": 8,
+                  "minute": 32
+                }
+              },
+              {
+                "day": "2026-09-16",
                 "durationMinutes": 90,
                 "explanationCodes": [],
                 "id": "deep",
                 "source": "planned",
                 "time": {
-                  "hour": 8,
+                  "hour": 13,
                   "minute": 30
-                }
-              },
-              {
-                "day": "2026-09-16",
-                "durationMinutes": 60,
-                "explanationCodes": [],
-                "id": "review",
-                "source": "planned",
-                "time": {
-                  "hour": 10,
-                  "minute": 0
                 }
               },
               {
@@ -782,8 +808,8 @@
                 "id": "rescue_recovery_2026-09-16",
                 "source": "recovery",
                 "time": {
-                  "hour": 13,
-                  "minute": 30
+                  "hour": 15,
+                  "minute": 0
                 }
               }
             ],
@@ -854,38 +880,6 @@
       },
       "differences": [
         {
-          "actual": 30,
-          "classification": "implementation_error",
-          "expected": 32,
-          "field": "strategies[1].entries[0].durationMinutes",
-          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
-          "runtime": "dart_vs_python"
-        },
-        {
-          "actual": 30,
-          "classification": "implementation_error",
-          "expected": 32,
-          "field": "strategies[1].entries[1].time.minute",
-          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
-          "runtime": "dart_vs_python"
-        },
-        {
-          "actual": 60,
-          "classification": "implementation_error",
-          "expected": 63,
-          "field": "strategies[1].entries[2].durationMinutes",
-          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
-          "runtime": "dart_vs_python"
-        },
-        {
-          "actual": 0,
-          "classification": "implementation_error",
-          "expected": 2,
-          "field": "strategies[1].entries[2].time.minute",
-          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
-          "runtime": "dart_vs_python"
-        },
-        {
           "actual": 0,
           "classification": "implementation_error",
           "expected": 1,
@@ -918,10 +912,42 @@
           "runtime": "python_vs_assertions"
         },
         {
-          "actual": 32,
+          "actual": "review",
+          "classification": "implementation_error",
+          "expected": "deep",
+          "field": "strategies[1].taskOrder[1]",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": "deep",
+          "classification": "implementation_error",
+          "expected": "review",
+          "field": "strategies[1].taskOrder[2]",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 13,
+          "classification": "implementation_error",
+          "expected": 8,
+          "field": "strategies[1].timeBlocks.deep.hour",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 15,
+          "classification": "implementation_error",
+          "expected": 13,
+          "field": "strategies[1].timeBlocks.rescue_recovery_2026-09-16.hour",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
           "classification": "implementation_error",
           "expected": 30,
-          "field": "strategies[1].timeBlocks.deep.minute",
+          "field": "strategies[1].timeBlocks.rescue_recovery_2026-09-16.minute",
           "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
           "runtime": "python_vs_assertions"
         },
@@ -934,7 +960,15 @@
           "runtime": "python_vs_assertions"
         },
         {
-          "actual": 2,
+          "actual": 8,
+          "classification": "implementation_error",
+          "expected": 10,
+          "field": "strategies[1].timeBlocks.review.hour",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 32,
           "classification": "implementation_error",
           "expected": 0,
           "field": "strategies[1].timeBlocks.review.minute",
@@ -986,6 +1020,78 @@
           "classification": "implementation_error",
           "expected": 1,
           "field": "strategies[1].explanationCodes.length",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": "review",
+          "classification": "implementation_error",
+          "expected": "deep",
+          "field": "strategies[1].taskOrder[1]",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": "deep",
+          "classification": "implementation_error",
+          "expected": "review",
+          "field": "strategies[1].taskOrder[2]",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 13,
+          "classification": "implementation_error",
+          "expected": 8,
+          "field": "strategies[1].timeBlocks.deep.hour",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 15,
+          "classification": "implementation_error",
+          "expected": 13,
+          "field": "strategies[1].timeBlocks.rescue_recovery_2026-09-16.hour",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "implementation_error",
+          "expected": 30,
+          "field": "strategies[1].timeBlocks.rescue_recovery_2026-09-16.minute",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 63,
+          "classification": "implementation_error",
+          "expected": 60,
+          "field": "strategies[1].timeBlocks.review.durationMinutes",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 8,
+          "classification": "implementation_error",
+          "expected": 10,
+          "field": "strategies[1].timeBlocks.review.hour",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 32,
+          "classification": "implementation_error",
+          "expected": 0,
+          "field": "strategies[1].timeBlocks.review.minute",
+          "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 32,
+          "classification": "implementation_error",
+          "expected": 30,
+          "field": "strategies[1].timeBlocks.urgent.durationMinutes",
           "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。",
           "runtime": "dart_vs_assertions"
         },
@@ -1077,9 +1183,9 @@
               },
               {
                 "day": "2026-09-16",
-                "durationMinutes": 90,
+                "durationMinutes": 63,
                 "explanationCodes": [],
-                "id": "deep",
+                "id": "review",
                 "source": "planned",
                 "time": {
                   "hour": 8,
@@ -1088,13 +1194,13 @@
               },
               {
                 "day": "2026-09-16",
-                "durationMinutes": 63,
+                "durationMinutes": 90,
                 "explanationCodes": [],
-                "id": "review",
+                "id": "deep",
                 "source": "planned",
                 "time": {
-                  "hour": 10,
-                  "minute": 2
+                  "hour": 13,
+                  "minute": 30
                 }
               },
               {
@@ -1104,8 +1210,8 @@
                 "id": "rescue_recovery_2026-09-16",
                 "source": "recovery",
                 "time": {
-                  "hour": 13,
-                  "minute": 30
+                  "hour": 15,
+                  "minute": 0
                 }
               }
             ],
@@ -1197,51 +1303,23 @@
           "actual": 0,
           "classification": "implementation_error",
           "expected": 1,
-          "field": "entries.length",
-          "reason": "无有效工作窗口时 Dart 报 no_slot，而 Python 私自回退到 08:00-20:00 并安排任务；该回退不符合工作窗口硬约束。原断言的 no_available_block 也应收敛为稳定 no_slot。",
-          "runtime": "dart_vs_python"
-        },
-        {
-          "actual": 1,
-          "classification": "implementation_error",
-          "expected": 0,
-          "field": "issues.length",
-          "reason": "无有效工作窗口时 Dart 报 no_slot，而 Python 私自回退到 08:00-20:00 并安排任务；该回退不符合工作窗口硬约束。原断言的 no_available_block 也应收敛为稳定 no_slot。",
-          "runtime": "dart_vs_python"
-        },
-        {
-          "actual": 0,
-          "classification": "implementation_error",
-          "expected": 1,
           "field": "explanationCodes.length",
           "reason": "无有效工作窗口时 Dart 报 no_slot，而 Python 私自回退到 08:00-20:00 并安排任务；该回退不符合工作窗口硬约束。原断言的 no_available_block 也应收敛为稳定 no_slot。",
           "runtime": "python_vs_assertions"
         },
         {
+          "actual": "no_slot",
+          "classification": "implementation_error",
+          "expected": "no_available_block",
+          "field": "issues[0].code",
+          "reason": "无有效工作窗口时 Dart 报 no_slot，而 Python 私自回退到 08:00-20:00 并安排任务；该回退不符合工作窗口硬约束。原断言的 no_available_block 也应收敛为稳定 no_slot。",
+          "runtime": "python_vs_assertions"
+        },
+        {
           "actual": 0,
           "classification": "implementation_error",
           "expected": 1,
-          "field": "issues.length",
-          "reason": "无有效工作窗口时 Dart 报 no_slot，而 Python 私自回退到 08:00-20:00 并安排任务；该回退不符合工作窗口硬约束。原断言的 no_available_block 也应收敛为稳定 no_slot。",
-          "runtime": "python_vs_assertions"
-        },
-        {
-          "actual": 1,
-          "classification": "implementation_error",
-          "expected": 0,
-          "field": "taskOrder.length",
-          "reason": "无有效工作窗口时 Dart 报 no_slot，而 Python 私自回退到 08:00-20:00 并安排任务；该回退不符合工作窗口硬约束。原断言的 no_available_block 也应收敛为稳定 no_slot。",
-          "runtime": "python_vs_assertions"
-        },
-        {
-          "actual": {
-            "durationMinutes": 30,
-            "hour": 8,
-            "minute": 0
-          },
-          "classification": "implementation_error",
-          "expected": null,
-          "field": "timeBlocks.none-task",
+          "field": "issues[0].explanationCodes.length",
           "reason": "无有效工作窗口时 Dart 报 no_slot，而 Python 私自回退到 08:00-20:00 并安排任务；该回退不符合工作窗口硬约束。原断言的 no_available_block 也应收敛为稳定 no_slot。",
           "runtime": "python_vs_assertions"
         },
@@ -1274,23 +1352,24 @@
       "kind": "plan",
       "name": "007-no-available-block.json",
       "pythonActual": {
-        "entries": [
+        "entries": [],
+        "issues": [
           {
-            "day": "2026-09-16",
-            "durationMinutes": 30,
+            "blockedBy": [],
+            "code": "no_slot",
             "explanationCodes": [],
-            "id": "none-task",
-            "source": "planned",
-            "time": {
-              "hour": 8,
-              "minute": 0
-            }
+            "taskId": "none-task"
           }
-        ],
-        "issues": []
+        ]
       },
       "pythonDiagnostics": {
-        "issues": []
+        "issues": [
+          {
+            "code": "no_slot",
+            "message": "No time slot left for task: No block task",
+            "taskId": "none-task"
+          }
+        ]
       },
       "review": {
         "classification": "implementation_error",
@@ -1313,33 +1392,46 @@
             }
           }
         ],
-        "issues": []
+        "issues": [
+          {
+            "blockedBy": [],
+            "code": "overdue",
+            "explanationCodes": [],
+            "taskId": "old-task"
+          }
+        ]
       },
       "dartDiagnostics": {
-        "issues": []
+        "issues": [
+          {
+            "code": "overdue",
+            "message": "Task due before the requested day: Overdue task",
+            "taskId": "old-task"
+          }
+        ]
       },
       "differences": [
         {
           "actual": 0,
           "classification": "implementation_error",
           "expected": 1,
-          "field": "issues.length",
+          "field": "issues[0].explanationCodes.length",
           "reason": "Python 输出 overdue，Dart 没有跨日逾期问题；后端守则明确要求 overdue，Dart 端缺少该约束检查。",
           "runtime": "dart_vs_python"
         },
         {
-          "actual": 0,
+          "actual": "deadline_proximity",
           "classification": "implementation_error",
-          "expected": 1,
-          "field": "explanationCodes.length",
+          "expected": "overdue",
+          "field": "explanationCodes[0]",
           "reason": "Python 输出 overdue，Dart 没有跨日逾期问题；后端守则明确要求 overdue，Dart 端缺少该约束检查。",
           "runtime": "python_vs_assertions"
         },
         {
-          "actual": 0,
+          "actual": "deadline_proximity",
           "classification": "implementation_error",
-          "expected": 1,
-          "field": "issues[0].explanationCodes.length",
+          "expected": "overdue",
+          "field": "issues[0].explanationCodes[0]",
           "reason": "Python 输出 overdue，Dart 没有跨日逾期问题；后端守则明确要求 overdue，Dart 端缺少该约束检查。",
           "runtime": "python_vs_assertions"
         },
@@ -1355,7 +1447,7 @@
           "actual": 0,
           "classification": "implementation_error",
           "expected": 1,
-          "field": "issues.length",
+          "field": "issues[0].explanationCodes.length",
           "reason": "Python 输出 overdue，Dart 没有跨日逾期问题；后端守则明确要求 overdue，Dart 端缺少该约束检查。",
           "runtime": "dart_vs_assertions"
         }
@@ -1381,7 +1473,9 @@
           {
             "blockedBy": [],
             "code": "overdue",
-            "explanationCodes": [],
+            "explanationCodes": [
+              "deadline_proximity"
+            ],
             "taskId": "old-task"
           }
         ]

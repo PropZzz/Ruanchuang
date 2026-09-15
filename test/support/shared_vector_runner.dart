@@ -100,6 +100,9 @@ Future<SharedJson> runSharedVectorDirectory(
         throw const FormatException('fixture root must be an object');
       }
       final fixture = SharedJson.from(decoded);
+      if (fixture['schemaVersion'] != 'scheduling/v1') {
+        continue;
+      }
       fixtures.add(
         await runSharedVectorFixture(fixture, name: name, engine: planner),
       );

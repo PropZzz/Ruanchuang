@@ -1,0 +1,522 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ruanchuang.local/contracts/scheduling/v1/scheduling.schema.json",
+  "title": "Scheduling Contract v1",
+  "description": "Canonical request and response shapes for the scheduling boundary.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/Request"
+    },
+    {
+      "$ref": "#/$defs/Response"
+    }
+  ],
+  "$defs": {
+    "ClockTime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hour",
+        "minute"
+      ],
+      "properties": {
+        "hour": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 23
+        },
+        "minute": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 59
+        }
+      }
+    },
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "DateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T(?:[01][0-9]|2[0-3]):[0-5][0-9](?::00)?(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])$"
+    },
+    "TimeWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/ClockTime"
+        },
+        "end": {
+          "$ref": "#/$defs/ClockTime"
+        }
+      },
+      "$comment": "The end time must be strictly after the start time; adapters enforce this cross-field rule."
+    },
+    "Load": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "Energy": {
+      "type": "string",
+      "enum": [
+        "veryLow",
+        "low",
+        "medium",
+        "high",
+        "veryHigh"
+      ]
+    },
+    "Tuning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "defaultDurationMultiplier",
+        "tagDurationMultiplier",
+        "highLoadPenaltyWhenLowEnergy"
+      ],
+      "properties": {
+        "defaultDurationMultiplier": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "tagDurationMultiplier": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "highLoadPenaltyWhenLowEnergy": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "Task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "durationMinutes",
+        "priority",
+        "load",
+        "tag"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "due": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "load": {
+          "$ref": "#/$defs/Load"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "goalId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "goalTaskId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hardDeadline": {
+          "type": "boolean",
+          "default": false
+        },
+        "earliestStart": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DateTime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dependsOn": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "splittable": {
+          "type": "boolean",
+          "default": false
+        },
+        "minimumChunkMinutes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1440
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "splittable": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "minimumChunkMinutes": {
+                "const": null
+              }
+            }
+          }
+        }
+      ]
+    },
+    "FixedEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "durationMinutes",
+        "time",
+        "source"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "day": {
+          "$ref": "#/$defs/Date"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string"
+        },
+        "load": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Load"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "goalId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "goalTaskId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440
+        },
+        "time": {
+          "$ref": "#/$defs/ClockTime"
+        },
+        "source": {
+          "const": "fixed"
+        }
+      }
+    },
+    "PlanEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "day",
+        "title",
+        "tag",
+        "load",
+        "durationMinutes",
+        "time",
+        "source",
+        "explanationCodes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "day": {
+          "$ref": "#/$defs/Date"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string"
+        },
+        "load": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Load"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "goalId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "goalTaskId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "durationMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440
+        },
+        "time": {
+          "$ref": "#/$defs/ClockTime"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "planned",
+            "recovery"
+          ]
+        },
+        "explanationCodes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "deadline_proximity",
+              "priority",
+              "energy_fit",
+              "kept_baseline",
+              "fixed_conflict"
+            ]
+          }
+        }
+      }
+    },
+    "Issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "explanationCodes"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "no_slot",
+            "miss_due",
+            "overdue",
+            "dependency_blocked",
+            "fixed_conflict"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "taskId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "blockedBy": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "explanationCodes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "deadline_proximity",
+              "priority",
+              "energy_fit",
+              "kept_baseline",
+              "fixed_conflict"
+            ]
+          }
+        }
+      }
+    },
+    "Request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "day",
+        "tasks",
+        "windows",
+        "energy",
+        "tuning",
+        "fixed"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "1"
+        },
+        "day": {
+          "$ref": "#/$defs/Date"
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Task"
+          }
+        },
+        "windows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/TimeWindow"
+          }
+        },
+        "energy": {
+          "$ref": "#/$defs/Energy"
+        },
+        "tuning": {
+          "$ref": "#/$defs/Tuning"
+        },
+        "fixed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FixedEntry"
+          }
+        }
+      }
+    },
+    "Response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "entries",
+        "issues",
+        "risk"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "1"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PlanEntry"
+          }
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Issue"
+          }
+        },
+        "risk": {
+          "$ref": "#/$defs/Risk"
+        }
+      }
+    },
+    "Risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "issueCount",
+        "hardIssueCount"
+      ],
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "issueCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hardIssueCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

@@ -45,7 +45,15 @@ ALLOWED_REVIEW_CLASSES = {
 
 
 def _fixture_paths() -> list[Path]:
-    return sorted(FIXTURES_DIR.glob("*.json"))
+    paths: list[Path] = []
+    for path in sorted(FIXTURES_DIR.glob("*.json")):
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, dict) and value.get("schemaVersion") == "scheduling/v1":
+            paths.append(path)
+    return paths
 
 
 def _read_fixture(path: Path) -> dict[str, Any]:

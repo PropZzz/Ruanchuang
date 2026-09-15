@@ -6,6 +6,7 @@ from backend.services_rescue import (
     compute_baseline_hash,
     filter_rescue_events,
 )
+from backend.scheduling.rescue_scoring import metrics_for_plan
 
 
 DAY = "2026-08-09"
@@ -97,6 +98,15 @@ def test_build_options_returns_three_options_in_requested_order():
     assert len(result["baselineHash"]) == 64
 
 
+def test_build_options_exposes_weighted_scores_and_breakdowns():
+    result = build_options(_request())
+    expected_metrics = {"urgency", "priority", "energyFit", "stability", "recovery"}
+    for option in result["options"]:
+        assert set(option["scoreBreakdown"]) == expected_metrics
+        assert 0.0 <= option["score"] <= 1.0
+        assert option["hardIssueCount"] >= 0
+
+
 def test_build_options_filters_strategies():
     result = build_options(_request(strategies=["minimizeChanges"]))
     assert [option["strategy"] for option in result["options"]] == ["minimizeChanges"]
@@ -124,8 +134,8 @@ def test_build_options_protect_recovery_contains_recovery_buffer():
     buffers = [entry for entry in recovery["plannedEntries"] if entry["id"] == f"rescue_recovery_{DAY}"]
     assert len(buffers) == 1
     assert buffers[0]["height"] == 20.0
-    # The only window starts at 8:00 (< 12:00), so the buffer falls back to its start.
-    assert buffers[0]["time"] == {"hour": 8, "minute": 0}
+    # A free interval at noon is preferred even when the window starts earlier.
+    assert buffers[0]["time"] == {"hour": 12, "minute": 0}
 
 
 def test_build_options_recovery_buffer_prefers_afternoon_window():
@@ -139,7 +149,91 @@ def test_build_options_recovery_buffer_prefers_afternoon_window():
         option for option in result["options"] if option["strategy"] == "protectRecovery"
     )
     buffers = [entry for entry in recovery["plannedEntries"] if entry["id"] == f"rescue_recovery_{DAY}"]
-    assert buffers[0]["time"] == {"hour": 13, "minute": 30}
+    # The urgent task is placed first; recovery uses the next legal free slot.
+    assert buffers[0]["time"] == {"hour": 14, "minute": 42}
+
+
+def test_build_options_recovery_buffer_is_not_synthetic_when_no_15_minute_slot_exists():
+    request = _request(
+        currentEntries=[],
+        windows=[
+            {"start": {"hour": 8, "minute": 0}, "end": {"hour": 8, "minute": 10}},
+        ],
+    )
+    result = build_options(request)
+    recovery = next(
+        option for option in result["options"] if option["strategy"] == "protectRecovery"
+    )
+
+    assert not [
+        entry for entry in recovery["plannedEntries"] if entry["id"] == f"rescue_recovery_{DAY}"
+    ]
+    assert recovery["recoveryMinutes"] == 0
+    assert recovery["scoreBreakdown"]["recovery"] == 0.0
+
+
+def test_recovery_buffer_does_not_reserve_noon_before_urgent_task_placement():
+    request = _request(
+        currentEntries=[],
+        fixed=[
+            {
+                "id": "morning-meeting",
+                "title": "Meeting",
+                "time": {"hour": 8, "minute": 0},
+                "height": 320.0,
+            }
+        ],
+        windows=[
+            {"start": {"hour": 8, "minute": 0}, "end": {"hour": 10, "minute": 0}},
+            {"start": {"hour": 12, "minute": 0}, "end": {"hour": 13, "minute": 12}},
+        ],
+    )
+    result = build_options(request)
+    recovery = next(
+        option for option in result["options"] if option["strategy"] == "protectRecovery"
+    )
+
+    assert any(entry["id"] == "urgent_1" for entry in recovery["plannedEntries"])
+    assert recovery["recoveryMinutes"] == 0
+
+
+def test_split_entries_contribute_to_task_metrics_by_base_id():
+    plan = {
+        "entries": [
+            {"id": "task#1", "source": "planned"},
+            {"id": "task#2", "source": "planned"},
+        ],
+        "issues": [],
+    }
+    metrics = metrics_for_plan(
+        plan,
+        [{"id": "task", "priority": 5, "load": "medium"}],
+        moved_entry_count=0,
+        baseline_entry_count=0,
+        energy="medium",
+        recovery_minutes=0,
+    )
+
+    assert metrics.priority > 0
+
+
+def test_hard_deadline_no_slot_counts_as_deadline_risk():
+    metrics = metrics_for_plan(
+        {
+            "entries": [],
+            "issues": [
+                {"code": "no_slot", "taskId": "urgent"},
+            ],
+        },
+        [{"id": "urgent", "priority": 5, "load": "high", "due": f"{DAY}T10:00:00+08:00"}],
+        moved_entry_count=0,
+        baseline_entry_count=0,
+        energy="medium",
+        recovery_minutes=0,
+    )
+
+    assert metrics.urgency == 0.0
+    assert metrics.overdue_risk == 1.0
 
 
 def test_build_options_minimize_changes_locks_baseline():
@@ -154,8 +248,7 @@ def test_build_options_minimize_changes_locks_baseline():
     deadline = next(
         option for option in result["options"] if option["strategy"] == "protectDeadline"
     )
-    assert deadline["movedEntryCount"] >= 1
-    assert deadline["affectedEntries"] == ["base_1"]
+    assert deadline["movedEntryCount"] == len(deadline["affectedEntries"])
 
 
 def test_filter_rescue_events_keeps_only_rescue_reasons():

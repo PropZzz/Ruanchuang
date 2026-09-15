@@ -1,10 +1,8 @@
-"""Rescue service layer: pure computation for the remote schedule-rescue flow.
+"""Pure rescue application service composed from the scheduling core.
 
-No network access and no database side effects live here. The three rescue
-strategies mirror the Flutter client's `ScheduleRescueService.propose`
-(lib/services/scheduling/schedule_rescue.dart) by composing the same inputs
-into the existing `plan_schedule` engine, so Dart and Python stay consistent
-until the SchedulerCore convergence work (P1 items 1-3) lands.
+No network access or persistence side effects live here. Persistence adapters
+own rescue transactions; this service only composes candidate plans, metrics,
+and recommendation diagnostics.
 """
 
 from __future__ import annotations
@@ -15,6 +13,8 @@ import json
 from typing import Any
 
 from .schemas import ENERGY_TIERS, RESCUE_STRATEGIES
+from .scheduling.rescue import RescueStrategy
+from .scheduling.rescue_scoring import load_strategy_config, metrics_for_plan, score_plan
 from .services_scheduling import plan_schedule
 
 
@@ -39,11 +39,20 @@ RESCUE_TRADEOFFS = {
 RECOVERY_BUFFER_COLOR = 0xFF80CBC4
 RECOVERY_BUFFER_MINUTES = 15
 RECOVERY_BUFFER_HEIGHT = 20.0
+EXPLANATION_CODE_ORDER = (
+    "deadline_proximity",
+    "priority",
+    "energy_fit",
+    "kept_baseline",
+    "fixed_conflict",
+)
 
 
 def _iso_day(value: object) -> str | None:
     if value is None:
         return None
+    if isinstance(value, datetime):
+        return value.date().isoformat()
     if isinstance(value, date):
         return value.isoformat()
     if isinstance(value, datetime):
@@ -120,26 +129,69 @@ def _lower_energy(energy: str) -> str:
     return ENERGY_TIERS[max(0, ENERGY_TIERS.index(energy) - 1)]
 
 
-def _recovery_buffer(day_iso: str, windows: list[dict[str, Any]]) -> dict[str, Any]:
-    """Synthetic 15-minute recovery block, mirroring Dart `_recoveryBuffer`.
+def _recovery_buffer(
+    day_iso: str,
+    windows: list[dict[str, Any]],
+    fixed: list[dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
+    """Return a real 15-minute free recovery interval, when one exists."""
+    fixed_blocks: list[tuple[int, int]] = []
+    for entry in fixed or []:
+        if not isinstance(entry, dict):
+            continue
+        start = entry.get("time")
+        if not isinstance(start, dict):
+            continue
+        start_minutes = int(start.get("hour") or 0) * 60 + int(start.get("minute") or 0)
+        try:
+            duration = int(
+                entry.get("durationMinutes")
+                or entry.get("minutes")
+                or round(float(entry.get("height") or 80.0) / 80.0 * 60.0)
+            )
+        except (TypeError, ValueError):
+            duration = 60
+        fixed_blocks.append((start_minutes, start_minutes + max(1, duration)))
 
-    Placed at the start of the first window beginning at/after 12:00, else at
-    the first window's start, else at 15:00 when there are no windows.
-    """
-    preferred: dict[str, Any] | None = None
+    free: list[tuple[int, int]] = []
     for window in windows:
         if not isinstance(window, dict):
             continue
         start = window.get("start")
-        if isinstance(start, dict) and int(start.get("hour") or 0) >= 12:
-            preferred = start
+        end = window.get("end")
+        if not isinstance(start, dict) or not isinstance(end, dict):
+            continue
+        window_start = int(start.get("hour") or 0) * 60 + int(start.get("minute") or 0)
+        window_end = int(end.get("hour") or 0) * 60 + int(end.get("minute") or 0)
+        if window_end <= window_start:
+            continue
+        cursor = window_start
+        for busy_start, busy_end in sorted(fixed_blocks):
+            if busy_end <= cursor:
+                continue
+            if busy_start >= window_end:
+                break
+            if busy_start > cursor:
+                free.append((cursor, min(busy_start, window_end)))
+            cursor = max(cursor, busy_end)
+        if cursor < window_end:
+            free.append((cursor, window_end))
+
+    free.sort()
+    preferred_start: int | None = None
+    for start, end in free:
+        candidate = max(start, 12 * 60)
+        if candidate + RECOVERY_BUFFER_MINUTES <= end:
+            preferred_start = candidate
             break
-    if preferred is None and windows:
-        first_start = windows[0].get("start")
-        if isinstance(first_start, dict):
-            preferred = first_start
-    if preferred is None:
-        preferred = {"hour": 15, "minute": 0}
+    if preferred_start is None:
+        for start, end in free:
+            if start + RECOVERY_BUFFER_MINUTES <= end:
+                preferred_start = start
+                break
+    if preferred_start is None:
+        return None
+    preferred = {"hour": preferred_start // 60, "minute": preferred_start % 60}
     return {
         "id": f"rescue_recovery_{day_iso}",
         "day": day_iso,
@@ -189,6 +241,75 @@ def _moved_ids(
     return moved
 
 
+def _annotate_kept_baseline(
+    plan: dict[str, Any],
+    baseline: list[dict[str, Any]],
+) -> dict[str, Any]:
+    baseline_by_id = {
+        str(entry.get("id")): entry
+        for entry in baseline
+        if isinstance(entry, dict) and entry.get("id")
+    }
+    if not baseline_by_id:
+        return plan
+    entries: list[dict[str, Any]] = []
+    for raw in plan.get("entries") or []:
+        entry = dict(raw)
+        original = baseline_by_id.get(str(entry.get("id")))
+        if original is not None:
+            unchanged = entry.get("time") == original.get("time")
+            try:
+                unchanged = unchanged and abs(
+                    float(entry.get("height") or 0.0)
+                    - float(original.get("height") or 0.0)
+                ) <= 0.1
+            except (TypeError, ValueError):
+                unchanged = False
+            if unchanged:
+                codes = list(entry.get("explanationCodes") or [])
+                if "kept_baseline" not in codes:
+                    codes.append("kept_baseline")
+                code_set = set(codes)
+                entry["explanationCodes"] = [
+                    code for code in EXPLANATION_CODE_ORDER if code in code_set
+                ]
+        entries.append(entry)
+    return {**plan, "entries": entries}
+
+
+def _baseline_tasks(
+    baseline: list[dict[str, Any]],
+    existing_tasks: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    known_ids = {
+        str(task.get("id"))
+        for task in existing_tasks
+        if isinstance(task, dict) and task.get("id")
+    }
+    derived: list[dict[str, Any]] = []
+    for entry in baseline:
+        if not isinstance(entry, dict) or not entry.get("id"):
+            continue
+        entry_id = str(entry["id"])
+        if entry_id in known_ids:
+            continue
+        try:
+            duration = max(1, round(float(entry.get("height") or 80.0) / 80.0 * 60.0))
+        except (TypeError, ValueError):
+            duration = 60
+        derived.append(
+            {
+                "id": entry_id,
+                "title": str(entry.get("title") or ""),
+                "durationMinutes": duration,
+                "priority": 3,
+                "load": entry.get("load") or "medium",
+                "tag": str(entry.get("tag") or "Task"),
+            }
+        )
+    return derived
+
+
 def build_options(request: dict[str, Any]) -> dict[str, Any]:
     """Generate the three rescue options plus the baseline hash."""
     day_iso = _iso_day(request.get("day")) or ""
@@ -200,6 +321,7 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
     tuning = request.get("tuning") or {}
     fixed = request.get("fixed") or []
     tasks = request.get("tasks") or []
+    score_config = load_strategy_config()
 
     baseline = [
         entry
@@ -207,21 +329,31 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
         if isinstance(entry, dict) and _iso_day(entry.get("day")) == day_iso
     ]
 
+    baseline_fixed = []
+    for entry in baseline:
+        baseline_entry = dict(entry)
+        baseline_entry["explanationCodes"] = ["kept_baseline"]
+        baseline_fixed.append(baseline_entry)
+
+    no_window_baseline = baseline if not windows else []
+    baseline_tasks = _baseline_tasks(baseline, tasks)
+    all_tasks = [*tasks, *baseline_tasks, urgent]
+
     compositions = {
         "protectDeadline": {
-            "tasks": [*tasks, urgent],
+            "tasks": all_tasks,
             "energy": energy,
-            "fixed": fixed,
+            "fixed": [*fixed, *no_window_baseline],
         },
         "protectRecovery": {
-            "tasks": [*tasks, urgent],
+            "tasks": all_tasks,
             "energy": _lower_energy(energy),
-            "fixed": [*fixed, _recovery_buffer(day_iso, windows)],
+            "fixed": [*fixed, *no_window_baseline],
         },
         "minimizeChanges": {
-            "tasks": [urgent],
+            "tasks": all_tasks,
             "energy": energy,
-            "fixed": [*fixed, *baseline],
+            "fixed": [*fixed, *baseline_fixed],
         },
     }
 
@@ -238,7 +370,42 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
                 "fixed": composition["fixed"],
             }
         )
+        plan = _annotate_kept_baseline(plan, baseline)
+        if strategy == "protectRecovery":
+            selected_recovery = _recovery_buffer(
+                day_iso,
+                windows,
+                [*composition["fixed"], *plan.get("entries", [])],
+            )
+            if selected_recovery is not None:
+                plan["entries"].append(
+                    selected_recovery
+                    | {"source": "recovery", "explanationCodes": []}
+                )
+                plan["entries"].sort(
+                    key=lambda entry: (
+                        int((entry.get("time") or {}).get("hour") or 0) * 60
+                        + int((entry.get("time") or {}).get("minute") or 0)
+                    )
+                )
         moved_ids = _moved_ids(baseline, plan["entries"])
+        recovery_id = f"rescue_recovery_{day_iso}"
+        recovery_minutes = (
+            RECOVERY_BUFFER_MINUTES
+            if strategy == "protectRecovery"
+            and any(entry.get("id") == recovery_id for entry in plan.get("entries") or [])
+            else 0
+        )
+        metrics = metrics_for_plan(
+            plan,
+            all_tasks,
+            moved_entry_count=len(moved_ids),
+            baseline_entry_count=len(baseline),
+            energy=composition["energy"],
+            recovery_minutes=recovery_minutes,
+            recovery_buffer_minutes=score_config.recovery_buffer_minutes,
+            current_day=day_iso,
+        )
         options.append(
             {
                 "id": f"option_{index:03d}",
@@ -248,18 +415,21 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
                 "rationale": RESCUE_RATIONALES[strategy],
                 "tradeoff": RESCUE_TRADEOFFS[strategy],
                 "movedEntryCount": len(moved_ids),
-                "recoveryMinutes": RECOVERY_BUFFER_MINUTES if strategy == "protectRecovery" else 0,
+                "recoveryMinutes": recovery_minutes,
                 "issueCount": len(plan.get("issues") or []),
+                "hardIssueCount": RescueStrategy.hard_issue_count(
+                    plan.get("issues") or []
+                ),
+                "score": score_plan(score_config.strategies[strategy], metrics),
+                "scoreBreakdown": metrics.as_contract_dict(),
+                "overdueRisk": metrics.overdue_risk,
                 "affectedEntries": moved_ids,
                 "plannedEntries": plan["entries"],
             }
         )
 
-    if options:
-        recommended_index = min(
-            range(len(options)),
-            key=lambda i: (options[i]["issueCount"], options[i]["movedEntryCount"], i),
-        )
+    recommended_index = RescueStrategy.recommended_index(options)
+    if recommended_index is not None:
         options[recommended_index]["recommended"] = True
 
     return {

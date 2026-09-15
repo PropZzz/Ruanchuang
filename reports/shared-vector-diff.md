@@ -17,8 +17,8 @@
 
 按差异条数统计：
 - allowed_difference：0
-- contract_error：16
-- implementation_error：56
+- contract_error：17
+- implementation_error：65
 - pending_a_review：0
 
 ## 逐场景结果
@@ -50,9 +50,10 @@
 - A 分类：contract_error
 - 原因：两端均按现有 miss_due 语义输出；后端守则列出的稳定问题码没有 deadline_infeasible，原断言使用了未定义问题码和解释码。
 - 差异：
-  - `python_vs_assertions` `explanationCodes.length`：expected=1；actual=0；分类=contract_error
+  - `dart_vs_python` `issues[0].explanationCodes.length`：expected=1；actual=0；分类=contract_error
+  - `python_vs_assertions` `explanationCodes[0]`：expected="deadline_infeasible"；actual="deadline_proximity"；分类=contract_error
   - `python_vs_assertions` `issues[0].code`：expected="deadline_infeasible"；actual="miss_due"；分类=contract_error
-  - `python_vs_assertions` `issues[0].explanationCodes.length`：expected=1；actual=0；分类=contract_error
+  - `python_vs_assertions` `issues[0].explanationCodes[0]`：expected="deadline_infeasible"；actual="deadline_proximity"；分类=contract_error
   - `dart_vs_assertions` `explanationCodes.length`：expected=1；actual=0；分类=contract_error
   - `dart_vs_assertions` `issues[0].code`：expected="deadline_infeasible"；actual="miss_due"；分类=contract_error
   - `dart_vs_assertions` `issues[0].explanationCodes.length`：expected=1；actual=0；分类=contract_error
@@ -77,8 +78,6 @@
 - 原因：Dart 按低负荷优先且保持 60 分钟；Python 按高优先级先排并把 high 任务放大到 72 分钟，违反低精力匹配与跨端规则。
 - 差异：
   - `dart_vs_python` `entries[0].durationMinutes`：expected=72；actual=60；分类=implementation_error
-  - `dart_vs_python` `entries[0].id`：expected="high-load"；actual="low-load"；分类=implementation_error
-  - `dart_vs_python` `entries[1].id`：expected="low-load"；actual="high-load"；分类=implementation_error
   - `dart_vs_python` `entries[1].time.minute`：expected=12；actual=0；分类=implementation_error
   - `python_vs_assertions` `explanationCodes.length`：expected=1；actual=0；分类=implementation_error
   - `python_vs_assertions` `taskOrder[0]`：expected="low-load"；actual="high-load"；分类=implementation_error
@@ -88,29 +87,43 @@
   - `python_vs_assertions` `timeBlocks.low-load.hour`：expected=8；actual=9；分类=implementation_error
   - `python_vs_assertions` `timeBlocks.low-load.minute`：expected=0；actual=12；分类=implementation_error
   - `dart_vs_assertions` `explanationCodes.length`：expected=1；actual=0；分类=implementation_error
+  - `dart_vs_assertions` `taskOrder[0]`：expected="low-load"；actual="high-load"；分类=implementation_error
+  - `dart_vs_assertions` `taskOrder[1]`：expected="high-load"；actual="low-load"；分类=implementation_error
+  - `dart_vs_assertions` `timeBlocks.high-load.hour`：expected=9；actual=8；分类=implementation_error
+  - `dart_vs_assertions` `timeBlocks.low-load.hour`：expected=8；actual=9；分类=implementation_error
 
 ### 006-rescue-strategies.json：mismatched
 
 - A 分类：implementation_error
 - 原因：三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。
 - 差异：
-  - `dart_vs_python` `strategies[1].entries[0].durationMinutes`：expected=32；actual=30；分类=implementation_error
-  - `dart_vs_python` `strategies[1].entries[1].time.minute`：expected=32；actual=30；分类=implementation_error
-  - `dart_vs_python` `strategies[1].entries[2].durationMinutes`：expected=63；actual=60；分类=implementation_error
-  - `dart_vs_python` `strategies[1].entries[2].time.minute`：expected=2；actual=0；分类=implementation_error
   - `python_vs_assertions` `strategies[0].explanationCodes.length`：expected=1；actual=0；分类=implementation_error
   - `python_vs_assertions` `strategies[0].timeBlocks.review.hour`：expected=13；actual=10；分类=implementation_error
   - `python_vs_assertions` `strategies[0].timeBlocks.review.minute`：expected=30；actual=0；分类=implementation_error
   - `python_vs_assertions` `strategies[1].explanationCodes.length`：expected=1；actual=0；分类=implementation_error
-  - `python_vs_assertions` `strategies[1].timeBlocks.deep.minute`：expected=30；actual=32；分类=implementation_error
+  - `python_vs_assertions` `strategies[1].taskOrder[1]`：expected="deep"；actual="review"；分类=implementation_error
+  - `python_vs_assertions` `strategies[1].taskOrder[2]`：expected="review"；actual="deep"；分类=implementation_error
+  - `python_vs_assertions` `strategies[1].timeBlocks.deep.hour`：expected=8；actual=13；分类=implementation_error
+  - `python_vs_assertions` `strategies[1].timeBlocks.rescue_recovery_2026-09-16.hour`：expected=13；actual=15；分类=implementation_error
+  - `python_vs_assertions` `strategies[1].timeBlocks.rescue_recovery_2026-09-16.minute`：expected=30；actual=0；分类=implementation_error
   - `python_vs_assertions` `strategies[1].timeBlocks.review.durationMinutes`：expected=60；actual=63；分类=implementation_error
-  - `python_vs_assertions` `strategies[1].timeBlocks.review.minute`：expected=0；actual=2；分类=implementation_error
+  - `python_vs_assertions` `strategies[1].timeBlocks.review.hour`：expected=10；actual=8；分类=implementation_error
+  - `python_vs_assertions` `strategies[1].timeBlocks.review.minute`：expected=0；actual=32；分类=implementation_error
   - `python_vs_assertions` `strategies[1].timeBlocks.urgent.durationMinutes`：expected=30；actual=32；分类=implementation_error
   - `python_vs_assertions` `strategies[2].explanationCodes.length`：expected=1；actual=0；分类=implementation_error
   - `dart_vs_assertions` `strategies[0].explanationCodes.length`：expected=1；actual=0；分类=implementation_error
   - `dart_vs_assertions` `strategies[0].timeBlocks.review.hour`：expected=13；actual=10；分类=implementation_error
   - `dart_vs_assertions` `strategies[0].timeBlocks.review.minute`：expected=30；actual=0；分类=implementation_error
   - `dart_vs_assertions` `strategies[1].explanationCodes.length`：expected=1；actual=0；分类=implementation_error
+  - `dart_vs_assertions` `strategies[1].taskOrder[1]`：expected="deep"；actual="review"；分类=implementation_error
+  - `dart_vs_assertions` `strategies[1].taskOrder[2]`：expected="review"；actual="deep"；分类=implementation_error
+  - `dart_vs_assertions` `strategies[1].timeBlocks.deep.hour`：expected=8；actual=13；分类=implementation_error
+  - `dart_vs_assertions` `strategies[1].timeBlocks.rescue_recovery_2026-09-16.hour`：expected=13；actual=15；分类=implementation_error
+  - `dart_vs_assertions` `strategies[1].timeBlocks.rescue_recovery_2026-09-16.minute`：expected=30；actual=0；分类=implementation_error
+  - `dart_vs_assertions` `strategies[1].timeBlocks.review.durationMinutes`：expected=60；actual=63；分类=implementation_error
+  - `dart_vs_assertions` `strategies[1].timeBlocks.review.hour`：expected=10；actual=8；分类=implementation_error
+  - `dart_vs_assertions` `strategies[1].timeBlocks.review.minute`：expected=0；actual=32；分类=implementation_error
+  - `dart_vs_assertions` `strategies[1].timeBlocks.urgent.durationMinutes`：expected=30；actual=32；分类=implementation_error
   - `dart_vs_assertions` `strategies[2].explanationCodes.length`：expected=1；actual=0；分类=implementation_error
 
 ### 007-no-available-block.json：mismatched
@@ -118,12 +131,9 @@
 - A 分类：implementation_error
 - 原因：无有效工作窗口时 Dart 报 no_slot，而 Python 私自回退到 08:00-20:00 并安排任务；该回退不符合工作窗口硬约束。原断言的 no_available_block 也应收敛为稳定 no_slot。
 - 差异：
-  - `dart_vs_python` `entries.length`：expected=1；actual=0；分类=implementation_error
-  - `dart_vs_python` `issues.length`：expected=0；actual=1；分类=implementation_error
   - `python_vs_assertions` `explanationCodes.length`：expected=1；actual=0；分类=implementation_error
-  - `python_vs_assertions` `issues.length`：expected=1；actual=0；分类=implementation_error
-  - `python_vs_assertions` `taskOrder.length`：expected=0；actual=1；分类=implementation_error
-  - `python_vs_assertions` `timeBlocks.none-task`：expected=null；actual={"durationMinutes": 30, "hour": 8, "minute": 0}；分类=implementation_error
+  - `python_vs_assertions` `issues[0].code`：expected="no_available_block"；actual="no_slot"；分类=implementation_error
+  - `python_vs_assertions` `issues[0].explanationCodes.length`：expected=1；actual=0；分类=implementation_error
   - `dart_vs_assertions` `explanationCodes.length`：expected=1；actual=0；分类=implementation_error
   - `dart_vs_assertions` `issues[0].code`：expected="no_available_block"；actual="no_slot"；分类=implementation_error
   - `dart_vs_assertions` `issues[0].explanationCodes.length`：expected=1；actual=0；分类=implementation_error
@@ -133,11 +143,11 @@
 - A 分类：implementation_error
 - 原因：Python 输出 overdue，Dart 没有跨日逾期问题；后端守则明确要求 overdue，Dart 端缺少该约束检查。
 - 差异：
-  - `dart_vs_python` `issues.length`：expected=1；actual=0；分类=implementation_error
-  - `python_vs_assertions` `explanationCodes.length`：expected=1；actual=0；分类=implementation_error
-  - `python_vs_assertions` `issues[0].explanationCodes.length`：expected=1；actual=0；分类=implementation_error
+  - `dart_vs_python` `issues[0].explanationCodes.length`：expected=1；actual=0；分类=implementation_error
+  - `python_vs_assertions` `explanationCodes[0]`：expected="overdue"；actual="deadline_proximity"；分类=implementation_error
+  - `python_vs_assertions` `issues[0].explanationCodes[0]`：expected="overdue"；actual="deadline_proximity"；分类=implementation_error
   - `dart_vs_assertions` `explanationCodes.length`：expected=1；actual=0；分类=implementation_error
-  - `dart_vs_assertions` `issues.length`：expected=1；actual=0；分类=implementation_error
+  - `dart_vs_assertions` `issues[0].explanationCodes.length`：expected=1；actual=0；分类=implementation_error
 
 ### 009-apply-rollback.json：matched
 

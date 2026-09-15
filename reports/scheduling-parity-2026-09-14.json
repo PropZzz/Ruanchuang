@@ -1,0 +1,403 @@
+{
+  "schemaVersion": "1",
+  "summary": {
+    "fixtures": 4,
+    "matched": 4,
+    "mismatched": 0,
+    "invalid": 0
+  },
+  "fixtures": [
+    {
+      "name": "basic.json",
+      "status": "matched",
+      "differences": [],
+      "python": {
+        "schemaVersion": "1",
+        "entries": [
+          {
+            "id": "fixed-standup",
+            "day": "2026-09-14",
+            "title": "Daily standup",
+            "tag": "Meeting",
+            "load": "medium",
+            "durationMinutes": 60,
+            "time": {
+              "hour": 9,
+              "minute": 0
+            },
+            "source": "fixed",
+            "explanationCodes": []
+          },
+          {
+            "id": "task-offset",
+            "day": "2026-09-14",
+            "title": "Prepare release notes",
+            "tag": "Writing",
+            "load": "medium",
+            "durationMinutes": 30,
+            "time": {
+              "hour": 10,
+              "minute": 0
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "deadline_proximity",
+              "priority",
+              "energy_fit"
+            ]
+          },
+          {
+            "id": "task-alpha",
+            "day": "2026-09-14",
+            "title": "Check metrics",
+            "tag": "Planning",
+            "load": "low",
+            "durationMinutes": 20,
+            "time": {
+              "hour": 10,
+              "minute": 30
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "priority"
+            ]
+          },
+          {
+            "id": "task-beta",
+            "day": "2026-09-14",
+            "title": "Review backlog",
+            "tag": "Planning",
+            "load": "low",
+            "durationMinutes": 20,
+            "time": {
+              "hour": 10,
+              "minute": 50
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "priority"
+            ]
+          }
+        ],
+        "issues": [
+          {
+            "code": "miss_due",
+            "message": "Task scheduled past due time: Prepare release notes",
+            "taskId": "task-offset",
+            "explanationCodes": [
+              "deadline_proximity"
+            ]
+          }
+        ],
+        "risk": {
+          "level": "medium",
+          "issueCount": 1,
+          "hardIssueCount": 0
+        }
+      },
+      "dart": {
+        "schemaVersion": "1",
+        "entries": [
+          {
+            "id": "fixed-standup",
+            "title": "Daily standup",
+            "tag": "Meeting",
+            "load": "medium",
+            "durationMinutes": 60,
+            "time": {
+              "hour": 9,
+              "minute": 0
+            },
+            "source": "fixed",
+            "explanationCodes": [],
+            "day": "2026-09-14"
+          },
+          {
+            "id": "task-offset",
+            "title": "Prepare release notes",
+            "tag": "Writing",
+            "load": "medium",
+            "durationMinutes": 30,
+            "time": {
+              "hour": 10,
+              "minute": 0
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "deadline_proximity",
+              "priority",
+              "energy_fit"
+            ],
+            "day": "2026-09-14"
+          },
+          {
+            "id": "task-alpha",
+            "title": "Check metrics",
+            "tag": "Planning",
+            "load": "low",
+            "durationMinutes": 20,
+            "time": {
+              "hour": 10,
+              "minute": 30
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "priority"
+            ],
+            "day": "2026-09-14"
+          },
+          {
+            "id": "task-beta",
+            "title": "Review backlog",
+            "tag": "Planning",
+            "load": "low",
+            "durationMinutes": 20,
+            "time": {
+              "hour": 10,
+              "minute": 50
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "priority"
+            ],
+            "day": "2026-09-14"
+          }
+        ],
+        "issues": [
+          {
+            "code": "miss_due",
+            "message": "Task scheduled past due time: Prepare release notes",
+            "taskId": "task-offset",
+            "explanationCodes": [
+              "deadline_proximity"
+            ]
+          }
+        ],
+        "risk": {
+          "level": "medium",
+          "issueCount": 1,
+          "hardIssueCount": 0
+        }
+      }
+    },
+    {
+      "name": "dependency-blocked.json",
+      "status": "matched",
+      "differences": [],
+      "python": {
+        "schemaVersion": "1",
+        "entries": [],
+        "issues": [
+          {
+            "code": "dependency_blocked",
+            "message": "Task cannot be scheduled until its dependency is placed",
+            "taskId": "blocked-task",
+            "blockedBy": [
+              "missing-task"
+            ],
+            "explanationCodes": []
+          }
+        ],
+        "risk": {
+          "level": "high",
+          "issueCount": 1,
+          "hardIssueCount": 1
+        }
+      },
+      "dart": {
+        "schemaVersion": "1",
+        "entries": [],
+        "issues": [
+          {
+            "code": "dependency_blocked",
+            "message": "Task cannot be scheduled until its dependency is placed",
+            "taskId": "blocked-task",
+            "explanationCodes": [],
+            "blockedBy": [
+              "missing-task"
+            ]
+          }
+        ],
+        "risk": {
+          "level": "high",
+          "issueCount": 1,
+          "hardIssueCount": 1
+        }
+      }
+    },
+    {
+      "name": "low-energy-tuning.json",
+      "status": "matched",
+      "differences": [],
+      "python": {
+        "schemaVersion": "1",
+        "entries": [
+          {
+            "id": "high",
+            "day": "2026-09-14",
+            "title": "High load",
+            "tag": "Task",
+            "load": "high",
+            "durationMinutes": 120,
+            "time": {
+              "hour": 14,
+              "minute": 0
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "deadline_proximity",
+              "priority"
+            ]
+          }
+        ],
+        "issues": [
+          {
+            "code": "miss_due",
+            "message": "Task scheduled past due time: High load",
+            "taskId": "high",
+            "explanationCodes": [
+              "deadline_proximity"
+            ]
+          }
+        ],
+        "risk": {
+          "level": "medium",
+          "issueCount": 1,
+          "hardIssueCount": 0
+        }
+      },
+      "dart": {
+        "schemaVersion": "1",
+        "entries": [
+          {
+            "id": "high",
+            "title": "High load",
+            "tag": "Task",
+            "load": "high",
+            "durationMinutes": 120,
+            "time": {
+              "hour": 14,
+              "minute": 0
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "deadline_proximity",
+              "priority"
+            ],
+            "day": "2026-09-14"
+          }
+        ],
+        "issues": [
+          {
+            "code": "miss_due",
+            "message": "Task scheduled past due time: High load",
+            "taskId": "high",
+            "explanationCodes": [
+              "deadline_proximity"
+            ]
+          }
+        ],
+        "risk": {
+          "level": "medium",
+          "issueCount": 1,
+          "hardIssueCount": 0
+        }
+      }
+    },
+    {
+      "name": "split-task.json",
+      "status": "matched",
+      "differences": [],
+      "python": {
+        "schemaVersion": "1",
+        "entries": [
+          {
+            "id": "split-task#1",
+            "day": "2026-09-14",
+            "title": "Split task",
+            "tag": "Task",
+            "load": "medium",
+            "durationMinutes": 60,
+            "time": {
+              "hour": 9,
+              "minute": 0
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "priority",
+              "energy_fit"
+            ]
+          },
+          {
+            "id": "split-task#2",
+            "day": "2026-09-14",
+            "title": "Split task",
+            "tag": "Task",
+            "load": "medium",
+            "durationMinutes": 30,
+            "time": {
+              "hour": 11,
+              "minute": 0
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "priority",
+              "energy_fit"
+            ]
+          }
+        ],
+        "issues": [],
+        "risk": {
+          "level": "none",
+          "issueCount": 0,
+          "hardIssueCount": 0
+        }
+      },
+      "dart": {
+        "schemaVersion": "1",
+        "entries": [
+          {
+            "id": "split-task#1",
+            "title": "Split task",
+            "tag": "Task",
+            "load": "medium",
+            "durationMinutes": 60,
+            "time": {
+              "hour": 9,
+              "minute": 0
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "priority",
+              "energy_fit"
+            ],
+            "day": "2026-09-14"
+          },
+          {
+            "id": "split-task#2",
+            "title": "Split task",
+            "tag": "Task",
+            "load": "medium",
+            "durationMinutes": 30,
+            "time": {
+              "hour": 11,
+              "minute": 0
+            },
+            "source": "planned",
+            "explanationCodes": [
+              "priority",
+              "energy_fit"
+            ],
+            "day": "2026-09-14"
+          }
+        ],
+        "issues": [],
+        "risk": {
+          "level": "none",
+          "issueCount": 0,
+          "hardIssueCount": 0
+        }
+      }
+    }
+  ]
+}

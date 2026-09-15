@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +19,7 @@ void main() {
       final fixtureCount = directory
           .listSync()
           .whereType<File>()
-          .where((file) => file.path.toLowerCase().endsWith('.json'))
+          .where(_isSharedFixture)
           .length;
       final fixtures = result['fixtures'] as List;
       expect(result['fixtures'], isA<List<dynamic>>());
@@ -27,4 +28,14 @@ void main() {
       expect(result['invalid'], 0);
     },
   );
+}
+
+bool _isSharedFixture(File file) {
+  if (!file.path.toLowerCase().endsWith('.json')) return false;
+  try {
+    final value = jsonDecode(file.readAsStringSync());
+    return value is Map && value['schemaVersion'] == 'scheduling/v1';
+  } on Object {
+    return false;
+  }
 }

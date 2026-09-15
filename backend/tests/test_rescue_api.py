@@ -132,6 +132,7 @@ def test_rescue_options_returns_three_options_with_metadata(tmp_path):
         assert isinstance(option["movedEntryCount"], int)
         assert isinstance(option["recoveryMinutes"], int)
         assert isinstance(option["issueCount"], int)
+        assert isinstance(option["overdueRisk"], float)
         assert isinstance(option["affectedEntries"], list)
         assert isinstance(option["plannedEntries"], list)
     assert sum(1 for option in body["options"] if option["recommended"]) == 1
@@ -171,6 +172,16 @@ def test_rescue_options_unknown_energy_422(tmp_path):
             headers=headers,
         )
     assert response.status_code == 422
+
+
+def test_rescue_deadline_offsets_normalize_before_scheduling():
+    from backend.schemas import RescueOptionsRequest
+
+    payload = _options_request()
+    payload["urgentTask"]["due"] = "2026-09-15T00:30:00+08:00"
+    parsed = RescueOptionsRequest.model_validate(payload)
+
+    assert parsed.urgent_task.due.isoformat() == "2026-09-14T16:30:00+00:00"
 
 
 # --- apply ---

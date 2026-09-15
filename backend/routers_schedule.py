@@ -15,13 +15,12 @@ from .repositories import (
     upsert_schedule,
     upsert_schedules_batch,
 )
+from .scheduling_contract import SchedulingRequest, SchedulingResponse, to_contract_response
 from .schemas import (
     ScheduleConflictsOut,
     ScheduleEntryIn,
     ScheduleEntryOut,
     ScheduleImportRequest,
-    SchedulingPlanOut,
-    SchedulingRequest,
 )
 from .services_ics import IcsValidationError, export_ics, parse_ics
 from .services_scheduling import plan_schedule
@@ -101,9 +100,9 @@ def remove_schedule(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/replan", response_model=SchedulingPlanOut)
-def replan(payload: SchedulingRequest, user_id: str = Depends(current_user_id)) -> dict[str, object]:
-    return plan_schedule(payload.model_dump(mode="json", by_alias=True))
+@router.post("/replan", response_model=SchedulingResponse, response_model_exclude_none=True)
+def replan(payload: SchedulingRequest, user_id: str = Depends(current_user_id)) -> SchedulingResponse:
+    return to_contract_response(plan_schedule(payload.to_engine_request()), payload)
 
 
 @router.post("/batch", response_model=list[ScheduleEntryOut])
