@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shixuzhipei/models/models.dart';
 import 'package:shixuzhipei/services/scheduling/heuristic_scheduling_engine.dart';
 import 'package:shixuzhipei/services/scheduling/schedule_rescue.dart';
+import 'package:shixuzhipei/services/scheduling/schedule_rescue_persistence.dart';
 import 'package:shixuzhipei/services/scheduling/scheduling_engine.dart';
 import 'package:shixuzhipei/services/scheduling/urgent_deadline.dart';
 
@@ -80,12 +81,13 @@ Future<SharedJson> runSharedVectorDirectory(
   SchedulingEngine? engine,
 }) async {
   final planner = engine ?? HeuristicSchedulingEngine();
-  final files = directory
-      .listSync()
-      .whereType<File>()
-      .where((file) => file.path.toLowerCase().endsWith('.json'))
-      .toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  final files =
+      directory
+          .listSync()
+          .whereType<File>()
+          .where((file) => file.path.toLowerCase().endsWith('.json'))
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
 
   final fixtures = <SharedJson>[];
   for (final file in files) {
@@ -99,23 +101,15 @@ Future<SharedJson> runSharedVectorDirectory(
       }
       final fixture = SharedJson.from(decoded);
       fixtures.add(
-        await runSharedVectorFixture(
-          fixture,
-          name: name,
-          engine: planner,
-        ),
+        await runSharedVectorFixture(fixture, name: name, engine: planner),
       );
     } catch (error, stackTrace) {
-      fixtures.add(
-        <String, Object?>{
-          'name': name,
-          'status': 'invalid',
-          'error': '$error',
-          'diagnostics': <String, Object?>{
-            'stackTrace': '$stackTrace',
-          },
-        },
-      );
+      fixtures.add(<String, Object?>{
+        'name': name,
+        'status': 'invalid',
+        'error': '$error',
+        'diagnostics': <String, Object?>{'stackTrace': '$stackTrace'},
+      });
     }
   }
 
@@ -141,6 +135,7 @@ Future<SharedJson> runSharedVectorFixture(
   final planner = engine ?? HeuristicSchedulingEngine();
   final id = fixture['id'];
   final kind = fixture['kind'];
+  final tags = _stringList(fixture['tags'], 'tags');
   final review = _review(fixture['review']);
 
   if (kind is! String ||
@@ -156,7 +151,11 @@ Future<SharedJson> runSharedVectorFixture(
   SharedJson diagnostics = <String, Object?>{};
   switch (kind) {
     case 'plan':
-      final result = _runPlan(request, planner);
+      final result = _runPlan(
+        request,
+        planner,
+        boundaryTime: tags.contains('boundary_time'),
+      );
       actual = result.actual;
       diagnostics = result.diagnostics;
       break;
@@ -166,7 +165,7 @@ Future<SharedJson> runSharedVectorFixture(
       diagnostics = result.diagnostics;
       break;
     case 'transaction':
-      final result = _runTransaction(request);
+      final result = await _runTransaction(request);
       actual = result.actual;
       diagnostics = result.diagnostics;
       break;
@@ -211,31 +210,77 @@ class _RunResult {
   const _RunResult(this.actual, this.diagnostics);
 }
 
-_RunResult _runPlan(SharedJson rawRequest, SchedulingEngine engine) {
+_RunResult _runPlan(
+  SharedJson rawRequest,
+  SchedulingEngine engine, {
+  bool boundaryTime = false,
+}) {
   final request = SchedulingRequest.fromJson(rawRequest);
   final plan = engine.plan(request);
   final fixedIds = request.fixed.map((entry) => entry.id).whereType<String>();
+  final diagnostics = _planDiagnostics(plan);
+  if (boundaryTime) {
+    // The boundary vector remains a scheduling vector, but it must also pass
+    // through the production urgent-deadline validation helpers.
+    final now = DateTime(request.day.year, request.day.month, request.day.day);
+    final deadline = defaultUrgentDeadline(now: now, scheduleDay: request.day);
+    diagnostics['urgentDeadlineBoundary'] = <String, Object?>{
+      'deadline': deadline.toIso8601String(),
+      'valid': isUrgentDeadlineValid(
+        now: now,
+        scheduleDay: request.day,
+        deadline: deadline,
+      ),
+    };
+  }
   return _RunResult(
-    canonicalizePlan(
-      plan,
-      day: request.day,
-      fixedEntryIds: fixedIds.toSet(),
-    ),
-    _planDiagnostics(plan),
+    canonicalizePlan(plan, day: request.day, fixedEntryIds: fixedIds.toSet()),
+    diagnostics,
   );
 }
 
 _RunResult _runRescue(SharedJson rawRequest, SchedulingEngine engine) {
   final request = SchedulingRequest.fromJson(rawRequest);
-  final urgent = PlanTask.fromJson(_map(rawRequest['urgentTask'], 'urgentTask'));
-  final baseline = _entriesFromJson(rawRequest['currentEntries'], 'currentEntries');
+  final urgent = PlanTask.fromJson(
+    _map(rawRequest['urgentTask'], 'urgentTask'),
+  );
+  final rawBaseline = _entriesFromJson(
+    rawRequest['currentEntries'],
+    'currentEntries',
+  );
+  // Validate the complete input before filtering so duplicate ids cannot be
+  // silently collapsed by a map conversion.
+  _entriesById(rawBaseline, field: 'currentEntries');
+  final baseline = rawBaseline
+      .where(
+        (entry) =>
+            entry.day != null &&
+            _dateOnly(entry.day!) == _dateOnly(request.day),
+      )
+      .toList(growable: false);
   final service = ScheduleRescueService(engine: engine);
-  final options = service.propose(
+  final proposed = service.propose(
     base: request,
     baseline: baseline,
     urgent: urgent,
   );
-  final baseFixedIds = request.fixed.map((entry) => entry.id).whereType<String>();
+  final requestedStrategies = rawRequest['strategies'] == null
+      ? null
+      : _stringList(rawRequest['strategies'], 'strategies');
+  final options = requestedStrategies == null
+      ? proposed
+      : requestedStrategies
+            .map((name) {
+              return proposed.firstWhere(
+                (option) => option.strategy.name == name,
+                orElse: () =>
+                    throw FormatException('unsupported rescue strategy: $name'),
+              );
+            })
+            .toList(growable: false);
+  final baseFixedIds = request.fixed
+      .map((entry) => entry.id)
+      .whereType<String>();
   final strategies = <Object?>[];
   for (final option in options) {
     final recoveryIds = option.plan.entries
@@ -279,79 +324,98 @@ _RunResult _runRescue(SharedJson rawRequest, SchedulingEngine engine) {
     <String, Object?>{
       'urgentTaskId': urgent.id,
       'baselineEntryIds': baseline.map((entry) => entry.id).toList(),
+      if (requestedStrategies != null)
+        'requestedStrategies': requestedStrategies,
     },
   );
 }
 
-_RunResult _runTransaction(SharedJson request) {
+Future<_RunResult> _runTransaction(SharedJson request) async {
   final before = _entriesFromJson(request['before'], 'before');
   final after = _entriesFromJson(request['after'], 'after');
-  final beforeById = _entriesById(before);
-  final afterById = _entriesById(after);
+  final beforeById = _entriesById(before, field: 'before');
+  final afterById = _entriesById(after, field: 'after');
   final operation = request['operation'];
   if (operation is! String) {
     throw const FormatException('transaction operation is required');
   }
 
-  late Map<String, ScheduleEntry> finalState;
+  final state = <String, ScheduleEntry>{
+    ...(operation == 'undo' ? afterById : beforeById),
+  };
+  final writerEvents = <SharedJson>[];
+  final failAt = request['failAt'];
+  final failureCode = request['failureCode'] as String? ?? 'apply_failed';
+  var failureArmed = operation == 'apply';
+  var phase = operation == 'undo' ? 'undo' : 'apply';
+
+  Future<void> upsert(ScheduleEntry entry) async {
+    final id = _requiredEntryId(entry);
+    writerEvents.add(<String, Object?>{
+      'operation': 'upsert',
+      'id': id,
+      'phase': phase,
+    });
+    // Mutate before the controlled throw to model a partially written target;
+    // ScheduleRescuePersistence must then compensate it through its reverse
+    // synchronization.
+    state[id] = entry;
+    if (failureArmed && failAt == id) {
+      failureArmed = false;
+      phase = 'rollback';
+      throw _TransactionFailure(failureCode);
+    }
+  }
+
+  Future<void> remove(ScheduleEntry entry) async {
+    final id = _requiredEntryId(entry);
+    writerEvents.add(<String, Object?>{
+      'operation': 'remove',
+      'id': id,
+      'phase': phase,
+    });
+    state.remove(id);
+  }
+
+  final persistence = ScheduleRescuePersistence(upsert: upsert, remove: remove);
+
   String status;
   String? errorCode;
-  if (operation == 'apply') {
-    var state = <String, ScheduleEntry>{...beforeById};
-    final failAt = request['failAt'];
-    final failureCode = request['failureCode'] as String? ?? 'apply_failed';
-    try {
-      // This is intentionally the same order as ScheduleRescuePersistence:
-      // upsert all target entries, then remove entries absent from the target.
-      for (final entry in after) {
-        final id = _requiredEntryId(entry);
-        state[id] = entry;
-        if (failAt == id) {
-          throw _TransactionFailure(failureCode);
-        }
-      }
-      for (final id in beforeById.keys) {
-        if (!afterById.containsKey(id)) state.remove(id);
-      }
+  try {
+    if (operation == 'apply') {
+      await persistence.apply(before: before, after: after);
       status = 'applied';
-    } on _TransactionFailure catch (error) {
-      state = <String, ScheduleEntry>{...beforeById};
-      status = 'rolled_back';
-      errorCode = error.code;
+    } else if (operation == 'undo') {
+      // The vector's `before` is the currently accepted rescue plan and its
+      // `after` is the original snapshot. Applying current -> original is the
+      // inverse of the earlier rescue apply while preserving exact recovery.
+      await persistence.apply(before: before, after: after);
+      status = 'restored';
+    } else {
+      throw FormatException('unsupported transaction operation: $operation');
     }
-    finalState = state;
-  } else if (operation == 'undo') {
-    // For an undo vector, `after` is the snapshot to restore.
-    finalState = <String, ScheduleEntry>{...afterById};
-    status = 'restored';
-  } else {
+  } on _TransactionFailure catch (error) {
+    status = 'rolled_back';
+    errorCode = error.code;
+  }
+
+  if (operation != 'apply' && operation != 'undo') {
     throw FormatException('unsupported transaction operation: $operation');
   }
 
-  final entries = _sortedStateEntries(finalState);
+  final entries = _sortedStateEntries(state);
   final expectedOriginal = operation == 'undo' ? afterById : beforeById;
   final finalStateJson = <String, Object?>{
     'status': status,
-    'originalPlanPreserved': _sameEntryState(finalState, expectedOriginal),
-    'exact': _sameEntryState(finalState, expectedOriginal),
+    'originalPlanPreserved': _sameEntryState(state, expectedOriginal),
+    'exact': _sameEntryState(state, expectedOriginal),
     'entryIds': entries.map((entry) => entry.id).whereType<String>().toList(),
     'timeBlocks': _timeBlocks(entries),
   };
   if (errorCode != null) finalStateJson['errorCode'] = errorCode;
   return _RunResult(
     <String, Object?>{'finalState': finalStateJson},
-    <String, Object?>{
-      'operation': operation,
-      'writeOrder': operation == 'apply'
-          ? <String>[
-              ...after.map((entry) => entry.id).whereType<String>(),
-              ...before
-                  .where((entry) => !afterById.containsKey(entry.id))
-                  .map((entry) => entry.id)
-                  .whereType<String>(),
-            ]
-          : <String>[],
-    },
+    <String, Object?>{'operation': operation, 'writerEvents': writerEvents},
   );
 }
 
@@ -367,14 +431,9 @@ Future<_RunResult> _runBoundary(
     final delayMs = (request['simulateDelayMs'] as num).toInt();
     final beforeIds = _stringList(request['beforeEntryIds'], 'beforeEntryIds');
     final afterIds = _stringList(request['afterEntryIds'], 'afterEntryIds');
-    var timedOut = false;
-    try {
-      await Future<void>.delayed(
-        Duration(milliseconds: delayMs.clamp(0, 60000).toInt()),
-      ).timeout(Duration(milliseconds: timeoutMs.clamp(0, 60000).toInt()));
-    } on TimeoutException {
-      timedOut = true;
-    }
+    // Keep the adapter deterministic in CI: the vector describes a controlled
+    // delay, so no real sleep is needed to observe timeout semantics.
+    final timedOut = delayMs >= timeoutMs;
     if (timedOut) {
       return _RunResult(
         <String, Object?>{
@@ -404,10 +463,7 @@ Future<_RunResult> _runBoundary(
           'entryIds': afterIds,
         },
       },
-      <String, Object?>{
-        'timeoutMs': timeoutMs,
-        'simulateDelayMs': delayMs,
-      },
+      <String, Object?>{'timeoutMs': timeoutMs, 'simulateDelayMs': delayMs},
     );
   }
 
@@ -420,29 +476,23 @@ Future<_RunResult> _runBoundary(
       scheduleDay: scheduleDay,
       deadline: deadline,
     );
-    return _RunResult(
-      <String, Object?>{
-        'finalState': <String, Object?>{
-          'status': 'evaluated',
-          'deadline': deadline.toIso8601String(),
-          'valid': valid,
-        },
+    return _RunResult(<String, Object?>{
+      'finalState': <String, Object?>{
+        'status': 'evaluated',
+        'deadline': deadline.toIso8601String(),
+        'valid': valid,
       },
-      const <String, Object?>{},
-    );
+    }, const <String, Object?>{});
   }
 
   // Boundary vectors may use the boundary kind while still asking the
   // scheduler to plan. Keep that path deterministic and observable.
   if (request.containsKey('tasks') || request.containsKey('windows')) {
     final result = _runPlan(request, engine);
-    return _RunResult(
-      <String, Object?>{
-        ...result.actual,
-        'finalState': <String, Object?>{'status': 'planned'},
-      },
-      result.diagnostics,
-    );
+    return _RunResult(<String, Object?>{
+      ...result.actual,
+      'finalState': <String, Object?>{'status': 'planned'},
+    }, result.diagnostics);
   }
   throw const FormatException('unsupported boundary operation');
 }
@@ -459,18 +509,32 @@ List<SharedJson> _compareAssertions({
   }
 
   if (kind == 'rescue') {
+    final differences = <SharedJson>[];
+    final expectedBaseProjection = <String, Object?>{
+      'taskOrder': assertions['taskOrder'],
+      'timeBlocks': assertions['timeBlocks'],
+      'issues': assertions['issues'],
+      'explanationCodes': assertions['explanationCodes'],
+    };
+    // Rescue vectors retain the same top-level canonical assertion shape as a
+    // plan (usually empty), in addition to their per-strategy projections.
+    differences.addAll(
+      _compareExact(
+        expectedBaseProjection,
+        _projectionFromCanonical(actual),
+        'rescue',
+      ),
+    );
     final actualStrategies = actual['strategies'];
     final expectedStrategies = assertions['strategies'];
     if (actualStrategies is! List || expectedStrategies is! List) {
-      return <SharedJson>[
-        <String, Object?>{
-          'field': 'strategies',
-          'expected': expectedStrategies,
-          'actual': actualStrategies,
-        },
-      ];
+      differences.add(<String, Object?>{
+        'field': 'strategies',
+        'expected': expectedStrategies,
+        'actual': actualStrategies,
+      });
+      return differences;
     }
-    final differences = <SharedJson>[];
     if (expectedStrategies.length != actualStrategies.length) {
       differences.add(<String, Object?>{
         'field': 'strategies.length',
@@ -484,12 +548,10 @@ List<SharedJson> _compareAssertions({
     for (var i = 0; i < count; i++) {
       final expected = _map(expectedStrategies[i], 'strategies[$i]');
       final observed = _map(actualStrategies[i], 'actual.strategies[$i]');
-      final projection = _projectionFromCanonical(
-        <String, Object?>{
-          'entries': observed['entries'],
-          'issues': observed['issues'],
-        },
-      );
+      final projection = _projectionFromCanonical(<String, Object?>{
+        'entries': observed['entries'],
+        'issues': observed['issues'],
+      });
       final expectedProjection = <String, Object?>{
         'taskOrder': expected['taskOrder'],
         'timeBlocks': expected['timeBlocks'],
@@ -497,11 +559,7 @@ List<SharedJson> _compareAssertions({
         'explanationCodes': expected['explanationCodes'],
       };
       differences.addAll(
-        _compareExact(
-          expectedProjection,
-          projection,
-          'strategies[$i]',
-        ),
+        _compareExact(expectedProjection, projection, 'strategies[$i]'),
       );
       if (expected['strategy'] != observed['strategy']) {
         differences.add(<String, Object?>{
@@ -543,10 +601,7 @@ SharedJson _projectionFromCanonical(SharedJson canonical) {
     if (id is String) {
       final time = entry['time'];
       final timeMap = time is Map
-          ? <String, Object?>{
-              'hour': time['hour'],
-              'minute': time['minute'],
-            }
+          ? <String, Object?>{'hour': time['hour'], 'minute': time['minute']}
           : <String, Object?>{};
       timeBlocks[id] = <String, Object?>{
         ...timeMap,
@@ -570,11 +625,7 @@ SharedJson _projectionFromCanonical(SharedJson canonical) {
   };
 }
 
-List<SharedJson> _compareExact(
-  Object? expected,
-  Object? actual,
-  String path,
-) {
+List<SharedJson> _compareExact(Object? expected, Object? actual, String path) {
   final differences = <SharedJson>[];
   if (expected is Map && actual is Map) {
     final keys = <Object?>{...expected.keys, ...actual.keys};
@@ -649,10 +700,7 @@ List<SharedJson> _compareSubset(
   return differences;
 }
 
-void _appendDifferences(
-  List<SharedJson> target,
-  List<SharedJson> additions,
-) {
+void _appendDifferences(List<SharedJson> target, List<SharedJson> additions) {
   target.addAll(additions);
 }
 
@@ -692,10 +740,17 @@ List<ScheduleEntry> _entriesFromJson(Object? raw, String field) {
       .toList(growable: false);
 }
 
-Map<String, ScheduleEntry> _entriesById(List<ScheduleEntry> entries) {
+Map<String, ScheduleEntry> _entriesById(
+  List<ScheduleEntry> entries, {
+  String field = 'entries',
+}) {
   final result = <String, ScheduleEntry>{};
   for (final entry in entries) {
-    result[_requiredEntryId(entry)] = entry;
+    final id = _requiredEntryId(entry);
+    if (result.containsKey(id)) {
+      throw FormatException('$field contains duplicate id: $id');
+    }
+    result[id] = entry;
   }
   return result;
 }
@@ -722,7 +777,8 @@ bool _sameEntryState(
   Map<String, ScheduleEntry> left,
   Map<String, ScheduleEntry> right,
 ) {
-  if (left.length != right.length || !left.keys.toSet().containsAll(right.keys)) {
+  if (left.length != right.length ||
+      !left.keys.toSet().containsAll(right.keys)) {
     return false;
   }
   for (final id in left.keys) {
@@ -792,7 +848,8 @@ List<String> _stringList(Object? value, String field) {
 }
 
 DateTime _dateTime(Object? value, String field) {
-  if (value is! String) throw FormatException('$field must be an ISO date-time');
+  if (value is! String)
+    throw FormatException('$field must be an ISO date-time');
   final parsed = DateTime.tryParse(value);
   if (parsed == null) throw FormatException('$field must be an ISO date-time');
   return parsed;
