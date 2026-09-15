@@ -1,0 +1,1741 @@
+{
+  "classificationCounts": {
+    "allowed_difference": 0,
+    "contract_error": 0,
+    "implementation_error": 0,
+    "pending_a_review": 72
+  },
+  "command": [
+    "python",
+    "scripts/scheduling_parity.py"
+  ],
+  "dart": {
+    "error": "",
+    "invalid": false,
+    "returncode": 0,
+    "stderr": ""
+  },
+  "results": [
+    {
+      "dartActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "focus",
+            "source": "planned",
+            "time": {
+              "hour": 8,
+              "minute": 0
+            }
+          },
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "fixed-standup",
+            "source": "fixed",
+            "time": {
+              "hour": 9,
+              "minute": 0
+            }
+          },
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 30,
+            "explanationCodes": [],
+            "id": "quick",
+            "source": "planned",
+            "time": {
+              "hour": 10,
+              "minute": 0
+            }
+          }
+        ],
+        "issues": []
+      },
+      "dartDiagnostics": {
+        "issues": []
+      },
+      "differences": [
+        {
+          "actual": "focus",
+          "classification": "pending_a_review",
+          "expected": "fixed-standup",
+          "field": "taskOrder[0]",
+          "reason": "双端执行后确认固定块冲突消解和 canonical 顺序。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": "fixed-standup",
+          "classification": "pending_a_review",
+          "expected": "focus",
+          "field": "taskOrder[1]",
+          "reason": "双端执行后确认固定块冲突消解和 canonical 顺序。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 8,
+          "classification": "pending_a_review",
+          "expected": 10,
+          "field": "timeBlocks.focus.hour",
+          "reason": "双端执行后确认固定块冲突消解和 canonical 顺序。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 10,
+          "classification": "pending_a_review",
+          "expected": 11,
+          "field": "timeBlocks.quick.hour",
+          "reason": "双端执行后确认固定块冲突消解和 canonical 顺序。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": "focus",
+          "classification": "pending_a_review",
+          "expected": "fixed-standup",
+          "field": "taskOrder[0]",
+          "reason": "双端执行后确认固定块冲突消解和 canonical 顺序。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": "fixed-standup",
+          "classification": "pending_a_review",
+          "expected": "focus",
+          "field": "taskOrder[1]",
+          "reason": "双端执行后确认固定块冲突消解和 canonical 顺序。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 8,
+          "classification": "pending_a_review",
+          "expected": 10,
+          "field": "timeBlocks.focus.hour",
+          "reason": "双端执行后确认固定块冲突消解和 canonical 顺序。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 10,
+          "classification": "pending_a_review",
+          "expected": 11,
+          "field": "timeBlocks.quick.hour",
+          "reason": "双端执行后确认固定块冲突消解和 canonical 顺序。",
+          "runtime": "dart_vs_assertions"
+        }
+      ],
+      "id": "fixed-conflict-001",
+      "kind": "plan",
+      "name": "001-fixed-conflict.json",
+      "pythonActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "focus",
+            "source": "planned",
+            "time": {
+              "hour": 8,
+              "minute": 0
+            }
+          },
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "fixed-standup",
+            "source": "fixed",
+            "time": {
+              "hour": 9,
+              "minute": 0
+            }
+          },
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 30,
+            "explanationCodes": [],
+            "id": "quick",
+            "source": "planned",
+            "time": {
+              "hour": 10,
+              "minute": 0
+            }
+          }
+        ],
+        "issues": []
+      },
+      "pythonDiagnostics": {
+        "issues": []
+      },
+      "review": {
+        "classification": "pending_a_review",
+        "reason": "双端执行后确认固定块冲突消解和 canonical 顺序。"
+      },
+      "status": "mismatched"
+    },
+    {
+      "dartActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "window-task",
+            "source": "planned",
+            "time": {
+              "hour": 13,
+              "minute": 0
+            }
+          }
+        ],
+        "issues": []
+      },
+      "dartDiagnostics": {
+        "issues": []
+      },
+      "differences": [
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "确认任务只落在声明的工作窗口内。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "确认任务只落在声明的工作窗口内。",
+          "runtime": "dart_vs_assertions"
+        }
+      ],
+      "id": "work-window-001",
+      "kind": "plan",
+      "name": "002-work-window.json",
+      "pythonActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "window-task",
+            "source": "planned",
+            "time": {
+              "hour": 13,
+              "minute": 0
+            }
+          }
+        ],
+        "issues": []
+      },
+      "pythonDiagnostics": {
+        "issues": []
+      },
+      "review": {
+        "classification": "pending_a_review",
+        "reason": "确认任务只落在声明的工作窗口内。"
+      },
+      "status": "mismatched"
+    },
+    {
+      "dartActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 90,
+            "explanationCodes": [],
+            "id": "too-late",
+            "source": "planned",
+            "time": {
+              "hour": 9,
+              "minute": 0
+            }
+          }
+        ],
+        "issues": [
+          {
+            "blockedBy": [],
+            "code": "miss_due",
+            "explanationCodes": [],
+            "taskId": "too-late"
+          }
+        ]
+      },
+      "dartDiagnostics": {
+        "issues": [
+          {
+            "code": "miss_due",
+            "message": "Task scheduled past due time: Too late task",
+            "taskId": "too-late"
+          }
+        ]
+      },
+      "differences": [
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "A 需要决定不可行截止应使用专用问题码还是 miss_due。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": "miss_due",
+          "classification": "pending_a_review",
+          "expected": "deadline_infeasible",
+          "field": "issues[0].code",
+          "reason": "A 需要决定不可行截止应使用专用问题码还是 miss_due。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "issues[0].explanationCodes.length",
+          "reason": "A 需要决定不可行截止应使用专用问题码还是 miss_due。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "A 需要决定不可行截止应使用专用问题码还是 miss_due。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": "miss_due",
+          "classification": "pending_a_review",
+          "expected": "deadline_infeasible",
+          "field": "issues[0].code",
+          "reason": "A 需要决定不可行截止应使用专用问题码还是 miss_due。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "issues[0].explanationCodes.length",
+          "reason": "A 需要决定不可行截止应使用专用问题码还是 miss_due。",
+          "runtime": "dart_vs_assertions"
+        }
+      ],
+      "id": "deadline-infeasible-001",
+      "kind": "plan",
+      "name": "003-deadline-infeasible.json",
+      "pythonActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 90,
+            "explanationCodes": [],
+            "id": "too-late",
+            "source": "planned",
+            "time": {
+              "hour": 9,
+              "minute": 0
+            }
+          }
+        ],
+        "issues": [
+          {
+            "blockedBy": [],
+            "code": "miss_due",
+            "explanationCodes": [],
+            "taskId": "too-late"
+          }
+        ]
+      },
+      "pythonDiagnostics": {
+        "issues": [
+          {
+            "code": "miss_due",
+            "message": "Task scheduled past due time: Too late task",
+            "taskId": "too-late"
+          }
+        ]
+      },
+      "review": {
+        "classification": "pending_a_review",
+        "reason": "A 需要决定不可行截止应使用专用问题码还是 miss_due。"
+      },
+      "status": "mismatched"
+    },
+    {
+      "dartActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "prerequisite",
+            "source": "planned",
+            "time": {
+              "hour": 9,
+              "minute": 0
+            }
+          }
+        ],
+        "issues": [
+          {
+            "blockedBy": [],
+            "code": "no_slot",
+            "explanationCodes": [],
+            "taskId": "blocked"
+          }
+        ]
+      },
+      "dartDiagnostics": {
+        "issues": [
+          {
+            "code": "no_slot",
+            "message": "No available slot for task: Blocked task",
+            "taskId": "blocked"
+          }
+        ]
+      },
+      "differences": [
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "当前 PlanTask 兼容输入保留 dependsOn，但两端是否执行依赖约束待 A 判定。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "issues[0].blockedBy.length",
+          "reason": "当前 PlanTask 兼容输入保留 dependsOn，但两端是否执行依赖约束待 A 判定。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": "no_slot",
+          "classification": "pending_a_review",
+          "expected": "dependency_blocked",
+          "field": "issues[0].code",
+          "reason": "当前 PlanTask 兼容输入保留 dependsOn，但两端是否执行依赖约束待 A 判定。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "issues[0].explanationCodes.length",
+          "reason": "当前 PlanTask 兼容输入保留 dependsOn，但两端是否执行依赖约束待 A 判定。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "当前 PlanTask 兼容输入保留 dependsOn，但两端是否执行依赖约束待 A 判定。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "issues[0].blockedBy.length",
+          "reason": "当前 PlanTask 兼容输入保留 dependsOn，但两端是否执行依赖约束待 A 判定。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": "no_slot",
+          "classification": "pending_a_review",
+          "expected": "dependency_blocked",
+          "field": "issues[0].code",
+          "reason": "当前 PlanTask 兼容输入保留 dependsOn，但两端是否执行依赖约束待 A 判定。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "issues[0].explanationCodes.length",
+          "reason": "当前 PlanTask 兼容输入保留 dependsOn，但两端是否执行依赖约束待 A 判定。",
+          "runtime": "dart_vs_assertions"
+        }
+      ],
+      "id": "dependency-blocked-001",
+      "kind": "plan",
+      "name": "004-dependency-blocked.json",
+      "pythonActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "prerequisite",
+            "source": "planned",
+            "time": {
+              "hour": 9,
+              "minute": 0
+            }
+          }
+        ],
+        "issues": [
+          {
+            "blockedBy": [],
+            "code": "no_slot",
+            "explanationCodes": [],
+            "taskId": "blocked"
+          }
+        ]
+      },
+      "pythonDiagnostics": {
+        "issues": [
+          {
+            "code": "no_slot",
+            "message": "No time slot left for task: Blocked task",
+            "taskId": "blocked"
+          }
+        ]
+      },
+      "review": {
+        "classification": "pending_a_review",
+        "reason": "当前 PlanTask 兼容输入保留 dependsOn，但两端是否执行依赖约束待 A 判定。"
+      },
+      "status": "mismatched"
+    },
+    {
+      "dartActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "low-load",
+            "source": "planned",
+            "time": {
+              "hour": 8,
+              "minute": 0
+            }
+          },
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "high-load",
+            "source": "planned",
+            "time": {
+              "hour": 9,
+              "minute": 0
+            }
+          }
+        ],
+        "issues": []
+      },
+      "dartDiagnostics": {
+        "issues": []
+      },
+      "differences": [
+        {
+          "actual": 60,
+          "classification": "pending_a_review",
+          "expected": 72,
+          "field": "entries[0].durationMinutes",
+          "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": "low-load",
+          "classification": "pending_a_review",
+          "expected": "high-load",
+          "field": "entries[0].id",
+          "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": "high-load",
+          "classification": "pending_a_review",
+          "expected": "low-load",
+          "field": "entries[1].id",
+          "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 12,
+          "field": "entries[1].time.minute",
+          "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": "high-load",
+          "classification": "pending_a_review",
+          "expected": "low-load",
+          "field": "taskOrder[0]",
+          "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": "low-load",
+          "classification": "pending_a_review",
+          "expected": "high-load",
+          "field": "taskOrder[1]",
+          "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 72,
+          "classification": "pending_a_review",
+          "expected": 60,
+          "field": "timeBlocks.high-load.durationMinutes",
+          "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 8,
+          "classification": "pending_a_review",
+          "expected": 9,
+          "field": "timeBlocks.high-load.hour",
+          "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 9,
+          "classification": "pending_a_review",
+          "expected": 8,
+          "field": "timeBlocks.low-load.hour",
+          "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 12,
+          "classification": "pending_a_review",
+          "expected": 0,
+          "field": "timeBlocks.low-load.minute",
+          "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。",
+          "runtime": "dart_vs_assertions"
+        }
+      ],
+      "id": "low-energy-match-001",
+      "kind": "plan",
+      "name": "005-low-energy-match.json",
+      "pythonActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 72,
+            "explanationCodes": [],
+            "id": "high-load",
+            "source": "planned",
+            "time": {
+              "hour": 8,
+              "minute": 0
+            }
+          },
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "low-load",
+            "source": "planned",
+            "time": {
+              "hour": 9,
+              "minute": 12
+            }
+          }
+        ],
+        "issues": []
+      },
+      "pythonDiagnostics": {
+        "issues": []
+      },
+      "review": {
+        "classification": "pending_a_review",
+        "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。"
+      },
+      "status": "mismatched"
+    },
+    {
+      "dartActual": {
+        "entries": [],
+        "issues": [],
+        "strategies": [
+          {
+            "diagnostics": {
+              "messages": {
+                "issues": []
+              },
+              "movedEntryCount": 2,
+              "rationale": "先安排紧急事项，再重新分配其余任务，优先降低逾期风险。",
+              "recoveryMinutes": 0,
+              "tradeoff": "可能移动更多原有任务，恢复时间取决于当前能量状态。"
+            },
+            "entries": [
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 30,
+                "explanationCodes": [],
+                "id": "urgent",
+                "source": "planned",
+                "time": {
+                  "hour": 8,
+                  "minute": 0
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 90,
+                "explanationCodes": [],
+                "id": "deep",
+                "source": "planned",
+                "time": {
+                  "hour": 8,
+                  "minute": 30
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 60,
+                "explanationCodes": [],
+                "id": "review",
+                "source": "planned",
+                "time": {
+                  "hour": 10,
+                  "minute": 0
+                }
+              }
+            ],
+            "issues": [],
+            "strategy": "protectDeadline"
+          },
+          {
+            "diagnostics": {
+              "messages": {
+                "issues": []
+              },
+              "movedEntryCount": 2,
+              "rationale": "降低高负荷任务的安排倾向，并预留 15 分钟恢复缓冲。",
+              "recoveryMinutes": 15,
+              "tradeoff": "部分低优先级任务可能顺延，适合疲劳或连续被打断的场景。"
+            },
+            "entries": [
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 30,
+                "explanationCodes": [],
+                "id": "urgent",
+                "source": "planned",
+                "time": {
+                  "hour": 8,
+                  "minute": 0
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 90,
+                "explanationCodes": [],
+                "id": "deep",
+                "source": "planned",
+                "time": {
+                  "hour": 8,
+                  "minute": 30
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 60,
+                "explanationCodes": [],
+                "id": "review",
+                "source": "planned",
+                "time": {
+                  "hour": 10,
+                  "minute": 0
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 15,
+                "explanationCodes": [],
+                "id": "rescue_recovery_2026-09-16",
+                "source": "recovery",
+                "time": {
+                  "hour": 13,
+                  "minute": 30
+                }
+              }
+            ],
+            "issues": [],
+            "strategy": "protectRecovery"
+          },
+          {
+            "diagnostics": {
+              "messages": {
+                "issues": []
+              },
+              "movedEntryCount": 0,
+              "rationale": "锁定当前已排日程，只在现有空档中放入紧急事项。",
+              "recoveryMinutes": 0,
+              "tradeoff": "如果空档不足，紧急事项可能无法在截止时间前安排。"
+            },
+            "entries": [
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 30,
+                "explanationCodes": [],
+                "id": "urgent",
+                "source": "planned",
+                "time": {
+                  "hour": 8,
+                  "minute": 0
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 90,
+                "explanationCodes": [],
+                "id": "deep",
+                "source": "fixed",
+                "time": {
+                  "hour": 9,
+                  "minute": 0
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 60,
+                "explanationCodes": [],
+                "id": "review",
+                "source": "fixed",
+                "time": {
+                  "hour": 14,
+                  "minute": 0
+                }
+              }
+            ],
+            "issues": [],
+            "strategy": "minimizeChanges"
+          }
+        ]
+      },
+      "dartDiagnostics": {
+        "baselineEntryIds": [
+          "deep",
+          "review"
+        ],
+        "requestedStrategies": [
+          "protectDeadline",
+          "protectRecovery",
+          "minimizeChanges"
+        ],
+        "urgentTaskId": "urgent"
+      },
+      "differences": [
+        {
+          "actual": 30,
+          "classification": "pending_a_review",
+          "expected": 32,
+          "field": "strategies[1].entries[0].durationMinutes",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": 30,
+          "classification": "pending_a_review",
+          "expected": 32,
+          "field": "strategies[1].entries[1].time.minute",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": 60,
+          "classification": "pending_a_review",
+          "expected": 63,
+          "field": "strategies[1].entries[2].durationMinutes",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 2,
+          "field": "strategies[1].entries[2].time.minute",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "strategies[0].explanationCodes.length",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 10,
+          "classification": "pending_a_review",
+          "expected": 13,
+          "field": "strategies[0].timeBlocks.review.hour",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 30,
+          "field": "strategies[0].timeBlocks.review.minute",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "strategies[1].explanationCodes.length",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 32,
+          "classification": "pending_a_review",
+          "expected": 30,
+          "field": "strategies[1].timeBlocks.deep.minute",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 63,
+          "classification": "pending_a_review",
+          "expected": 60,
+          "field": "strategies[1].timeBlocks.review.durationMinutes",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 2,
+          "classification": "pending_a_review",
+          "expected": 0,
+          "field": "strategies[1].timeBlocks.review.minute",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 32,
+          "classification": "pending_a_review",
+          "expected": 30,
+          "field": "strategies[1].timeBlocks.urgent.durationMinutes",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "strategies[2].explanationCodes.length",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "strategies[0].explanationCodes.length",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 10,
+          "classification": "pending_a_review",
+          "expected": 13,
+          "field": "strategies[0].timeBlocks.review.hour",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 30,
+          "field": "strategies[0].timeBlocks.review.minute",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "strategies[1].explanationCodes.length",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "strategies[2].explanationCodes.length",
+          "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。",
+          "runtime": "dart_vs_assertions"
+        }
+      ],
+      "id": "rescue-strategies-001",
+      "kind": "rescue",
+      "name": "006-rescue-strategies.json",
+      "pythonActual": {
+        "entries": [],
+        "issues": [],
+        "strategies": [
+          {
+            "diagnostics": {
+              "messages": {
+                "issues": []
+              },
+              "movedEntryCount": 2,
+              "rationale": "先安排紧急事项，再重新分配其余任务，优先降低逾期风险。",
+              "recoveryMinutes": 0,
+              "tradeoff": "可能移动更多原有任务，恢复时间取决于当前能量状态。"
+            },
+            "entries": [
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 30,
+                "explanationCodes": [],
+                "id": "urgent",
+                "source": "planned",
+                "time": {
+                  "hour": 8,
+                  "minute": 0
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 90,
+                "explanationCodes": [],
+                "id": "deep",
+                "source": "planned",
+                "time": {
+                  "hour": 8,
+                  "minute": 30
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 60,
+                "explanationCodes": [],
+                "id": "review",
+                "source": "planned",
+                "time": {
+                  "hour": 10,
+                  "minute": 0
+                }
+              }
+            ],
+            "issues": [],
+            "strategy": "protectDeadline"
+          },
+          {
+            "diagnostics": {
+              "messages": {
+                "issues": []
+              },
+              "movedEntryCount": 2,
+              "rationale": "降低高负荷任务的安排倾向，并预留 15 分钟恢复缓冲。",
+              "recoveryMinutes": 15,
+              "tradeoff": "部分低优先级任务可能顺延，适合疲劳或连续被打断的场景。"
+            },
+            "entries": [
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 32,
+                "explanationCodes": [],
+                "id": "urgent",
+                "source": "planned",
+                "time": {
+                  "hour": 8,
+                  "minute": 0
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 90,
+                "explanationCodes": [],
+                "id": "deep",
+                "source": "planned",
+                "time": {
+                  "hour": 8,
+                  "minute": 32
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 63,
+                "explanationCodes": [],
+                "id": "review",
+                "source": "planned",
+                "time": {
+                  "hour": 10,
+                  "minute": 2
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 15,
+                "explanationCodes": [],
+                "id": "rescue_recovery_2026-09-16",
+                "source": "recovery",
+                "time": {
+                  "hour": 13,
+                  "minute": 30
+                }
+              }
+            ],
+            "issues": [],
+            "strategy": "protectRecovery"
+          },
+          {
+            "diagnostics": {
+              "messages": {
+                "issues": []
+              },
+              "movedEntryCount": 0,
+              "rationale": "锁定当前已排日程，只在现有空档中放入紧急事项。",
+              "recoveryMinutes": 0,
+              "tradeoff": "如果空档不足，紧急事项可能无法在截止时间前安排。"
+            },
+            "entries": [
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 30,
+                "explanationCodes": [],
+                "id": "urgent",
+                "source": "planned",
+                "time": {
+                  "hour": 8,
+                  "minute": 0
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 90,
+                "explanationCodes": [],
+                "id": "deep",
+                "source": "fixed",
+                "time": {
+                  "hour": 9,
+                  "minute": 0
+                }
+              },
+              {
+                "day": "2026-09-16",
+                "durationMinutes": 60,
+                "explanationCodes": [],
+                "id": "review",
+                "source": "fixed",
+                "time": {
+                  "hour": 14,
+                  "minute": 0
+                }
+              }
+            ],
+            "issues": [],
+            "strategy": "minimizeChanges"
+          }
+        ]
+      },
+      "pythonDiagnostics": {
+        "baselineHash": "68d51537e4ac8f2ab34501653f30dffa2a161523c8021605bbc8c6540bd2611c"
+      },
+      "review": {
+        "classification": "pending_a_review",
+        "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。"
+      },
+      "status": "mismatched"
+    },
+    {
+      "dartActual": {
+        "entries": [],
+        "issues": [
+          {
+            "blockedBy": [],
+            "code": "no_slot",
+            "explanationCodes": [],
+            "taskId": "none-task"
+          }
+        ]
+      },
+      "dartDiagnostics": {
+        "issues": [
+          {
+            "code": "no_slot",
+            "message": "No available slot for task: No block task",
+            "taskId": "none-task"
+          }
+        ]
+      },
+      "differences": [
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "entries.length",
+          "reason": "Python 当前会在空窗口回退到 08:00-20:00，需由 A 判定契约或实现归属。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": 1,
+          "classification": "pending_a_review",
+          "expected": 0,
+          "field": "issues.length",
+          "reason": "Python 当前会在空窗口回退到 08:00-20:00，需由 A 判定契约或实现归属。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "Python 当前会在空窗口回退到 08:00-20:00，需由 A 判定契约或实现归属。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "issues.length",
+          "reason": "Python 当前会在空窗口回退到 08:00-20:00，需由 A 判定契约或实现归属。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 1,
+          "classification": "pending_a_review",
+          "expected": 0,
+          "field": "taskOrder.length",
+          "reason": "Python 当前会在空窗口回退到 08:00-20:00，需由 A 判定契约或实现归属。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": {
+            "durationMinutes": 30,
+            "hour": 8,
+            "minute": 0
+          },
+          "classification": "pending_a_review",
+          "expected": null,
+          "field": "timeBlocks.none-task",
+          "reason": "Python 当前会在空窗口回退到 08:00-20:00，需由 A 判定契约或实现归属。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "Python 当前会在空窗口回退到 08:00-20:00，需由 A 判定契约或实现归属。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": "no_slot",
+          "classification": "pending_a_review",
+          "expected": "no_available_block",
+          "field": "issues[0].code",
+          "reason": "Python 当前会在空窗口回退到 08:00-20:00，需由 A 判定契约或实现归属。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "issues[0].explanationCodes.length",
+          "reason": "Python 当前会在空窗口回退到 08:00-20:00，需由 A 判定契约或实现归属。",
+          "runtime": "dart_vs_assertions"
+        }
+      ],
+      "id": "no-available-block-001",
+      "kind": "plan",
+      "name": "007-no-available-block.json",
+      "pythonActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 30,
+            "explanationCodes": [],
+            "id": "none-task",
+            "source": "planned",
+            "time": {
+              "hour": 8,
+              "minute": 0
+            }
+          }
+        ],
+        "issues": []
+      },
+      "pythonDiagnostics": {
+        "issues": []
+      },
+      "review": {
+        "classification": "pending_a_review",
+        "reason": "Python 当前会在空窗口回退到 08:00-20:00，需由 A 判定契约或实现归属。"
+      },
+      "status": "mismatched"
+    },
+    {
+      "dartActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "old-task",
+            "source": "planned",
+            "time": {
+              "hour": 8,
+              "minute": 0
+            }
+          }
+        ],
+        "issues": []
+      },
+      "dartDiagnostics": {
+        "issues": []
+      },
+      "differences": [
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "issues.length",
+          "reason": "确认跨日截止的逾期问题码在 Dart 和 Python 中是否一致。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "确认跨日截止的逾期问题码在 Dart 和 Python 中是否一致。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "issues[0].explanationCodes.length",
+          "reason": "确认跨日截止的逾期问题码在 Dart 和 Python 中是否一致。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "确认跨日截止的逾期问题码在 Dart 和 Python 中是否一致。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "issues.length",
+          "reason": "确认跨日截止的逾期问题码在 Dart 和 Python 中是否一致。",
+          "runtime": "dart_vs_assertions"
+        }
+      ],
+      "id": "overdue-001",
+      "kind": "plan",
+      "name": "008-overdue.json",
+      "pythonActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 60,
+            "explanationCodes": [],
+            "id": "old-task",
+            "source": "planned",
+            "time": {
+              "hour": 8,
+              "minute": 0
+            }
+          }
+        ],
+        "issues": [
+          {
+            "blockedBy": [],
+            "code": "overdue",
+            "explanationCodes": [],
+            "taskId": "old-task"
+          }
+        ]
+      },
+      "pythonDiagnostics": {
+        "issues": [
+          {
+            "code": "overdue",
+            "message": "Task due before the requested day: Overdue task",
+            "taskId": "old-task"
+          }
+        ]
+      },
+      "review": {
+        "classification": "pending_a_review",
+        "reason": "确认跨日截止的逾期问题码在 Dart 和 Python 中是否一致。"
+      },
+      "status": "mismatched"
+    },
+    {
+      "dartActual": {
+        "finalState": {
+          "entryIds": [
+            "focus"
+          ],
+          "errorCode": "apply_failed",
+          "exact": true,
+          "originalPlanPreserved": true,
+          "status": "rolled_back",
+          "timeBlocks": {
+            "focus": {
+              "durationMinutes": 60,
+              "hour": 9,
+              "minute": 0
+            }
+          }
+        }
+      },
+      "dartDiagnostics": {
+        "operation": "apply",
+        "writerEvents": [
+          {
+            "id": "focus",
+            "operation": "upsert",
+            "phase": "apply"
+          },
+          {
+            "id": "urgent",
+            "operation": "upsert",
+            "phase": "apply"
+          },
+          {
+            "id": "focus",
+            "operation": "upsert",
+            "phase": "rollback"
+          },
+          {
+            "id": "urgent",
+            "operation": "remove",
+            "phase": "rollback"
+          }
+        ]
+      },
+      "differences": [],
+      "id": "apply-rollback-001",
+      "kind": "transaction",
+      "name": "009-apply-rollback.json",
+      "pythonActual": {
+        "finalState": {
+          "entryIds": [
+            "focus"
+          ],
+          "errorCode": "apply_failed",
+          "exact": true,
+          "originalPlanPreserved": true,
+          "status": "rolled_back",
+          "timeBlocks": {
+            "focus": {
+              "durationMinutes": 60,
+              "hour": 9,
+              "minute": 0
+            }
+          }
+        }
+      },
+      "pythonDiagnostics": {
+        "operation": "apply",
+        "writerEvents": [
+          {
+            "id": "focus",
+            "operation": "upsert",
+            "phase": "apply"
+          },
+          {
+            "id": "urgent",
+            "operation": "upsert",
+            "phase": "apply"
+          },
+          {
+            "id": "focus",
+            "operation": "upsert",
+            "phase": "rollback"
+          },
+          {
+            "id": "urgent",
+            "operation": "remove",
+            "phase": "rollback"
+          }
+        ]
+      },
+      "review": {
+        "classification": "pending_a_review",
+        "reason": "应用写入失败后必须恢复 before 快照，并保留原始错误。"
+      },
+      "status": "matched"
+    },
+    {
+      "dartActual": {
+        "finalState": {
+          "entryIds": [
+            "focus"
+          ],
+          "exact": true,
+          "originalPlanPreserved": true,
+          "status": "restored",
+          "timeBlocks": {
+            "focus": {
+              "durationMinutes": 60,
+              "hour": 9,
+              "minute": 0
+            }
+          }
+        }
+      },
+      "dartDiagnostics": {
+        "operation": "undo",
+        "writerEvents": [
+          {
+            "id": "focus",
+            "operation": "upsert",
+            "phase": "undo"
+          },
+          {
+            "id": "urgent",
+            "operation": "remove",
+            "phase": "undo"
+          }
+        ]
+      },
+      "differences": [],
+      "id": "undo-restore-001",
+      "kind": "transaction",
+      "name": "010-undo-restore.json",
+      "pythonActual": {
+        "finalState": {
+          "entryIds": [
+            "focus"
+          ],
+          "exact": true,
+          "originalPlanPreserved": true,
+          "status": "restored",
+          "timeBlocks": {
+            "focus": {
+              "durationMinutes": 60,
+              "hour": 9,
+              "minute": 0
+            }
+          }
+        }
+      },
+      "pythonDiagnostics": {
+        "operation": "undo",
+        "writerEvents": [
+          {
+            "id": "focus",
+            "operation": "upsert",
+            "phase": "undo"
+          },
+          {
+            "id": "urgent",
+            "operation": "remove",
+            "phase": "undo"
+          }
+        ]
+      },
+      "review": {
+        "classification": "pending_a_review",
+        "reason": "撤销救援后计划必须逐字段恢复到接受救援前的快照。"
+      },
+      "status": "matched"
+    },
+    {
+      "dartActual": {
+        "finalState": {
+          "entryIds": [
+            "focus"
+          ],
+          "errorCode": "timeout",
+          "originalPlanPreserved": true,
+          "partialWrites": false,
+          "status": "timeout",
+          "timeout": true
+        }
+      },
+      "dartDiagnostics": {
+        "attemptedEntryIds": [
+          "focus",
+          "urgent"
+        ],
+        "simulateDelayMs": 100,
+        "timeoutMs": 25
+      },
+      "differences": [],
+      "id": "timeout-001",
+      "kind": "boundary",
+      "name": "011-timeout.json",
+      "pythonActual": {
+        "finalState": {
+          "entryIds": [
+            "focus"
+          ],
+          "errorCode": "timeout",
+          "originalPlanPreserved": true,
+          "partialWrites": false,
+          "status": "timeout",
+          "timeout": true
+        }
+      },
+      "pythonDiagnostics": {
+        "attemptedEntryIds": [
+          "focus",
+          "urgent"
+        ],
+        "simulateDelayMs": 100,
+        "timeoutMs": 25
+      },
+      "review": {
+        "classification": "pending_a_review",
+        "reason": "超时适配器只比较状态不变量，不伪造不存在的调度输出。"
+      },
+      "status": "matched"
+    },
+    {
+      "dartActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 15,
+            "explanationCodes": [],
+            "id": "midnight",
+            "source": "planned",
+            "time": {
+              "hour": 0,
+              "minute": 0
+            }
+          },
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 1,
+            "explanationCodes": [],
+            "id": "day-end",
+            "source": "fixed",
+            "time": {
+              "hour": 23,
+              "minute": 58
+            }
+          }
+        ],
+        "issues": []
+      },
+      "dartDiagnostics": {
+        "issues": [],
+        "urgentDeadlineBoundary": {
+          "deadline": "2026-09-16T02:00:00.000",
+          "valid": true
+        }
+      },
+      "differences": [
+        {
+          "actual": 15,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "entries[0].durationMinutes",
+          "reason": "比较 00:00 和 23:59 前最后可用分钟的边界处理与时长换算。",
+          "runtime": "dart_vs_python"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "比较 00:00 和 23:59 前最后可用分钟的边界处理与时长换算。",
+          "runtime": "python_vs_assertions"
+        },
+        {
+          "actual": 0,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "explanationCodes.length",
+          "reason": "比较 00:00 和 23:59 前最后可用分钟的边界处理与时长换算。",
+          "runtime": "dart_vs_assertions"
+        },
+        {
+          "actual": 15,
+          "classification": "pending_a_review",
+          "expected": 1,
+          "field": "timeBlocks.midnight.durationMinutes",
+          "reason": "比较 00:00 和 23:59 前最后可用分钟的边界处理与时长换算。",
+          "runtime": "dart_vs_assertions"
+        }
+      ],
+      "id": "boundary-time-001",
+      "kind": "plan",
+      "name": "012-boundary-time.json",
+      "pythonActual": {
+        "entries": [
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 1,
+            "explanationCodes": [],
+            "id": "midnight",
+            "source": "planned",
+            "time": {
+              "hour": 0,
+              "minute": 0
+            }
+          },
+          {
+            "day": "2026-09-16",
+            "durationMinutes": 1,
+            "explanationCodes": [],
+            "id": "day-end",
+            "source": "fixed",
+            "time": {
+              "hour": 23,
+              "minute": 58
+            }
+          }
+        ],
+        "issues": []
+      },
+      "pythonDiagnostics": {
+        "issues": [],
+        "urgentDeadlineBoundary": {
+          "deadline": "2026-09-16T17:00:00",
+          "valid": true
+        }
+      },
+      "review": {
+        "classification": "pending_a_review",
+        "reason": "比较 00:00 和 23:59 前最后可用分钟的边界处理与时长换算。"
+      },
+      "status": "mismatched"
+    }
+  ],
+  "schemaVersion": "scheduling/v1",
+  "summary": {
+    "invalid": 0,
+    "matched": 3,
+    "mismatched": 9,
+    "total": 12
+  }
+}
