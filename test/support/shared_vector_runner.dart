@@ -360,9 +360,7 @@ Future<_RunResult> _runTransaction(SharedJson request) async {
     throw const FormatException('transaction operation is required');
   }
 
-  final state = <String, ScheduleEntry>{
-    ...(operation == 'undo' ? afterById : beforeById),
-  };
+  final state = <String, ScheduleEntry>{...beforeById};
   final writerEvents = <SharedJson>[];
   final failAt = request['failAt'];
   final failureCode = request['failureCode'] as String? ?? 'apply_failed';
