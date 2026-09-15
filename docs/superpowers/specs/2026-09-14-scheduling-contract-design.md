@@ -1,7 +1,7 @@
 # Scheduling Contract v1 Design
 
 > **Status:** v1 contract boundary, splitting, and risk output implemented and verified
-> **Owner:** Member A  
+> **Owner:** Member A
 > **Scope:** `/schedule/replan` input/output and the Dart/Python scheduling boundary
 
 ## Goal
