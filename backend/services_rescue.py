@@ -1,10 +1,8 @@
-"""Rescue service layer: pure computation for the remote schedule-rescue flow.
+"""Pure rescue application service composed from the scheduling core.
 
-No network access and no database side effects live here. The three rescue
-strategies mirror the Flutter client's `ScheduleRescueService.propose`
-(lib/services/scheduling/schedule_rescue.dart) by composing the same inputs
-into the existing `plan_schedule` engine, so Dart and Python stay consistent
-until the SchedulerCore convergence work (P1 items 1-3) lands.
+No network access or persistence side effects live here. Persistence adapters
+own rescue transactions; this service only composes candidate plans, metrics,
+and recommendation diagnostics.
 """
 
 from __future__ import annotations
@@ -15,6 +13,7 @@ import json
 from typing import Any
 
 from .schemas import ENERGY_TIERS, RESCUE_STRATEGIES
+from .scheduling.rescue import RescueStrategy
 from .scheduling.rescue_scoring import load_strategy_config, metrics_for_plan, score_plan
 from .services_scheduling import plan_schedule
 
@@ -418,10 +417,8 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
                 "movedEntryCount": len(moved_ids),
                 "recoveryMinutes": recovery_minutes,
                 "issueCount": len(plan.get("issues") or []),
-                "hardIssueCount": sum(
-                    1
-                    for issue in plan.get("issues") or []
-                    if issue.get("code") in {"no_slot", "dependency_blocked", "fixed_conflict"}
+                "hardIssueCount": RescueStrategy.hard_issue_count(
+                    plan.get("issues") or []
                 ),
                 "score": score_plan(score_config.strategies[strategy], metrics),
                 "scoreBreakdown": metrics.as_contract_dict(),
@@ -431,15 +428,8 @@ def build_options(request: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
-    if options:
-        recommended_index = min(
-            range(len(options)),
-            key=lambda i: (
-                options[i]["hardIssueCount"],
-                -options[i]["score"],
-                i,
-            ),
-        )
+    recommended_index = RescueStrategy.recommended_index(options)
+    if recommended_index is not None:
         options[recommended_index]["recommended"] = True
 
     return {

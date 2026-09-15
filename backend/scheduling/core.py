@@ -1,577 +1,283 @@
+"""Pure scheduling orchestration."""
+
 from __future__ import annotations
 
-from datetime import date, datetime
 from typing import Any
 
-
-_EXPLANATION_CODE_ORDER = (
-    "deadline_proximity",
-    "priority",
-    "energy_fit",
-    "kept_baseline",
-    "fixed_conflict",
+from .constraints import (
+    ConstraintEngine,
+    consume_interval,
+    due_minutes_for_day,
+    earliest_start_minutes,
+    merge_busy,
+    next_chunk_duration,
+    subtract,
+)
+from .explanations import (
+    ExplanationBuilder,
+    ordered_explanation_codes,
+    task_explanation_codes,
+)
+from .normalization import (
+    InputNormalizer,
+    NormalizedRequest,
+    duration_from_height,
+    height_from_duration,
+    minutes_to_time,
+    parse_day,
+    parse_datetime,
+    task_id,
+    time_to_minutes,
+)
+from .ranking import TaskRanker, task_sort_key
+from .scoring import (
+    PlacementScorer,
+    load_penalty,
+    palette,
+    score_placement,
+    task_duration,
 )
 
 
-def _ordered_explanation_codes(codes: object) -> list[str]:
-    if not isinstance(codes, list):
-        return []
-    values = {str(code) for code in codes}
-    return [code for code in _EXPLANATION_CODE_ORDER if code in values]
+class SchedulerCore:
+    """Pure scheduling facade composed from focused computation components."""
 
+    def __init__(
+        self,
+        *,
+        normalizer: InputNormalizer | None = None,
+        constraints: ConstraintEngine | None = None,
+        ranker: TaskRanker | None = None,
+        scorer: PlacementScorer | None = None,
+        explanations: ExplanationBuilder | None = None,
+    ) -> None:
+        self._normalizer = normalizer if normalizer is not None else InputNormalizer()
+        self._constraints = constraints if constraints is not None else ConstraintEngine()
+        self._ranker = ranker if ranker is not None else TaskRanker()
+        self._scorer = scorer if scorer is not None else PlacementScorer()
+        self._explanations = (
+            explanations if explanations is not None else ExplanationBuilder()
+        )
 
-def _time_to_minutes(value: object) -> int:
-    if isinstance(value, dict):
-        hour = int(value.get("hour", 0) or 0)
-        minute = int(value.get("minute", 0) or 0)
-        return hour * 60 + minute
-    return 0
+    def plan(self, request: dict[str, Any]) -> dict[str, Any]:
+        normalized = self._normalizer.normalize(request)
+        return self._plan_normalized(normalized)
 
+    def _plan_normalized(self, request: NormalizedRequest) -> dict[str, Any]:
+        day = request.day
+        energy = request.energy
+        tuning = request.tuning
+        fixed_entries = request.fixed_entries
+        fixed_blocks = request.fixed_blocks
+        supplied_windows = list(request.windows)
 
-def _minutes_to_time(minutes: int) -> dict[str, int]:
-    minutes = max(0, min(24 * 60 - 1, minutes))
-    return {"hour": minutes // 60, "minute": minutes % 60}
+        fixed_conflicts = self._constraints.fixed_conflicts(
+            fixed_blocks,
+            supplied_windows,
+        )
+        slots = self._constraints.free_slots(supplied_windows, fixed_blocks)
+        tasks = self._ranker.rank(request.tasks, day)
 
+        entries: list[dict[str, Any]] = []
+        issues: list[dict[str, Any]] = []
+        for index in sorted(fixed_conflicts):
+            issues.append(
+                self._explanations.fixed_conflict(task_id(fixed_entries[index], index))
+            )
 
-def _parse_day(value: object) -> str | None:
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value.date().isoformat()
-    if isinstance(value, date):
-        return value.isoformat()
-    if isinstance(value, str):
-        text = value.strip()
-        if not text:
-            return None
-        return text.split("T", 1)[0]
-    return None
+        fixed_ids = {
+            task_id(entry, index) for index, entry in enumerate(fixed_entries)
+        }
+        task_by_id = {task_id(task, index): task for index, task in enumerate(tasks)}
+        pending = list(enumerate(tasks))
+        placed_ids = set(fixed_ids)
+        failed_ids: set[str] = set()
 
+        while pending:
+            progressed = False
+            next_pending: list[tuple[int, dict[str, Any]]] = []
+            for index, task in pending:
+                current_task_id = task_id(task, index)
+                if current_task_id in fixed_ids:
+                    progressed = True
+                    continue
 
-def _parse_datetime(value: object | None) -> datetime | None:
-    if value is None:
-        return None
-    if isinstance(value, datetime):
-        return value
-    if isinstance(value, str):
-        text = value.strip()
-        if not text:
-            return None
-        try:
-            if text.endswith("Z"):
-                text = text[:-1] + "+00:00"
-            return datetime.fromisoformat(text)
-        except ValueError:
-            return None
-    return None
+                blocked_by, unresolved = self._constraints.blocked_dependencies(
+                    task,
+                    placed_ids,
+                    set(task_by_id),
+                    failed_ids,
+                )
+                if unresolved:
+                    issues.append(
+                        self._explanations.dependency_blocked(
+                            current_task_id,
+                            blocked_by,
+                        )
+                    )
+                    failed_ids.add(current_task_id)
+                    progressed = True
+                    continue
+                if blocked_by:
+                    next_pending.append((index, task))
+                    continue
 
+                duration = self._scorer.task_duration(task, energy, tuning)
+                splittable = bool(task.get("splittable"))
+                minimum_chunk = int(task.get("minimumChunkMinutes") or 15)
+                earliest_minutes = self._constraints.earliest_start(task, day)
+                due_minutes = self._constraints.due_minutes(task, day)
+                slots_before_task = list(slots)
+                chunks: list[tuple[int, int]] = []
+                remaining = duration
+                while remaining > 0:
+                    chunk_duration = (
+                        self._constraints.next_chunk(
+                            remaining,
+                            minimum_chunk,
+                            slots,
+                            earliest_start=earliest_minutes,
+                        )
+                        if splittable
+                        else remaining
+                    )
+                    if chunk_duration is None:
+                        break
+                    start = self._scorer.pick_slot(
+                        slots,
+                        chunk_duration,
+                        earliest_minutes,
+                        due_minutes,
+                        bool(task.get("hardDeadline")),
+                        energy,
+                        task.get("load"),
+                        tuning,
+                    )
+                    if start is None:
+                        break
+                    chunks.append((start, chunk_duration))
+                    self._constraints.consume(
+                        slots,
+                        (start, start + chunk_duration),
+                    )
+                    remaining -= chunk_duration
 
-def _duration_from_height(height: float) -> int:
-    return max(1, min(24 * 60, round((height / 80.0) * 60.0)))
+                if remaining > 0:
+                    slots[:] = slots_before_task
+                    issues.append(
+                        self._explanations.no_slot(
+                            current_task_id,
+                            task.get("title", ""),
+                            due=task.get("due"),
+                            hard_deadline=bool(task.get("hardDeadline")),
+                        )
+                    )
+                    if due_minutes is not None and due_minutes < 0:
+                        issues.append(
+                            self._explanations.overdue(
+                                current_task_id,
+                                task.get("title", ""),
+                            )
+                        )
+                    failed_ids.add(current_task_id)
+                    progressed = True
+                    continue
 
+                entry = self._explanations.planned_entry(
+                    task,
+                    current_task_id,
+                    day,
+                    duration,
+                    chunks[-1][0],
+                    energy,
+                )
+                for chunk_index, (start, chunk_duration) in enumerate(chunks, start=1):
+                    chunk_entry = dict(entry)
+                    chunk_entry["id"] = (
+                        current_task_id
+                        if not splittable
+                        else f"{current_task_id}#{chunk_index}"
+                    )
+                    chunk_entry["height"] = height_from_duration(chunk_duration)
+                    chunk_entry["time"] = minutes_to_time(start)
+                    entries.append(chunk_entry)
+                placed_ids.add(current_task_id)
+                progressed = True
 
-def _height_from_duration(minutes: int) -> float:
-    return round((minutes / 60.0) * 80.0, 2)
+                due = parse_datetime(task.get("due"))
+                if due is not None and due_minutes is not None:
+                    if due_minutes < 0:
+                        issues.append(
+                            self._explanations.overdue(
+                                current_task_id,
+                                entry["title"],
+                            )
+                        )
+                    elif chunks[-1][0] + chunks[-1][1] > due_minutes:
+                        issues.append(
+                            self._explanations.miss_due(
+                                current_task_id,
+                                entry["title"],
+                            )
+                        )
 
+            if not progressed:
+                for index, task in next_pending:
+                    current_task_id = task_id(task, index)
+                    blocked_by = [
+                        str(dependency)
+                        for dependency in (task.get("dependsOn") or [])
+                        if str(dependency) not in placed_ids
+                    ]
+                    issues.append(
+                        self._explanations.dependency_blocked(
+                            current_task_id,
+                            blocked_by,
+                        )
+                    )
+                    failed_ids.add(current_task_id)
+                break
+            pending = next_pending
 
-def _load_penalty(load: object, energy: object, tuning: dict[str, Any]) -> float:
-    if energy not in {"low", "veryLow"}:
-        return 1.0
-    if load == "high":
-        return float(tuning.get("highLoadPenaltyWhenLowEnergy") or 1.2)
-    if load == "medium":
-        return 1.05
-    return 1.0
-
-
-def _task_duration(task: dict[str, Any], energy: object, tuning: dict[str, Any]) -> int:
-    duration = int(task.get("durationMinutes") or 0)
-    if duration <= 0:
-        duration = 15
-
-    load = task.get("load")
-    tag = str(task.get("tag") or "")
-    multipliers = tuning.get("tagDurationMultiplier") if isinstance(tuning, dict) else {}
-    tag_multiplier = 1.0
-    if isinstance(multipliers, dict):
-        raw = multipliers.get(tag)
-        if isinstance(raw, (int, float)):
-            tag_multiplier = float(raw)
-
-    base = duration * float(tuning.get("defaultDurationMultiplier") or 1.0)
-    base *= tag_multiplier
-    base *= _load_penalty(load, energy, tuning)
-    return max(1, round(base))
-
-
-def _task_priority(task: dict[str, Any], current_day: str | None) -> tuple:
-    priority = int(task.get("priority") or 3)
-    duration = max(1, int(task.get("durationMinutes") or 15))
-    due = _parse_datetime(task.get("due"))
-    due_rank = 2
-    due_minutes = 10**9
-    if due is not None:
-        if current_day is not None and due.date().isoformat() == current_day:
-            due_rank = 0
-            due_minutes = due.hour * 60 + due.minute
-        else:
-            due_rank = 1
-            due_minutes = int(due.timestamp() // 60)
-    return (due_rank, due_minutes, -priority, -duration, str(task.get("id") or ""))
-
-
-def _task_id(task: dict[str, Any], index: int) -> str:
-    return str(task.get("id") or f"plan_{index}")
-
-
-def _explanation_codes(task: dict[str, Any], energy: object) -> list[str]:
-    codes = ["deadline_proximity"] if task.get("due") else []
-    codes.append("priority")
-    target_load = {
-        "veryLow": "low",
-        "low": "low",
-        "medium": "medium",
-        "high": "high",
-        "veryHigh": "high",
-    }.get(str(energy))
-    if target_load is not None and task.get("load") == target_load:
-        codes.append("energy_fit")
-    return _ordered_explanation_codes(codes)
-
-
-def _due_minutes_for_day(task: dict[str, Any], current_day: str | None) -> int | None:
-    due = _parse_datetime(task.get("due"))
-    if due is None or current_day is None:
-        return None
-    if due.date().isoformat() == current_day:
-        return due.hour * 60 + due.minute
-    if due.date().isoformat() < current_day:
-        return -1
-    return None
-
-
-def _pick_slot(
-    free: list[tuple[int, int]],
-    duration: int,
-    earliest_start: int | None,
-    due_minutes: int | None,
-    hard_deadline: bool,
-    energy: object,
-    load: object,
-    tuning: dict[str, Any],
-) -> int | None:
-    def first_candidate() -> int | None:
-        for start, end in free:
-            candidate = max(start, earliest_start if earliest_start is not None else start)
-            if candidate + duration <= end:
-                return candidate
-        return None
-
-    best_start: int | None = None
-    best_score = float("-inf")
-    for start, end in free:
-        candidate = max(start, earliest_start if earliest_start is not None else start)
-        if candidate + duration > end:
-            continue
-        if due_minutes is not None and (due_minutes < 0 or candidate + duration > due_minutes):
-            continue
-        score = _score_placement(candidate, energy, load, tuning)
-        if score > best_score:
-            best_score = score
-            best_start = candidate
-    if best_start is not None:
-        return best_start
-    if hard_deadline and due_minutes is not None:
-        return None
-    best_start: int | None = None
-    best_score = float("-inf")
-    for start, end in free:
-        candidate = max(start, earliest_start if earliest_start is not None else start)
-        if candidate + duration > end:
-            continue
-        score = _score_placement(candidate, energy, load, tuning)
-        if score > best_score:
-            best_score = score
-            best_start = candidate
-    return best_start if best_start is not None else first_candidate()
-
-
-def _score_placement(
-    start_minutes: int,
-    energy: object,
-    load: object,
-    tuning: dict[str, Any],
-) -> float:
-    hour = start_minutes // 60
-    is_morning = hour < 12
-    is_afternoon = 12 <= hour < 17
-    score = -start_minutes / 1000.0
-    if energy in {"high", "veryHigh"}:
-        if load == "high" and is_morning:
-            score += 5
-        if load == "medium" and is_afternoon:
-            score += 2
-        if load == "low":
-            score += 0.5
-    elif energy == "medium":
-        if load == "high" and is_morning:
-            score += 2
-        if load == "medium":
-            score += 2
-        if load == "low":
-            score += 1
-    else:
-        penalty = min(3.0, max(1.0, float(tuning.get("highLoadPenaltyWhenLowEnergy") or 1.0)))
-        extra = max(0.0, penalty - 1.0)
-        if load == "high":
-            score -= 5 * penalty
-            if is_morning:
-                score -= 2.0 * (1.0 + extra)
-        if load == "medium":
-            score -= 1
-        if load == "low":
-            score += 3
-    return score
-
-
-def _merge_busy(blocks: list[tuple[int, int]]) -> list[tuple[int, int]]:
-    merged: list[tuple[int, int]] = []
-    for start, end in sorted(blocks):
-        if end <= start:
-            continue
-        if not merged or start > merged[-1][1]:
-            merged.append((start, end))
-        else:
-            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-    return merged
-
-
-def _subtract(window: tuple[int, int], busy: list[tuple[int, int]]) -> list[tuple[int, int]]:
-    free: list[tuple[int, int]] = []
-    cursor = window[0]
-    for start, end in busy:
-        if end <= cursor:
-            continue
-        if start >= window[1]:
-            break
-        start = max(start, window[0])
-        end = min(end, window[1])
-        if start > cursor:
-            free.append((cursor, start))
-        cursor = max(cursor, end)
-    if cursor < window[1]:
-        free.append((cursor, window[1]))
-    return free
-
-
-def _consume_interval(intervals: list[tuple[int, int]], used: tuple[int, int]) -> None:
-    remaining: list[tuple[int, int]] = []
-    for interval in intervals:
-        remaining.extend(_subtract(interval, [used]))
-    intervals[:] = remaining
-
-
-def _palette(load: object) -> int:
-    palette = {
-        "high": 0xFFB42318,
-        "medium": 0xFF0F766E,
-        "low": 0xFF2563EB,
-    }
-    return palette.get(str(load or ""), 0xFF334155)
-
-
-def _next_chunk_duration(
-    remaining: int,
-    minimum_chunk: int,
-    slots: list[tuple[int, int]],
-    earliest_start: int | None = None,
-) -> int | None:
-    lengths = [
-        end - (start if earliest_start is None or start > earliest_start else earliest_start)
-        for start, end in slots
-    ]
-    lengths = [length for length in lengths if length > 0]
-    if any(length >= remaining for length in lengths):
-        return remaining
-    largest = max(lengths, default=0)
-    if largest < minimum_chunk:
-        return None
-    candidate = min(remaining, largest)
-    remainder = remaining - candidate
-    if 0 < remainder < minimum_chunk:
-        candidate = remaining - minimum_chunk
-    if candidate < minimum_chunk or candidate > largest:
-        return None
-    return candidate
+        entries.extend(
+            self._explanations.fixed_entry(
+                entry,
+                index,
+                day,
+                index in fixed_conflicts,
+            )
+            for index, entry in enumerate(fixed_entries)
+        )
+        entries.sort(key=lambda item: time_to_minutes(item.get("time")))
+        return {"entries": entries, "issues": issues}
 
 
 def _plan_schedule(request: dict[str, Any]) -> dict[str, Any]:
-    day = _parse_day(request.get("day"))
-    windows_raw = request.get("windows") or []
-    fixed_raw = request.get("fixed") or []
-    tasks_raw = request.get("tasks") or []
-    energy = request.get("energy") or "medium"
-    tuning = request.get("tuning") or {}
+    """Compatibility helper for code that used the old private function."""
 
-    busy_blocks: list[tuple[int, int]] = []
-    fixed_entries: list[dict[str, Any]] = []
-    fixed_blocks: list[tuple[int, int]] = []
-    for entry in fixed_raw:
-        if not isinstance(entry, dict):
-            continue
-        start = _time_to_minutes(entry.get("time"))
-        duration = int(entry.get("durationMinutes") or entry.get("minutes") or _duration_from_height(float(entry.get("height") or 80.0)))
-        fixed_blocks.append((start, start + max(1, duration)))
-        fixed_entries.append(entry)
-    fixed_pairs = sorted(
-        zip(fixed_entries, fixed_blocks),
-        key=lambda pair: (pair[1][0], str(pair[0].get("id") or "")),
-    )
-    fixed_entries = [entry for entry, _ in fixed_pairs]
-    fixed_blocks = [block for _, block in fixed_pairs]
-
-    supplied_windows: list[tuple[int, int]] = []
-    for window in windows_raw:
-        if not isinstance(window, dict):
-            continue
-        start = _time_to_minutes(window.get("start"))
-        end = _time_to_minutes(window.get("end"))
-        if end > start:
-            supplied_windows.append((start, end))
-
-    fixed_conflicts: set[int] = set()
-    for index, (start, end) in enumerate(fixed_blocks):
-        if not any(window_start <= start and end <= window_end for window_start, window_end in supplied_windows):
-            fixed_conflicts.add(index)
-        for other_index, (other_start, other_end) in enumerate(fixed_blocks):
-            if index != other_index and start < other_end and other_start < end:
-                fixed_conflicts.add(index)
-
-    # A conflicting fixed entry remains immutable and continues to occupy time;
-    # diagnostics must not make ordinary tasks overlap it.
-    busy_blocks.extend(fixed_blocks)
-
-    slots: list[tuple[int, int]] = []
-    for start, end in supplied_windows:
-        slots.extend(_subtract((start, end), _merge_busy(busy_blocks)))
-
-    tasks = [task for task in tasks_raw if isinstance(task, dict)]
-    tasks.sort(key=lambda task: _task_priority(task, day))
-
-    entries: list[dict[str, Any]] = []
-    issues: list[dict[str, Any]] = []
-    for index in sorted(fixed_conflicts):
-        fixed_id = _task_id(fixed_entries[index], index)
-        issues.append(
-            {
-                "code": "fixed_conflict",
-                "message": "Fixed entry overlaps another fixed entry or lies outside every work window",
-                "taskId": fixed_id,
-                "explanationCodes": ["fixed_conflict"],
-                "hard": True,
-            }
-        )
-    fixed_ids = {_task_id(entry, index) for index, entry in enumerate(fixed_entries)}
-    task_by_id = {_task_id(task, index): task for index, task in enumerate(tasks)}
-    pending = list(enumerate(tasks))
-    placed_ids = set(fixed_ids)
-    failed_ids: set[str] = set()
-    while pending:
-        progressed = False
-        next_pending: list[tuple[int, dict[str, Any]]] = []
-        for index, task in pending:
-            task_id = _task_id(task, index)
-            if task_id in fixed_ids:
-                progressed = True
-                continue
-            dependencies = [str(dep) for dep in (task.get("dependsOn") or [])]
-            blocked_by = [dep for dep in dependencies if dep not in placed_ids]
-            unknown = [dep for dep in blocked_by if dep not in task_by_id and dep not in fixed_ids]
-            failed = [dep for dep in blocked_by if dep in failed_ids]
-            if unknown or failed:
-                issues.append(
-                    {
-                        "code": "dependency_blocked",
-                        "message": "Task cannot be scheduled until its dependency is placed",
-                        "taskId": task_id,
-                        "blockedBy": blocked_by,
-                        "explanationCodes": [],
-                    }
-                )
-                failed_ids.add(task_id)
-                progressed = True
-                continue
-            if blocked_by:
-                next_pending.append((index, task))
-                continue
-
-            duration = _task_duration(task, energy, tuning)
-            splittable = bool(task.get("splittable"))
-            minimum_chunk = int(task.get("minimumChunkMinutes") or 15)
-            earliest = _parse_datetime(task.get("earliestStart"))
-            earliest_minutes = None
-            if earliest is not None and day is not None:
-                if earliest.date().isoformat() > day:
-                    earliest_minutes = 24 * 60
-                elif earliest.date().isoformat() == day:
-                    earliest_minutes = earliest.hour * 60 + earliest.minute
-            due_minutes = _due_minutes_for_day(task, day)
-            slots_before_task = list(slots)
-            chunks: list[tuple[int, int]] = []
-            remaining = duration
-            while remaining > 0:
-                chunk_duration = (
-                    _next_chunk_duration(
-                        remaining,
-                        minimum_chunk,
-                        slots,
-                        earliest_start=earliest_minutes,
-                    )
-                    if splittable
-                    else remaining
-                )
-                if chunk_duration is None:
-                    break
-                start = _pick_slot(
-                    slots,
-                    chunk_duration,
-                    earliest_minutes,
-                    due_minutes,
-                    bool(task.get("hardDeadline")),
-                    energy,
-                    task.get("load"),
-                    tuning,
-                )
-                if start is None:
-                    break
-                chunks.append((start, chunk_duration))
-                _consume_interval(slots, (start, start + chunk_duration))
-                remaining -= chunk_duration
-
-            if remaining > 0:
-                slots[:] = slots_before_task
-                issue_code = "no_slot"
-                issue = {
-                    "code": issue_code,
-                    "message": f"No time slot left for task: {task.get('title', '')}",
-                    "taskId": task_id,
-                    "explanationCodes": ["deadline_proximity"] if task.get("due") else [],
-                    "hard": bool(task.get("hardDeadline")),
-                }
-                issues.append(issue)
-                if due_minutes is not None and due_minutes < 0:
-                    issues.append(
-                        {
-                            "code": "overdue",
-                            "message": f"Task due before the requested day: {task.get('title', '')}",
-                            "taskId": task_id,
-                            "explanationCodes": ["deadline_proximity"],
-                        }
-                    )
-                failed_ids.add(task_id)
-                progressed = True
-                continue
-
-            entry = {
-                "id": task_id,
-                "day": day,
-                "title": str(task.get("title") or ""),
-                "tag": str(task.get("tag") or "Task"),
-                "load": task.get("load"),
-                "goalId": task.get("goalId"),
-                "goalTaskId": task.get("goalTaskId"),
-                "height": _height_from_duration(duration),
-                "color": _palette(task.get("load")),
-                "time": _minutes_to_time(start),
-                "reminderMinutesBefore": 10,
-                "repeat": "none",
-                "repeatUntil": None,
-                "source": "planned",
-                "explanationCodes": _explanation_codes(task, energy),
-            }
-            for chunk_index, (start, chunk_duration) in enumerate(chunks, start=1):
-                chunk_entry = dict(entry)
-                chunk_entry["id"] = task_id if not splittable else f"{task_id}#{chunk_index}"
-                chunk_entry["height"] = _height_from_duration(chunk_duration)
-                chunk_entry["time"] = _minutes_to_time(start)
-                entries.append(chunk_entry)
-            placed_ids.add(task_id)
-            progressed = True
-
-            due = _parse_datetime(task.get("due"))
-            if due is not None and due_minutes is not None:
-                if due_minutes < 0:
-                    issues.append(
-                        {
-                            "code": "overdue",
-                            "message": f"Task due before the requested day: {entry['title']}",
-                            "taskId": task_id,
-                            "explanationCodes": ["deadline_proximity"],
-                        }
-                    )
-                elif chunks[-1][0] + chunks[-1][1] > due_minutes:
-                    issues.append(
-                        {
-                            "code": "miss_due",
-                            "message": f"Task scheduled past due time: {entry['title']}",
-                            "taskId": task_id,
-                            "explanationCodes": ["deadline_proximity"],
-                        }
-                    )
-
-        if not progressed:
-            for index, task in next_pending:
-                task_id = _task_id(task, index)
-                blocked_by = [str(dep) for dep in (task.get("dependsOn") or []) if str(dep) not in placed_ids]
-                issues.append(
-                    {
-                        "code": "dependency_blocked",
-                        "message": "Task cannot be scheduled until its dependency is placed",
-                        "taskId": task_id,
-                        "blockedBy": blocked_by,
-                        "explanationCodes": [],
-                    }
-                )
-                failed_ids.add(task_id)
-            break
-        pending = next_pending
-
-    entries.extend(
-        {
-            "id": str(entry.get("id") or f"fixed_{index}"),
-            "day": entry.get("day") or day,
-            "title": str(entry.get("title") or ""),
-            "tag": str(entry.get("tag") or "Fixed"),
-            "load": entry.get("load"),
-            "goalId": entry.get("goalId"),
-            "goalTaskId": entry.get("goalTaskId"),
-            "height": float(entry.get("height") or 80.0),
-            "color": int(entry.get("color") or 0xFF64748B),
-            "time": entry.get("time") or {"hour": 0, "minute": 0},
-            "reminderMinutesBefore": int(entry.get("reminderMinutesBefore") or 10),
-            "repeat": str(entry.get("repeat") or "none"),
-            "repeatUntil": entry.get("repeatUntil"),
-            "source": "fixed",
-            "explanationCodes": _ordered_explanation_codes(
-                [
-                    *(
-                        entry.get("explanationCodes")
-                        if isinstance(entry.get("explanationCodes"), list)
-                        else []
-                    ),
-                    *(["fixed_conflict"] if index in fixed_conflicts else []),
-                ]
-            ),
-        }
-        for index, entry in enumerate(fixed_entries)
-    )
-
-    entries.sort(key=lambda item: _time_to_minutes(item.get("time")))
-    return {"entries": entries, "issues": issues}
+    return SchedulerCore().plan(request)
 
 
-class SchedulerCore:
-    """Pure scheduling facade used by API and rescue adapters."""
+# Private aliases preserve the old helper names for downstream adapters while the
+# implementation lives in focused modules.
+_time_to_minutes = time_to_minutes
+_minutes_to_time = minutes_to_time
+_parse_day = parse_day
+_parse_datetime = parse_datetime
+_duration_from_height = duration_from_height
+_height_from_duration = height_from_duration
+_load_penalty = load_penalty
+_task_duration = task_duration
+_task_priority = task_sort_key
+_task_id = task_id
+_explanation_codes = task_explanation_codes
+_due_minutes_for_day = due_minutes_for_day
+_merge_busy = merge_busy
+_subtract = subtract
+_consume_interval = consume_interval
+_palette = palette
+_next_chunk_duration = next_chunk_duration
+_score_placement = score_placement
 
-    def plan(self, request: dict[str, Any]) -> dict[str, Any]:
-        return _plan_schedule(request)
+
+__all__ = ["SchedulerCore"]
