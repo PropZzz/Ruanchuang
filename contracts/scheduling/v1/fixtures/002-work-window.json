@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "scheduling/v1",
+  "id": "work-window-001",
+  "kind": "plan",
+  "tags": ["work_window"],
+  "request": {
+    "day": "2026-09-16",
+    "energy": "medium",
+    "windows": [
+      {"start": {"hour": 13, "minute": 0}, "end": {"hour": 15, "minute": 0}}
+    ],
+    "fixed": [],
+    "tasks": [
+      {
+        "id": "window-task",
+        "title": "Window task",
+        "durationMinutes": 60,
+        "priority": 3,
+        "load": "medium",
+        "tag": "Routine"
+      }
+    ]
+  },
+  "assertions": {
+    "taskOrder": ["window-task"],
+    "timeBlocks": {
+      "window-task": {"hour": 13, "minute": 0, "durationMinutes": 60}
+    },
+    "issues": [],
+    "explanationCodes": ["work_window"]
+  },
+  "review": {
+    "classification": "pending_a_review",
+    "reason": "确认任务只落在声明的工作窗口内。"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "scheduling/v1",
+  "id": "overdue-001",
+  "kind": "plan",
+  "tags": ["overdue"],
+  "request": {
+    "day": "2026-09-16",
+    "energy": "medium",
+    "windows": [
+      {"start": {"hour": 8, "minute": 0}, "end": {"hour": 10, "minute": 0}}
+    ],
+    "fixed": [],
+    "tasks": [
+      {
+        "id": "old-task",
+        "title": "Overdue task",
+        "durationMinutes": 60,
+        "priority": 4,
+        "load": "medium",
+        "tag": "Follow-up",
+        "due": "2026-09-15T17:00:00"
+      }
+    ]
+  },
+  "assertions": {
+    "taskOrder": ["old-task"],
+    "timeBlocks": {
+      "old-task": {"hour": 8, "minute": 0, "durationMinutes": 60}
+    },
+    "issues": [
+      {
+        "code": "overdue",
+        "taskId": "old-task",
+        "blockedBy": [],
+        "explanationCodes": ["overdue"]
+      }
+    ],
+    "explanationCodes": ["overdue"]
+  },
+  "review": {
+    "classification": "pending_a_review",
+    "reason": "确认跨日截止的逾期问题码在 Dart 和 Python 中是否一致。"
+  }
+}

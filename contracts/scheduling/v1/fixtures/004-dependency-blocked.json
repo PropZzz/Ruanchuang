@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "scheduling/v1",
+  "id": "dependency-blocked-001",
+  "kind": "plan",
+  "tags": ["dependency_blocked"],
+  "request": {
+    "day": "2026-09-16",
+    "energy": "medium",
+    "windows": [
+      {"start": {"hour": 9, "minute": 0}, "end": {"hour": 10, "minute": 0}}
+    ],
+    "fixed": [],
+    "tasks": [
+      {
+        "id": "prerequisite",
+        "title": "Prerequisite",
+        "durationMinutes": 60,
+        "priority": 4,
+        "load": "medium",
+        "tag": "Setup"
+      },
+      {
+        "id": "blocked",
+        "title": "Blocked task",
+        "durationMinutes": 30,
+        "priority": 3,
+        "load": "low",
+        "tag": "Follow-up",
+        "dependsOn": ["prerequisite"]
+      }
+    ]
+  },
+  "assertions": {
+    "taskOrder": ["prerequisite"],
+    "timeBlocks": {
+      "prerequisite": {"hour": 9, "minute": 0, "durationMinutes": 60}
+    },
+    "issues": [
+      {
+        "code": "dependency_blocked",
+        "taskId": "blocked",
+        "blockedBy": ["prerequisite"],
+        "explanationCodes": ["dependency_blocked"]
+      }
+    ],
+    "explanationCodes": ["dependency_blocked"]
+  },
+  "review": {
+    "classification": "pending_a_review",
+    "reason": "当前 PlanTask 兼容输入保留 dependsOn，但两端是否执行依赖约束待 A 判定。"
+  }
+}

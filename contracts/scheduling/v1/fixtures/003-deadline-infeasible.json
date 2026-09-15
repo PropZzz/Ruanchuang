@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "scheduling/v1",
+  "id": "deadline-infeasible-001",
+  "kind": "plan",
+  "tags": ["deadline_infeasible"],
+  "request": {
+    "day": "2026-09-16",
+    "energy": "high",
+    "windows": [
+      {"start": {"hour": 9, "minute": 0}, "end": {"hour": 11, "minute": 0}}
+    ],
+    "fixed": [],
+    "tasks": [
+      {
+        "id": "too-late",
+        "title": "Too late task",
+        "durationMinutes": 90,
+        "priority": 5,
+        "load": "high",
+        "tag": "Urgent",
+        "due": "2026-09-16T09:30:00"
+      }
+    ]
+  },
+  "assertions": {
+    "taskOrder": ["too-late"],
+    "timeBlocks": {
+      "too-late": {"hour": 9, "minute": 0, "durationMinutes": 90}
+    },
+    "issues": [
+      {
+        "code": "deadline_infeasible",
+        "taskId": "too-late",
+        "blockedBy": [],
+        "explanationCodes": ["deadline_infeasible"]
+      }
+    ],
+    "explanationCodes": ["deadline_infeasible"]
+  },
+  "review": {
+    "classification": "pending_a_review",
+    "reason": "A 需要决定不可行截止应使用专用问题码还是 miss_due。"
+  }
+}

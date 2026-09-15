@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "scheduling/v1",
+  "id": "apply-rollback-001",
+  "kind": "transaction",
+  "tags": ["apply_rollback"],
+  "request": {
+    "operation": "apply",
+    "before": [
+      {
+        "id": "focus",
+        "day": "2026-09-16",
+        "title": "Focus",
+        "tag": "Work",
+        "load": "high",
+        "height": 80,
+        "color": 4278255360,
+        "time": {"hour": 9, "minute": 0}
+      }
+    ],
+    "after": [
+      {
+        "id": "focus",
+        "day": "2026-09-16",
+        "title": "Moved focus",
+        "tag": "Work",
+        "load": "high",
+        "height": 80,
+        "color": 4278255360,
+        "time": {"hour": 10, "minute": 0}
+      },
+      {
+        "id": "urgent",
+        "day": "2026-09-16",
+        "title": "Urgent",
+        "tag": "Urgent",
+        "load": "medium",
+        "height": 40,
+        "color": 4278190335,
+        "time": {"hour": 9, "minute": 0}
+      }
+    ],
+    "failAt": "urgent",
+    "failureCode": "apply_failed"
+  },
+  "assertions": {
+    "finalState": {
+      "status": "rolled_back",
+      "originalPlanPreserved": true,
+      "exact": true,
+      "errorCode": "apply_failed",
+      "entryIds": ["focus"],
+      "timeBlocks": {
+        "focus": {"hour": 9, "minute": 0, "durationMinutes": 60}
+      }
+    }
+  },
+  "review": {
+    "classification": "pending_a_review",
+    "reason": "应用写入失败后必须恢复 before 快照，并保留原始错误。"
+  }
+}

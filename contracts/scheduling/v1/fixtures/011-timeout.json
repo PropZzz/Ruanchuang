@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "scheduling/v1",
+  "id": "timeout-001",
+  "kind": "boundary",
+  "tags": ["timeout"],
+  "request": {
+    "operation": "apply",
+    "timeoutMs": 25,
+    "simulateDelayMs": 100,
+    "beforeEntryIds": ["focus"],
+    "afterEntryIds": ["focus", "urgent"]
+  },
+  "assertions": {
+    "finalState": {
+      "status": "timeout",
+      "timeout": true,
+      "originalPlanPreserved": true,
+      "partialWrites": false,
+      "errorCode": "timeout"
+    }
+  },
+  "review": {
+    "classification": "pending_a_review",
+    "reason": "超时适配器只比较状态不变量，不伪造不存在的调度输出。"
+  }
+}

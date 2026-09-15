@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "scheduling/v1",
+  "id": "fixed-conflict-001",
+  "kind": "plan",
+  "tags": ["fixed_conflict"],
+  "request": {
+    "day": "2026-09-16",
+    "energy": "medium",
+    "windows": [
+      {"start": {"hour": 8, "minute": 0}, "end": {"hour": 12, "minute": 0}}
+    ],
+    "fixed": [
+      {
+        "id": "fixed-standup",
+        "day": "2026-09-16",
+        "title": "Standup",
+        "tag": "Fixed",
+        "load": "medium",
+        "height": 80,
+        "color": 4278190335,
+        "time": {"hour": 9, "minute": 0}
+      }
+    ],
+    "tasks": [
+      {
+        "id": "focus",
+        "title": "Focus work",
+        "durationMinutes": 60,
+        "priority": 4,
+        "load": "high",
+        "tag": "Deep Work",
+        "due": "2026-09-16T12:00:00"
+      },
+      {
+        "id": "quick",
+        "title": "Quick review",
+        "durationMinutes": 30,
+        "priority": 2,
+        "load": "low",
+        "tag": "Routine"
+      }
+    ]
+  },
+  "assertions": {
+    "taskOrder": ["fixed-standup", "focus", "quick"],
+    "timeBlocks": {
+      "fixed-standup": {"hour": 9, "minute": 0, "durationMinutes": 60},
+      "focus": {"hour": 10, "minute": 0, "durationMinutes": 60},
+      "quick": {"hour": 11, "minute": 0, "durationMinutes": 30}
+    },
+    "issues": [],
+    "explanationCodes": []
+  },
+  "review": {
+    "classification": "pending_a_review",
+    "reason": "双端执行后确认固定块冲突消解和 canonical 顺序。"
+  }
+}

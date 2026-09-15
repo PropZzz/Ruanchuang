@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "scheduling/v1",
+  "id": "no-available-block-001",
+  "kind": "plan",
+  "tags": ["no_available_block"],
+  "request": {
+    "day": "2026-09-16",
+    "energy": "medium",
+    "windows": [],
+    "fixed": [],
+    "tasks": [
+      {
+        "id": "none-task",
+        "title": "No block task",
+        "durationMinutes": 30,
+        "priority": 3,
+        "load": "medium",
+        "tag": "Routine"
+      }
+    ]
+  },
+  "assertions": {
+    "taskOrder": [],
+    "timeBlocks": {},
+    "issues": [
+      {
+        "code": "no_available_block",
+        "taskId": "none-task",
+        "blockedBy": [],
+        "explanationCodes": ["no_available_block"]
+      }
+    ],
+    "explanationCodes": ["no_available_block"]
+  },
+  "review": {
+    "classification": "pending_a_review",
+    "reason": "Python 当前会在空窗口回退到 08:00-20:00，需由 A 判定契约或实现归属。"
+  }
+}

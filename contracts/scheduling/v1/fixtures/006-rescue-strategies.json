@@ -1,0 +1,116 @@
+{
+  "schemaVersion": "scheduling/v1",
+  "id": "rescue-strategies-001",
+  "kind": "rescue",
+  "tags": ["rescue_strategies"],
+  "request": {
+    "day": "2026-09-16",
+    "energy": "medium",
+    "windows": [
+      {"start": {"hour": 8, "minute": 0}, "end": {"hour": 12, "minute": 0}},
+      {"start": {"hour": 13, "minute": 30}, "end": {"hour": 18, "minute": 0}}
+    ],
+    "fixed": [],
+    "tuning": {
+      "defaultDurationMultiplier": 1.0,
+      "tagDurationMultiplier": {},
+      "highLoadPenaltyWhenLowEnergy": 1.0
+    },
+    "tasks": [
+      {
+        "id": "deep",
+        "title": "Deep work",
+        "durationMinutes": 90,
+        "priority": 3,
+        "load": "high",
+        "tag": "Deep Work"
+      },
+      {
+        "id": "review",
+        "title": "Review",
+        "durationMinutes": 60,
+        "priority": 2,
+        "load": "medium",
+        "tag": "Review"
+      }
+    ],
+    "urgentTask": {
+      "id": "urgent",
+      "title": "Urgent task",
+      "durationMinutes": 30,
+      "priority": 5,
+      "load": "medium",
+      "tag": "Urgent",
+      "due": "2026-09-16T11:00:00"
+    },
+    "currentEntries": [
+      {
+        "id": "deep",
+        "day": "2026-09-16",
+        "title": "Deep work",
+        "tag": "Deep Work",
+        "load": "high",
+        "height": 120,
+        "color": 4278255360,
+        "time": {"hour": 9, "minute": 0}
+      },
+      {
+        "id": "review",
+        "day": "2026-09-16",
+        "title": "Review",
+        "tag": "Review",
+        "load": "medium",
+        "height": 80,
+        "color": 4278190335,
+        "time": {"hour": 14, "minute": 0}
+      }
+    ],
+    "strategies": ["protectDeadline", "protectRecovery", "minimizeChanges"]
+  },
+  "assertions": {
+    "taskOrder": [],
+    "timeBlocks": {},
+    "issues": [],
+    "explanationCodes": [],
+    "strategies": [
+      {
+        "strategy": "protectDeadline",
+        "taskOrder": ["urgent", "deep", "review"],
+        "timeBlocks": {
+          "urgent": {"hour": 8, "minute": 0, "durationMinutes": 30},
+          "deep": {"hour": 8, "minute": 30, "durationMinutes": 90},
+          "review": {"hour": 13, "minute": 30, "durationMinutes": 60}
+        },
+        "issues": [],
+        "explanationCodes": ["protect_deadline"]
+      },
+      {
+        "strategy": "protectRecovery",
+        "taskOrder": ["urgent", "deep", "review", "rescue_recovery_2026-09-16"],
+        "timeBlocks": {
+          "urgent": {"hour": 8, "minute": 0, "durationMinutes": 30},
+          "deep": {"hour": 8, "minute": 30, "durationMinutes": 90},
+          "review": {"hour": 10, "minute": 0, "durationMinutes": 60},
+          "rescue_recovery_2026-09-16": {"hour": 13, "minute": 30, "durationMinutes": 15}
+        },
+        "issues": [],
+        "explanationCodes": ["protect_recovery"]
+      },
+      {
+        "strategy": "minimizeChanges",
+        "taskOrder": ["urgent", "deep", "review"],
+        "timeBlocks": {
+          "urgent": {"hour": 8, "minute": 0, "durationMinutes": 30},
+          "deep": {"hour": 9, "minute": 0, "durationMinutes": 90},
+          "review": {"hour": 14, "minute": 0, "durationMinutes": 60}
+        },
+        "issues": [],
+        "explanationCodes": ["minimize_changes"]
+      }
+    ]
+  },
+  "review": {
+    "classification": "pending_a_review",
+    "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。"
+  }
+}

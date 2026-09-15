@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "scheduling/v1",
+  "id": "boundary-time-001",
+  "kind": "plan",
+  "tags": ["boundary_time"],
+  "request": {
+    "day": "2026-09-16",
+    "energy": "medium",
+    "windows": [
+      {"start": {"hour": 0, "minute": 0}, "end": {"hour": 0, "minute": 2}},
+      {"start": {"hour": 23, "minute": 58}, "end": {"hour": 23, "minute": 59}}
+    ],
+    "fixed": [
+      {
+        "id": "day-end",
+        "day": "2026-09-16",
+        "title": "Day end marker",
+        "tag": "Boundary",
+        "load": "low",
+        "height": 1.333,
+        "color": 4278255360,
+        "time": {"hour": 23, "minute": 58}
+      }
+    ],
+    "tasks": [
+      {
+        "id": "midnight",
+        "title": "Midnight task",
+        "durationMinutes": 1,
+        "priority": 3,
+        "load": "low",
+        "tag": "Boundary",
+        "due": "2026-09-16T00:01:00"
+      }
+    ]
+  },
+  "assertions": {
+    "taskOrder": ["midnight", "day-end"],
+    "timeBlocks": {
+      "midnight": {"hour": 0, "minute": 0, "durationMinutes": 1},
+      "day-end": {"hour": 23, "minute": 58, "durationMinutes": 1}
+    },
+    "issues": [],
+    "explanationCodes": ["boundary_time"]
+  },
+  "review": {
+    "classification": "pending_a_review",
+    "reason": "比较 00:00 和 23:59 前最后可用分钟的边界处理与时长换算。"
+  }
+}

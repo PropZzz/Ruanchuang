@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "scheduling/v1",
+  "id": "undo-restore-001",
+  "kind": "transaction",
+  "tags": ["undo_restore"],
+  "request": {
+    "operation": "undo",
+    "before": [
+      {
+        "id": "focus",
+        "day": "2026-09-16",
+        "title": "Moved focus",
+        "tag": "Work",
+        "load": "high",
+        "height": 80,
+        "color": 4278255360,
+        "time": {"hour": 10, "minute": 0}
+      },
+      {
+        "id": "urgent",
+        "day": "2026-09-16",
+        "title": "Urgent",
+        "tag": "Urgent",
+        "load": "medium",
+        "height": 40,
+        "color": 4278190335,
+        "time": {"hour": 9, "minute": 0}
+      }
+    ],
+    "after": [
+      {
+        "id": "focus",
+        "day": "2026-09-16",
+        "title": "Focus",
+        "tag": "Work",
+        "load": "high",
+        "height": 80,
+        "color": 4278255360,
+        "time": {"hour": 9, "minute": 0}
+      }
+    ]
+  },
+  "assertions": {
+    "finalState": {
+      "status": "restored",
+      "originalPlanPreserved": true,
+      "exact": true,
+      "entryIds": ["focus"],
+      "timeBlocks": {
+        "focus": {"hour": 9, "minute": 0, "durationMinutes": 60}
+      }
+    }
+  },
+  "review": {
+    "classification": "pending_a_review",
+    "reason": "撤销救援后计划必须逐字段恢复到接受救援前的快照。"
+  }
+}
