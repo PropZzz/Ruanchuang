@@ -15,6 +15,8 @@ import pytest
 
 from scripts.scheduling_parity import (
     DartRunResult,
+    PythonFixtureResult,
+    build_report,
     compare_fixture,
     parse_dart_output,
     run_dart_runner,
@@ -149,6 +151,76 @@ def test_python_transaction_rejects_duplicate_entry_ids() -> None:
 
     assert result.invalid is True
     assert "duplicate id" in result.error
+
+
+def test_build_report_counts_fixture_review_classifications() -> None:
+    fixtures = [
+        {
+            "_fixtureName": "allowed.json",
+            "id": "allowed",
+            "kind": "transaction",
+            "review": {
+                "classification": "allowed_difference",
+                "reason": "same state",
+            },
+            "assertions": {"finalState": {"status": "ok"}},
+        },
+        {
+            "_fixtureName": "implementation.json",
+            "id": "implementation",
+            "kind": "transaction",
+            "review": {
+                "classification": "implementation_error",
+                "reason": "runtime differs",
+            },
+            "assertions": {"finalState": {"status": "ok"}},
+        },
+    ]
+    results = [
+        PythonFixtureResult(
+            name="allowed.json",
+            fixture_id="allowed",
+            kind="transaction",
+            actual={"finalState": {"status": "ok"}},
+        ),
+        PythonFixtureResult(
+            name="implementation.json",
+            fixture_id="implementation",
+            kind="transaction",
+            actual={"finalState": {"status": "different"}},
+        ),
+    ]
+    dart = DartRunResult(
+        stdout="",
+        stderr="",
+        returncode=0,
+        payload={
+            "fixtures": [
+                {
+                    "id": "allowed",
+                    "name": "allowed.json",
+                    "status": "matched",
+                    "actual": {"finalState": {"status": "ok"}},
+                },
+                {
+                    "id": "implementation",
+                    "name": "implementation.json",
+                    "status": "matched",
+                    "actual": {"finalState": {"status": "different"}},
+                },
+            ],
+            "invalid": 0,
+        },
+    )
+
+    report = build_report(fixtures, results, dart)
+
+    assert report["fixtureClassificationCounts"] == {
+        "allowed_difference": 1,
+        "contract_error": 0,
+        "implementation_error": 1,
+        "pending_a_review": 0,
+    }
 
 
 def test_report_exit_gate_rejects_pending_but_allows_explicit_allowed_difference() -> None:

@@ -902,9 +902,16 @@ def _markdown_report(report: Mapping[str, Any]) -> str:
         f"- mismatched：{summary.get('mismatched', 0)}",
         f"- invalid：{summary.get('invalid', 0)}",
         "",
-        "## A 分类统计",
-        "",
+    "## A 分类统计",
+    "",
     ]
+    fixture_classifications = report.get("fixtureClassificationCounts")
+    if isinstance(fixture_classifications, Mapping):
+        lines.append("按场景统计：")
+        for key in sorted(fixture_classifications):
+            lines.append(f"- {key}：{fixture_classifications[key]}")
+        lines.append("")
+    lines.append("按差异条数统计：")
     for key in sorted(classifications):
         lines.append(f"- {key}：{classifications[key]}")
     lines.extend(["", "## 逐场景结果", ""])
@@ -953,6 +960,9 @@ def build_report(
     python_map = {result.fixture_id or result.name: result for result in python_results}
     results: list[dict[str, Any]] = []
     classification_counts: dict[str, int] = {key: 0 for key in sorted(REVIEW_CLASSES)}
+    fixture_classification_counts: dict[str, int] = {
+        key: 0 for key in sorted(REVIEW_CLASSES)
+    }
     matched = mismatched = invalid = 0
 
     for fixture in fixtures:
@@ -960,6 +970,7 @@ def build_report(
         fixture_id = fixture.get("id") if isinstance(fixture.get("id"), str) else None
         kind = fixture.get("kind") if isinstance(fixture.get("kind"), str) else None
         review_class, review_reason = _review(fixture)
+        fixture_classification_counts[review_class] += 1
         result: dict[str, Any] = {
             "name": name,
             "id": fixture_id,
@@ -1021,6 +1032,7 @@ def build_report(
         "command": ["python", "scripts/scheduling_parity.py"],
         "summary": summary,
         "classificationCounts": classification_counts,
+        "fixtureClassificationCounts": fixture_classification_counts,
         "dart": {
             "returncode": dart_result.returncode,
             "invalid": dart_result.invalid,

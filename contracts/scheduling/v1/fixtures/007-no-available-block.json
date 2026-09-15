@@ -33,7 +33,7 @@
     "explanationCodes": ["no_available_block"]
   },
   "review": {
-    "classification": "pending_a_review",
-    "reason": "Python 当前会在空窗口回退到 08:00-20:00，需由 A 判定契约或实现归属。"
+    "classification": "implementation_error",
+    "reason": "无有效工作窗口时 Dart 报 no_slot，而 Python 私自回退到 08:00-20:00 并安排任务；该回退不符合工作窗口硬约束。原断言的 no_available_block 也应收敛为稳定 no_slot。"
   }
 }

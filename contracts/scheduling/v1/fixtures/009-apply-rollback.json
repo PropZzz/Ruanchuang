@@ -55,7 +55,7 @@
     }
   },
   "review": {
-    "classification": "pending_a_review",
-    "reason": "应用写入失败后必须恢复 before 快照，并保留原始错误。"
+    "classification": "allowed_difference",
+    "reason": "Dart 内存 persistence 适配器与 Python 事务观察器均恢复原计划并保留 apply_failed；该向量无可观察差异。"
   }
 }

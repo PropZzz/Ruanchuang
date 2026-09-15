@@ -44,7 +44,7 @@
     "explanationCodes": ["boundary_time"]
   },
   "review": {
-    "classification": "pending_a_review",
-    "reason": "比较 00:00 和 23:59 前最后可用分钟的边界处理与时长换算。"
+    "classification": "implementation_error",
+    "reason": "Python 保留 1 分钟边界时长，Dart 的 ScheduleEntry 高度最小值把 1 分钟任务扩大为 15 分钟；这是 Dart 边界时长转换错误，boundary_time 解释码也尚未实现。"
   }
 }

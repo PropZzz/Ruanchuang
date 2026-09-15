@@ -20,7 +20,7 @@
     }
   },
   "review": {
-    "classification": "pending_a_review",
-    "reason": "超时适配器只比较状态不变量，不伪造不存在的调度输出。"
+    "classification": "allowed_difference",
+    "reason": "两端均确定性报告 timeout、无部分写入并保留原计划；entryIds 等额外诊断字段不属于断言差异。"
   }
 }

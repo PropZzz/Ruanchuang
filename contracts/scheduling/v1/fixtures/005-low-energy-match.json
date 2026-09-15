@@ -39,7 +39,7 @@
     "explanationCodes": ["low_energy_match"]
   },
   "review": {
-    "classification": "pending_a_review",
-    "reason": "确认低精力排序是否优先低负荷任务且不改变任务时长。"
+    "classification": "implementation_error",
+    "reason": "Dart 按低负荷优先且保持 60 分钟；Python 按高优先级先排并把 high 任务放大到 72 分钟，违反低精力匹配与跨端规则。"
   }
 }

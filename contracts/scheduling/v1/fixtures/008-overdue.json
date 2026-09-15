@@ -38,7 +38,7 @@
     "explanationCodes": ["overdue"]
   },
   "review": {
-    "classification": "pending_a_review",
-    "reason": "确认跨日截止的逾期问题码在 Dart 和 Python 中是否一致。"
+    "classification": "implementation_error",
+    "reason": "Python 输出 overdue，Dart 没有跨日逾期问题；后端守则明确要求 overdue，Dart 端缺少该约束检查。"
   }
 }

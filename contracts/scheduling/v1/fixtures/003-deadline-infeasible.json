@@ -38,7 +38,7 @@
     "explanationCodes": ["deadline_infeasible"]
   },
   "review": {
-    "classification": "pending_a_review",
-    "reason": "A 需要决定不可行截止应使用专用问题码还是 miss_due。"
+    "classification": "contract_error",
+    "reason": "两端均按现有 miss_due 语义输出；后端守则列出的稳定问题码没有 deadline_infeasible，原断言使用了未定义问题码和解释码。"
   }
 }

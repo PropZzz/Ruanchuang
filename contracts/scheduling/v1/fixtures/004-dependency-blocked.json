@@ -46,7 +46,7 @@
     "explanationCodes": ["dependency_blocked"]
   },
   "review": {
-    "classification": "pending_a_review",
-    "reason": "当前 PlanTask 兼容输入保留 dependsOn，但两端是否执行依赖约束待 A 判定。"
+    "classification": "implementation_error",
+    "reason": "后端守则明确要求 dependency_blocked 和 blockedBy；当前 Dart/Python 都忽略 dependsOn，实际输出 no_slot/空 blockedBy，属于两端尚未实现契约。"
   }
 }

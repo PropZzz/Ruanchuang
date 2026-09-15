@@ -52,7 +52,7 @@
     }
   },
   "review": {
-    "classification": "pending_a_review",
-    "reason": "撤销救援后计划必须逐字段恢复到接受救援前的快照。"
+    "classification": "allowed_difference",
+    "reason": "Dart persistence 与 Python 撤销观察器均逐字段恢复原始快照；该向量无可观察差异。"
   }
 }

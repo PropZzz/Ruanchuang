@@ -30,7 +30,7 @@
     "explanationCodes": ["work_window"]
   },
   "review": {
-    "classification": "pending_a_review",
-    "reason": "确认任务只落在声明的工作窗口内。"
+    "classification": "contract_error",
+    "reason": "双端均把任务安排在 13:00-17:00 工作窗口内；work_window 不是现有稳定解释码，原断言的解释码要求超出契约。"
   }
 }

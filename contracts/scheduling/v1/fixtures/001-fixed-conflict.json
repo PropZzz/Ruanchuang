@@ -52,7 +52,7 @@
     "explanationCodes": []
   },
   "review": {
-    "classification": "pending_a_review",
-    "reason": "双端执行后确认固定块冲突消解和 canonical 顺序。"
+    "classification": "contract_error",
+    "reason": "双端实际结果一致；固定日程只占用 09:00-10:00，不要求任务全部排在固定块之后，原断言错误要求 focus 从 10:00 开始。"
   }
 }

@@ -63,3 +63,20 @@ python scripts/scheduling_parity.py
 比较器必须分别执行 Dart 和 Python，输出逐 fixture、逐 runtime、逐字段的
 差异报告。只要存在 `pending_a_review`、invalid 输出或未分类差异，就不能
 宣称两端一致，也不能为了消除报告而单独修改某一端的生产算法。
+
+## 2026-09-15 A 判定
+
+最近一次实际运行（Python 3.10.11、Flutter 3.38.7/Dart 3.10.7）执行全部 12 个
+fixture：`matched=3`、`mismatched=9`、`invalid=0`，命令因未获允许的差异返回
+非零。逐场景的 JSON/Markdown 证据在 `reports/shared-vector-diff.json` 和
+`reports/shared-vector-diff.md`。
+
+- `contract_error`：固定块前后顺序的过强断言、未定义的 `work_window`/
+  `deadline_infeasible` 解释/问题码，以及把非硬约束空档写死的救援断言。
+- `implementation_error`：依赖阻塞、低精力排序与时长、空窗口回退、逾期检查、
+  Dart 边界时长和 Python/Dart protectRecovery 时长未对齐。
+- `allowed_difference`：应用失败回滚、撤销恢复原计划、超时保留原计划；三项均
+  在两端观察到相同最终状态。
+
+这些分类是 A 对当前代码和守则的判断，不表示实现已经统一；在修复并重新运行
+报告前，禁止单独修改一端后宣称 Dart/Python 一致。

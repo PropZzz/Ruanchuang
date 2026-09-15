@@ -110,7 +110,7 @@
     ]
   },
   "review": {
-    "classification": "pending_a_review",
-    "reason": "三种救援策略需要逐策略比较顺序、时间块、问题码和解释码。"
+    "classification": "implementation_error",
+    "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。"
   }
 }
