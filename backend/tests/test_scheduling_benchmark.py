@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import time
 
+import pytest
+
 from scripts.scheduling_benchmark import (
     build_workload,
     evaluate_parity_gate,
@@ -23,6 +25,12 @@ def test_build_workload_is_seeded_and_has_requested_task_count() -> None:
     assert len(first["tasks"]) == 7
 
 
+@pytest.mark.parametrize("bad_seed", [None, "123", 1.5, True])
+def test_build_workload_rejects_non_integer_seed(bad_seed: object) -> None:
+    with pytest.raises(ValueError):
+        build_workload(1, seed=bad_seed)  # type: ignore[arg-type]
+
+
 def test_evaluate_parity_gate_blocks_mismatches_and_pending_review() -> None:
     report = {
         "summary": {"total": 2, "matched": 1, "mismatched": 1, "invalid": 0},
@@ -35,6 +43,33 @@ def test_evaluate_parity_gate_blocks_mismatches_and_pending_review() -> None:
     assert result["status"] == "blocked"
     assert "mismatched" in result["reasons"]
     assert "pending_a_review" in result["reasons"]
+
+
+def test_evaluate_parity_gate_requires_conserved_non_negative_counts() -> None:
+    report = {
+        "summary": {"total": 2, "matched": 1, "mismatched": 0, "invalid": 0},
+        "dart": {"invalid": False, "returncode": 0},
+        "classificationCounts": {"pending_a_review": 0},
+    }
+    assert evaluate_parity_gate(report)["status"] == "blocked"
+
+
+@pytest.mark.parametrize(
+    "summary",
+    [
+        {"total": 2, "matched": 1, "mismatched": 1, "invalid": -1},
+        {"total": 2, "matched": 2, "mismatched": 1, "invalid": 0},
+        {"total": 2, "matched": True, "mismatched": 1, "invalid": 0},
+        {"total": 2.0, "matched": 1, "mismatched": 1, "invalid": 0},
+    ],
+)
+def test_evaluate_parity_gate_rejects_invalid_summary_shape(summary: dict[str, object]) -> None:
+    report = {
+        "summary": summary,
+        "dart": {"invalid": False, "returncode": 0},
+        "classificationCounts": {"pending_a_review": 0},
+    }
+    assert evaluate_parity_gate(report)["status"] == "blocked"
 
 
 def test_summarize_samples_counts_outcomes_and_calculates_p50() -> None:
@@ -68,3 +103,15 @@ def test_measure_call_reports_exception_type_for_failure() -> None:
 
     assert result["status"] == "failure"
     assert result["errorType"] == "ValueError"
+
+
+def test_measure_call_requires_boolean_degradation_flags() -> None:
+    assert measure_call(lambda: {"fallback": "false"}, timeoutMs=100)["status"] == "success"
+
+
+def test_percentile_and_summary_reject_non_finite_or_boolean_durations() -> None:
+    with pytest.raises(ValueError):
+        percentile([1.0, float("nan")], 0.5)
+    summary = summarize_samples([{"status": "success", "durationMs": True}])
+    assert summary["successfulSampleCount"] == 1
+    assert summary["p50Ms"] is None

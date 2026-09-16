@@ -9,10 +9,19 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 import math
+import multiprocessing
+from pathlib import Path
+import pickle
 import random
+import sys
 import threading
 import time
 from typing import Any, Callable, Mapping, Sequence
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 # Imported here so later benchmark layers can use the same production
 # services.  The primitive functions below never invoke either service.
@@ -32,7 +41,10 @@ def percentile(samples: Sequence[float], quantile: float) -> float:
     if not math.isfinite(q) or not 0.0 <= q <= 1.0:
         raise ValueError("quantile must be between 0 and 1")
 
-    values = sorted(float(sample) for sample in samples)
+    try:
+        values = sorted(float(sample) for sample in samples)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("samples must contain finite numbers") from exc
     if any(not math.isfinite(value) for value in values):
         raise ValueError("samples must contain finite numbers")
     position = (len(values) - 1) * q
@@ -49,6 +61,8 @@ def build_workload(task_count: int, *, seed: int) -> dict[str, Any]:
 
     if isinstance(task_count, bool) or not isinstance(task_count, int) or task_count < 1:
         raise ValueError("task_count must be at least 1")
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise ValueError("seed must be an integer")
 
     rng = random.Random(seed)
     day = "2026-09-16"
@@ -131,8 +145,6 @@ def _as_count(value: object) -> int | None:
         return None
     if isinstance(value, int):
         return value
-    if isinstance(value, float) and value.is_integer() and math.isfinite(value):
-        return int(value)
     return None
 
 
@@ -147,28 +159,26 @@ def evaluate_parity_gate(report: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(summary_raw, Mapping):
         reasons.append("summary")
 
-    total: int | None = None
-    for key in ("total", "fixtures"):
-        if key in summary:
-            value = summary[key]
-            if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-                total = len(value)
-            else:
-                total = _as_count(value)
-            if total is None:
-                reasons.append(f"{key}")
-            break
+    total_key = "total" if "total" in summary else "fixtures"
+    total = _as_count(summary.get(total_key)) if total_key in summary else None
     if total is None:
-        reasons.append("total")
+        reasons.append("total" if total_key == "total" else "fixtures")
     elif total <= 0:
         reasons.append("total")
 
-    for key in ("mismatched", "invalid"):
-        value = _as_count(summary.get(key, 0))
-        if value is None:
+    counts: dict[str, int | None] = {}
+    for key in ("matched", "mismatched", "invalid"):
+        value = _as_count(summary.get(key)) if key in summary else None
+        counts[key] = value
+        if value is None or value < 0:
             reasons.append(key)
-        elif value > 0:
-            reasons.append(key)
+    if total is not None and all(value is not None for value in counts.values()):
+        if sum(value for value in counts.values() if value is not None) != total:
+            reasons.append("count_mismatch")
+    if counts["mismatched"] is not None and counts["mismatched"] > 0:
+        reasons.append("mismatched")
+    if counts["invalid"] is not None and counts["invalid"] > 0:
+        reasons.append("invalid")
 
     classifications_raw = report.get("classificationCounts") if isinstance(report, Mapping) else None
     classifications = (
@@ -176,8 +186,8 @@ def evaluate_parity_gate(report: Mapping[str, Any]) -> dict[str, Any]:
     )
     if not isinstance(classifications_raw, Mapping):
         reasons.append("classificationCounts")
-    pending = _as_count(classifications.get("pending_a_review", 0))
-    if pending is None:
+    pending = _as_count(classifications.get("pending_a_review"))
+    if pending is None or pending < 0:
         reasons.append("pending_a_review")
     elif pending > 0:
         reasons.append("pending_a_review")
@@ -186,13 +196,11 @@ def evaluate_parity_gate(report: Mapping[str, Any]) -> dict[str, Any]:
     dart = dart_raw if isinstance(dart_raw, Mapping) else {}
     if not isinstance(dart_raw, Mapping):
         reasons.append("dart")
-    if dart.get("invalid") is True:
-        reasons.append("dart_invalid")
-    elif dart.get("invalid") not in (False, None):
+    if dart.get("invalid") is not False:
         reasons.append("dart_invalid")
     if dart.get("error"):
         reasons.append("dart_error")
-    returncode = dart.get("returncode", 0)
+    returncode = dart.get("returncode")
     code = _as_count(returncode)
     if code is None:
         reasons.append("dart_returncode")
@@ -208,57 +216,116 @@ def evaluate_parity_gate(report: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def measure_call(
-    call: Callable[[], Any],
-    *,
-    timeoutMs: int,
-    clock: Callable[[], float] = time.perf_counter,
-) -> dict[str, Any]:
-    """Run ``call`` on a daemon thread and classify its outcome."""
+def _classify_value(value: Any) -> str:
+    if isinstance(value, Mapping) and (
+        value.get("degraded") is True or value.get("fallback") is True
+    ):
+        return "degraded"
+    return "success"
 
-    if isinstance(timeoutMs, bool) or not isinstance(timeoutMs, int) or timeoutMs < 0:
-        raise ValueError("timeoutMs must be non-negative")
+
+def _thread_call(call: Callable[[], Any], timeout_ms: int, clock: Callable[[], float]) -> dict[str, Any]:
     started = clock()
     outcome: dict[str, Any] = {}
 
     def invoke() -> None:
         try:
             outcome["value"] = call()
-        except Exception as exc:  # runner failures are data, not process errors
+        except BaseException as exc:  # runner failures are benchmark data
             outcome["exception"] = exc
 
     worker = threading.Thread(target=invoke, daemon=True)
     worker.start()
-    worker.join(timeoutMs / 1000.0)
-    duration_ms = max(0.0, (clock() - started) * 1000.0)
-    result: dict[str, Any] = {"durationMs": round(duration_ms, 3), "timeoutMs": timeoutMs}
+    worker.join(timeout_ms / 1000.0)
+    result: dict[str, Any] = {
+        "durationMs": round(max(0.0, (clock() - started) * 1000.0), 3),
+        "timeoutMs": timeout_ms,
+        "isolation": "thread",
+    }
     if worker.is_alive():
         result["status"] = "timeout"
-        return result
-    if "exception" in outcome:
+    elif "exception" in outcome:
         exc = outcome["exception"]
-        result.update(
-            {
-                "status": "failure",
-                "errorType": type(exc).__name__,
-                "error": str(exc),
-            }
-        )
-        return result
-
-    value = outcome.get("value")
-    result["result"] = value
-    if isinstance(value, Mapping) and (value.get("degraded") or value.get("fallback")):
-        result["status"] = "degraded"
+        result.update({"status": "failure", "errorType": type(exc).__name__, "error": str(exc)})
+    elif "value" not in outcome:
+        result.update({"status": "failure", "errorType": "WorkerError", "error": "worker exited without a value"})
     else:
-        result["status"] = "success"
+        value = outcome["value"]
+        result.update({"result": value, "status": _classify_value(value)})
     return result
+
+
+def _process_invoke(call: Callable[[], Any], output: Any) -> None:
+    try:
+        output.put(("value", call()))
+    except BaseException as exc:
+        try:
+            output.put(("exception", type(exc).__name__, str(exc)))
+        except BaseException:
+            pass
+
+
+def _process_call(call: Callable[[], Any], timeout_ms: int, clock: Callable[[], float]) -> dict[str, Any]:
+    context_name = "fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn"
+    context = multiprocessing.get_context(context_name)
+    output = context.Queue()
+    started = clock()
+    worker = context.Process(target=_process_invoke, args=(call, output), daemon=True)
+    try:
+        worker.start()
+    except BaseException:
+        output.close()
+        return _thread_call(call, timeout_ms, clock)
+    worker.join(timeout_ms / 1000.0)
+    timed_out = worker.is_alive()
+    if timed_out:
+        worker.terminate()
+        worker.join()
+    result: dict[str, Any] = {
+        "durationMs": round(max(0.0, (clock() - started) * 1000.0), 3),
+        "timeoutMs": timeout_ms,
+        "isolation": "process",
+    }
+    message: tuple[Any, ...] | None = None
+    try:
+        message = output.get(timeout=0.1) if not timed_out else None
+    except Exception:
+        message = None
+    output.close()
+    if timed_out:
+        result["status"] = "timeout"
+    elif message and message[0] == "exception":
+        result.update({"status": "failure", "errorType": message[1], "error": message[2]})
+    elif message and message[0] == "value":
+        result.update({"result": message[1], "status": _classify_value(message[1])})
+    else:
+        result.update({"status": "failure", "errorType": "WorkerError", "error": "worker exited without a value"})
+    return result
+
+
+def measure_call(
+    call: Callable[[], Any],
+    *,
+    timeoutMs: int,
+    clock: Callable[[], float] = time.perf_counter,
+) -> dict[str, Any]:
+    """Run a picklable call in a killable process, or a daemon thread fallback."""
+
+    if isinstance(timeoutMs, bool) or not isinstance(timeoutMs, int) or timeoutMs < 0:
+        raise ValueError("timeoutMs must be non-negative")
+    try:
+        pickle.dumps(call)
+    except Exception:
+        return _thread_call(call, timeoutMs, clock)
+    return _process_call(call, timeoutMs, clock)
 
 
 def _duration(sample: Mapping[str, Any]) -> float | None:
     value = sample.get("durationMs")
     if value is None:
         value = sample.get("duration_ms")
+    if isinstance(value, bool):
+        return None
     try:
         number = float(value)
     except (TypeError, ValueError):
