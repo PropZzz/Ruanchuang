@@ -4,9 +4,9 @@
 
 **Goal:** 在共享 parity 通过后提供可重复的 Python 调度基准，记录任务规模、规划/救援耗时、超时、失败、降级和三策略结果，并在当前 parity 未通过时生成明确的阻断报告。
 
-**Architecture:** `scripts/scheduling_benchmark.py` 是纯 Python CLI 和可注入的基准库。它读取 parity 机器报告作为门禁，使用固定种子生成单日任务夹具，在线程隔离调用现有 `plan_schedule` 与 `build_options`，用标准库计时/内存采样聚合结果，输出一次性 JSON/Markdown 报告。生产调度核心和 Dart/Python parity runner 不变。
+**Architecture:** `scripts/scheduling_benchmark.py` 是纯 Python CLI 和可注入的基准库。它读取 parity 机器报告作为门禁，使用固定种子生成单日任务夹具；对可 pickle 的调用优先使用可终止的独立 process 隔离，对不可 pickle 的调用回退到 thread，并在超时结果中标记 `timeoutUncancellable`。基准使用标准库计时/内存采样聚合结果，输出一次性 JSON/Markdown 报告。生产调度核心和 Dart/Python parity runner 不变。
 
-**Tech Stack:** Python 3.10、标准库 `argparse`/`dataclasses`/`random`/`threading`/`tracemalloc`/`time`/`json`、pytest 9.1。
+**Tech Stack:** Python 3.10、标准库 `argparse`/`dataclasses`/`random`/`multiprocessing`/`pickle`/`threading`/`tracemalloc`/`time`/`json`、pytest 9.1。
 
 ---
 
@@ -98,7 +98,7 @@ def evaluate_parity_gate(report: Mapping[str, Any]) -> dict[str, Any]:
 
 def measure_call(call: Callable[[], Any], *, timeoutMs: int,
                  clock: Callable[[], float] = time.perf_counter) -> dict[str, Any]:
-    """Run a pure call on a daemon thread and classify success/timeout/failure."""
+    """Use a killable process for pickleable calls, else thread fallback."""
 
 def summarize_samples(samples: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """Aggregate counts, P50/P95/P99, min/max and successful durations."""
@@ -106,7 +106,7 @@ def summarize_samples(samples: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 
 `percentile` rejects an empty sequence and quantiles outside `[0, 1]`; it sorts a copy and interpolates `(n - 1) * q`. `build_workload` validates `task_count >= 1`, uses `random.Random(seed)`, stable ids (`task-0000` etc.), two legal windows (`08:00-12:00`, `13:00-18:00`), deterministic fixed entries and a due-dated urgent task. It must return the same JSON-compatible value for the same inputs.
 
-`measure_call` records `durationMs`, `status`, `timeoutMs`, and an exception type/message for failures. A timeout is decided by `thread.join(timeoutMs / 1000)`, returns immediately with `status: timeout`, and does not mark the call as successful. A normal scheduling response containing `degraded: true` or `fallback: true` is classified as `degraded`; ordinary plan issues are not degradation.
+`measure_call` records `durationMs`, `status`, `timeoutMs`, and an exception type/message for failures. It first checks whether the callable can be serialized with pickle and, when so, runs it in a separate process that can be terminated after `timeoutMs`; otherwise it uses a daemon thread fallback. A process timeout returns immediately with `status: timeout`; a thread fallback also returns immediately but marks `timeoutUncancellable: true` because the running call cannot be forcibly stopped. Neither timeout is counted as successful. A normal scheduling response containing `degraded: true` or `fallback: true` is classified as `degraded`; ordinary plan issues are not degradation.
 
 `summarize_samples` counts `success`, `timeout`, `failure`, and `degraded`, computes P50/P95/P99 plus min/max from successful and degraded non-timeout durations, and reports `sampleCount` and `successfulSampleCount`. All duration values are rounded to three decimal milliseconds. `peakMemoryBytes` is the `tracemalloc` estimate of Python allocation growth during the call; `peakRssBytes` remains `null`/uncollected, with `rssSource: "unavailable"` (or `"parentPeakMemoryBytes"` only when explicitly derived from a parent-process memory value).
 
