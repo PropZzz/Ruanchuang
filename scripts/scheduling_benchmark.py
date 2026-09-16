@@ -810,13 +810,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--seed", type=int, default=20260916)
     parser.add_argument("--timeout-ms", type=int, default=1000, dest="timeout_ms")
-    parser.add_argument("--refresh-parity", action="store_true")
+    refresh_group = parser.add_mutually_exclusive_group()
+    refresh_group.add_argument("--refresh-parity", dest="refresh_parity", action="store_true")
+    refresh_group.add_argument("--no-refresh-parity", dest="refresh_parity", action="store_false")
+    parser.set_defaults(refresh_parity=True)
     args = parser.parse_args(argv)
     parity_path = args.parity_report if args.parity_report.is_absolute() else REPO_ROOT / args.parity_report
     refresh_error: str | None = None
     if args.refresh_parity:
         with tempfile.TemporaryDirectory(prefix="scheduling-parity-") as refresh_dir_name:
             refresh_dir = Path(refresh_dir_name)
+            fresh_path = refresh_dir / "shared-vector-diff.json"
             try:
                 refresh_result = subprocess.run(
                     [sys.executable, "scripts/scheduling_parity.py", "--reports-dir", str(refresh_dir)],
@@ -824,22 +828,26 @@ def main(argv: Sequence[str] | None = None) -> int:
                     check=False,
                 )
                 returncode = getattr(refresh_result, "returncode", 1)
+                parity_path = fresh_path
                 if returncode != 0:
                     refresh_error = f"parity refresh failed with returncode {returncode}"
-                else:
-                    parity_path = refresh_dir / "shared-vector-diff.json"
             except Exception as exc:
                 refresh_error = f"parity refresh failed: {exc}"
-            if not refresh_error:
+            fresh_parity: Mapping[str, Any] | None = None
+            if fresh_path.exists():
                 try:
-                    parity = json.loads(parity_path.read_text(encoding="utf-8"))
+                    parity = json.loads(fresh_path.read_text(encoding="utf-8"))
                     if not isinstance(parity, Mapping):
                         raise ValueError("refreshed parity report must be an object")
+                    fresh_parity = parity
                 except Exception as exc:
                     refresh_error = f"parity refresh report unavailable: {exc}"
                     parity = {}
-            else:
+            if fresh_parity is None:
                 parity = {}
+            else:
+                parity = fresh_parity
+                refresh_error = None
         if refresh_error:
             report = run_benchmark(task_counts=tuple(args.task_counts or (10, 50, 100, 200)), warmups=args.warmups, samples=args.samples, seed=args.seed, timeoutMs=args.timeout_ms, parity_report={})
             report["errors"].append({"type": "parity_refresh", "reason": refresh_error})

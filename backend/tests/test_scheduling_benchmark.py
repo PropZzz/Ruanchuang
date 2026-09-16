@@ -383,12 +383,26 @@ def test_refresh_parity_uses_fresh_temporary_reports_dir(tmp_path, monkeypatch) 
 
     def fake_refresh(command: list[str], cwd: object, check: bool) -> SimpleNamespace:
         reports_dir = Path(command[-1])
-        reports_dir.mkdir()
+        reports_dir.mkdir(exist_ok=True)
         (reports_dir / "shared-vector-diff.json").write_text(json.dumps({"summary": {"total": 1, "matched": 0, "mismatched": 1, "invalid": 0}, "dart": {"invalid": False, "returncode": 0}, "classificationCounts": {"pending_a_review": 0}}), encoding="utf-8")
         return SimpleNamespace(returncode=0)
 
     monkeypatch.setattr("scripts.scheduling_benchmark.subprocess.run", fake_refresh)
     assert main(["--refresh-parity", "--parity-report", str(stale), "--output-dir", str(tmp_path)]) == 2
+
+
+def test_refresh_parity_keeps_fresh_mismatch_report_when_subprocess_nonzero(tmp_path, monkeypatch) -> None:
+    def fake_refresh(command: list[str], cwd: object, check: bool) -> SimpleNamespace:
+        reports_dir = Path(command[-1])
+        reports_dir.mkdir(exist_ok=True)
+        (reports_dir / "shared-vector-diff.json").write_text(json.dumps({"summary": {"total": 12, "matched": 3, "mismatched": 9, "invalid": 0}, "dart": {"invalid": False, "returncode": 0}, "classificationCounts": {"pending_a_review": 0}}), encoding="utf-8")
+        return SimpleNamespace(returncode=1)
+
+    monkeypatch.setattr("scripts.scheduling_benchmark.subprocess.run", fake_refresh)
+    assert main(["--refresh-parity", "--output-dir", str(tmp_path)]) == 2
+    reports = sorted(tmp_path.glob("scheduling-benchmark-*.json"))
+    payload = json.loads(reports[-1].read_text(encoding="utf-8"))
+    assert payload["gate"]["summary"]["mismatched"] == 9
 
 
 def test_write_benchmark_report_rejects_nan_without_partial_files(tmp_path) -> None:
