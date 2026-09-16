@@ -134,6 +134,12 @@ def test_percentile_and_summary_reject_non_finite_or_boolean_durations() -> None
     assert summary["p50Ms"] is None
 
 
+def test_summarize_samples_counts_unknown_status_as_failure() -> None:
+    summary = summarize_samples([{"status": "unexpected"}])
+    assert summary["sampleCount"] == 1
+    assert summary["failureCount"] == 1
+
+
 def test_run_benchmark_records_plan_and_rescue_matrix_after_parity_gate() -> None:
     parity = {
         "summary": {"total": 1, "matched": 1, "mismatched": 0, "invalid": 0},

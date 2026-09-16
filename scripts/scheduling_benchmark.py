@@ -377,6 +377,8 @@ def summarize_samples(samples: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             duration = _duration(sample)
             if duration is not None:
                 durations.append(duration)
+        else:
+            failure_count += 1
 
     def rounded(value: float | None) -> float | None:
         return None if value is None else round(value, 3)
