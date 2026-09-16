@@ -24,11 +24,13 @@ def test_build_workload_is_seeded_and_has_requested_task_count() -> None:
 
 
 def test_evaluate_parity_gate_blocks_mismatches_and_pending_review() -> None:
-    summary = {"total": 2, "matched": 1, "mismatched": 1, "invalid": 0}
-    dart = {"invalid": False}
-    classification_counts = {"pending_a_review": 1}
+    report = {
+        "summary": {"total": 2, "matched": 1, "mismatched": 1, "invalid": 0},
+        "dart": {"invalid": False},
+        "classificationCounts": {"pending_a_review": 1},
+    }
 
-    result = evaluate_parity_gate(summary, dart, classification_counts)
+    result = evaluate_parity_gate(report)
 
     assert result["status"] == "blocked"
     assert "mismatched" in result["reasons"]
@@ -37,10 +39,10 @@ def test_evaluate_parity_gate_blocks_mismatches_and_pending_review() -> None:
 
 def test_summarize_samples_counts_outcomes_and_calculates_p50() -> None:
     samples = [
-        {"status": "success", "elapsedMs": 10},
-        {"status": "timeout", "elapsedMs": 20},
-        {"status": "failure", "elapsedMs": 30},
-        {"status": "degraded", "elapsedMs": 40},
+        {"status": "success", "durationMs": 10},
+        {"status": "timeout", "durationMs": 20},
+        {"status": "failure", "durationMs": 30},
+        {"status": "degraded", "durationMs": 40},
     ]
 
     result = summarize_samples(samples)
