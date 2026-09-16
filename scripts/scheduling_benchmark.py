@@ -1,8 +1,7 @@
-"""Small, deterministic primitives used by the scheduling benchmark.
+"""Deterministic scheduling benchmark primitives, matrix runner, and reports.
 
-The matrix runner and report writer are intentionally kept out of this module
-until parity has been validated.  These helpers are side-effect free apart
-from the daemon thread used by :func:`measure_call`.
+The parity gate is evaluated before any scheduling work; measurement helpers
+use killable processes where possible and mark thread timeouts explicitly.
 """
 
 from __future__ import annotations
@@ -18,6 +17,7 @@ import pickle
 import random
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import tracemalloc
@@ -247,8 +247,9 @@ def _thread_call(call: Callable[[], Any], timeout_ms: int, clock: Callable[[], f
         "timeoutMs": timeout_ms,
         "isolation": "thread",
     }
+    result["wallDurationMs"] = result["durationMs"]
     if worker.is_alive():
-        result["status"] = "timeout"
+        result.update({"status": "timeout", "timeoutUncancellable": True, "wallDurationMs": result["durationMs"]})
     elif "exception" in outcome:
         exc = outcome["exception"]
         result.update({"status": "failure", "errorType": type(exc).__name__, "error": str(exc)})
@@ -291,12 +292,21 @@ def _process_call(call: Callable[[], Any], timeout_ms: int, clock: Callable[[], 
         "timeoutMs": timeout_ms,
         "isolation": "process",
     }
+    result["wallDurationMs"] = result["durationMs"]
     message: tuple[Any, ...] | None = None
     try:
         message = output.get(timeout=0.1) if not timed_out else None
     except Exception:
         message = None
+    try:
+        output.cancel_join_thread()
+    except Exception:
+        pass
     output.close()
+    try:
+        worker.close()
+    except Exception:
+        pass
     if timed_out:
         result["status"] = "timeout"
     elif message and message[0] == "exception":
@@ -416,7 +426,16 @@ def _numeric(value: Any, default: float = 0.0) -> float:
 
 
 def _valid_plan_result(value: Any) -> bool:
-    return isinstance(value, Mapping) and isinstance(value.get("entries"), list) and isinstance(value.get("issues"), list)
+    if not isinstance(value, Mapping) or not isinstance(value.get("entries"), list) or not isinstance(value.get("issues"), list):
+        return False
+    for entry in [*value["entries"], *value["issues"]]:
+        if not isinstance(entry, Mapping):
+            return False
+        if "id" in entry and not isinstance(entry.get("id"), str):
+            return False
+        if "time" in entry and not isinstance(entry.get("time"), Mapping):
+            return False
+    return True
 
 
 def _option_map(value: Any) -> dict[str, Mapping[str, Any]] | None:
@@ -462,10 +481,12 @@ def _memory_wrapped_call(call: Callable[[], Any]) -> dict[str, Any]:
     if not was_tracing:
         tracemalloc.start()
     tracemalloc.reset_peak()
+    started = time.perf_counter()
     try:
         value = call()
+        inner_duration = (time.perf_counter() - started) * 1000.0
         _, peak = tracemalloc.get_traced_memory()
-        return {"__benchmark_value__": value, "__peak_memory_bytes__": int(peak)}
+        return {"__benchmark_value__": value, "__peak_memory_bytes__": int(peak), "__inner_duration_ms__": round(inner_duration, 3)}
     finally:
         if not was_tracing:
             tracemalloc.stop()
@@ -488,9 +509,17 @@ def _run_sample(
         if isinstance(wrapped, Mapping) and "__benchmark_value__" in wrapped:
             observed["result"] = wrapped.get("__benchmark_value__")
             observed["peakMemoryBytes"] = wrapped.get("__peak_memory_bytes__")
+            observed["innerDurationMs"] = wrapped.get("__inner_duration_ms__")
+            observed["wallDurationMs"] = observed.get("durationMs")
+            observed["durationMs"] = observed.get("innerDurationMs")
             observed["status"] = _classify_value(observed["result"])
         else:
             observed.update({"status": "failure", "errorType": "WorkerError", "error": "worker did not return benchmark payload"})
+    if observed.get("status") in {"success", "degraded"}:
+        try:
+            json.dumps(observed.get("result"), allow_nan=False)
+        except (TypeError, ValueError):
+            observed.update({"status": "failure", "errorType": "MalformedJSON", "error": "result is not JSON serializable"})
     if observed.get("status") in {"success", "degraded"}:
         if operation == "plan" and not _valid_plan_result(observed.get("result")):
             observed.update({"status": "failure", "errorType": "MalformedResult", "error": "plan result must contain entries and issues lists"})
@@ -590,6 +619,7 @@ def run_benchmark(
         base["errors"] = [{"type": "parity_gate", "reason": reason} for reason in gate["reasons"]] or [{"type": "parity_gate", "reason": "blocked"}]
         base["finishedAt"] = _utc_now()
         base["peakRssBytes"] = None
+        base["parentPeakMemoryBytes"] = None
         base["memorySource"] = "tracemalloc"
         return base
 
@@ -610,6 +640,7 @@ def run_benchmark(
         base["errors"] = errors
         base["finishedAt"] = _utc_now()
         base["peakRssBytes"] = None
+        base["parentPeakMemoryBytes"] = None
         base["memorySource"] = "tracemalloc"
         return base
 
@@ -625,7 +656,9 @@ def run_benchmark(
             rescue_samples = [_run_sample(rescue_runner, request, operation="rescue", task_count=task_count, timeout_ms=timeoutMs, clock=clock) for _ in range(samples)]
             for operation, measured in (("plan", plan_samples), ("rescue", rescue_samples)):
                 summary = summarize_samples(measured)
-                row: dict[str, Any] = {"runtime": "python", "operation": operation, "taskCount": task_count, "warmups": warmups, "samples": samples, "samplesData": measured}
+                row_peaks = [int(sample["peakMemoryBytes"]) for sample in measured if isinstance(sample.get("peakMemoryBytes"), int)]
+                row_peak = max(row_peaks) if row_peaks else None
+                row: dict[str, Any] = {"runtime": "python", "operation": operation, "taskCount": task_count, "warmups": warmups, "samples": samples, "samplesData": measured, "peakRssBytes": row_peak}
                 row.update(summary)
                 if operation == "plan" and measured:
                     last = measured[-1]
@@ -662,7 +695,7 @@ def run_benchmark(
         for sample in (row.get("samplesData") or [])
         if isinstance(sample, Mapping) and isinstance(sample.get("peakMemoryBytes"), int)
     ]
-    peak = max([int(parent_peak), *sample_peaks])
+    peak = max(sample_peaks) if sample_peaks else None
     base["errors"] = errors
     completed_samples = sum(
         int(row.get("successfulSampleCount", 0) or 0)
@@ -671,11 +704,9 @@ def run_benchmark(
     )
     base["status"] = "completed" if completed_samples > 0 else "failed"
     base["finishedAt"] = _utc_now()
-    base["peakRssBytes"] = int(peak)
+    base["peakRssBytes"] = peak
+    base["parentPeakMemoryBytes"] = int(parent_peak)
     base["memorySource"] = "tracemalloc"
-    for row in base["runs"]:
-        if isinstance(row, dict):
-            row["peakRssBytes"] = int(peak)
     return base
 
 
@@ -709,8 +740,21 @@ def write_benchmark_report(report: Mapping[str, Any], output_dir: Path) -> Path:
         if not json_path.exists() and not md_path.exists():
             break
         index += 1
-    json_path.write_text(json.dumps(dict(report), ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-    md_path.write_text(_markdown_benchmark(report), encoding="utf-8")
+    created: list[Path] = []
+    try:
+        with json_path.open("x", encoding="utf-8") as handle:
+            handle.write(json.dumps(dict(report), ensure_ascii=False, sort_keys=True, indent=2) + "\n")
+        created.append(json_path)
+        with md_path.open("x", encoding="utf-8") as handle:
+            handle.write(_markdown_benchmark(report))
+        created.append(md_path)
+    except Exception:
+        for path in created:
+            try:
+                path.unlink()
+            except OSError:
+                pass
+        raise
     return json_path
 
 
@@ -728,26 +772,44 @@ def main(argv: Sequence[str] | None = None) -> int:
     parity_path = args.parity_report if args.parity_report.is_absolute() else REPO_ROOT / args.parity_report
     refresh_error: str | None = None
     if args.refresh_parity:
-        refresh_dir = parity_path.parent
-        try:
-            refresh_result = subprocess.run(
-                [sys.executable, "scripts/scheduling_parity.py", "--reports-dir", str(refresh_dir)],
-                cwd=REPO_ROOT,
-                check=False,
-            )
-            returncode = getattr(refresh_result, "returncode", 1)
-            if returncode != 0:
-                refresh_error = f"parity refresh failed with returncode {returncode}"
+        with tempfile.TemporaryDirectory(prefix="scheduling-parity-") as refresh_dir_name:
+            refresh_dir = Path(refresh_dir_name)
+            try:
+                refresh_result = subprocess.run(
+                    [sys.executable, "scripts/scheduling_parity.py", "--reports-dir", str(refresh_dir)],
+                    cwd=REPO_ROOT,
+                    check=False,
+                )
+                returncode = getattr(refresh_result, "returncode", 1)
+                if returncode != 0:
+                    refresh_error = f"parity refresh failed with returncode {returncode}"
+                else:
+                    parity_path = refresh_dir / "shared-vector-diff.json"
+            except Exception as exc:
+                refresh_error = f"parity refresh failed: {exc}"
+            if not refresh_error:
+                try:
+                    parity = json.loads(parity_path.read_text(encoding="utf-8"))
+                    if not isinstance(parity, Mapping):
+                        raise ValueError("refreshed parity report must be an object")
+                except Exception as exc:
+                    refresh_error = f"parity refresh report unavailable: {exc}"
+                    parity = {}
             else:
-                parity_path = refresh_dir / "shared-vector-diff.json"
-        except Exception as exc:
-            refresh_error = f"parity refresh failed: {exc}"
-    try:
+                parity = {}
         if refresh_error:
-            raise RuntimeError(refresh_error)
-        parity = json.loads(parity_path.read_text(encoding="utf-8"))
-        if not isinstance(parity, Mapping):
-            raise ValueError("parity report must be an object")
+            report = run_benchmark(task_counts=tuple(args.task_counts or (10, 50, 100, 200)), warmups=args.warmups, samples=args.samples, seed=args.seed, timeoutMs=args.timeout_ms, parity_report={})
+            report["errors"].append({"type": "parity_refresh", "reason": refresh_error})
+            path = write_benchmark_report(report, args.output_dir if args.output_dir.is_absolute() else REPO_ROOT / args.output_dir)
+            print(f"benchmark report: {path} status={report.get('status')}")
+            return 2
+    else:
+        parity = None
+    try:
+        if parity is None:
+            parity = json.loads(parity_path.read_text(encoding="utf-8"))
+            if not isinstance(parity, Mapping):
+                raise ValueError("parity report must be an object")
     except Exception as exc:
         parity = {}
         report = run_benchmark(task_counts=tuple(args.task_counts or (10, 50, 100, 200)), warmups=args.warmups, samples=args.samples, seed=args.seed, timeoutMs=args.timeout_ms, parity_report=parity)

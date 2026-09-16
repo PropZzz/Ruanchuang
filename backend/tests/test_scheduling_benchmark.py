@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -313,3 +314,48 @@ def test_refresh_parity_failure_blocks_even_when_stale_report_is_valid(tmp_path,
     payload = json.loads(reports[-1].read_text(encoding="utf-8"))
     assert payload["status"] == "blocked"
     assert any(error.get("type") == "parity_refresh" for error in payload["errors"])
+
+
+def test_benchmark_records_inner_duration_and_sample_peak_memory() -> None:
+    report = run_benchmark(
+        task_counts=(1,), warmups=0, samples=1, seed=7, timeoutMs=100,
+        parity_report=_passed_parity(), plan_runner=lambda _: {"entries": [], "issues": []},
+        rescue_runner=lambda _: {"options": [{"strategy": s, "plannedEntries": [], "issueCount": 0, "hardIssueCount": 0, "movedEntryCount": 0, "recoveryMinutes": 0, "recommended": False} for s in ("protectDeadline", "protectRecovery", "minimizeChanges")]},
+    )
+    run = report["runs"][0]
+    sample = run["samplesData"][0]
+    assert "innerDurationMs" in sample and "peakMemoryBytes" in sample
+    assert run["peakRssBytes"] == sample["peakMemoryBytes"]
+    assert report["memorySource"] == "tracemalloc"
+    assert "parentPeakMemoryBytes" in report
+
+
+def test_thread_timeout_is_marked_uncancellable() -> None:
+    sample = measure_call(lambda: time.sleep(0.05), timeoutMs=1)
+    assert sample["status"] == "timeout"
+    assert sample["isolation"] == "thread"
+    assert sample["timeoutUncancellable"] is True
+
+
+def test_malformed_non_json_plan_result_is_failure() -> None:
+    report = run_benchmark(
+        task_counts=(1,), warmups=0, samples=1, seed=7, timeoutMs=100,
+        parity_report=_passed_parity(), plan_runner=lambda _: {"entries": [{"bad": {1, 2}}], "issues": []},
+        rescue_runner=lambda _: {"options": []},
+    )
+    plan = next(item for item in report["runs"] if item["operation"] == "plan")
+    assert plan["failureCount"] == 1 and plan["degradedCount"] == 0
+
+
+def test_refresh_parity_uses_fresh_temporary_reports_dir(tmp_path, monkeypatch) -> None:
+    stale = tmp_path / "shared-vector-diff.json"
+    stale.write_text(json.dumps(_passed_parity()), encoding="utf-8")
+
+    def fake_refresh(command: list[str], cwd: object, check: bool) -> SimpleNamespace:
+        reports_dir = Path(command[-1])
+        reports_dir.mkdir()
+        (reports_dir / "shared-vector-diff.json").write_text(json.dumps({"summary": {"total": 1, "matched": 0, "mismatched": 1, "invalid": 0}, "dart": {"invalid": False, "returncode": 0}, "classificationCounts": {"pending_a_review": 0}}), encoding="utf-8")
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr("scripts.scheduling_benchmark.subprocess.run", fake_refresh)
+    assert main(["--refresh-parity", "--parity-report", str(stale), "--output-dir", str(tmp_path)]) == 2
