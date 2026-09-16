@@ -41,6 +41,10 @@ C++ 重写调度核心。
 `degraded` 与各策略指标。普通业务 issues 只描述调度问题，不等于
 `degraded` 降级状态。
 
+超时调用中，可 pickle 的调用使用可终止的 process；不可 pickle 的调用回退到
+daemon thread。thread 超时会立即返回并标记 `timeoutUncancellable=true`，因此不能
+作为调用已取消或无污染的超时证据。
+
 ## 🧠 项目简介
 
 时序智配是一套本地优先的智能日程调度系统。它聚焦一个真实且高频的问题：

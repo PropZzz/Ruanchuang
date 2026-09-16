@@ -79,6 +79,10 @@ blocked 报告是门槛状态证据，不是性能结果。
 `rssSource`，以及超时、失败、降级和各策略指标。普通业务 `issues` 不等于
 `degraded`；降级必须由调度运行状态明确记录。
 
+可 pickle 的超时调用使用可终止的 process；不可 pickle 的调用回退到 daemon
+thread。thread 超时会立即返回并标记 `timeoutUncancellable=true`，不能据此证明
+调用已取消或没有后台污染。
+
 在获得有效 parity 和可重复的基准数据之前，禁止以性能假设推动 Go、Rust 或
 C++ 重写调度核心。
 

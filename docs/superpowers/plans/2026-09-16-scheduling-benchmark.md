@@ -4,6 +4,8 @@
 
 **Goal:** 在共享 parity 通过后提供可重复的 Python 调度基准，记录任务规模、规划/救援耗时、超时、失败、降级和三策略结果，并在当前 parity 未通过时生成明确的阻断报告。
 
+**执行状态：已完成**（实现提交与验证见 Git 历史；此文档保留步骤记录）。
+
 **Architecture:** `scripts/scheduling_benchmark.py` 是纯 Python CLI 和可注入的基准库。它读取 parity 机器报告作为门禁，使用固定种子生成单日任务夹具；对可 pickle 的调用优先使用可终止的独立 process 隔离，对不可 pickle 的调用回退到 thread，并在超时结果中标记 `timeoutUncancellable`。基准使用标准库计时/内存采样聚合结果，输出一次性 JSON/Markdown 报告。生产调度核心和 Dart/Python parity runner 不变。
 
 **Tech Stack:** Python 3.10、标准库 `argparse`/`dataclasses`/`random`/`multiprocessing`/`pickle`/`threading`/`tracemalloc`/`time`/`json`、pytest 9.1。
@@ -16,7 +18,7 @@
 - Create: `backend/tests/test_scheduling_benchmark.py`
 - Test target: `scripts/scheduling_benchmark.py`（此任务只写测试，不创建实现文件）
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_percentile_uses_linear_interpolation():
@@ -63,13 +65,13 @@ def test_timeout_and_runner_exception_are_distinct():
     assert failed["errorType"] == "ValueError"
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `python -m pytest backend/tests/test_scheduling_benchmark.py -q`
 
 Expected: collection fails with `ModuleNotFoundError` for `scripts.scheduling_benchmark`, proving the new contract is not already implemented.
 
-- [ ] **Step 3: Commit the red tests**
+- [x] **Step 3: Commit the red tests**
 
 ```bash
 git add backend/tests/test_scheduling_benchmark.py
@@ -82,7 +84,7 @@ git commit -m "test: define scheduling benchmark contracts"
 - Create: `scripts/scheduling_benchmark.py`
 - Modify: `backend/tests/test_scheduling_benchmark.py` only when an assertion exposes an incorrect test setup
 
-- [ ] **Step 1: Implement the minimal public API**
+- [x] **Step 1: Implement the minimal public API**
 
 Add these exact public functions and behavior:
 
@@ -110,13 +112,13 @@ def summarize_samples(samples: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 
 `summarize_samples` counts `success`, `timeout`, `failure`, and `degraded`, computes P50/P95/P99 plus min/max from successful and degraded non-timeout durations, and reports `sampleCount` and `successfulSampleCount`. All duration values are rounded to three decimal milliseconds. `peakMemoryBytes` is the `tracemalloc` estimate of Python allocation growth during the call; `peakRssBytes` remains `null`/uncollected, with `rssSource: "unavailable"` (or `"parentPeakMemoryBytes"` only when explicitly derived from a parent-process memory value).
 
-- [ ] **Step 2: Run the focused tests to verify they pass**
+- [x] **Step 2: Run the focused tests to verify they pass**
 
 Run: `python -m pytest backend/tests/test_scheduling_benchmark.py -q`
 
 Expected: all focused tests pass with no warnings.
 
-- [ ] **Step 3: Commit the implementation unit**
+- [x] **Step 3: Commit the implementation unit**
 
 ```bash
 git add scripts/scheduling_benchmark.py backend/tests/test_scheduling_benchmark.py
@@ -129,7 +131,7 @@ git commit -m "feat: add scheduling benchmark primitives"
 - Modify: `scripts/scheduling_benchmark.py`
 - Modify: `backend/tests/test_scheduling_benchmark.py`
 
-- [ ] **Step 1: Write failing matrix/report tests**
+- [x] **Step 1: Write failing matrix/report tests**
 
 Add tests that inject `plan_runner`, `rescue_runner`, a temporary parity report, and `output_dir`:
 
@@ -165,21 +167,21 @@ def test_blocked_benchmark_writes_no_measurements(tmp_path):
     assert payload["runs"] == []
 ```
 
-- [ ] **Step 2: Run the matrix tests to verify they fail**
+- [x] **Step 2: Run the matrix tests to verify they fail**
 
 Run: `python -m pytest backend/tests/test_scheduling_benchmark.py -q`
 
 Expected: failures report missing `run_benchmark` or `write_benchmark_report`.
 
-- [ ] **Step 3: Implement matrix execution**
+- [x] **Step 3: Implement matrix execution**
 
-Add `run_benchmark(...)` with injectable `plan_runner`, `rescue_runner`, `clock`, and an already loaded parity mapping. For each requested task count, generate one workload, run `warmups` without recording, then run `samples` for the plan operation and the rescue operation. Measure each call with `timeoutMs`; append one `runs` row per runtime/operation/task count with `runtime: "python"`, task count, sample configuration and `summarize_samples` fields. Use `tracemalloc.reset_peak()` around the matrix and record its Python allocation increment as `peakMemoryBytes`. Keep `peakRssBytes: null` with `rssSource: "unavailable"`; if a future implementation explicitly derives a parent-process value, use `rssSource: "parentPeakMemoryBytes"` and do not label it as current-process RSS.
+Add `run_benchmark(...)` with injectable `plan_runner`, `rescue_runner`, `clock`, and an already loaded parity mapping. For each requested task count, generate one workload, run `warmups` without recording, then run `samples` for the plan operation and the rescue operation. Measure each call with `timeoutMs`; append one `runs` row per runtime/operation/task count with `runtime: "python"`, task count, sample configuration and `summarize_samples` fields. For every successful or degraded sample, collect `peakMemoryBytes` during the worker call with `tracemalloc`, then report the maximum per `runs` row and at top level. Keep `peakRssBytes: null` with `rssSource: "unavailable"`; any explicitly derived parent-process peak is tracked separately as `rssSource: "parentPeakMemoryBytes"` and is not labeled current-process RSS.
 
 For each rescue response, look up all three fixed strategy names. Record one strategy row per task count/name with success, failure, timeout and degraded counts, plus averages/min/max for `entryCount`, `issueCount`, `hardIssueCount`, `movedEntryCount`, `recoveryMinutes`, and `recommendedCount`. Missing options and malformed responses become structured `errors` and failures; one bad sample does not stop other samples. Ordinary scheduling issues remain result metrics, not execution failures or degradation.
 
 Set `status: "completed"` when the gate passed and at least one sample completed; set `status: "failed"` when the gate passed but no sample completed. Include `schemaVersion: "scheduling-benchmark/v1"`, UTC timestamps, seed, task counts, warmups, samples, timeout budget, command, gate, runs, strategies and errors.
 
-- [ ] **Step 4: Implement report writers and CLI**
+- [x] **Step 4: Implement report writers and CLI**
 
 Add:
 
@@ -195,13 +197,13 @@ CLI defaults: `--parity-report reports/shared-vector-diff.json`, `--output-dir r
 
 The Markdown writer must include the gate status/reasons, one table for plan/rescue latency (task count, P50/P95/P99, timeout/failure/degraded), one table for the three strategies, and a complete error list. It must state that an ordinary `issues` count is not a degradation.
 
-- [ ] **Step 5: Run focused tests and inspect generated shape**
+- [x] **Step 5: Run focused tests and inspect generated shape**
 
 Run: `python -m pytest backend/tests/test_scheduling_benchmark.py -q`
 
 Expected: all tests pass, and the temporary report contains `gate`, `runs`, `strategies`, `errors`, P50/P95/P99, timeout/failure/degraded counts and a stable seed.
 
-- [ ] **Step 6: Commit the matrix and report unit**
+- [x] **Step 6: Commit the matrix and report unit**
 
 ```bash
 git add scripts/scheduling_benchmark.py backend/tests/test_scheduling_benchmark.py
@@ -215,7 +217,7 @@ git commit -m "feat: record scheduling benchmark matrix"
 - Modify: `contracts/scheduling/v1/README.md`
 - Create: `reports/benchmarks/.gitkeep`
 
-- [ ] **Step 1: Document the two-command gate and report fields**
+- [x] **Step 1: Document the two-command gate and report fields**
 
 Add a Chinese section to `README.md` with these commands:
 
@@ -226,32 +228,32 @@ python scripts/scheduling_benchmark.py --parity-report reports/shared-vector-dif
 
 Explain that the current parity result must have zero mismatch/invalid/pending before a completed benchmark is valid; otherwise the second command writes a blocked report. Document default scales, seed, warmups/samples, timeout budget, report directory, P50/P95/P99, peak-memory source, strategy metrics, failure and degradation semantics, and the rule that no Go/Rust/C++ rewrite is justified by a blocked or incomplete report.
 
-- [ ] **Step 2: Run the full Python verification**
+- [x] **Step 2: Run the full Python verification**
 
 Run: `python -m pytest backend/tests -q`
 
 Expected: all existing backend tests and benchmark tests pass. If the environment reports pre-existing dependency warnings, record their exact count without changing unrelated code.
 
-- [ ] **Step 3: Generate the current blocked evidence report**
+- [x] **Step 3: Generate the current blocked evidence report**
 
 Run: `python scripts/scheduling_benchmark.py --parity-report reports/shared-vector-diff.json --output-dir reports/benchmarks`
 
 Expected: exit code `2`, a new timestamped JSON/Markdown pair, `status: blocked`, reasons containing `mismatched`, `summary.mismatched == 9`, and empty `runs`/`strategies`. Do not label it as performance data.
 
-- [ ] **Step 4: Run repository checks**
+- [x] **Step 4: Run repository checks**
 
 Run: `git diff --check`
 
 Expected: no output. Run `flutter analyze` only if Flutter is installed; retain its exit code/output in the handoff when unavailable or when existing unrelated diagnostics prevent a clean run.
 
-- [ ] **Step 5: Commit docs and evidence scaffolding**
+- [x] **Step 5: Commit docs and evidence scaffolding**
 
 ```bash
 git add README.md contracts/scheduling/v1/README.md reports/benchmarks/.gitkeep
 git commit -m "docs: publish scheduling benchmark workflow"
 ```
 
-- [ ] **Step 6: Push and report the remote revision**
+- [x] **Step 6: Push and report the remote revision**
 
 Run: `git push origin main`
 
