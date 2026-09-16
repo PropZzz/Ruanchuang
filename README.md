@@ -18,6 +18,28 @@
 - 远端救援采用与撤销在单个 SQLite 事务内完成：基线哈希校验通过后，日程写入、`rescue_accept:`/`rescue_undo:` 事件与撤销快照要么全部落库，要么全部回滚；快照 ID 支持撤销与复盘追溯。
 - 只有远端不可用或网络/服务端暂时故障时才使用本地兜底。认证、校验、冲突和响应格式错误会明确返回，避免把错误数据当成空结果。
 
+## 调度基准与性能证据
+
+规则正确且 Dart/Python 跨语言结果一致后，先运行 parity，再采集调度性能：
+
+```powershell
+python scripts/scheduling_parity.py
+python scripts/scheduling_benchmark.py --parity-report reports/shared-vector-diff.json
+```
+
+只有 parity 报告满足 `mismatched=0`、`invalid=0`、`pending_a_review=0`，且 Dart
+运行 `returncode=0` 时，基准脚本才会采集测量数据。当前已知 parity 结果为
+`total=12`、`matched=3`、`mismatched=9`、`invalid=0`；此时脚本生成
+`status=blocked`、退出码 `2`，且不会产生性能测量，不能据此推动 Go、Rust 或
+C++ 重写调度核心。
+
+基准默认覆盖任务数量 `10/50/100/200`，`seed=20260916`，预热 `2` 次、采样
+`10` 次、超时 `1000ms`。每次运行在 `reports/benchmarks` 生成带时间戳的 JSON
+和 Markdown 报告，记录任务数量、规划耗时（包括 P50/P95/P99）、
+`peakMemory`/`peakRss`（来源为 `tracemalloc`）、`timeout`、`failure`、
+`degraded` 以及各策略指标。普通业务 issues 只描述调度问题，不等于
+`degraded` 降级状态。
+
 ## 🧠 项目简介
 
 时序智配是一套本地优先的智能日程调度系统。它聚焦一个真实且高频的问题：

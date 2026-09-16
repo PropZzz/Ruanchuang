@@ -64,6 +64,23 @@ python scripts/scheduling_parity.py
 差异报告。只要存在 `pending_a_review`、invalid 输出或未分类差异，就不能
 宣称两端一致，也不能为了消除报告而单独修改某一端的生产算法。
 
+## 性能基准门槛
+
+性能基准必须在 parity 通过后运行：只有 `mismatched=0`、`invalid=0`、
+`pending_a_review=0` 且 Dart `returncode=0`，才能采集调度测量。parity 未通过时，
+基准报告使用 `status=blocked`，退出码为 `2`，并且不产生任何性能数据；
+blocked 报告是门槛状态证据，不是性能结果。
+
+基准覆盖三种策略（`protectDeadline`、`protectRecovery`、`minimizeChanges`）和
+任务规模 `10/50/100/200`，默认 `seed=20260916`、预热 `2` 次、采样 `10` 次、
+超时 `1000ms`。带时间戳的 JSON/Markdown 报告位于 `reports/benchmarks`，应至少
+记录任务数量、规划耗时 P50/P95/P99、`peakMemory`/`peakRss`（`tracemalloc`
+来源）、超时、失败、降级和各策略指标。普通业务 `issues` 不等于
+`degraded`；降级必须由调度运行状态明确记录。
+
+在获得有效 parity 和可重复的基准数据之前，禁止以性能假设推动 Go、Rust 或
+C++ 重写调度核心。
+
 ## 2026-09-15 A 判定
 
 最近一次实际运行（Python 3.10.11、Flutter 3.38.7/Dart 3.10.7）执行全部 12 个
