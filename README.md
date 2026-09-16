@@ -27,6 +27,11 @@ python scripts/scheduling_parity.py
 python scripts/scheduling_benchmark.py --parity-report reports/shared-vector-diff.json
 ```
 
+基准命令默认会先刷新 parity，并将新报告写入临时 `reports-dir` 后读取；即使
+parity runner 返回非零，只要临时目录产生了新报告，也会保留该报告中的 mismatch
+诊断并按门禁阻断。需要明确复用已有报告时使用
+`python scripts/scheduling_benchmark.py --no-refresh-parity --parity-report reports/shared-vector-diff.json`；此报告可能已过期，脚本会提示 stale 风险。
+
 只有 parity 报告满足 `mismatched=0`、`invalid=0`、`pending_a_review=0`，且 Dart
 运行 `returncode=0` 时，基准脚本才会采集测量数据。当前已知 parity 结果为
 `total=12`、`matched=3`、`mismatched=9`、`invalid=0`；此时脚本生成

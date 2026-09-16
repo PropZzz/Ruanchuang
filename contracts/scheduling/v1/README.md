@@ -60,6 +60,11 @@ python -m pytest backend/tests/test_shared_vector_schema.py -q
 python scripts/scheduling_parity.py
 ```
 
+调度基准默认会刷新 parity：使用临时 `reports-dir` 执行 runner，并在 runner 非零
+但已生成新报告时保留该报告的 mismatch 诊断。若需复用已有报告，必须显式传入
+`--no-refresh-parity --parity-report reports/shared-vector-diff.json`；已有报告可能
+已过期，脚本会提示 stale 风险。
+
 比较器必须分别执行 Dart 和 Python，输出逐 fixture、逐 runtime、逐字段的
 差异报告。只要 `mismatched > 0`、`invalid > 0`、`pending_a_review > 0`、Dart
 runner 的 `invalid` 为真或 `returncode != 0`，或存在未分类差异，就不能宣称

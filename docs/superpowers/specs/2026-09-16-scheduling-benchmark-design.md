@@ -6,7 +6,7 @@
 
 ## 前置门禁
 
-基准命令默认先执行共享向量 parity 检查，并读取其机器报告。parity 报告缺失、不是对象、必需字段缺失或字段结构非法时，基准直接写出 `status: blocked`。在报告结构有效时，只有 `summary.mismatched` 或 `summary.invalid` 大于 `0`、`pending_a_review` 计数大于 `0`，或 Dart 的 `invalid` 不为 `false`/`returncode` 不为 `0` 时，基准才会写出 `status: blocked` 的报告，记录阻断原因和 parity 摘要，然后以非零状态退出；不会把未对齐实现的耗时发布为可比较基线。用户可在 parity 全部通过后运行同一命令获得 `status: completed` 报告。
+基准命令默认先执行共享向量 parity 检查：runner 使用临时 `reports-dir`，并读取其中新生成的报告；即使 runner 返回非零，只要产生了新报告，也保留报告中的 mismatch 诊断并按门禁阻断。使用 `--no-refresh-parity` 时才复用 `--parity-report` 指定的已有报告，并提示该报告可能 stale。parity 报告缺失、不是对象、必需字段缺失或字段结构非法时，基准直接写出 `status: blocked`。在报告结构有效时，只有 `summary.mismatched` 或 `summary.invalid` 大于 `0`、`pending_a_review` 计数大于 `0`，或 Dart 的 `invalid` 不为 `false`/`returncode` 不为 `0` 时，基准才会写出 `status: blocked` 的报告，记录阻断原因和 parity 摘要，然后以非零状态退出；不会把未对齐实现的耗时发布为可比较基线。用户可在 parity 全部通过后运行同一命令获得 `status: completed` 报告。
 
 ## 运行矩阵
 
