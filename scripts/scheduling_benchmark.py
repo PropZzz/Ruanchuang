@@ -656,7 +656,7 @@ def run_benchmark(
             rescue_samples = [_run_sample(rescue_runner, request, operation="rescue", task_count=task_count, timeout_ms=timeoutMs, clock=clock) for _ in range(samples)]
             for operation, measured in (("plan", plan_samples), ("rescue", rescue_samples)):
                 summary = summarize_samples(measured)
-                row_peaks = [int(sample["peakMemoryBytes"]) for sample in measured if isinstance(sample.get("peakMemoryBytes"), int)]
+                row_peaks = [int(sample["peakMemoryBytes"]) for sample in measured if sample.get("status") in {"success", "degraded"} and isinstance(sample.get("peakMemoryBytes"), int)]
                 row_peak = max(row_peaks) if row_peaks else None
                 row: dict[str, Any] = {"runtime": "python", "operation": operation, "taskCount": task_count, "warmups": warmups, "samples": samples, "samplesData": measured, "peakRssBytes": row_peak}
                 row.update(summary)
@@ -693,7 +693,7 @@ def run_benchmark(
         for row in base["runs"]
         if isinstance(row, Mapping)
         for sample in (row.get("samplesData") or [])
-        if isinstance(sample, Mapping) and isinstance(sample.get("peakMemoryBytes"), int)
+        if isinstance(sample, Mapping) and sample.get("status") in {"success", "degraded"} and isinstance(sample.get("peakMemoryBytes"), int)
     ]
     peak = max(sample_peaks) if sample_peaks else None
     base["errors"] = errors
