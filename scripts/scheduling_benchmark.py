@@ -639,7 +639,15 @@ def run_benchmark(
                 base["runs"].append(row)
                 for sample in measured:
                     if sample.get("status") in {"failure", "timeout"}:
-                        errors.append(_error_record(operation=operation, task_count=task_count, status=str(sample.get("status")), message=str(sample.get("error") or sample.get("status"))))
+                        errors.append(
+                            _error_record(
+                                operation=operation,
+                                task_count=task_count,
+                                status=str(sample.get("status")),
+                                error_type=str(sample.get("errorType") or "") or None,
+                                message=str(sample.get("error") or sample.get("status")),
+                            )
+                        )
             for strategy in STRATEGIES:
                 row, strategy_errors = _strategy_row(task_count, rescue_samples, strategy, warmups, samples)
                 base["strategies"].append(row)
