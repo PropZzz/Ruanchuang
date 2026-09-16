@@ -61,8 +61,9 @@ python scripts/scheduling_parity.py
 ```
 
 比较器必须分别执行 Dart 和 Python，输出逐 fixture、逐 runtime、逐字段的
-差异报告。只要存在 `pending_a_review`、invalid 输出或未分类差异，就不能
-宣称两端一致，也不能为了消除报告而单独修改某一端的生产算法。
+差异报告。只要 `mismatched > 0`、`invalid > 0`、`pending_a_review > 0`、Dart
+runner 的 `invalid` 为真或 `returncode != 0`，或存在未分类差异，就不能宣称
+两端一致，也不能为了消除报告而单独修改某一端的生产算法。
 
 ## 性能基准门槛
 
