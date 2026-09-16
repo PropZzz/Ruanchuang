@@ -7,15 +7,20 @@ from the daemon thread used by :func:`measure_call`.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+import argparse
+from datetime import datetime, timedelta, timezone
+from functools import partial
+import json
 import math
 import multiprocessing
 from pathlib import Path
 import pickle
 import random
+import subprocess
 import sys
 import threading
 import time
+import tracemalloc
 from typing import Any, Callable, Mapping, Sequence
 
 
@@ -379,6 +384,301 @@ def summarize_samples(samples: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+STRATEGIES = ("protectDeadline", "protectRecovery", "minimizeChanges")
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _error_record(*, operation: str, task_count: int, status: str, message: str, strategy: str | None = None) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "operation": operation,
+        "taskCount": task_count,
+        "status": status,
+        "error": message,
+    }
+    if strategy is not None:
+        record["strategy"] = strategy
+    return record
+
+
+def _numeric(value: Any, default: float = 0.0) -> float:
+    if isinstance(value, bool):
+        return default
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    return number if math.isfinite(number) else default
+
+
+def _valid_plan_result(value: Any) -> bool:
+    return isinstance(value, Mapping) and isinstance(value.get("entries"), list) and isinstance(value.get("issues"), list)
+
+
+def _option_map(value: Any) -> dict[str, Mapping[str, Any]] | None:
+    raw = value.get("options") if isinstance(value, Mapping) else value
+    if not isinstance(raw, list):
+        return None
+    options: dict[str, Mapping[str, Any]] = {}
+    for option in raw:
+        if not isinstance(option, Mapping) or not isinstance(option.get("strategy"), str):
+            return None
+        strategy = str(option["strategy"])
+        if strategy in options:
+            return None
+        options[strategy] = option
+    return options
+
+
+def _run_sample(
+    runner: Callable[[dict[str, Any]], Any],
+    request: dict[str, Any],
+    *,
+    operation: str,
+    task_count: int,
+    timeout_ms: int,
+    clock: Callable[[], float],
+) -> dict[str, Any]:
+    observed = measure_call(partial(runner, dict(request)), timeoutMs=timeout_ms, clock=clock)
+    observed["operation"] = operation
+    observed["taskCount"] = task_count
+    if observed.get("status") == "success":
+        if operation == "plan" and not _valid_plan_result(observed.get("result")):
+            observed.update({"status": "failure", "errorType": "MalformedResult", "error": "plan result must contain entries and issues lists"})
+        elif operation == "rescue" and _option_map(observed.get("result")) is None:
+            observed.update({"status": "failure", "errorType": "MalformedResult", "error": "rescue result must contain an options list"})
+    return observed
+
+
+def _strategy_row(task_count: int, samples: Sequence[Mapping[str, Any]], strategy: str, warmups: int, sample_count: int) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    errors: list[dict[str, Any]] = []
+    strategy_samples: list[dict[str, Any]] = []
+    recommended_count = 0
+    metric_values: dict[str, list[float]] = {key: [] for key in ("entryCount", "issueCount", "hardIssueCount", "movedEntryCount", "recoveryMinutes")}
+    for sample in samples:
+        status = sample.get("status")
+        option = None
+        if status in {"success", "degraded"}:
+            option = (_option_map(sample.get("result")) or {}).get(strategy)
+            if option is None:
+                status = "failure"
+                errors.append(_error_record(operation="rescue", task_count=task_count, strategy=strategy, status="failure", message=f"missing option: {strategy}"))
+        if option is not None:
+            entry_count = option.get("plannedEntries")
+            if not isinstance(entry_count, list):
+                status = "failure"
+                errors.append(_error_record(operation="rescue", task_count=task_count, strategy=strategy, status="failure", message="plannedEntries must be a list"))
+                option = None
+            else:
+                metric_values["entryCount"].append(float(len(entry_count)))
+                metric_values["issueCount"].append(_numeric(option.get("issueCount")))
+                metric_values["hardIssueCount"].append(_numeric(option.get("hardIssueCount")))
+                metric_values["movedEntryCount"].append(_numeric(option.get("movedEntryCount")))
+                metric_values["recoveryMinutes"].append(_numeric(option.get("recoveryMinutes")))
+                if option.get("recommended") is True:
+                    recommended_count += 1
+        item = dict(sample)
+        item["status"] = status
+        if option is not None:
+            item["result"] = {"strategy": strategy, **{key: option.get(key) for key in ("plannedEntries", "issueCount", "hardIssueCount", "movedEntryCount", "recoveryMinutes", "recommended")}}
+        strategy_samples.append(item)
+    summary = summarize_samples(strategy_samples)
+    row: dict[str, Any] = {
+        "runtime": "python",
+        "operation": "rescue",
+        "taskCount": task_count,
+        "strategy": strategy,
+        "warmups": warmups,
+        "samples": sample_count,
+        "resultSummary": {},
+        "recommendedCount": recommended_count,
+    }
+    row.update(summary)
+    for key, values in metric_values.items():
+        label = f"{key[0].upper()}{key[1:]}"
+        row[f"avg{label}"] = round(sum(values) / len(values), 3) if values else None
+        row[f"min{label}"] = round(min(values), 3) if values else None
+        row[f"max{label}"] = round(max(values), 3) if values else None
+    if strategy_samples:
+        last = strategy_samples[-1]
+        if isinstance(last.get("result"), Mapping):
+            row["resultSummary"] = {"strategy": strategy, "recommended": last["result"].get("recommended"), "plannedEntryCount": len(last["result"].get("plannedEntries") or [])}
+    return row, errors
+
+
+def run_benchmark(
+    *,
+    task_counts: Sequence[int],
+    warmups: int,
+    samples: int,
+    seed: int,
+    timeoutMs: int,
+    parity_report: Mapping[str, Any],
+    plan_runner: Callable[[dict[str, Any]], Any] = plan_schedule,
+    rescue_runner: Callable[[dict[str, Any]], Any] = build_options,
+    clock: Callable[[], float] = time.perf_counter,
+) -> dict[str, Any]:
+    started = _utc_now()
+    gate = evaluate_parity_gate(parity_report)
+    base: dict[str, Any] = {
+        "schemaVersion": "scheduling-benchmark/v1",
+        "command": ["python", "scripts/scheduling_benchmark.py"],
+        "startedAt": started,
+        "seed": seed,
+        "taskCounts": list(task_counts) if isinstance(task_counts, Sequence) and not isinstance(task_counts, (str, bytes)) else task_counts,
+        "warmups": warmups,
+        "samples": samples,
+        "timeoutMs": timeoutMs,
+        "gate": gate,
+        "runs": [],
+        "strategies": [],
+        "errors": [],
+    }
+    if gate["status"] != "passed":
+        base["status"] = "blocked"
+        base["errors"] = [{"type": "parity_gate", "reason": reason} for reason in gate["reasons"]] or [{"type": "parity_gate", "reason": "blocked"}]
+        base["finishedAt"] = _utc_now()
+        base["peakRssBytes"] = None
+        base["memorySource"] = "tracemalloc"
+        return base
+
+    errors: list[dict[str, Any]] = []
+    valid_counts = isinstance(task_counts, Sequence) and not isinstance(task_counts, (str, bytes))
+    if not valid_counts or any(isinstance(value, bool) or not isinstance(value, int) or value < 1 for value in task_counts):
+        errors.append({"type": "validation", "field": "task_counts", "message": "task_counts must contain positive integers"})
+    if isinstance(warmups, bool) or not isinstance(warmups, int) or warmups < 0:
+        errors.append({"type": "validation", "field": "warmups", "message": "warmups must be non-negative"})
+    if isinstance(samples, bool) or not isinstance(samples, int) or samples < 1:
+        errors.append({"type": "validation", "field": "samples", "message": "samples must be at least 1"})
+    if isinstance(timeoutMs, bool) or not isinstance(timeoutMs, int) or timeoutMs < 0:
+        errors.append({"type": "validation", "field": "timeoutMs", "message": "timeoutMs must be non-negative"})
+    if errors:
+        base["status"] = "failed"
+        base["errors"] = errors
+        base["finishedAt"] = _utc_now()
+        base["peakRssBytes"] = None
+        base["memorySource"] = "tracemalloc"
+        return base
+
+    tracemalloc.start()
+    try:
+        for task_count in task_counts:
+            request = build_workload(task_count, seed=seed + task_count * 1009)
+            for _ in range(warmups):
+                _run_sample(plan_runner, request, operation="plan", task_count=task_count, timeout_ms=timeoutMs, clock=clock)
+                _run_sample(rescue_runner, request, operation="rescue", task_count=task_count, timeout_ms=timeoutMs, clock=clock)
+            plan_samples = [_run_sample(plan_runner, request, operation="plan", task_count=task_count, timeout_ms=timeoutMs, clock=clock) for _ in range(samples)]
+            rescue_samples = [_run_sample(rescue_runner, request, operation="rescue", task_count=task_count, timeout_ms=timeoutMs, clock=clock) for _ in range(samples)]
+            for operation, measured in (("plan", plan_samples), ("rescue", rescue_samples)):
+                summary = summarize_samples(measured)
+                row: dict[str, Any] = {"runtime": "python", "operation": operation, "taskCount": task_count, "warmups": warmups, "samples": samples, "samplesData": measured}
+                row.update(summary)
+                if operation == "plan" and measured:
+                    last = measured[-1]
+                    result = last.get("result")
+                    if isinstance(result, Mapping):
+                        row["resultSummary"] = {"entryCount": len(result.get("entries") or []) if isinstance(result.get("entries"), list) else 0, "issueCount": len(result.get("issues") or []) if isinstance(result.get("issues"), list) else 0}
+                elif operation == "rescue" and measured:
+                    result = measured[-1].get("result")
+                    option_map = _option_map(result)
+                    row["resultSummary"] = {"strategies": list(option_map or {}), "recommended": next((strategy for strategy, option in (option_map or {}).items() if option.get("recommended") is True), None)}
+                base["runs"].append(row)
+                for sample in measured:
+                    if sample.get("status") in {"failure", "timeout"}:
+                        errors.append(_error_record(operation=operation, task_count=task_count, status=str(sample.get("status")), message=str(sample.get("error") or sample.get("status"))))
+            for strategy in STRATEGIES:
+                row, strategy_errors = _strategy_row(task_count, rescue_samples, strategy, warmups, samples)
+                base["strategies"].append(row)
+                errors.extend(strategy_errors)
+    finally:
+        _, peak = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+    base["errors"] = errors
+    completed_samples = sum(
+        int(row.get("successfulSampleCount", 0) or 0)
+        for row in base["runs"]
+        if isinstance(row, Mapping)
+    )
+    base["status"] = "completed" if completed_samples > 0 else "failed"
+    base["finishedAt"] = _utc_now()
+    base["peakRssBytes"] = int(peak)
+    base["memorySource"] = "tracemalloc"
+    for row in base["runs"]:
+        if isinstance(row, dict):
+            row["peakRssBytes"] = int(peak)
+    return base
+
+
+def _markdown_benchmark(report: Mapping[str, Any]) -> str:
+    gate = report.get("gate") if isinstance(report.get("gate"), Mapping) else {}
+    reasons = gate.get("reasons") if isinstance(gate.get("reasons"), list) else []
+    lines = ["# Scheduling benchmark", "", f"- status: {report.get('status')}", f"- parity gate: {gate.get('status')}", f"- gate reasons: {', '.join(map(str, reasons)) or 'none'}", "", "普通 issues 仅作为结果计数，不计入 degradation。", "", "## Plan/Rescue timing", "", "| operation | taskCount | samples | p50Ms | p95Ms | p99Ms | timeouts | failures | degraded |", "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    for run in report.get("runs", []):
+        if isinstance(run, Mapping):
+            lines.append(f"| {run.get('operation')} | {run.get('taskCount')} | {run.get('sampleCount', run.get('samples'))} | {run.get('p50Ms')} | {run.get('p95Ms')} | {run.get('p99Ms')} | {run.get('timeoutCount')} | {run.get('failureCount')} | {run.get('degradedCount')} |")
+    lines.extend(["", "## Strategies", "", "| taskCount | strategy | samples | successful | failures | avgEntryCount | avgIssueCount | avgHardIssueCount | avgMovedEntryCount | avgRecoveryMinutes | recommended |", "|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"])
+    for row in report.get("strategies", []):
+        if isinstance(row, Mapping):
+            lines.append(f"| {row.get('taskCount')} | {row.get('strategy')} | {row.get('sampleCount')} | {row.get('successfulSampleCount')} | {row.get('failureCount')} | {row.get('avgEntryCount')} | {row.get('avgIssueCount')} | {row.get('avgHardIssueCount')} | {row.get('avgMovedEntryCount')} | {row.get('avgRecoveryMinutes')} | {row.get('recommendedCount')} |")
+    lines.extend(["", "## Errors", ""])
+    errors = report.get("errors") if isinstance(report.get("errors"), list) else []
+    lines.extend(f"- {json.dumps(error, ensure_ascii=False, sort_keys=True)}" for error in errors) if errors else lines.append("- none")
+    return "\n".join(lines) + "\n"
+
+
+def write_benchmark_report(report: Mapping[str, Any], output_dir: Path) -> Path:
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stem = f"scheduling-benchmark-{timestamp}"
+    index = 0
+    while True:
+        suffix = "" if index == 0 else f"-{index}"
+        json_path = output_dir / f"{stem}{suffix}.json"
+        md_path = output_dir / f"{stem}{suffix}.md"
+        if not json_path.exists() and not md_path.exists():
+            break
+        index += 1
+    json_path.write_text(json.dumps(dict(report), ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    md_path.write_text(_markdown_benchmark(report), encoding="utf-8")
+    return json_path
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Run scheduling benchmark matrix")
+    parser.add_argument("--parity-report", type=Path, default=Path("reports/shared-vector-diff.json"))
+    parser.add_argument("--output-dir", type=Path, default=Path("reports/benchmarks"))
+    parser.add_argument("--task-count", type=int, action="append", dest="task_counts")
+    parser.add_argument("--warmups", type=int, default=2)
+    parser.add_argument("--samples", type=int, default=10)
+    parser.add_argument("--seed", type=int, default=20260916)
+    parser.add_argument("--timeout-ms", type=int, default=1000, dest="timeout_ms")
+    parser.add_argument("--refresh-parity", action="store_true")
+    args = parser.parse_args(argv)
+    parity_path = args.parity_report if args.parity_report.is_absolute() else REPO_ROOT / args.parity_report
+    if args.refresh_parity:
+        subprocess.run([sys.executable, "scripts/scheduling_parity.py"], cwd=REPO_ROOT, check=False)
+    try:
+        parity = json.loads(parity_path.read_text(encoding="utf-8"))
+        if not isinstance(parity, Mapping):
+            raise ValueError("parity report must be an object")
+    except Exception as exc:
+        parity = {}
+        report = run_benchmark(task_counts=tuple(args.task_counts or (10, 50, 100, 200)), warmups=args.warmups, samples=args.samples, seed=args.seed, timeoutMs=args.timeout_ms, parity_report=parity)
+        report["errors"].append({"type": "parity_report", "reason": str(exc)})
+    else:
+        report = run_benchmark(task_counts=tuple(args.task_counts or (10, 50, 100, 200)), warmups=args.warmups, samples=args.samples, seed=args.seed, timeoutMs=args.timeout_ms, parity_report=parity)
+    path = write_benchmark_report(report, args.output_dir if args.output_dir.is_absolute() else REPO_ROOT / args.output_dir)
+    print(f"benchmark report: {path} status={report.get('status')}")
+    if report.get("status") == "blocked":
+        return 2
+    if report.get("status") != "completed" or any(error.get("status") in {"failure", "timeout"} for error in report.get("errors", []) if isinstance(error, Mapping)):
+        return 1
+    return 0
+
+
 __all__ = [
     "build_options",
     "build_workload",
@@ -386,5 +686,11 @@ __all__ = [
     "measure_call",
     "percentile",
     "plan_schedule",
+    "run_benchmark",
     "summarize_samples",
+    "write_benchmark_report",
 ]
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

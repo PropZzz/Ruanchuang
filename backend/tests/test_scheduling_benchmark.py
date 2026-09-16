@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import json
 
 import pytest
 
@@ -10,6 +11,8 @@ from scripts.scheduling_benchmark import (
     measure_call,
     percentile,
     summarize_samples,
+    run_benchmark,
+    write_benchmark_report,
 )
 
 
@@ -115,3 +118,72 @@ def test_percentile_and_summary_reject_non_finite_or_boolean_durations() -> None
     summary = summarize_samples([{"status": "success", "durationMs": True}])
     assert summary["successfulSampleCount"] == 1
     assert summary["p50Ms"] is None
+
+
+def test_run_benchmark_records_plan_and_rescue_matrix_after_parity_gate() -> None:
+    parity = {
+        "summary": {"total": 1, "matched": 1, "mismatched": 0, "invalid": 0},
+        "dart": {"invalid": False, "returncode": 0},
+        "classificationCounts": {"pending_a_review": 0},
+    }
+
+    def plan_runner(request: dict[str, object]) -> dict[str, object]:
+        return {"entries": [], "issues": []}
+
+    def rescue_runner(request: dict[str, object]) -> dict[str, object]:
+        return {
+            "options": [
+                {
+                    "strategy": strategy,
+                    "plannedEntries": [],
+                    "issueCount": 0,
+                    "hardIssueCount": 0,
+                    "movedEntryCount": 0,
+                    "recoveryMinutes": 0,
+                    "recommended": strategy == "protectDeadline",
+                }
+                for strategy in ("protectDeadline", "protectRecovery", "minimizeChanges")
+            ]
+        }
+
+    report = run_benchmark(
+        task_counts=(3,),
+        warmups=0,
+        samples=2,
+        seed=7,
+        timeoutMs=100,
+        parity_report=parity,
+        plan_runner=plan_runner,
+        rescue_runner=rescue_runner,
+    )
+
+    assert report["status"] == "completed"
+    assert [row["strategy"] for row in report["strategies"]] == [
+        "protectDeadline",
+        "protectRecovery",
+        "minimizeChanges",
+    ]
+    assert report["runs"]
+    assert report["errors"] == []
+
+
+def test_write_benchmark_report_writes_json_and_markdown_without_overwriting(tmp_path) -> None:
+    report = {
+        "schemaVersion": "scheduling-benchmark/v1",
+        "status": "blocked",
+        "gate": {"status": "blocked", "reasons": ["mismatched"]},
+        "runs": [],
+        "strategies": [],
+        "errors": ["parity gate blocked"],
+    }
+
+    first = write_benchmark_report(report, tmp_path)
+    second = write_benchmark_report(report, tmp_path)
+
+    assert first.suffix == ".json"
+    assert first.exists()
+    assert second.exists()
+    assert first != second
+    assert json.loads(first.read_text(encoding="utf-8"))["status"] == "blocked"
+    assert first.with_suffix(".md").exists()
+    assert second.with_suffix(".md").exists()
