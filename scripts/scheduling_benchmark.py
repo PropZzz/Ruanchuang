@@ -391,11 +391,13 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def _error_record(*, operation: str, task_count: int, status: str, message: str, strategy: str | None = None) -> dict[str, Any]:
+def _error_record(*, operation: str, task_count: int, status: str, message: str, strategy: str | None = None, error_type: str | None = None) -> dict[str, Any]:
     record: dict[str, Any] = {
         "operation": operation,
         "taskCount": task_count,
         "status": status,
+        "type": error_type or status.title(),
+        "message": message,
         "error": message,
     }
     if strategy is not None:
@@ -432,6 +434,43 @@ def _option_map(value: Any) -> dict[str, Mapping[str, Any]] | None:
     return options
 
 
+_OPTION_METRICS = ("issueCount", "hardIssueCount", "movedEntryCount", "recoveryMinutes")
+
+
+def _validate_option(strategy: str, option: Mapping[str, Any] | None) -> str | None:
+    if option is None:
+        return f"missing option: {strategy}"
+    if option.get("strategy") != strategy:
+        return f"option strategy must be {strategy}"
+    if not isinstance(option.get("plannedEntries"), list):
+        return "plannedEntries must be a list"
+    for key in _OPTION_METRICS:
+        value = option.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return f"{key} must be a finite non-negative number"
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return f"{key} must be a finite non-negative number"
+        if not math.isfinite(number) or number < 0:
+            return f"{key} must be a finite non-negative number"
+    return None
+
+
+def _memory_wrapped_call(call: Callable[[], Any]) -> dict[str, Any]:
+    was_tracing = tracemalloc.is_tracing()
+    if not was_tracing:
+        tracemalloc.start()
+    tracemalloc.reset_peak()
+    try:
+        value = call()
+        _, peak = tracemalloc.get_traced_memory()
+        return {"__benchmark_value__": value, "__peak_memory_bytes__": int(peak)}
+    finally:
+        if not was_tracing:
+            tracemalloc.stop()
+
+
 def _run_sample(
     runner: Callable[[dict[str, Any]], Any],
     request: dict[str, Any],
@@ -441,10 +480,18 @@ def _run_sample(
     timeout_ms: int,
     clock: Callable[[], float],
 ) -> dict[str, Any]:
-    observed = measure_call(partial(runner, dict(request)), timeoutMs=timeout_ms, clock=clock)
+    observed = measure_call(partial(_memory_wrapped_call, partial(runner, dict(request))), timeoutMs=timeout_ms, clock=clock)
     observed["operation"] = operation
     observed["taskCount"] = task_count
-    if observed.get("status") == "success":
+    if observed.get("status") in {"success", "degraded"}:
+        wrapped = observed.get("result")
+        if isinstance(wrapped, Mapping) and "__benchmark_value__" in wrapped:
+            observed["result"] = wrapped.get("__benchmark_value__")
+            observed["peakMemoryBytes"] = wrapped.get("__peak_memory_bytes__")
+            observed["status"] = _classify_value(observed["result"])
+        else:
+            observed.update({"status": "failure", "errorType": "WorkerError", "error": "worker did not return benchmark payload"})
+    if observed.get("status") in {"success", "degraded"}:
         if operation == "plan" and not _valid_plan_result(observed.get("result")):
             observed.update({"status": "failure", "errorType": "MalformedResult", "error": "plan result must contain entries and issues lists"})
         elif operation == "rescue" and _option_map(observed.get("result")) is None:
@@ -461,22 +508,24 @@ def _strategy_row(task_count: int, samples: Sequence[Mapping[str, Any]], strateg
         status = sample.get("status")
         option = None
         if status in {"success", "degraded"}:
-            option = (_option_map(sample.get("result")) or {}).get(strategy)
-            if option is None:
+            options = _option_map(sample.get("result")) or {}
+            if strategy == STRATEGIES[0]:
+                for unknown in sorted(set(options) - set(STRATEGIES)):
+                    errors.append(_error_record(operation="rescue", task_count=task_count, strategy=unknown, status="failure", error_type="UnknownStrategy", message=f"unknown strategy: {unknown}"))
+            option = options.get(strategy)
+            validation_error = _validate_option(strategy, option)
+            if validation_error is not None:
                 status = "failure"
-                errors.append(_error_record(operation="rescue", task_count=task_count, strategy=strategy, status="failure", message=f"missing option: {strategy}"))
-        if option is not None:
-            entry_count = option.get("plannedEntries")
-            if not isinstance(entry_count, list):
-                status = "failure"
-                errors.append(_error_record(operation="rescue", task_count=task_count, strategy=strategy, status="failure", message="plannedEntries must be a list"))
+                errors.append(_error_record(operation="rescue", task_count=task_count, strategy=strategy, status="failure", error_type="OptionValidation", message=validation_error))
                 option = None
-            else:
+        if option is not None:
+            entry_count = option["plannedEntries"]
+            if isinstance(entry_count, list):
                 metric_values["entryCount"].append(float(len(entry_count)))
-                metric_values["issueCount"].append(_numeric(option.get("issueCount")))
-                metric_values["hardIssueCount"].append(_numeric(option.get("hardIssueCount")))
-                metric_values["movedEntryCount"].append(_numeric(option.get("movedEntryCount")))
-                metric_values["recoveryMinutes"].append(_numeric(option.get("recoveryMinutes")))
+                metric_values["issueCount"].append(float(option["issueCount"]))
+                metric_values["hardIssueCount"].append(float(option["hardIssueCount"]))
+                metric_values["movedEntryCount"].append(float(option["movedEntryCount"]))
+                metric_values["recoveryMinutes"].append(float(option["recoveryMinutes"]))
                 if option.get("recommended") is True:
                     recommended_count += 1
         item = dict(sample)
@@ -554,6 +603,8 @@ def run_benchmark(
         errors.append({"type": "validation", "field": "samples", "message": "samples must be at least 1"})
     if isinstance(timeoutMs, bool) or not isinstance(timeoutMs, int) or timeoutMs < 0:
         errors.append({"type": "validation", "field": "timeoutMs", "message": "timeoutMs must be non-negative"})
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        errors.append({"type": "validation", "field": "seed", "message": "seed must be an integer"})
     if errors:
         base["status"] = "failed"
         base["errors"] = errors
@@ -563,6 +614,7 @@ def run_benchmark(
         return base
 
     tracemalloc.start()
+    tracemalloc.reset_peak()
     try:
         for task_count in task_counts:
             request = build_workload(task_count, seed=seed + task_count * 1009)
@@ -593,8 +645,16 @@ def run_benchmark(
                 base["strategies"].append(row)
                 errors.extend(strategy_errors)
     finally:
-        _, peak = tracemalloc.get_traced_memory()
+        _, parent_peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
+    sample_peaks = [
+        int(sample.get("peakMemoryBytes"))
+        for row in base["runs"]
+        if isinstance(row, Mapping)
+        for sample in (row.get("samplesData") or [])
+        if isinstance(sample, Mapping) and isinstance(sample.get("peakMemoryBytes"), int)
+    ]
+    peak = max([int(parent_peak), *sample_peaks])
     base["errors"] = errors
     completed_samples = sum(
         int(row.get("successfulSampleCount", 0) or 0)
@@ -618,10 +678,10 @@ def _markdown_benchmark(report: Mapping[str, Any]) -> str:
     for run in report.get("runs", []):
         if isinstance(run, Mapping):
             lines.append(f"| {run.get('operation')} | {run.get('taskCount')} | {run.get('sampleCount', run.get('samples'))} | {run.get('p50Ms')} | {run.get('p95Ms')} | {run.get('p99Ms')} | {run.get('timeoutCount')} | {run.get('failureCount')} | {run.get('degradedCount')} |")
-    lines.extend(["", "## Strategies", "", "| taskCount | strategy | samples | successful | failures | avgEntryCount | avgIssueCount | avgHardIssueCount | avgMovedEntryCount | avgRecoveryMinutes | recommended |", "|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"])
+    lines.extend(["", "## Strategies", "", "| taskCount | strategy | samples | successful | timeouts | failures | degraded | avgEntryCount | avgIssueCount | avgHardIssueCount | avgMovedEntryCount | avgRecoveryMinutes | recommended |", "|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"])
     for row in report.get("strategies", []):
         if isinstance(row, Mapping):
-            lines.append(f"| {row.get('taskCount')} | {row.get('strategy')} | {row.get('sampleCount')} | {row.get('successfulSampleCount')} | {row.get('failureCount')} | {row.get('avgEntryCount')} | {row.get('avgIssueCount')} | {row.get('avgHardIssueCount')} | {row.get('avgMovedEntryCount')} | {row.get('avgRecoveryMinutes')} | {row.get('recommendedCount')} |")
+            lines.append(f"| {row.get('taskCount')} | {row.get('strategy')} | {row.get('sampleCount')} | {row.get('successfulSampleCount')} | {row.get('timeoutCount')} | {row.get('failureCount')} | {row.get('degradedCount')} | {row.get('avgEntryCount')} | {row.get('avgIssueCount')} | {row.get('avgHardIssueCount')} | {row.get('avgMovedEntryCount')} | {row.get('avgRecoveryMinutes')} | {row.get('recommendedCount')} |")
     lines.extend(["", "## Errors", ""])
     errors = report.get("errors") if isinstance(report.get("errors"), list) else []
     lines.extend(f"- {json.dumps(error, ensure_ascii=False, sort_keys=True)}" for error in errors) if errors else lines.append("- none")
@@ -658,16 +718,28 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--refresh-parity", action="store_true")
     args = parser.parse_args(argv)
     parity_path = args.parity_report if args.parity_report.is_absolute() else REPO_ROOT / args.parity_report
+    refresh_error: str | None = None
     if args.refresh_parity:
-        subprocess.run([sys.executable, "scripts/scheduling_parity.py"], cwd=REPO_ROOT, check=False)
+        refresh_dir = parity_path.parent
+        refresh_result = subprocess.run(
+            [sys.executable, "scripts/scheduling_parity.py", "--reports-dir", str(refresh_dir)],
+            cwd=REPO_ROOT,
+            check=False,
+        )
+        if refresh_result.returncode != 0:
+            refresh_error = f"parity refresh failed with returncode {refresh_result.returncode}"
+        else:
+            parity_path = refresh_dir / "shared-vector-diff.json"
     try:
+        if refresh_error:
+            raise RuntimeError(refresh_error)
         parity = json.loads(parity_path.read_text(encoding="utf-8"))
         if not isinstance(parity, Mapping):
             raise ValueError("parity report must be an object")
     except Exception as exc:
         parity = {}
         report = run_benchmark(task_counts=tuple(args.task_counts or (10, 50, 100, 200)), warmups=args.warmups, samples=args.samples, seed=args.seed, timeoutMs=args.timeout_ms, parity_report=parity)
-        report["errors"].append({"type": "parity_report", "reason": str(exc)})
+        report["errors"].append({"type": "parity_refresh" if args.refresh_parity else "parity_report", "reason": str(exc)})
     else:
         report = run_benchmark(task_counts=tuple(args.task_counts or (10, 50, 100, 200)), warmups=args.warmups, samples=args.samples, seed=args.seed, timeoutMs=args.timeout_ms, parity_report=parity)
     path = write_benchmark_report(report, args.output_dir if args.output_dir.is_absolute() else REPO_ROOT / args.output_dir)

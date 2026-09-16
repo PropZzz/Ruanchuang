@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -13,6 +14,7 @@ from scripts.scheduling_benchmark import (
     summarize_samples,
     run_benchmark,
     write_benchmark_report,
+    main,
 )
 
 
@@ -187,3 +189,127 @@ def test_write_benchmark_report_writes_json_and_markdown_without_overwriting(tmp
     assert json.loads(first.read_text(encoding="utf-8"))["status"] == "blocked"
     assert first.with_suffix(".md").exists()
     assert second.with_suffix(".md").exists()
+
+
+def _passed_parity() -> dict[str, object]:
+    return {
+        "summary": {"total": 1, "matched": 1, "mismatched": 0, "invalid": 0},
+        "dart": {"invalid": False, "returncode": 0},
+        "classificationCounts": {"pending_a_review": 0},
+    }
+
+
+@pytest.mark.parametrize("bad_seed", [True, "7", 1.5])
+def test_run_benchmark_rejects_non_integer_seed_without_calling_runners(bad_seed: object) -> None:
+    calls = 0
+
+    def runner(_: dict[str, object]) -> dict[str, object]:
+        nonlocal calls
+        calls += 1
+        return {"entries": [], "issues": []}
+
+    report = run_benchmark(
+        task_counts=(1,), warmups=0, samples=1, seed=bad_seed, timeoutMs=100,  # type: ignore[arg-type]
+        parity_report=_passed_parity(), plan_runner=runner, rescue_runner=runner,
+    )
+
+    assert report["status"] == "failed"
+    assert calls == 0
+    assert any(error.get("field") == "seed" for error in report["errors"])
+
+
+def test_run_benchmark_marks_missing_rescue_metric_as_strategy_failure() -> None:
+    def rescue_runner(_: dict[str, object]) -> dict[str, object]:
+        return {"options": [{"strategy": strategy, "plannedEntries": [], **({} if strategy == "protectRecovery" else {"issueCount": 0, "hardIssueCount": 0, "movedEntryCount": 0, "recoveryMinutes": 0}), "recommended": False} for strategy in ("protectDeadline", "protectRecovery", "minimizeChanges")]}
+
+    report = run_benchmark(
+        task_counts=(1,), warmups=0, samples=1, seed=7, timeoutMs=100,
+        parity_report=_passed_parity(), plan_runner=lambda _: {"entries": [], "issues": []},
+        rescue_runner=rescue_runner,
+    )
+
+    row = next(item for item in report["strategies"] if item["strategy"] == "protectRecovery")
+    assert row["failureCount"] == 1
+    assert any(error.get("strategy") == "protectRecovery" and error.get("type") for error in report["errors"])
+
+
+def test_run_benchmark_marks_missing_and_unknown_rescue_strategies_as_failures() -> None:
+    def rescue_runner(_: dict[str, object]) -> dict[str, object]:
+        return {"options": [{"strategy": "protectDeadline", "plannedEntries": [], "issueCount": 0, "hardIssueCount": 0, "movedEntryCount": 0, "recoveryMinutes": 0, "recommended": True}, {"strategy": "unknown", "plannedEntries": [], "issueCount": 0, "hardIssueCount": 0, "movedEntryCount": 0, "recoveryMinutes": 0, "recommended": False}]}
+
+    report = run_benchmark(
+        task_counts=(1,), warmups=0, samples=1, seed=7, timeoutMs=100,
+        parity_report=_passed_parity(), plan_runner=lambda _: {"entries": [], "issues": []},
+        rescue_runner=rescue_runner,
+    )
+
+    assert all(item["failureCount"] == 1 for item in report["strategies"] if item["strategy"] != "protectDeadline")
+    assert any(error.get("strategy") == "unknown" for error in report["errors"])
+
+
+def test_run_benchmark_counts_timeout_failure_and_degraded_samples() -> None:
+    responses = iter([TimeoutError("sleep"), RuntimeError("boom"), {"entries": [], "issues": [], "degraded": True}])
+
+    def plan_runner(_: dict[str, object]) -> dict[str, object]:
+        response = next(responses)
+        if isinstance(response, Exception):
+            if isinstance(response, TimeoutError):
+                time.sleep(0.05)
+            raise response
+        return response
+
+    report = run_benchmark(
+        task_counts=(1,), warmups=0, samples=3, seed=7, timeoutMs=1,
+        parity_report=_passed_parity(), plan_runner=plan_runner,
+        rescue_runner=lambda _: {"options": []},
+    )
+    plan = next(item for item in report["runs"] if item["operation"] == "plan")
+    assert plan["timeoutCount"] == 1
+    assert plan["failureCount"] == 1
+    assert plan["degradedCount"] == 1
+
+
+def test_blocked_gate_does_not_call_runners() -> None:
+    calls = []
+
+    def runner(_: dict[str, object]) -> dict[str, object]:
+        calls.append(True)
+        return {"entries": [], "issues": []}
+
+    report = run_benchmark(task_counts=(1,), warmups=0, samples=1, seed=7, timeoutMs=100, parity_report={"summary": {"total": 1, "matched": 0, "mismatched": 1, "invalid": 0}}, plan_runner=runner, rescue_runner=runner)
+    assert report["status"] == "blocked"
+    assert calls == []
+
+
+def test_degraded_malformed_plan_and_rescue_are_failures_not_degradation() -> None:
+    report = run_benchmark(
+        task_counts=(1,), warmups=0, samples=1, seed=7, timeoutMs=100,
+        parity_report=_passed_parity(), plan_runner=lambda _: {"degraded": True},
+        rescue_runner=lambda _: {"degraded": True, "options": None},
+    )
+    plan = next(item for item in report["runs"] if item["operation"] == "plan")
+    rescue = next(item for item in report["runs"] if item["operation"] == "rescue")
+    assert plan["failureCount"] == 1 and plan["degradedCount"] == 0
+    assert rescue["failureCount"] == 1 and rescue["degradedCount"] == 0
+
+
+def test_markdown_strategy_table_includes_timeout_and_degraded_columns(tmp_path) -> None:
+    path = write_benchmark_report({"status": "completed", "gate": {"status": "passed", "reasons": []}, "runs": [], "strategies": [{"taskCount": 1, "strategy": "protectDeadline", "sampleCount": 1, "successfulSampleCount": 1, "timeoutCount": 0, "failureCount": 0, "degradedCount": 0, "avgEntryCount": 0, "avgIssueCount": 0, "avgHardIssueCount": 0, "avgMovedEntryCount": 0, "avgRecoveryMinutes": 0, "recommendedCount": 1}], "errors": []}, tmp_path)
+    markdown = path.with_suffix(".md").read_text(encoding="utf-8")
+    header = next(line for line in markdown.splitlines() if line.startswith("| taskCount | strategy"))
+    assert "timeout" in header and "degraded" in header
+
+
+def test_refresh_parity_failure_blocks_even_when_stale_report_is_valid(tmp_path, monkeypatch) -> None:
+    stale = tmp_path / "stale.json"
+    stale.write_text(json.dumps(_passed_parity()), encoding="utf-8")
+
+    def failed_refresh(*args: object, **kwargs: object) -> SimpleNamespace:
+        return SimpleNamespace(returncode=1)
+
+    monkeypatch.setattr("scripts.scheduling_benchmark.subprocess.run", failed_refresh)
+    assert main(["--refresh-parity", "--parity-report", str(stale), "--output-dir", str(tmp_path)]) == 2
+    reports = sorted(tmp_path.glob("scheduling-benchmark-*.json"))
+    payload = json.loads(reports[-1].read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert any(error.get("type") == "parity_refresh" for error in payload["errors"])
