@@ -721,15 +721,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     refresh_error: str | None = None
     if args.refresh_parity:
         refresh_dir = parity_path.parent
-        refresh_result = subprocess.run(
-            [sys.executable, "scripts/scheduling_parity.py", "--reports-dir", str(refresh_dir)],
-            cwd=REPO_ROOT,
-            check=False,
-        )
-        if refresh_result.returncode != 0:
-            refresh_error = f"parity refresh failed with returncode {refresh_result.returncode}"
-        else:
-            parity_path = refresh_dir / "shared-vector-diff.json"
+        try:
+            refresh_result = subprocess.run(
+                [sys.executable, "scripts/scheduling_parity.py", "--reports-dir", str(refresh_dir)],
+                cwd=REPO_ROOT,
+                check=False,
+            )
+            returncode = getattr(refresh_result, "returncode", 1)
+            if returncode != 0:
+                refresh_error = f"parity refresh failed with returncode {returncode}"
+            else:
+                parity_path = refresh_dir / "shared-vector-diff.json"
+        except Exception as exc:
+            refresh_error = f"parity refresh failed: {exc}"
     try:
         if refresh_error:
             raise RuntimeError(refresh_error)
