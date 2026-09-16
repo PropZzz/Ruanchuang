@@ -278,6 +278,15 @@ def test_run_benchmark_marks_missing_and_unknown_rescue_strategies_as_failures()
     assert any(error.get("strategy") == "unknown" for error in report["errors"])
 
 
+@pytest.mark.parametrize("bad_option", [{"recommended": "yes"}, {"plannedEntries": ["bad"]}])
+def test_run_benchmark_rejects_malformed_rescue_option_structure(bad_option: dict[str, object]) -> None:
+    base = {"strategy": "protectDeadline", "plannedEntries": [], "issueCount": 0, "hardIssueCount": 0, "movedEntryCount": 0, "recoveryMinutes": 0, "recommended": False}
+    base.update(bad_option)
+    report = run_benchmark(task_counts=(1,), warmups=0, samples=1, seed=7, timeoutMs=100, parity_report=_passed_parity(), plan_runner=lambda _: {"entries": [], "issues": []}, rescue_runner=lambda _: {"options": [base]})
+    row = next(item for item in report["strategies"] if item["strategy"] == "protectDeadline")
+    assert row["failureCount"] == 1
+
+
 def test_run_benchmark_counts_timeout_failure_and_degraded_samples() -> None:
     responses = iter([TimeoutError("sleep"), RuntimeError("boom"), {"entries": [], "issues": [], "degraded": True}])
 

@@ -480,8 +480,11 @@ def _validate_option(strategy: str, option: Mapping[str, Any] | None) -> str | N
         return f"missing option: {strategy}"
     if option.get("strategy") != strategy:
         return f"option strategy must be {strategy}"
-    if not isinstance(option.get("plannedEntries"), list):
+    planned_entries = option.get("plannedEntries")
+    if not isinstance(planned_entries, list) or any(not isinstance(entry, Mapping) for entry in planned_entries):
         return "plannedEntries must be a list"
+    if "recommended" in option and not isinstance(option.get("recommended"), bool):
+        return "recommended must be a boolean"
     for key in _OPTION_METRICS:
         value = option.get(key)
         if isinstance(value, bool) or not isinstance(value, (int, float)):
