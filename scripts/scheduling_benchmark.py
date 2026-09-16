@@ -483,13 +483,14 @@ def _memory_wrapped_call(call: Callable[[], Any]) -> dict[str, Any]:
     was_tracing = tracemalloc.is_tracing()
     if not was_tracing:
         tracemalloc.start()
+    current_before, _ = tracemalloc.get_traced_memory()
     tracemalloc.reset_peak()
     started = time.perf_counter()
     try:
         value = call()
         inner_duration = (time.perf_counter() - started) * 1000.0
         _, peak = tracemalloc.get_traced_memory()
-        return {"__benchmark_value__": value, "__peak_memory_bytes__": int(peak), "__inner_duration_ms__": round(inner_duration, 3)}
+        return {"__benchmark_value__": value, "__peak_memory_bytes__": int(max(0, peak - current_before)), "__inner_duration_ms__": round(inner_duration, 3)}
     finally:
         if not was_tracing:
             tracemalloc.stop()
