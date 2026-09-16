@@ -7,6 +7,7 @@ use killable processes where possible and mark thread timeouts explicitly.
 from __future__ import annotations
 
 import argparse
+import copy
 from datetime import datetime, timedelta, timezone
 from functools import partial
 import json
@@ -501,7 +502,7 @@ def _run_sample(
     timeout_ms: int,
     clock: Callable[[], float],
 ) -> dict[str, Any]:
-    observed = measure_call(partial(_memory_wrapped_call, partial(runner, dict(request))), timeoutMs=timeout_ms, clock=clock)
+    observed = measure_call(partial(_memory_wrapped_call, partial(runner, copy.deepcopy(request))), timeoutMs=timeout_ms, clock=clock)
     observed["operation"] = operation
     observed["taskCount"] = task_count
     if observed.get("status") in {"success", "degraded"}:
@@ -619,6 +620,7 @@ def run_benchmark(
         base["errors"] = [{"type": "parity_gate", "reason": reason} for reason in gate["reasons"]] or [{"type": "parity_gate", "reason": "blocked"}]
         base["finishedAt"] = _utc_now()
         base["peakRssBytes"] = None
+        base["peakMemoryBytes"] = None
         base["parentPeakMemoryBytes"] = None
         base["memorySource"] = "tracemalloc"
         return base
@@ -640,6 +642,7 @@ def run_benchmark(
         base["errors"] = errors
         base["finishedAt"] = _utc_now()
         base["peakRssBytes"] = None
+        base["peakMemoryBytes"] = None
         base["parentPeakMemoryBytes"] = None
         base["memorySource"] = "tracemalloc"
         return base
@@ -658,7 +661,7 @@ def run_benchmark(
                 summary = summarize_samples(measured)
                 row_peaks = [int(sample["peakMemoryBytes"]) for sample in measured if sample.get("status") in {"success", "degraded"} and isinstance(sample.get("peakMemoryBytes"), int)]
                 row_peak = max(row_peaks) if row_peaks else None
-                row: dict[str, Any] = {"runtime": "python", "operation": operation, "taskCount": task_count, "warmups": warmups, "samples": samples, "samplesData": measured, "peakRssBytes": row_peak}
+                row: dict[str, Any] = {"runtime": "python", "operation": operation, "taskCount": task_count, "warmups": warmups, "samples": samples, "samplesData": measured, "peakRssBytes": row_peak, "peakMemoryBytes": row_peak}
                 row.update(summary)
                 if operation == "plan" and measured:
                     last = measured[-1]
@@ -705,6 +708,7 @@ def run_benchmark(
     base["status"] = "completed" if completed_samples > 0 else "failed"
     base["finishedAt"] = _utc_now()
     base["peakRssBytes"] = peak
+    base["peakMemoryBytes"] = peak
     base["parentPeakMemoryBytes"] = int(parent_peak)
     base["memorySource"] = "tracemalloc"
     return base
@@ -723,7 +727,7 @@ def _markdown_benchmark(report: Mapping[str, Any]) -> str:
             lines.append(f"| {row.get('taskCount')} | {row.get('strategy')} | {row.get('sampleCount')} | {row.get('successfulSampleCount')} | {row.get('timeoutCount')} | {row.get('failureCount')} | {row.get('degradedCount')} | {row.get('avgEntryCount')} | {row.get('avgIssueCount')} | {row.get('avgHardIssueCount')} | {row.get('avgMovedEntryCount')} | {row.get('avgRecoveryMinutes')} | {row.get('recommendedCount')} |")
     lines.extend(["", "## Errors", ""])
     errors = report.get("errors") if isinstance(report.get("errors"), list) else []
-    lines.extend(f"- {json.dumps(error, ensure_ascii=False, sort_keys=True)}" for error in errors) if errors else lines.append("- none")
+    lines.extend(f"- {json.dumps(error, ensure_ascii=False, sort_keys=True, allow_nan=False)}" for error in errors) if errors else lines.append("- none")
     return "\n".join(lines) + "\n"
 
 
@@ -732,30 +736,35 @@ def write_benchmark_report(report: Mapping[str, Any], output_dir: Path) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     stem = f"scheduling-benchmark-{timestamp}"
+    payload = json.dumps(dict(report), ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False) + "\n"
+    markdown = _markdown_benchmark(report)
     index = 0
     while True:
         suffix = "" if index == 0 else f"-{index}"
         json_path = output_dir / f"{stem}{suffix}.json"
         md_path = output_dir / f"{stem}{suffix}.md"
-        if not json_path.exists() and not md_path.exists():
-            break
-        index += 1
-    created: list[Path] = []
-    try:
-        with json_path.open("x", encoding="utf-8") as handle:
-            handle.write(json.dumps(dict(report), ensure_ascii=False, sort_keys=True, indent=2) + "\n")
-        created.append(json_path)
-        with md_path.open("x", encoding="utf-8") as handle:
-            handle.write(_markdown_benchmark(report))
-        created.append(md_path)
-    except Exception:
-        for path in created:
-            try:
-                path.unlink()
-            except OSError:
-                pass
-        raise
-    return json_path
+        created_json = False
+        try:
+            with json_path.open("x", encoding="utf-8") as handle:
+                handle.write(payload)
+            created_json = True
+            with md_path.open("x", encoding="utf-8") as handle:
+                handle.write(markdown)
+            return json_path
+        except FileExistsError:
+            if created_json:
+                try:
+                    json_path.unlink()
+                except OSError:
+                    pass
+            index += 1
+        except Exception:
+            if created_json:
+                try:
+                    json_path.unlink()
+                except OSError:
+                    pass
+            raise
 
 
 def main(argv: Sequence[str] | None = None) -> int:

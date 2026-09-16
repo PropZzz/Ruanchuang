@@ -19,6 +19,10 @@ from scripts.scheduling_benchmark import (
 )
 
 
+def _picklable_echo() -> dict[str, str]:
+    return {"ok": "yes"}
+
+
 def test_percentile_uses_linear_interpolation() -> None:
     assert percentile([10, 20, 30, 40], 0.95) == 38.5
 
@@ -109,6 +113,13 @@ def test_measure_call_reports_exception_type_for_failure() -> None:
 
     assert result["status"] == "failure"
     assert result["errorType"] == "ValueError"
+
+
+def test_measure_call_uses_process_for_picklable_runner() -> None:
+    result = measure_call(_picklable_echo, timeoutMs=1000)
+    assert result["isolation"] == "process"
+    assert result["result"] == {"ok": "yes"}
+    assert result["durationMs"] >= 0
 
 
 def test_measure_call_requires_boolean_degradation_flags() -> None:
@@ -359,3 +370,33 @@ def test_refresh_parity_uses_fresh_temporary_reports_dir(tmp_path, monkeypatch) 
 
     monkeypatch.setattr("scripts.scheduling_benchmark.subprocess.run", fake_refresh)
     assert main(["--refresh-parity", "--parity-report", str(stale), "--output-dir", str(tmp_path)]) == 2
+
+
+def test_write_benchmark_report_rejects_nan_without_partial_files(tmp_path) -> None:
+    with pytest.raises(ValueError):
+        write_benchmark_report({"status": "blocked", "value": float("nan")}, tmp_path)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_benchmark_exposes_peak_memory_aliases() -> None:
+    report = run_benchmark(
+        task_counts=(1,), warmups=0, samples=1, seed=7, timeoutMs=100,
+        parity_report=_passed_parity(), plan_runner=lambda _: {"entries": [], "issues": []},
+        rescue_runner=lambda _: {"options": [{"strategy": s, "plannedEntries": [], "issueCount": 0, "hardIssueCount": 0, "movedEntryCount": 0, "recoveryMinutes": 0, "recommended": False} for s in ("protectDeadline", "protectRecovery", "minimizeChanges")]},
+    )
+    assert report["peakMemoryBytes"] == report["peakRssBytes"]
+    assert all(row["peakMemoryBytes"] == row["peakRssBytes"] for row in report["runs"])
+
+
+def test_runner_receives_deepcopied_request_each_sample() -> None:
+    seen: list[int] = []
+
+    def plan_runner(request: dict[str, object]) -> dict[str, object]:
+        tasks = request["tasks"]
+        assert isinstance(tasks, list)
+        seen.append(len(tasks))
+        tasks.append({"id": "mutated"})
+        return {"entries": [], "issues": []}
+
+    run_benchmark(task_counts=(1,), warmups=0, samples=2, seed=7, timeoutMs=100, parity_report=_passed_parity(), plan_runner=plan_runner, rescue_runner=lambda _: {"options": []})
+    assert seen == [1, 1]
