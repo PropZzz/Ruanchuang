@@ -55,6 +55,13 @@ def test_evaluate_parity_gate_blocks_mismatches_and_pending_review() -> None:
     assert "pending_a_review" in result["reasons"]
 
 
+def test_evaluate_parity_gate_summary_preserves_review_and_dart_state() -> None:
+    result = evaluate_parity_gate(_passed_parity())
+    assert result["summary"]["pending_a_review"] == 0
+    assert result["summary"]["dartInvalid"] is False
+    assert result["summary"]["dartReturncode"] == 0
+
+
 def test_evaluate_parity_gate_requires_conserved_non_negative_counts() -> None:
     report = {
         "summary": {"total": 2, "matched": 1, "mismatched": 0, "invalid": 0},
@@ -348,7 +355,7 @@ def test_benchmark_records_inner_duration_and_sample_peak_memory() -> None:
     run = report["runs"][0]
     sample = run["samplesData"][0]
     assert "innerDurationMs" in sample and "peakMemoryBytes" in sample
-    assert run["peakRssBytes"] == sample["peakMemoryBytes"]
+    assert run["peakMemoryBytes"] == sample["peakMemoryBytes"]
     assert report["memorySource"] == "tracemalloc"
     assert "parentPeakMemoryBytes" in report
 
@@ -396,8 +403,11 @@ def test_benchmark_exposes_peak_memory_aliases() -> None:
         parity_report=_passed_parity(), plan_runner=lambda _: {"entries": [], "issues": []},
         rescue_runner=lambda _: {"options": [{"strategy": s, "plannedEntries": [], "issueCount": 0, "hardIssueCount": 0, "movedEntryCount": 0, "recoveryMinutes": 0, "recommended": False} for s in ("protectDeadline", "protectRecovery", "minimizeChanges")]},
     )
-    assert report["peakMemoryBytes"] == report["peakRssBytes"]
-    assert all(row["peakMemoryBytes"] == row["peakRssBytes"] for row in report["runs"])
+    assert isinstance(report["peakMemoryBytes"], int) and report["peakMemoryBytes"] >= 0
+    assert report["peakRssBytes"] is None
+    assert all(isinstance(row["peakMemoryBytes"], int) and row["peakMemoryBytes"] >= 0 for row in report["runs"])
+    assert all(row["peakRssBytes"] is None for row in report["runs"])
+    assert report["rssSource"] == "unavailable"
 
 
 def test_runner_receives_deepcopied_request_each_sample() -> None:

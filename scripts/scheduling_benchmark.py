@@ -215,10 +215,17 @@ def evaluate_parity_gate(report: Mapping[str, Any]) -> dict[str, Any]:
 
     # Keep diagnostics stable if multiple validation checks hit the same field.
     reasons = list(dict.fromkeys(reasons))
+    gate_summary = dict(summary)
+    gate_summary.update({
+        "pending_a_review": pending,
+        "dartInvalid": dart.get("invalid"),
+        "dartReturncode": returncode,
+        "dartError": dart.get("error"),
+    })
     return {
         "status": "blocked" if reasons else "passed",
         "reasons": reasons,
-        "summary": summary,
+        "summary": gate_summary,
     }
 
 
@@ -633,6 +640,7 @@ def run_benchmark(
         base["finishedAt"] = _utc_now()
         base["peakRssBytes"] = None
         base["peakMemoryBytes"] = None
+        base["rssSource"] = "unavailable"
         base["parentPeakMemoryBytes"] = None
         base["memorySource"] = "tracemalloc"
         return base
@@ -655,6 +663,7 @@ def run_benchmark(
         base["finishedAt"] = _utc_now()
         base["peakRssBytes"] = None
         base["peakMemoryBytes"] = None
+        base["rssSource"] = "unavailable"
         base["parentPeakMemoryBytes"] = None
         base["memorySource"] = "tracemalloc"
         return base
@@ -673,7 +682,7 @@ def run_benchmark(
                 summary = summarize_samples(measured)
                 row_peaks = [int(sample["peakMemoryBytes"]) for sample in measured if sample.get("status") in {"success", "degraded"} and isinstance(sample.get("peakMemoryBytes"), int)]
                 row_peak = max(row_peaks) if row_peaks else None
-                row: dict[str, Any] = {"runtime": "python", "operation": operation, "taskCount": task_count, "warmups": warmups, "samples": samples, "samplesData": measured, "peakRssBytes": row_peak, "peakMemoryBytes": row_peak}
+                row: dict[str, Any] = {"runtime": "python", "operation": operation, "taskCount": task_count, "warmups": warmups, "samples": samples, "samplesData": measured, "peakRssBytes": None, "peakMemoryBytes": row_peak}
                 row.update(summary)
                 if operation == "plan" and measured:
                     last = measured[-1]
@@ -719,8 +728,9 @@ def run_benchmark(
     )
     base["status"] = "completed" if completed_samples > 0 else "failed"
     base["finishedAt"] = _utc_now()
-    base["peakRssBytes"] = peak
+    base["peakRssBytes"] = None
     base["peakMemoryBytes"] = peak
+    base["rssSource"] = "unavailable"
     base["parentPeakMemoryBytes"] = int(parent_peak)
     base["memorySource"] = "tracemalloc"
     return base
