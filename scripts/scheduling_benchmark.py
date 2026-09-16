@@ -281,7 +281,15 @@ def _process_call(call: Callable[[], Any], timeout_ms: int, clock: Callable[[], 
     try:
         worker.start()
     except BaseException:
+        try:
+            output.cancel_join_thread()
+        except Exception:
+            pass
         output.close()
+        try:
+            worker.close()
+        except Exception:
+            pass
         return _thread_call(call, timeout_ms, clock)
     worker.join(timeout_ms / 1000.0)
     timed_out = worker.is_alive()
@@ -748,11 +756,13 @@ def write_benchmark_report(report: Mapping[str, Any], output_dir: Path) -> Path:
         json_path = output_dir / f"{stem}{suffix}.json"
         md_path = output_dir / f"{stem}{suffix}.md"
         created_json = False
+        created_md = False
         try:
             with json_path.open("x", encoding="utf-8") as handle:
+                created_json = True
                 handle.write(payload)
-            created_json = True
             with md_path.open("x", encoding="utf-8") as handle:
+                created_md = True
                 handle.write(markdown)
             return json_path
         except FileExistsError:
@@ -761,11 +771,21 @@ def write_benchmark_report(report: Mapping[str, Any], output_dir: Path) -> Path:
                     json_path.unlink()
                 except OSError:
                     pass
+            if created_md:
+                try:
+                    md_path.unlink()
+                except OSError:
+                    pass
             index += 1
         except Exception:
             if created_json:
                 try:
                     json_path.unlink()
+                except OSError:
+                    pass
+            if created_md:
+                try:
+                    md_path.unlink()
                 except OSError:
                     pass
             raise
