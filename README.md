@@ -36,8 +36,9 @@ C++ 重写调度核心。
 基准默认覆盖任务数量 `10/50/100/200`，`seed=20260916`，预热 `2` 次、采样
 `10` 次、超时 `1000ms`。每次运行在 `reports/benchmarks` 生成带时间戳的 JSON
 和 Markdown 报告，记录任务数量、规划耗时（包括 P50/P95/P99）、
-`peakMemory`/`peakRss`（来源为 `tracemalloc`）、`timeout`、`failure`、
-`degraded` 以及各策略指标。普通业务 issues 只描述调度问题，不等于
+`peakMemoryBytes`（`tracemalloc` 调用期间的 Python 分配增量估计）、
+`peakRssBytes`（当前为 `null`，未采集）和 `rssSource`，以及 `timeout`、`failure`、
+`degraded` 与各策略指标。普通业务 issues 只描述调度问题，不等于
 `degraded` 降级状态。
 
 ## 🧠 项目简介

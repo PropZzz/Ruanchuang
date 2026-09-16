@@ -108,7 +108,7 @@ def summarize_samples(samples: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 
 `measure_call` records `durationMs`, `status`, `timeoutMs`, and an exception type/message for failures. A timeout is decided by `thread.join(timeoutMs / 1000)`, returns immediately with `status: timeout`, and does not mark the call as successful. A normal scheduling response containing `degraded: true` or `fallback: true` is classified as `degraded`; ordinary plan issues are not degradation.
 
-`summarize_samples` counts `success`, `timeout`, `failure`, and `degraded`, computes P50/P95/P99 plus min/max from successful and degraded non-timeout durations, and reports `sampleCount` and `successfulSampleCount`. All duration values are rounded to three decimal milliseconds; `peakRssBytes` is supplied separately by the memory sampler.
+`summarize_samples` counts `success`, `timeout`, `failure`, and `degraded`, computes P50/P95/P99 plus min/max from successful and degraded non-timeout durations, and reports `sampleCount` and `successfulSampleCount`. All duration values are rounded to three decimal milliseconds. `peakMemoryBytes` is the `tracemalloc` estimate of Python allocation growth during the call; `peakRssBytes` remains `null`/uncollected, with `rssSource: "unavailable"` (or `"parentPeakMemoryBytes"` only when explicitly derived from a parent-process memory value).
 
 - [ ] **Step 2: Run the focused tests to verify they pass**
 
@@ -173,7 +173,7 @@ Expected: failures report missing `run_benchmark` or `write_benchmark_report`.
 
 - [ ] **Step 3: Implement matrix execution**
 
-Add `run_benchmark(...)` with injectable `plan_runner`, `rescue_runner`, `clock`, and an already loaded parity mapping. For each requested task count, generate one workload, run `warmups` without recording, then run `samples` for the plan operation and the rescue operation. Measure each call with `timeoutMs`; append one `runs` row per runtime/operation/task count with `runtime: "python"`, task count, sample configuration and `summarize_samples` fields. Use `tracemalloc.reset_peak()` around the matrix and include a non-null `peakRssBytes` estimate with `memorySource: "tracemalloc"` when platform RSS is unavailable.
+Add `run_benchmark(...)` with injectable `plan_runner`, `rescue_runner`, `clock`, and an already loaded parity mapping. For each requested task count, generate one workload, run `warmups` without recording, then run `samples` for the plan operation and the rescue operation. Measure each call with `timeoutMs`; append one `runs` row per runtime/operation/task count with `runtime: "python"`, task count, sample configuration and `summarize_samples` fields. Use `tracemalloc.reset_peak()` around the matrix and record its Python allocation increment as `peakMemoryBytes`. Keep `peakRssBytes: null` with `rssSource: "unavailable"`; if a future implementation explicitly derives a parent-process value, use `rssSource: "parentPeakMemoryBytes"` and do not label it as current-process RSS.
 
 For each rescue response, look up all three fixed strategy names. Record one strategy row per task count/name with success, failure, timeout and degraded counts, plus averages/min/max for `entryCount`, `issueCount`, `hardIssueCount`, `movedEntryCount`, `recoveryMinutes`, and `recommendedCount`. Missing options and malformed responses become structured `errors` and failures; one bad sample does not stop other samples. Ordinary scheduling issues remain result metrics, not execution failures or degradation.
 

@@ -22,11 +22,11 @@
 
 - `schemaVersion`、`status`、`command`、`startedAt`、`finishedAt`、`seed`；
 - `gate`：parity 状态、摘要、阻断原因；
-- `runs`：runtime、taskCount、warmups、samples、P50/P95/P99、min/max、timeoutCount、failureCount、degradedCount、peakRssBytes；
+- `runs`：runtime、taskCount、warmups、samples、P50/P95/P99、min/max、timeoutCount、failureCount、degradedCount、`peakMemoryBytes`、`peakRssBytes` 和 `rssSource`；其中 `peakMemoryBytes` 是 `tracemalloc` 调用期间的 Python 分配增量估计，`peakRssBytes` 当前为 `null`/未采集，不能当作 RSS 测量值；
 - `strategies`：taskCount、strategy、success/failure/timeout/degraded 计数、entry/issue/hardIssue/moved/recovery 指标和结果摘要；
 - `errors`：运行时、规模、策略、阶段、异常类型和消息。
 
-耗时分位数使用排序后的样本线性插值，统一以毫秒和整数微秒精度记录；内存峰值尽力使用标准库采样，采集失败写入诊断并计入失败，不伪造零值。降级只统计明确返回的降级状态或 fallback 标记，不能把普通业务 issue 误报为降级。
+耗时分位数使用排序后的样本线性插值，统一以毫秒和整数微秒精度记录；`peakMemoryBytes` 使用 `tracemalloc` 记录调用期间的 Python 分配增量估计，`peakRssBytes` 当前不采集并保持 `null`。`rssSource` 使用 `unavailable` 表示 RSS 不可用；若未来复用父进程峰值，应标记为 `parentPeakMemoryBytes`，不得声称其为当前运行的 RSS。降级只统计明确返回的降级状态或 fallback 标记，不能把普通业务 issue 误报为降级。
 
 ## 失败与可复现性
 

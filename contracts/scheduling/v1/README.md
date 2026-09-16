@@ -74,8 +74,9 @@ blocked 报告是门槛状态证据，不是性能结果。
 基准覆盖三种策略（`protectDeadline`、`protectRecovery`、`minimizeChanges`）和
 任务规模 `10/50/100/200`，默认 `seed=20260916`、预热 `2` 次、采样 `10` 次、
 超时 `1000ms`。带时间戳的 JSON/Markdown 报告位于 `reports/benchmarks`，应至少
-记录任务数量、规划耗时 P50/P95/P99、`peakMemory`/`peakRss`（`tracemalloc`
-来源）、超时、失败、降级和各策略指标。普通业务 `issues` 不等于
+记录任务数量、规划耗时 P50/P95/P99、`peakMemoryBytes`（`tracemalloc` 调用期间
+的 Python 分配增量估计）、`peakRssBytes`（当前为 `null`，未采集）和
+`rssSource`，以及超时、失败、降级和各策略指标。普通业务 `issues` 不等于
 `degraded`；降级必须由调度运行状态明确记录。
 
 在获得有效 parity 和可重复的基准数据之前，禁止以性能假设推动 Go、Rust 或
