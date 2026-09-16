@@ -360,6 +360,7 @@ def summarize_samples(samples: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     durations: list[float] = []
     for sample in samples:
         if not isinstance(sample, Mapping):
+            failure_count += 1
             continue
         status = sample.get("status")
         if status == "timeout":
