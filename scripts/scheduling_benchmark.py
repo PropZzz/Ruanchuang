@@ -870,6 +870,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         report["errors"].append({"type": "parity_refresh" if args.refresh_parity else "parity_report", "reason": str(exc)})
     else:
         report = run_benchmark(task_counts=tuple(args.task_counts or (10, 50, 100, 200)), warmups=args.warmups, samples=args.samples, seed=args.seed, timeoutMs=args.timeout_ms, parity_report=parity)
+    if args.refresh_parity:
+        report.setdefault("warnings", [])
+    else:
+        warning = {"type": "parity_report_reused", "message": "existing parity report may be stale; use default refresh"}
+        report.setdefault("warnings", []).append(warning)
+        print(f"warning: {warning['message']}", file=sys.stderr)
     path = write_benchmark_report(report, args.output_dir if args.output_dir.is_absolute() else REPO_ROOT / args.output_dir)
     print(f"benchmark report: {path} status={report.get('status')}")
     if report.get("status") == "blocked":

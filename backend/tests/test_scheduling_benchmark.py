@@ -414,6 +414,17 @@ def test_refresh_parity_keeps_fresh_mismatch_report_when_subprocess_nonzero(tmp_
     assert payload["gate"]["summary"]["mismatched"] == 9
 
 
+def test_no_refresh_parity_warns_when_reusing_existing_report(tmp_path, monkeypatch, capsys) -> None:
+    parity_path = tmp_path / "parity.json"
+    parity_path.write_text(json.dumps({"summary": {"total": 1, "matched": 0, "mismatched": 1, "invalid": 0}, "dart": {"invalid": False, "returncode": 0}, "classificationCounts": {"pending_a_review": 0}}), encoding="utf-8")
+    monkeypatch.setattr("scripts.scheduling_benchmark.run_benchmark", lambda **kwargs: {"status": "blocked", "gate": {"status": "blocked", "reasons": ["mismatched"]}, "runs": [], "strategies": [], "errors": [], "warnings": kwargs.get("warnings", [])})
+    assert main(["--no-refresh-parity", "--parity-report", str(parity_path), "--output-dir", str(tmp_path)]) == 2
+    captured = capsys.readouterr()
+    assert "may be stale" in captured.err
+    payload = json.loads(sorted(tmp_path.glob("scheduling-benchmark-*.json"))[-1].read_text(encoding="utf-8"))
+    assert payload["warnings"][0]["type"] == "parity_report_reused"
+
+
 def test_write_benchmark_report_rejects_nan_without_partial_files(tmp_path) -> None:
     with pytest.raises(ValueError):
         write_benchmark_report({"status": "blocked", "value": float("nan")}, tmp_path)
