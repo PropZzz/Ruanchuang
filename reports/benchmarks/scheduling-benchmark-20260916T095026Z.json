@@ -1,0 +1,50 @@
+{
+  "command": [
+    "python",
+    "scripts/scheduling_benchmark.py"
+  ],
+  "errors": [
+    {
+      "reason": "mismatched",
+      "type": "parity_gate"
+    }
+  ],
+  "finishedAt": "2026-09-16T09:50:26.270521Z",
+  "gate": {
+    "reasons": [
+      "mismatched"
+    ],
+    "status": "blocked",
+    "summary": {
+      "dartError": "",
+      "dartInvalid": false,
+      "dartReturncode": 0,
+      "invalid": 0,
+      "matched": 3,
+      "mismatched": 9,
+      "pending_a_review": 0,
+      "total": 12
+    }
+  },
+  "memorySource": "tracemalloc",
+  "parentPeakMemoryBytes": null,
+  "peakMemoryBytes": null,
+  "peakRssBytes": null,
+  "rssSource": "unavailable",
+  "runs": [],
+  "samples": 10,
+  "schemaVersion": "scheduling-benchmark/v1",
+  "seed": 20260916,
+  "startedAt": "2026-09-16T09:50:26.270521Z",
+  "status": "blocked",
+  "strategies": [],
+  "taskCounts": [
+    10,
+    50,
+    100,
+    200
+  ],
+  "timeoutMs": 1000,
+  "warmups": 2,
+  "warnings": []
+}
