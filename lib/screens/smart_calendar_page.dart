@@ -745,6 +745,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               onPressed: _isLoading ? null : _showInsertUrgentDialog,
             ),
           IconButton(
+            tooltip: AppStrings.of(context, 'calendar_refresh'),
             icon: const Icon(Icons.refresh),
             onPressed: _isLoading ? null : _loadSchedule,
           ),
@@ -2702,14 +2703,12 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
           Positioned(
             right: 4,
             top: 4,
-            child: SizedBox(
-              width: 28,
-              height: 28,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                icon: const Icon(Icons.cancel, size: 20, color: Colors.white70),
-                onPressed: onDelete,
-              ),
+            child: IconButton(
+              tooltip: AppStrings.of(context, 'btn_delete'),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              icon: const Icon(Icons.cancel, size: 20, color: Colors.white70),
+              onPressed: onDelete,
             ),
           ),
       ],

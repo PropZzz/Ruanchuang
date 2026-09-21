@@ -178,7 +178,10 @@ class _RescuePlanComparisonState extends State<RescuePlanComparison> {
         borderRadius: BorderRadius.circular(8),
         onTap: () => setState(() => _selectedIndex = index),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
+          duration: AppMotion.resolve(
+            context,
+            const Duration(milliseconds: 160),
+          ),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
