@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../services/app_services.dart';
+import '../services/composite_data_service.dart';
+import '../services/remote_data_service.dart';
 import '../services/microtask_crystals/microtask_crystal_engine.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
@@ -16,6 +18,7 @@ import '../widgets/mini_timeline.dart';
 import '../widgets/responsive_card_grid.dart';
 import '../widgets/responsive_page_frame.dart';
 import '../widgets/workbench_surface.dart';
+import '../widgets/workspace_status_bar.dart';
 import 'smart_calendar_page.dart';
 
 int completedMinutesForTimer({
@@ -41,6 +44,7 @@ class _FocusPageState extends State<FocusPage> {
 
   ScheduleEntry? _currentTask;
   List<ScheduleEntry> _nextTasks = [];
+  int _conflictCount = 0;
 
   List<TimeCrystalRecommendation> _crystalRecs = [];
   bool _isRecsLoading = false;
@@ -236,6 +240,7 @@ class _FocusPageState extends State<FocusPage> {
       setState(() {
         _energyStatus = energy;
         _currentTask = current;
+        _conflictCount = countScheduleConflicts(entries);
         if (current != null) {
           final start = current.time.hour * 60 + current.time.minute;
           final duration = (current.height / 80.0) * 60.0;
@@ -454,6 +459,11 @@ class _FocusPageState extends State<FocusPage> {
                                       AppStrings.of(context, 'focus_today'),
                                       style: theme.textTheme.displaySmall,
                                     ),
+                                    const SizedBox(height: 4),
+                                    DataSourceBadge(
+                                      key: const ValueKey('focus-source-label'),
+                                      label: _dataSourceLabel(context),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -498,11 +508,26 @@ class _FocusPageState extends State<FocusPage> {
     );
   }
 
+  String _dataSourceLabel(BuildContext context) {
+    final service = AppServices.dataService;
+    if (service is CompositeDataService) {
+      return AppStrings.of(
+        context,
+        service.preferRemoteReads
+            ? 'source_remote_first'
+            : 'workspace_local_ready',
+      );
+    }
+    if (service is RemoteDataService) {
+      return AppStrings.of(context, 'source_remote');
+    }
+    return AppStrings.of(context, 'source_local');
+  }
+
   Widget _buildRhythmPanel(ThemeData theme) {
-    // Conflict and team-window APIs are not part of the FocusPage data load;
-    // keep the summary truthful until those services provide real values.
-    const conflictCount = 0;
-    const teamCount = 0;
+    // Conflicts are derived from today's loaded entries. Team windows are a
+    // reserved capability and must not pretend to have live data.
+    final conflictCount = _conflictCount;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -532,15 +557,15 @@ class _FocusPageState extends State<FocusPage> {
               conflictCount > 0
                   ? theme.colorScheme.error
                   : theme.colorScheme.tertiary,
+              valueKey: const ValueKey('focus-conflict-summary'),
             ),
             _buildSummaryTile(
               theme,
               Icons.people_outline_rounded,
               AppStrings.of(context, 'focus_team_window'),
-              teamCount > 0
-                  ? '15:00 · $teamCount ${AppStrings.of(context, 'focus_people_free')}'
-                  : AppStrings.of(context, 'focus_no_window'),
+              AppStrings.of(context, 'focus_team_window_pending'),
               theme.colorScheme.primary,
+              valueKey: const ValueKey('focus-team-window-summary'),
             ),
           ],
         ),
@@ -553,8 +578,9 @@ class _FocusPageState extends State<FocusPage> {
     IconData icon,
     String title,
     String value,
-    Color accent,
-  ) {
+    Color accent, {
+    Key? valueKey,
+  }) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -567,6 +593,7 @@ class _FocusPageState extends State<FocusPage> {
             const SizedBox(height: 4),
             Text(
               value,
+              key: valueKey,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyLarge?.copyWith(

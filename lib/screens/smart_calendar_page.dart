@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../services/app_services.dart';
+import '../services/composite_data_service.dart';
+import '../services/remote_data_service.dart';
 import '../services/ics/ics_bridge.dart';
 import '../services/ics/ics_codec.dart';
 import '../services/ics/ics_file_saver.dart';
@@ -23,6 +25,7 @@ import '../widgets/responsive_page_frame.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/schedule_timeline.dart';
 import '../widgets/workbench_surface.dart';
+import '../widgets/workspace_status_bar.dart';
 import 'emotion_page.dart';
 import 'goals_page.dart';
 import 'integrations_page.dart';
@@ -391,17 +394,33 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      final selected = await showDialog<ScheduleRescueOption>(
-        context: context,
-        builder: (ctx) => RescuePlanComparison(
-          options: options,
-          baseline: _blocks,
-          title: AppStrings.of(ctx, 'calendar_rescue_title'),
-          cancelLabel: AppStrings.of(ctx, 'calendar_rescue_cancel'),
-          onCancel: () => Navigator.of(ctx).pop(),
-          onSelect: (option) => Navigator.of(ctx).pop(option),
-        ),
+      //  MASTER §3.1/§4.2: phones use a ModalBottomSheet; tablets and
+      // desktops keep the fullscreen dialog.
+      Widget buildPanel(BuildContext ctx) => RescuePlanComparison(
+        options: options,
+        baseline: _blocks,
+        title: AppStrings.of(ctx, 'calendar_rescue_title'),
+        cancelLabel: AppStrings.of(ctx, 'calendar_rescue_cancel'),
+        onCancel: () => Navigator.of(ctx).pop(),
+        onSelect: (option) => Navigator.of(ctx).pop(option),
       );
+
+      final isNarrow =
+          MediaQuery.sizeOf(context).width < AppTheme.compactShellBreakpoint;
+      final ScheduleRescueOption? selected;
+      if (isNarrow) {
+        selected = await showModalBottomSheet<ScheduleRescueOption>(
+          context: context,
+          isScrollControlled: true,
+          showDragHandle: true,
+          builder: buildPanel,
+        );
+      } else {
+        selected = await showDialog<ScheduleRescueOption>(
+          context: context,
+          builder: (ctx) => Dialog.fullscreen(child: buildPanel(ctx)),
+        );
+      }
 
       if (selected == null || !mounted) return;
 
@@ -663,6 +682,22 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     return title;
   }
 
+  String _dataSourceLabel(BuildContext context) {
+    final service = AppServices.dataService;
+    if (service is CompositeDataService) {
+      return AppStrings.of(
+        context,
+        service.preferRemoteReads
+            ? 'source_remote_first'
+            : 'workspace_local_ready',
+      );
+    }
+    if (service is RemoteDataService) {
+      return AppStrings.of(context, 'source_remote');
+    }
+    return AppStrings.of(context, 'source_local');
+  }
+
   @override
   Widget build(BuildContext context) {
     final isCompactAppBar = MobileFeedback.isNarrow(context, breakpoint: 760);
@@ -684,7 +719,16 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     return Scaffold(
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
       appBar: AppBar(
-        title: Text(AppStrings.of(context, 'calendar_title')),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(AppStrings.of(context, 'calendar_title')),
+            DataSourceBadge(
+              key: const ValueKey('calendar-source-label'),
+              label: _dataSourceLabel(context),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: _mode == _CalendarMode.manual

@@ -11,6 +11,9 @@ import 'workbench_surface.dart';
 /// 每个方案固定展示理由、代价、移动任务数、恢复缓冲、受影响任务与问题数；
 /// 推荐方案仅以徽章突出，须先「选择此方案」再点「采用此方案」显式确认，
 /// 不会自动采用。确认通过 [onSelect] 回调，取消通过 [onCancel]。
+///
+/// 本组件只渲染面板内容，不自带弹层容器：桌面/平板由调用方包进
+/// `Dialog.fullscreen`，手机包进 `ModalBottomSheet`（MASTER §3.1/§4.2）。
 class RescuePlanComparison extends StatefulWidget {
   const RescuePlanComparison({
     super.key,
@@ -71,7 +74,9 @@ class _RescuePlanComparisonState extends State<RescuePlanComparison> {
     }
     for (final entry in option.plan.entries) {
       final id = entry.id;
-      if (id != null && id.startsWith('urgent_') && !titles.contains(entry.title)) {
+      if (id != null &&
+          id.startsWith('urgent_') &&
+          !titles.contains(entry.title)) {
         titles.add(entry.title);
       }
     }
@@ -82,69 +87,61 @@ class _RescuePlanComparisonState extends State<RescuePlanComparison> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return Dialog.fullscreen(
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(widget.title, style: theme.textTheme.headlineMedium),
-              const SizedBox(height: 4),
-              Text(
-                '比较三个方案的影响后，显式选择一个并确认采用。',
-                style: theme.textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isWide =
-                        constraints.maxWidth >= AppTheme.comparisonBreakpoint;
-                    if (isWide) {
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (var i = 0; i < widget.options.length; i++) ...[
-                            if (i > 0) const SizedBox(width: 16),
-                            Expanded(
-                              child: SingleChildScrollView(
-                                child: _buildOptionCard(
-                                  context,
-                                  widget.options[i],
-                                  index: i,
-                                ),
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.title, style: theme.textTheme.headlineMedium),
+            const SizedBox(height: 4),
+            Text('比较三个方案的影响后，显式选择一个并确认采用。', style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 16),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide =
+                      constraints.maxWidth >= AppTheme.comparisonBreakpoint;
+                  if (isWide) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (var i = 0; i < widget.options.length; i++) ...[
+                          if (i > 0) const SizedBox(width: 16),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              child: _buildOptionCard(
+                                context,
+                                widget.options[i],
+                                index: i,
                               ),
                             ),
-                          ],
+                          ),
                         ],
-                      );
-                    }
-                    return ListView.separated(
-                      itemCount: widget.options.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 16),
-                      itemBuilder: (context, i) => _buildOptionCard(
-                        context,
-                        widget.options[i],
-                        index: i,
-                      ),
+                      ],
                     );
-                  },
+                  }
+                  return ListView.separated(
+                    itemCount: widget.options.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 16),
+                    itemBuilder: (context, i) =>
+                        _buildOptionCard(context, widget.options[i], index: i),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: widget.onCancel,
+                child: Text(
+                  widget.cancelLabel,
+                  style: TextStyle(color: scheme.onSurfaceVariant),
                 ),
               ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: widget.onCancel,
-                  child: Text(
-                    widget.cancelLabel,
-                    style: TextStyle(color: scheme.onSurfaceVariant),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -185,10 +182,7 @@ class _RescuePlanComparisonState extends State<RescuePlanComparison> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: borderColor,
-              width: isSelected ? 1.5 : 1,
-            ),
+            border: Border.all(color: borderColor, width: isSelected ? 1.5 : 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,8 +262,7 @@ class _RescuePlanComparisonState extends State<RescuePlanComparison> {
                         label: const Text('采用此方案'),
                       )
                     : OutlinedButton(
-                        onPressed: () =>
-                            setState(() => _selectedIndex = index),
+                        onPressed: () => setState(() => _selectedIndex = index),
                         child: const Text('选择此方案'),
                       ),
               ),

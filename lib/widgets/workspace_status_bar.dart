@@ -4,6 +4,29 @@ import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import 'glass_surface.dart';
 
+/// Caption chip that states where the current screen's data comes from.
+///
+/// The label is supplied by the page controller (which may inspect the
+/// configured services); this widget itself stays free of service access.
+class DataSourceBadge extends StatelessWidget {
+  const DataSourceBadge({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: theme.textTheme.labelSmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
+}
+
 /// Shared title bar for desktop and mobile workspaces.
 class WorkspaceStatusBar extends StatelessWidget {
   const WorkspaceStatusBar({

@@ -20,6 +20,9 @@ class AppStrings {
       'nav_signed_out': '未登录',
 
       'workspace_local_ready': '本地优先 · 就绪',
+      'source_remote_first': '远端优先 · 离线时本地兜底',
+      'source_remote': '远端数据',
+      'source_local': '本地数据',
       'workspace_settings': '打开设置',
       'workspace_my_schedule': '我的日程',
       'workspace_synced': '已同步',
@@ -79,6 +82,7 @@ class AppStrings {
       'focus_clear': '无需处理',
       'focus_people_free': '人空闲',
       'focus_no_window': '暂无窗口',
+      'focus_team_window_pending': '协作窗口待接入',
       'focus_status_label': '当前状态：',
       'focus_energy_label': '今日的节奏',
       'focus_load_error': '暂时无法加载专注面板，当前数据可能不完整。',
@@ -401,6 +405,9 @@ class AppStrings {
       'nav_signed_out': 'Not signed in',
 
       'workspace_local_ready': 'Local-first · Ready',
+      'source_remote_first': 'Remote-first · local fallback when offline',
+      'source_remote': 'Remote data',
+      'source_local': 'Local data',
       'workspace_settings': 'Open settings',
       'workspace_my_schedule': 'My schedule',
       'workspace_synced': 'Synced',
@@ -461,6 +468,7 @@ class AppStrings {
       'focus_clear': 'All clear',
       'focus_people_free': 'free',
       'focus_no_window': 'No window yet',
+      'focus_team_window_pending': 'Team windows coming soon',
       'focus_status_label': 'Status:',
       'focus_energy_label': "Today's rhythm",
       'focus_load_error':

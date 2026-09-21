@@ -69,7 +69,28 @@ List<ScheduleEntry> entriesForDay({
   required List<ScheduleEntry> allEntries,
 }) {
   final target = dateOnly(day);
-  return allEntries.where((e) => occursOnDay(e, target)).toList(growable: false);
+  return allEntries
+      .where((e) => occursOnDay(e, target))
+      .toList(growable: false);
+}
+
+/// Counts pairwise time overlaps within [entries].
+///
+/// Entries are expected to belong to a single day already (see
+/// [entriesForDay]); the `height` duration uses the existing
+/// `80.0 ~ 60 minutes` conversion.
+int countScheduleConflicts(List<ScheduleEntry> entries) {
+  var conflicts = 0;
+  for (var i = 0; i < entries.length; i++) {
+    final aStart = entries[i].time.hour * 60 + entries[i].time.minute;
+    final aEnd = aStart + (entries[i].height / 80.0) * 60.0;
+    for (var j = i + 1; j < entries.length; j++) {
+      final bStart = entries[j].time.hour * 60 + entries[j].time.minute;
+      final bEnd = bStart + (entries[j].height / 80.0) * 60.0;
+      if (aStart < bEnd && bStart < aEnd) conflicts++;
+    }
+  }
+  return conflicts;
 }
 
 DateTime startOfWeek(DateTime day, {int weekStartsOn = DateTime.monday}) {
@@ -77,4 +98,3 @@ DateTime startOfWeek(DateTime day, {int weekStartsOn = DateTime.monday}) {
   final delta = (d.weekday - weekStartsOn) % 7;
   return d.subtract(Duration(days: delta));
 }
-
