@@ -417,4 +417,7 @@ class MockDataService implements DataService {
     await _delay(100);
     _currentUser = null;
   }
+
+  @override
+  Future<void> continueAsGuest() => logout();
 }

@@ -16,6 +16,8 @@ import 'remote_data_service.dart';
 ///   commit is best effort and must not invite a duplicate remote write.
 /// - A local write is the fallback only when the remote is unavailable.
 class CompositeDataService implements DataService {
+  static const Set<int> _recoverableStatusCodes = <int>{500, 502, 503, 504};
+
   final DataService local;
   final DataService remote;
 
@@ -29,8 +31,7 @@ class CompositeDataService implements DataService {
   });
 
   bool _isRemoteFallbackError(Object error) {
-    if (error is RemoteUnavailableException ||
-        error is TimeoutException ||
+    if (error is TimeoutException ||
         error is SocketException ||
         error is http.ClientException) {
       return true;
@@ -38,7 +39,15 @@ class CompositeDataService implements DataService {
 
     return error is ApiException &&
         error.statusCode != null &&
-        error.statusCode! >= 500;
+        _recoverableStatusCodes.contains(error.statusCode);
+  }
+
+  LocalIdentityStore get _localIdentityStore {
+    final candidate = local;
+    if (candidate is! LocalIdentityStore) {
+      throw StateError('Local data service must implement LocalIdentityStore.');
+    }
+    return candidate as LocalIdentityStore;
   }
 
   Future<T> _read<T>(Future<T> Function(DataService s) fn) async {
@@ -75,25 +84,6 @@ class CompositeDataService implements DataService {
       await fn(local);
     } catch (_) {
       if (!remoteSucceeded) rethrow;
-    }
-  }
-
-  Future<T> _writeValue<T>(Future<T> Function(DataService s) fn) async {
-    T? remoteResult;
-    var remoteSucceeded = false;
-    try {
-      remoteResult = await fn(remote);
-      remoteSucceeded = true;
-    } catch (error) {
-      if (!_isRemoteFallbackError(error)) rethrow;
-    }
-
-    try {
-      final localResult = await fn(local);
-      return remoteSucceeded ? remoteResult as T : localResult;
-    } catch (_) {
-      if (!remoteSucceeded) rethrow;
-      return remoteResult as T;
     }
   }
 
@@ -237,17 +227,76 @@ class CompositeDataService implements DataService {
   Future<UserAccount?> getCurrentUser() => _read((s) => s.getCurrentUser());
 
   @override
-  Future<bool> login(String account, String password) =>
-      _writeValue((s) => s.login(account, password));
+  Future<bool> login(String account, String password) {
+    return _authenticate(() => remote.login(account, password));
+  }
 
   @override
   Future<bool> registerAccount({
     required String username,
     required String password,
-  }) => _writeValue(
-    (s) => s.registerAccount(username: username, password: password),
-  );
+  }) {
+    return _authenticate(
+      () => remote.registerAccount(username: username, password: password),
+    );
+  }
+
+  Future<bool> _authenticate(
+    Future<bool> Function() remoteAuthentication,
+  ) async {
+    final authenticated = await remoteAuthentication();
+    if (!authenticated) return false;
+
+    try {
+      final user = await remote.getCurrentUser();
+      final userId = user?.userId?.trim();
+      if (user == null || userId == null || userId.isEmpty) {
+        throw RemoteDataException(
+          'Remote authentication did not return a stable user id.',
+        );
+      }
+      await _localIdentityStore.activateAuthenticatedUser(user);
+      return true;
+    } catch (error, stackTrace) {
+      try {
+        await remote.continueAsGuest();
+      } catch (_) {
+        // Preserve the authentication or local activation failure.
+      }
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+  }
+
+  Future<void> _clearSession(Future<void> Function() clearRemoteSession) async {
+    Object? remoteError;
+    StackTrace? remoteStackTrace;
+    try {
+      await clearRemoteSession();
+    } catch (error, stackTrace) {
+      remoteError = error;
+      remoteStackTrace = stackTrace;
+    }
+
+    Object? localError;
+    StackTrace? localStackTrace;
+    try {
+      await _localIdentityStore.activateGuest();
+    } catch (error, stackTrace) {
+      localError = error;
+      localStackTrace = stackTrace;
+    }
+
+    if (remoteError != null) {
+      Error.throwWithStackTrace(remoteError, remoteStackTrace!);
+    }
+    if (localError != null) {
+      Error.throwWithStackTrace(localError, localStackTrace!);
+    }
+  }
 
   @override
-  Future<void> logout() => _writeVoid((s) => s.logout());
+  Future<void> logout() => _clearSession(remote.logout);
+
+  @override
+  Future<void> continueAsGuest() => _clearSession(remote.continueAsGuest);
 }

@@ -216,20 +216,22 @@ class _AuthDialogState extends State<AuthDialog> with TickerProviderStateMixin {
     setState(() => _isLoading = true);
     FocusScope.of(context).unfocus();
 
-    // 模拟轻微加载延迟，提升交互质感
-    await Future.delayed(const Duration(milliseconds: 600));
+    try {
+      await AppServices.dataService.continueAsGuest();
+      await Future.delayed(const Duration(milliseconds: 600));
 
-    // 为游客分配一个带有随机编号的默认昵称，并且强制清空自定义头像
-    final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
-    final guestId = DateTime.now().millisecondsSinceEpoch.toString().substring(
-      9,
-    );
-    ProfilePage.globalNameNotifier.value = isZh
-        ? '游客_$guestId'
-        : 'Guest_$guestId';
-    ProfilePage.globalAvatarNotifier.value = null;
+      final isZh = Localizations.localeOf(
+        context,
+      ).languageCode.startsWith('zh');
+      final guestId = DateTime.now().millisecondsSinceEpoch
+          .toString()
+          .substring(9);
+      ProfilePage.globalNameNotifier.value = isZh
+          ? '游客_$guestId'
+          : 'Guest_$guestId';
+      ProfilePage.globalAvatarNotifier.value = null;
 
-    if (mounted) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(isZh ? '已作为游客身份进入' : 'Logged in as guest'),
@@ -241,6 +243,10 @@ class _AuthDialogState extends State<AuthDialog> with TickerProviderStateMixin {
       );
       await _enterAnimationController.reverse();
       widget.onAuthSuccess();
+    } catch (_) {
+      if (mounted) setState(() => _errorMessage = '游客模式切换失败，请重试');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
