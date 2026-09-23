@@ -518,18 +518,13 @@ class _ThemeModeDataService implements DataService {
     this.themeMode = 'system',
     this.getThemeModeError,
     this.setThemeModeError,
-    this.loginResult = false,
-    this.loginError,
   });
 
   final String themeMode;
   final Object? getThemeModeError;
   final Object? setThemeModeError;
-  final bool loginResult;
-  final Object? loginError;
   int getThemeModeCalls = 0;
   int setThemeModeCalls = 0;
-  int loginCalls = 0;
 
   @override
   Future<String> getThemeMode() async {
@@ -544,14 +539,6 @@ class _ThemeModeDataService implements DataService {
     setThemeModeCalls++;
     final error = setThemeModeError;
     if (error != null) throw error;
-  }
-
-  @override
-  Future<bool> login(String account, String password) async {
-    loginCalls++;
-    final error = loginError;
-    if (error != null) throw error;
-    return loginResult;
   }
 
   @override
@@ -593,7 +580,6 @@ class _IdentityDataService implements DataService, LocalIdentityStore {
     this.registerResult = false,
     this.currentUser,
     this.loginError,
-    this.registerError,
     this.activationError,
     this.logoutError,
     this.activateGuestError,
@@ -604,7 +590,6 @@ class _IdentityDataService implements DataService, LocalIdentityStore {
   final bool registerResult;
   final UserAccount? currentUser;
   final Object? loginError;
-  final Object? registerError;
   final Object? activationError;
   final Object? logoutError;
   final Object? activateGuestError;
@@ -631,8 +616,6 @@ class _IdentityDataService implements DataService, LocalIdentityStore {
     required String password,
   }) async {
     registerCalls++;
-    final error = registerError;
-    if (error != null) throw error;
     return registerResult;
   }
 
