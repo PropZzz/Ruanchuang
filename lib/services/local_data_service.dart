@@ -22,6 +22,7 @@ class _LocalDataSnapshot {
   final String locale;
   final UserAccount? currentUser;
   final SchedulingTuning tuning;
+  final Map<String, Object?>? legacyMigration;
 
   const _LocalDataSnapshot({
     required this.schedule,
@@ -35,10 +36,11 @@ class _LocalDataSnapshot {
     required this.locale,
     required this.currentUser,
     required this.tuning,
+    required this.legacyMigration,
   });
 }
 
-class LocalDataService implements DataService {
+class LocalDataService implements DataService, LocalIdentityStore {
   LocalDataService._({LocalPersistence? persistence})
     : _persistence = persistence ?? createLocalPersistence();
 
@@ -49,11 +51,15 @@ class LocalDataService implements DataService {
     return LocalDataService._(persistence: persistence);
   }
 
-  static const int _schemaVersion = 5;
+  static const int _schemaVersion = 6;
+  static const String _guestNamespace = 'guest';
+  static const String _sessionNamespace = 'session';
 
   final LocalPersistence _persistence;
 
   bool _loaded = false;
+  bool _identityLoaded = false;
+  String _activeNamespace = _guestNamespace;
 
   final List<ScheduleEntry> _schedule = [];
   final List<MicroTask> _microTasks = [];
@@ -66,9 +72,11 @@ class LocalDataService implements DataService {
   String _locale = 'zh_CN';
   Future<void> _mutationQueue = Future<void>.value();
   Future<void>? _loadFuture;
+  Future<void>? _identityLoadFuture;
 
   // 新增：用于存储当前登录用户
   UserAccount? _currentUser;
+  Map<String, Object?>? _legacyMigration;
 
   SchedulingTuning _tuning = const SchedulingTuning();
 
@@ -152,7 +160,54 @@ class LocalDataService implements DataService {
     return out.isEmpty ? null : out;
   }
 
-  Future<void> _ensureLoaded() {
+  Future<void> _ensureIdentityLoaded() {
+    if (_identityLoaded) return Future<void>.value();
+    final inFlight = _identityLoadFuture;
+    if (inFlight != null) return inFlight;
+
+    final load = _loadIdentity();
+    _identityLoadFuture = load.whenComplete(() {
+      _identityLoadFuture = null;
+    });
+    return _identityLoadFuture!;
+  }
+
+  Future<void> _loadIdentity() async {
+    final raw = await _persistence.read(namespace: _sessionNamespace);
+    final decoded = _decodeRootObject(raw);
+    if (decoded == null || decoded['kind'] == 'guest') {
+      _activeNamespace = _guestNamespace;
+      _currentUser = null;
+      _identityLoaded = true;
+      return;
+    }
+    if (decoded['kind'] != 'authenticated') {
+      throw const FormatException('Persisted session kind is invalid');
+    }
+    final userMap = _asMap(decoded['user']);
+    if (userMap == null) {
+      throw const FormatException('Persisted authenticated session needs user');
+    }
+    final parsed = UserAccount.fromJson(
+      userMap,
+      identityState: ClientIdentityState.offlineCached,
+    );
+    final userId = parsed.userId?.trim();
+    if (userId == null || userId.isEmpty) {
+      throw const FormatException('Persisted authenticated user needs id');
+    }
+    _currentUser = UserAccount(
+      userId: userId,
+      contactAddress: parsed.contactAddress,
+      displayName: parsed.displayName,
+      identityState: ClientIdentityState.offlineCached,
+    );
+    _activeNamespace = 'user:$userId';
+    _identityLoaded = true;
+  }
+
+  Future<void> _ensureLoaded() async {
+    await _ensureIdentityLoaded();
     if (_loaded) return Future<void>.value();
     final inFlight = _loadFuture;
     if (inFlight != null) return inFlight;
@@ -161,7 +216,7 @@ class LocalDataService implements DataService {
     _loadFuture = load.whenComplete(() {
       _loadFuture = null;
     });
-    return _loadFuture!;
+    await _loadFuture!;
   }
 
   Future<void> _loadAndMigrate() async {
@@ -176,11 +231,25 @@ class LocalDataService implements DataService {
       _favoriteDeviceId = null;
       _themeMode = 'system';
       _locale = 'zh_CN';
-      _currentUser = null;
       _tuning = const SchedulingTuning();
+      _legacyMigration = null;
 
       var shouldSave = false;
-      final raw = await _persistence.read();
+      var migratingLegacy = false;
+      String? raw;
+      if (_activeNamespace == _guestNamespace) {
+        final guestExists = await _persistence.exists(
+          namespace: _guestNamespace,
+        );
+        if (guestExists) {
+          raw = await _persistence.read(namespace: _guestNamespace);
+        } else {
+          raw = await _persistence.read(namespace: legacyLocalNamespace);
+          migratingLegacy = raw != null;
+        }
+      } else {
+        raw = await _persistence.read(namespace: _activeNamespace);
+      }
       try {
         final decoded = _decodeRootObject(raw);
         if (decoded != null) {
@@ -221,13 +290,9 @@ class LocalDataService implements DataService {
             favoriteDeviceKeys,
           );
 
-          // 新增解析当前用户
-          final currentUserJson = decoded['currentUser'];
-          if (currentUserJson != null) {
-            final currentUserMap = _asMap(currentUserJson);
-            if (currentUserMap != null) {
-              _currentUser = UserAccount.fromJson(currentUserMap);
-            }
+          final legacyMigration = _asMap(decoded['legacyMigration']);
+          if (legacyMigration != null) {
+            _legacyMigration = Map<String, Object?>.from(legacyMigration);
           }
 
           final scheduleMapList = _asMapList(scheduleJson);
@@ -295,6 +360,14 @@ class LocalDataService implements DataService {
           }
           if (localeJson is String && localeJson.isNotEmpty) {
             _locale = localeJson;
+          }
+
+          if (migratingLegacy) {
+            _legacyMigration = <String, Object?>{
+              'sourceVersion': version ?? 0,
+              'state': 'completed',
+            };
+            shouldSave = true;
           }
         }
       } catch (_) {
@@ -521,6 +594,9 @@ class LocalDataService implements DataService {
       locale: _locale,
       currentUser: _currentUser,
       tuning: _cloneTuning(_tuning),
+      legacyMigration: _legacyMigration == null
+          ? null
+          : Map<String, Object?>.from(_legacyMigration!),
     );
   }
 
@@ -548,6 +624,9 @@ class LocalDataService implements DataService {
     _locale = state.locale;
     _currentUser = state.currentUser;
     _tuning = _cloneTuning(state.tuning);
+    _legacyMigration = state.legacyMigration == null
+        ? null
+        : Map<String, Object?>.from(state.legacyMigration!);
   }
 
   Future<void> _saveState(_LocalDataSnapshot state) async {
@@ -564,11 +643,12 @@ class LocalDataService implements DataService {
       'favoriteDeviceId': state.favoriteDeviceId,
       'themeMode': state.themeMode,
       'locale': state.locale,
-      'currentUser': state.currentUser?.toJson(),
+      if (state.legacyMigration != null)
+        'legacyMigration': state.legacyMigration,
     };
 
     final jsonText = const JsonEncoder.withIndent('  ').convert(obj);
-    await _persistence.write(jsonText);
+    await _persistence.write(jsonText, namespace: _activeNamespace);
   }
 
   Future<void> _save({List<TaskEvent>? events, List<Goal>? goals}) async {
@@ -586,6 +666,7 @@ class LocalDataService implements DataService {
         locale: state.locale,
         currentUser: state.currentUser,
         tuning: state.tuning,
+        legacyMigration: state.legacyMigration,
       ),
     );
   }
@@ -609,8 +690,9 @@ class LocalDataService implements DataService {
   }
 
   Future<StorageInfo> debugStorageInfo() async {
-    final exists = await _persistence.exists();
-    final raw = await _persistence.read();
+    await _ensureIdentityLoaded();
+    final exists = await _persistence.exists(namespace: _activeNamespace);
+    final raw = await _persistence.read(namespace: _activeNamespace);
     final bytes = raw == null ? 0 : utf8.encode(raw).length;
     return StorageInfo(
       exists: exists,
@@ -1193,8 +1275,6 @@ class LocalDataService implements DataService {
     return EmotionType.values[rand];
   }
 
-  // --- 重点：新增的认证相关实现 ---
-
   @override
   Future<UserAccount?> getCurrentUser() async {
     await _ensureLoaded();
@@ -1202,49 +1282,78 @@ class LocalDataService implements DataService {
   }
 
   @override
-  Future<bool> login(String account, String password) {
-    return _enqueueMutation(() async {
-      await _ensureLoaded();
-      // 本地存储简单校验，只要账号密码有效就准入（因为没有服务器）
-      if (account.isNotEmpty && password.length >= 6) {
-        _currentUser = UserAccount(
-          contactAddress: account,
-          displayName:
-              '用户_${account.substring(0, account.length > 4 ? 4 : account.length)}',
-        );
-        await _save();
-        return true;
-      }
-      return false;
-    });
-  }
+  Future<bool> login(String account, String password) async => false;
 
   @override
   Future<bool> registerAccount({
     required String username,
     required String password,
-  }) {
-    return _enqueueMutation(() async {
+  }) async => false;
+
+  Future<void> _writeSession(UserAccount? user) async {
+    final payload = user == null
+        ? <String, Object?>{'version': 1, 'kind': 'guest'}
+        : <String, Object?>{
+            'version': 1,
+            'kind': 'authenticated',
+            'user': user.toJson(),
+          };
+    await _persistence.write(jsonEncode(payload), namespace: _sessionNamespace);
+  }
+
+  Future<void> _switchIdentity(UserAccount? nextUser) {
+    final result = _mutationQueue.then((_) async {
       await _ensureLoaded();
-      if (username.isNotEmpty && password.length >= 6) {
-        // 注册完毕直接成为当前用户
-        _currentUser = UserAccount(
-          contactAddress: username,
-          displayName: '新用户_$username',
-        );
-        await _save();
-        return true;
+      final previousState = _captureState();
+      final previousNamespace = _activeNamespace;
+      final previousLoaded = _loaded;
+      try {
+        _currentUser = nextUser;
+        _activeNamespace = nextUser == null
+            ? _guestNamespace
+            : 'user:${nextUser.userId}';
+        _loaded = false;
+        _loadFuture = null;
+        await _loadAndMigrate();
+        await _writeSession(nextUser);
+      } catch (_) {
+        _activeNamespace = previousNamespace;
+        _loaded = previousLoaded;
+        _restoreState(previousState);
+        rethrow;
       }
-      return false;
     });
+    _mutationQueue = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return result;
   }
 
   @override
-  Future<void> logout() {
-    return _enqueueMutation(() async {
-      await _ensureLoaded();
-      _currentUser = null;
-      await _save();
-    });
+  Future<void> activateAuthenticatedUser(UserAccount user) {
+    final userId = user.userId?.trim();
+    if (userId == null || userId.isEmpty) {
+      return Future<void>.error(
+        ArgumentError.value(user.userId, 'user.userId', 'must not be blank'),
+      );
+    }
+    return _switchIdentity(
+      UserAccount(
+        userId: userId,
+        contactAddress: user.contactAddress,
+        displayName: user.displayName,
+        identityState: ClientIdentityState.offlineCached,
+      ),
+    );
   }
+
+  @override
+  Future<void> activateGuest() => _switchIdentity(null);
+
+  @override
+  Future<void> continueAsGuest() => activateGuest();
+
+  @override
+  Future<void> logout() => activateGuest();
 }

@@ -1,5 +1,10 @@
 import '../models/models.dart';
 
+abstract interface class LocalIdentityStore {
+  Future<void> activateAuthenticatedUser(UserAccount user);
+  Future<void> activateGuest();
+}
+
 /// Data service interface.
 ///
 /// Design goals:
@@ -95,4 +100,7 @@ abstract class DataService {
 
   /// 退出登录
   Future<void> logout();
+
+  /// Switches to the explicit local guest identity without authenticating.
+  Future<void> continueAsGuest() => logout();
 }

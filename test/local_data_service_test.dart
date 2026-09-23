@@ -9,36 +9,40 @@ import 'package:shixuzhipei/services/local_data_service.dart';
 import 'package:shixuzhipei/services/local_persistence/local_persistence.dart';
 
 class _ControllableLocalPersistence implements LocalPersistence {
-  String? _content;
+  final Map<String, String> _contentByNamespace = <String, String>{};
   bool failWrites = false;
   int readAttempts = 0;
   int writeAttempts = 0;
 
   @override
-  Future<bool> exists() async => _content != null;
+  Future<bool> exists({String namespace = legacyLocalNamespace}) async =>
+      _contentByNamespace.containsKey(namespace);
 
   @override
-  Future<String?> read() async {
+  Future<String?> read({String namespace = legacyLocalNamespace}) async {
     readAttempts++;
-    return _content;
+    return _contentByNamespace[namespace];
   }
 
-  void seed(String content) {
-    _content = content;
+  void seed(String content, {String namespace = legacyLocalNamespace}) {
+    _contentByNamespace[namespace] = content;
   }
 
   @override
-  Future<void> write(String content) async {
+  Future<void> write(
+    String content, {
+    String namespace = legacyLocalNamespace,
+  }) async {
     writeAttempts++;
     if (failWrites) {
       throw StateError('write failed');
     }
-    _content = content;
+    _contentByNamespace[namespace] = content;
   }
 }
 
 class _DelayedFailingLocalPersistence implements LocalPersistence {
-  String? _content;
+  final Map<String, String> _contentByNamespace = <String, String>{};
   final List<String> writeSnapshots = [];
   int _activeWrites = 0;
   int maxConcurrentWrites = 0;
@@ -48,10 +52,12 @@ class _DelayedFailingLocalPersistence implements LocalPersistence {
   Completer<void>? _releaseDelayedWrite;
 
   @override
-  Future<bool> exists() async => _content != null;
+  Future<bool> exists({String namespace = legacyLocalNamespace}) async =>
+      _contentByNamespace.containsKey(namespace);
 
   @override
-  Future<String?> read() async => _content;
+  Future<String?> read({String namespace = legacyLocalNamespace}) async =>
+      _contentByNamespace[namespace];
 
   void delayNextWrite() {
     _delayNextWrite = true;
@@ -78,7 +84,10 @@ class _DelayedFailingLocalPersistence implements LocalPersistence {
   }
 
   @override
-  Future<void> write(String content) async {
+  Future<void> write(
+    String content, {
+    String namespace = legacyLocalNamespace,
+  }) async {
     writeSnapshots.add(content);
     _activeWrites++;
     if (_activeWrites > maxConcurrentWrites) {
@@ -97,7 +106,7 @@ class _DelayedFailingLocalPersistence implements LocalPersistence {
           throw StateError('delayed write failed');
         }
       }
-      _content = content;
+      _contentByNamespace[namespace] = content;
     } finally {
       _activeWrites--;
     }
@@ -124,6 +133,110 @@ List<String> _savedGoalIds(String raw) {
       .toList(growable: false);
 }
 
+UserAccount _cachedUser(String id) => UserAccount(
+  userId: id,
+  contactAddress: '$id@example.com',
+  displayName: 'Profile $id',
+  identityState: ClientIdentityState.offlineCached,
+);
+
+Future<void> _populateIdentity(LocalDataService service, String prefix) async {
+  final day = DateTime(2026, 9, 24);
+  await service.addScheduleEntry(
+    ScheduleEntry(
+      id: '$prefix-schedule',
+      day: day,
+      title: '$prefix schedule',
+      tag: 'Focus',
+      height: 80,
+      color: Colors.teal,
+      time: const TimeOfDay(hour: 8, minute: 0),
+    ),
+  );
+  await service.addMicroTask(
+    MicroTask(
+      id: '$prefix-micro',
+      title: '$prefix micro',
+      tag: 'Focus',
+      minutes: 10,
+    ),
+  );
+  await service.upsertGoal(
+    Goal(
+      id: '$prefix-goal',
+      title: '$prefix goal',
+      due: day.add(const Duration(days: 1)),
+      priority: 4,
+      tasks: const [],
+    ),
+  );
+  await service.upsertTeamMember(
+    TeamMemberCalendar(
+      memberId: '$prefix-member',
+      displayName: '$prefix member',
+      role: 'Developer',
+      energy: EnergyTier.medium,
+      permission: TeamSharePermission.details,
+      busy: const [],
+    ),
+  );
+  await service.addEmotionCheckIn(
+    EmotionCheckIn(
+      id: '$prefix-emotion',
+      at: day.add(const Duration(hours: 9)),
+      state: EmotionState.efficient,
+    ),
+  );
+  await service.logTaskEvent(
+    TaskEvent(
+      id: '$prefix-event',
+      taskId: '$prefix-task',
+      title: '$prefix event',
+      tag: 'Focus',
+      at: day.add(const Duration(hours: 10)),
+      type: TaskEventType.complete,
+    ),
+  );
+  await service.setSchedulingTuning(
+    SchedulingTuning(tagDurationMultiplier: {prefix: 1.25}),
+  );
+  await service.setFavoriteDevice('$prefix-device');
+  await service.setThemeMode('$prefix-theme');
+  await service.setLocale('$prefix-locale');
+}
+
+Future<void> _expectIdentityValues(
+  LocalDataService service,
+  String prefix, {
+  required bool present,
+}) async {
+  final day = DateTime(2026, 9, 24);
+  final checks = <bool>[
+    (await service.getScheduleEntries()).any(
+      (entry) => entry.id == '$prefix-schedule',
+    ),
+    (await service.getMicroTasks()).any((task) => task.id == '$prefix-micro'),
+    (await service.getGoals()).any((goal) => goal.id == '$prefix-goal'),
+    (await service.getTeamCalendars(
+      day,
+    )).any((member) => member.memberId == '$prefix-member'),
+    (await service.getEmotionCheckIns(
+      day,
+    )).any((checkIn) => checkIn.id == '$prefix-emotion'),
+    (await service.getTaskEvents(
+      day,
+      day.add(const Duration(days: 1)),
+    )).any((event) => event.id == '$prefix-event'),
+    (await service.getSchedulingTuning()).tagDurationMultiplier.containsKey(
+      prefix,
+    ),
+    await service.getFavoriteDevice() == '$prefix-device',
+    await service.getThemeMode() == '$prefix-theme',
+    await service.getLocale() == '$prefix-locale',
+  ];
+  expect(checks, everyElement(present), reason: 'identity=$prefix');
+}
+
 void main() {
   test('LocalDataService migrates legacy keys and persists ids', () async {
     final persistence = InMemoryLocalPersistence();
@@ -147,7 +260,7 @@ void main() {
     expect(entries.first.id, isNotNull);
     expect(entries.first.id!.isNotEmpty, true);
 
-    final savedRaw = await persistence.read();
+    final savedRaw = await persistence.read(namespace: 'guest');
     expect(savedRaw, isNotNull);
     final saved = Map<String, Object?>.from(
       jsonDecode(savedRaw!) as Map<dynamic, dynamic>,
@@ -181,7 +294,7 @@ void main() {
     final testEntry = entries.firstWhere((e) => e.id == 'sch_test_unique');
     expect(testEntry.title, 'Updated');
 
-    final savedRaw = await persistence.read();
+    final savedRaw = await persistence.read(namespace: 'guest');
     final saved = Map<String, Object?>.from(
       jsonDecode(savedRaw!) as Map<dynamic, dynamic>,
     );
@@ -252,7 +365,7 @@ void main() {
     );
 
     await service.logTaskEvent(existing);
-    final persistedBefore = await persistence.read();
+    final persistedBefore = await persistence.read(namespace: 'guest');
     final writeAttemptsBefore = persistence.writeAttempts;
     persistence.failWrites = true;
 
@@ -266,7 +379,7 @@ void main() {
     expect(events.map((event) => event.id), ['evt_existing']);
     expect(events.map((event) => event.id), isNot(contains(first.id)));
     expect(events.map((event) => event.id), isNot(contains(second.id)));
-    expect(await persistence.read(), persistedBefore);
+    expect(await persistence.read(namespace: 'guest'), persistedBefore);
     expect(persistence.writeAttempts, writeAttemptsBefore + 1);
   });
 
@@ -331,10 +444,10 @@ void main() {
         'evt_baseline',
         'evt_batch_b',
       ]);
-      expect(_savedTaskEventIds((await persistence.read())!), [
-        'evt_baseline',
-        'evt_batch_b',
-      ]);
+      expect(
+        _savedTaskEventIds((await persistence.read(namespace: 'guest'))!),
+        ['evt_baseline', 'evt_batch_b'],
+      );
     },
   );
 
@@ -389,7 +502,9 @@ void main() {
       expect(events.every((event) => event.id.trim().isNotEmpty), isTrue);
       expect(events.map((event) => event.id).toSet(), hasLength(3));
 
-      final savedIds = _savedTaskEventIds((await persistence.read())!);
+      final savedIds = _savedTaskEventIds(
+        (await persistence.read(namespace: 'guest'))!,
+      );
       expect(savedIds, hasLength(3));
       expect(savedIds.every((id) => id.trim().isNotEmpty), isTrue);
       expect(savedIds.toSet(), hasLength(3));
@@ -429,7 +544,7 @@ void main() {
       expect(events, hasLength(1));
       expect(events.single.title, 'Second attempt');
 
-      final raw = await persistence.read();
+      final raw = await persistence.read(namespace: 'guest');
       final saved = Map<String, Object?>.from(
         jsonDecode(raw!) as Map<dynamic, dynamic>,
       );
@@ -525,7 +640,7 @@ void main() {
           time: const TimeOfDay(hour: 9, minute: 0),
         ),
       );
-      final persistedBefore = await persistence.read();
+      final persistedBefore = await persistence.read(namespace: 'guest');
       persistence.failWrites = true;
 
       await expectLater(
@@ -544,7 +659,7 @@ void main() {
 
       persistence.failWrites = false;
       expect((await service.getGoals()).single.tasks.single.done, isFalse);
-      expect(await persistence.read(), persistedBefore);
+      expect(await persistence.read(namespace: 'guest'), persistedBefore);
     },
   );
 
@@ -595,7 +710,7 @@ void main() {
         'goal_race',
       ]);
 
-      final saved = (await persistence.read())!;
+      final saved = (await persistence.read(namespace: 'guest'))!;
       expect(_savedTaskEventIds(saved), ['evt_race']);
       expect(_savedGoalIds(saved), ['goal_race']);
     },
@@ -643,10 +758,10 @@ void main() {
         )).map((event) => event.id),
         ['evt_blocking', 'evt_copied'],
       );
-      expect(_savedTaskEventIds((await persistence.read())!), [
-        'evt_blocking',
-        'evt_copied',
-      ]);
+      expect(
+        _savedTaskEventIds((await persistence.read(namespace: 'guest'))!),
+        ['evt_blocking', 'evt_copied'],
+      );
     },
   );
 
@@ -699,7 +814,7 @@ void main() {
       );
       await expectLater(firstLoad, throwsA(isA<StateError>()));
       await expectLater(secondLoad, throwsA(isA<StateError>()));
-      expect(persistence.readAttempts, 1);
+      expect(persistence.readAttempts, 2);
 
       persistence.failWrites = false;
       final events = await service.getTaskEvents(
@@ -707,11 +822,13 @@ void main() {
         day.add(const Duration(days: 1)),
       );
 
-      expect(persistence.readAttempts, 2);
+      expect(persistence.readAttempts, 3);
       expect(events, hasLength(3));
       expect(events.every((event) => event.id.trim().isNotEmpty), isTrue);
       expect(events.map((event) => event.id).toSet(), hasLength(3));
-      final savedIds = _savedTaskEventIds((await persistence.read())!);
+      final savedIds = _savedTaskEventIds(
+        (await persistence.read(namespace: 'guest'))!,
+      );
       expect(savedIds, hasLength(3));
       expect(savedIds.every((id) => id.trim().isNotEmpty), isTrue);
       expect(savedIds.toSet(), hasLength(3));
@@ -724,7 +841,7 @@ void main() {
       final persistence = _ControllableLocalPersistence();
       final service = LocalDataService.forPersistence(persistence);
       await service.getGoals();
-      final persistedBefore = await persistence.read();
+      final persistedBefore = await persistence.read(namespace: 'guest');
       final failedGoal = Goal(
         id: 'goal_failed_ordinary_mutation',
         title: 'Must not survive',
@@ -746,10 +863,14 @@ void main() {
         (await service.getGoals()).where((goal) => goal.id == failedGoal.id),
         isEmpty,
       );
-      expect(await persistence.read(), isNot(contains(failedGoal.title)));
+      expect(
+        await persistence.read(namespace: 'guest'),
+        isNot(contains(failedGoal.title)),
+      );
       expect(
         Map<String, Object?>.from(
-          jsonDecode((await persistence.read())!) as Map<dynamic, dynamic>,
+          jsonDecode((await persistence.read(namespace: 'guest'))!)
+              as Map<dynamic, dynamic>,
         )['locale'],
         'en_US',
       );
@@ -806,7 +927,7 @@ void main() {
       );
       expect(events.map((event) => event.id), ['evt_repaired']);
       expect(events.map((event) => event.title), ['Repaired event']);
-      expect(persistence.readAttempts, 3);
+      expect(persistence.readAttempts, 4);
     },
   );
 
@@ -846,7 +967,10 @@ void main() {
       ]);
       expect(events.every((event) => event.id.isNotEmpty), isTrue);
       expect(events.map((event) => event.id).toSet(), hasLength(2));
-      expect(_savedTaskEventIds((await persistence.read())!), hasLength(2));
+      expect(
+        _savedTaskEventIds((await persistence.read(namespace: 'guest'))!),
+        hasLength(2),
+      );
     },
   );
 
@@ -1110,7 +1234,8 @@ void main() {
         'Focus': 1.25,
       });
 
-      final persisted = jsonDecode((await persistence.read())!) as Map;
+      final persisted =
+          jsonDecode((await persistence.read(namespace: 'guest'))!) as Map;
       final persistedGoal = (persisted['goals'] as List)
           .map((goal) => Map<String, dynamic>.from(goal as Map))
           .singleWhere((goal) => goal['id'] == 'goal_queued');
@@ -1141,7 +1266,212 @@ void main() {
   );
 
   test(
-    'LocalDataService persists the profile current user across reloads',
+    'LocalDataService isolates every stored category for user A user B and guest',
+    () async {
+      final persistence = InMemoryLocalPersistence();
+
+      var service = LocalDataService.forPersistence(persistence);
+      await service.activateAuthenticatedUser(_cachedUser('user-a'));
+      await _populateIdentity(service, 'a');
+
+      service = LocalDataService.forPersistence(persistence);
+      await service.activateAuthenticatedUser(_cachedUser('user-b'));
+      await _expectIdentityValues(service, 'a', present: false);
+      await _populateIdentity(service, 'b');
+
+      service = LocalDataService.forPersistence(persistence);
+      await service.activateGuest();
+      expect(await service.getCurrentUser(), isNull);
+      await _expectIdentityValues(service, 'a', present: false);
+      await _expectIdentityValues(service, 'b', present: false);
+      await _populateIdentity(service, 'guest');
+
+      service = LocalDataService.forPersistence(persistence);
+      await service.activateAuthenticatedUser(_cachedUser('user-a'));
+      expect((await service.getCurrentUser())?.userId, 'user-a');
+      expect(
+        (await service.getCurrentUser())?.identityState,
+        ClientIdentityState.offlineCached,
+      );
+      expect((await service.getUserProfile()).displayName, 'Profile user-a');
+      await _expectIdentityValues(service, 'a', present: true);
+      await _expectIdentityValues(service, 'b', present: false);
+      await _expectIdentityValues(service, 'guest', present: false);
+
+      service = LocalDataService.forPersistence(persistence);
+      await service.activateAuthenticatedUser(_cachedUser('user-b'));
+      expect((await service.getUserProfile()).displayName, 'Profile user-b');
+      await _expectIdentityValues(service, 'a', present: false);
+      await _expectIdentityValues(service, 'b', present: true);
+      await _expectIdentityValues(service, 'guest', present: false);
+
+      service = LocalDataService.forPersistence(persistence);
+      await service.activateGuest();
+      await _expectIdentityValues(service, 'a', present: false);
+      await _expectIdentityValues(service, 'b', present: false);
+      await _expectIdentityValues(service, 'guest', present: true);
+    },
+  );
+
+  test(
+    'LocalDataService never authenticates arbitrary local passwords',
+    () async {
+      final persistence = InMemoryLocalPersistence();
+      final service = LocalDataService.forPersistence(persistence);
+
+      expect(await service.login('alice@example.com', 'secret1'), isFalse);
+      expect(
+        await service.registerAccount(
+          username: 'alice@example.com',
+          password: 'secret1',
+        ),
+        isFalse,
+      );
+      expect(await service.getCurrentUser(), isNull);
+    },
+  );
+
+  test(
+    'logout switches to guest without deleting authenticated data',
+    () async {
+      final persistence = InMemoryLocalPersistence();
+      var service = LocalDataService.forPersistence(persistence);
+      await service.activateAuthenticatedUser(_cachedUser('user-a'));
+      await _populateIdentity(service, 'a');
+
+      await service.logout();
+
+      expect(await service.getCurrentUser(), isNull);
+      await _expectIdentityValues(service, 'a', present: false);
+      service = LocalDataService.forPersistence(persistence);
+      await service.activateAuthenticatedUser(_cachedUser('user-a'));
+      await _expectIdentityValues(service, 'a', present: true);
+    },
+  );
+
+  test(
+    'legacy data migrates to guest once and remains rollback safe',
+    () async {
+      final persistence = InMemoryLocalPersistence();
+      final legacy = jsonEncode({
+        'version': 5,
+        'schedule': [
+          {
+            'id': 'legacy-schedule',
+            'title': 'Legacy schedule',
+            'tag': 'Legacy',
+            'height': 80.0,
+            'color': Colors.teal.toARGB32(),
+            'time': const {'hour': 9, 'minute': 0},
+          },
+        ],
+        'currentUser': {
+          'id': 'must-not-be-trusted',
+          'contactAddress': 'legacy@example.com',
+          'displayName': 'Legacy user',
+        },
+      });
+      await persistence.write(legacy);
+
+      var service = LocalDataService.forPersistence(persistence);
+      expect(
+        (await service.getScheduleEntries()).map((entry) => entry.id),
+        contains('legacy-schedule'),
+      );
+      expect(await service.getCurrentUser(), isNull);
+      expect(await persistence.read(), legacy);
+
+      final guestRaw = await persistence.read(namespace: 'guest');
+      final guest = jsonDecode(guestRaw!) as Map<String, dynamic>;
+      expect(guest['version'], 6);
+      expect(guest['legacyMigration'], {
+        'sourceVersion': 5,
+        'state': 'completed',
+      });
+
+      await persistence.write(jsonEncode({'version': 5, 'schedule': const []}));
+      service = LocalDataService.forPersistence(persistence);
+      expect(
+        (await service.getScheduleEntries()).map((entry) => entry.id),
+        contains('legacy-schedule'),
+      );
+
+      await service.activateAuthenticatedUser(_cachedUser('new-user'));
+      expect(
+        (await service.getScheduleEntries()).map((entry) => entry.id),
+        isNot(contains('legacy-schedule')),
+      );
+    },
+  );
+
+  test(
+    'existing guest data is never overwritten by legacy migration',
+    () async {
+      final persistence = InMemoryLocalPersistence();
+      await persistence.write(
+        jsonEncode({
+          'version': 5,
+          'schedule': [
+            {
+              'id': 'legacy-schedule',
+              'title': 'Legacy schedule',
+              'tag': 'Legacy',
+              'height': 80.0,
+              'color': Colors.teal.toARGB32(),
+              'time': const {'hour': 9, 'minute': 0},
+            },
+          ],
+        }),
+      );
+      final guestRaw = jsonEncode({
+        'version': 6,
+        'schedule': [
+          {
+            'id': 'guest-schedule',
+            'title': 'Guest schedule',
+            'tag': 'Guest',
+            'height': 80.0,
+            'color': Colors.blue.toARGB32(),
+            'time': const {'hour': 10, 'minute': 0},
+          },
+        ],
+        'teamCalendars': [
+          {
+            'memberId': 'guest-member',
+            'displayName': 'Guest member',
+            'role': 'Guest',
+            'energy': 'medium',
+            'permission': 'details',
+            'busy': const [],
+          },
+        ],
+        'legacyMigration': {'sourceVersion': 5, 'state': 'completed'},
+      });
+      await persistence.write(guestRaw, namespace: 'guest');
+
+      final service = LocalDataService.forPersistence(persistence);
+      final ids = (await service.getScheduleEntries()).map((entry) => entry.id);
+
+      expect(ids, contains('guest-schedule'));
+      expect(ids, isNot(contains('legacy-schedule')));
+      expect(await persistence.read(namespace: 'guest'), guestRaw);
+    },
+  );
+
+  test('malformed legacy data remains untouched and is not copied', () async {
+    final persistence = InMemoryLocalPersistence();
+    const malformed = '{not-json';
+    await persistence.write(malformed);
+    final service = LocalDataService.forPersistence(persistence);
+
+    await expectLater(service.getScheduleEntries(), throwsFormatException);
+
+    expect(await persistence.read(), malformed);
+    expect(await persistence.exists(namespace: 'guest'), isFalse);
+  });
+
+  test(
+    'LocalDataService persists the cached profile identity across reloads',
     () async {
       final persistence = InMemoryLocalPersistence();
       final service = LocalDataService.forPersistence(persistence);
@@ -1150,9 +1480,9 @@ void main() {
       expect(defaultProfile.displayName, '时序智配用户');
       expect(defaultProfile.status, '本地存储');
 
-      expect(await service.login('alice@example.com', 'secret1'), isTrue);
+      await service.activateAuthenticatedUser(_cachedUser('alice'));
       final loggedInProfile = await service.getUserProfile();
-      expect(loggedInProfile.displayName, '用户_alic');
+      expect(loggedInProfile.displayName, 'Profile alice');
       expect(loggedInProfile.status, '本地存储');
 
       final reloadedService = LocalDataService.forPersistence(persistence);

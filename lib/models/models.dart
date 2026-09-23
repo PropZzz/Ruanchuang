@@ -1291,20 +1291,44 @@ class TimeRange {
   }
 }
 
-// === 下方为新增的 UserAccount 模型 ===
+enum ClientIdentityState { remoteAuthenticated, offlineCached }
+
 class UserAccount {
+  final String? userId;
   final String contactAddress;
   final String displayName;
+  final ClientIdentityState identityState;
 
-  const UserAccount({required this.contactAddress, required this.displayName});
+  const UserAccount({
+    this.userId,
+    required this.contactAddress,
+    required this.displayName,
+    this.identityState = ClientIdentityState.offlineCached,
+  });
 
   Map<String, Object?> toJson() => {
+    if (userId != null) 'id': userId,
     'contactAddress': contactAddress,
     'displayName': displayName,
+    'identityState': identityState.name,
   };
 
-  static UserAccount fromJson(Map<String, Object?> json) => UserAccount(
-    contactAddress: (json['contactAddress'] as String?) ?? '',
-    displayName: (json['displayName'] as String?) ?? '',
-  );
+  static UserAccount fromJson(
+    Map<String, Object?> json, {
+    ClientIdentityState? identityState,
+  }) {
+    final storedState = json['identityState'] as String?;
+    final parsedState =
+        identityState ??
+        ClientIdentityState.values.firstWhere(
+          (state) => state.name == storedState,
+          orElse: () => ClientIdentityState.offlineCached,
+        );
+    return UserAccount(
+      userId: json['id'] as String?,
+      contactAddress: (json['contactAddress'] as String?) ?? '',
+      displayName: (json['displayName'] as String?) ?? '',
+      identityState: parsedState,
+    );
+  }
 }
