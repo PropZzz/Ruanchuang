@@ -52,6 +52,37 @@ class RemoteDataService implements DataService {
     return Map<String, Object?>.from(raw);
   }
 
+  UserAccount _authenticatedUser(Object? raw) {
+    final data = _map(raw);
+    final userId = data['id'];
+    final contactAddress = data['contactAddress'];
+    final displayName = data['displayName'];
+    if (userId is! String || userId.trim().isEmpty) {
+      throw RemoteDataException('Expected a non-empty user.id.');
+    }
+    if (contactAddress is! String || displayName is! String) {
+      throw RemoteDataException(
+        'Expected string user.contactAddress and user.displayName.',
+      );
+    }
+    return UserAccount(
+      userId: userId.trim(),
+      contactAddress: contactAddress,
+      displayName: displayName,
+      identityState: ClientIdentityState.remoteAuthenticated,
+    );
+  }
+
+  ({String token, UserAccount user}) _authenticationResponse(Object? raw) {
+    final data = _map(raw);
+    final accessToken = data['accessToken'];
+    if (accessToken is! String || accessToken.trim().isEmpty) {
+      throw RemoteDataException('Expected a non-empty accessToken.');
+    }
+    final user = _authenticatedUser(data['user']);
+    return (token: accessToken.trim(), user: user);
+  }
+
   @override
   Future<EmotionType> getCurrentEmotion() async {
     final state = await getEmotionState();
@@ -260,10 +291,7 @@ class RemoteDataService implements DataService {
   }
 
   @override
-  Future<void> bookTeamMeeting(
-    DateTime day,
-    TeamMeetingRequest request,
-  ) async {
+  Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request) async {
     await _api.post('/team/book-meeting', {
       'day': _dateOnly(day),
       'title': request.title,
@@ -299,7 +327,7 @@ class RemoteDataService implements DataService {
 
     try {
       final raw = await _api.get('/auth/me');
-      _currentUser = UserAccount.fromJson(_map(raw));
+      _currentUser = _authenticatedUser(raw);
       return _currentUser;
     } on ApiException catch (error) {
       if (error.statusCode == 401) {
@@ -315,9 +343,9 @@ class RemoteDataService implements DataService {
       'contactAddress': account,
       'password': password,
     });
-    final data = _map(raw);
-    _api.setToken(data['accessToken'] as String?);
-    _currentUser = UserAccount.fromJson(_map(data['user']));
+    final response = _authenticationResponse(raw);
+    _api.setToken(response.token);
+    _currentUser = response.user;
     return true;
   }
 
@@ -331,9 +359,9 @@ class RemoteDataService implements DataService {
       'displayName': username,
       'password': password,
     });
-    final data = _map(raw);
-    _api.setToken(data['accessToken'] as String?);
-    _currentUser = UserAccount.fromJson(_map(data['user']));
+    final response = _authenticationResponse(raw);
+    _api.setToken(response.token);
+    _currentUser = response.user;
     return true;
   }
 
@@ -343,7 +371,14 @@ class RemoteDataService implements DataService {
       await _api.post('/auth/logout', null);
     } on ApiException catch (error) {
       if (error.statusCode != 401) rethrow;
+    } finally {
+      _api.setToken(null);
+      _currentUser = null;
     }
+  }
+
+  @override
+  Future<void> continueAsGuest() async {
     _api.setToken(null);
     _currentUser = null;
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -10,39 +11,289 @@ import 'package:shixuzhipei/services/api_client.dart';
 import 'package:shixuzhipei/services/remote_data_service.dart';
 
 void main() {
-  test('RemoteDataService logs out through the server before clearing token', () async {
-    var logoutCalled = false;
-    final client = MockClient((request) async {
-      if (request.url.path == '/auth/login') {
-        return http.Response(
-          jsonEncode({
-            'accessToken': 'logout-token',
-            'tokenType': 'Bearer',
-            'user': {
-              'id': 'user-logout',
-              'contactAddress': 'logout@example.com',
-              'displayName': 'Logout',
-            },
+  for (final operation in ['login', 'register']) {
+    final invalidResponses = <String, Map<String, Object?>>{
+      'missing token': {
+        'user': {
+          'id': 'user-1',
+          'contactAddress': 'alice@example.com',
+          'displayName': 'Alice',
+        },
+      },
+      'blank token': {
+        'accessToken': '   ',
+        'user': {
+          'id': 'user-1',
+          'contactAddress': 'alice@example.com',
+          'displayName': 'Alice',
+        },
+      },
+      'non-object user': {'accessToken': 'token-1', 'user': <Object?>[]},
+      'missing user id': {
+        'accessToken': 'token-1',
+        'user': {'contactAddress': 'alice@example.com', 'displayName': 'Alice'},
+      },
+      'blank user id': {
+        'accessToken': 'token-1',
+        'user': {
+          'id': '   ',
+          'contactAddress': 'alice@example.com',
+          'displayName': 'Alice',
+        },
+      },
+    };
+
+    for (final entry in invalidResponses.entries) {
+      test(
+        'RemoteDataService rejects $operation response with ${entry.key} without retaining a token',
+        () async {
+          var meCalls = 0;
+          final client = MockClient((request) async {
+            if (request.url.path == '/auth/$operation') {
+              return http.Response(jsonEncode(entry.value), 200);
+            }
+            if (request.url.path == '/auth/me') {
+              meCalls++;
+              expect(request.headers['authorization'], isNull);
+              return http.Response('Unauthorized', 401);
+            }
+            return http.Response('not found', 404);
+          });
+          final service = RemoteDataService(
+            apiClient: ApiClient(
+              httpClient: client,
+              baseUrl: 'http://server.test',
+            ),
+          );
+
+          final auth = operation == 'login'
+              ? service.login('alice@example.com', 'secret123')
+              : service.registerAccount(
+                  username: 'alice@example.com',
+                  password: 'secret123',
+                );
+          await expectLater(auth, throwsA(isA<RemoteDataException>()));
+          expect(await service.getCurrentUser(), isNull);
+          expect(meCalls, 1);
+        },
+      );
+    }
+  }
+
+  test(
+    'RemoteDataService preserves stable user id and remote identity state',
+    () async {
+      final service = RemoteDataService(
+        apiClient: ApiClient(
+          baseUrl: 'http://server.test',
+          httpClient: MockClient((request) async {
+            expect(request.url.path, '/auth/login');
+            return http.Response(
+              jsonEncode({
+                'accessToken': 'token-identity',
+                'user': {
+                  'id': 'stable-user-id',
+                  'contactAddress': 'alice@example.com',
+                  'displayName': 'Alice',
+                },
+              }),
+              200,
+            );
           }),
-          200,
+        ),
+      );
+
+      await service.login('alice@example.com', 'secret123');
+      final user = await service.getCurrentUser();
+
+      expect(user?.userId, 'stable-user-id');
+      expect(user?.identityState, ClientIdentityState.remoteAuthenticated);
+    },
+  );
+
+  test(
+    'RemoteDataService logs out through the server before clearing token',
+    () async {
+      var logoutCalled = false;
+      final client = MockClient((request) async {
+        if (request.url.path == '/auth/login') {
+          return http.Response(
+            jsonEncode({
+              'accessToken': 'logout-token',
+              'tokenType': 'Bearer',
+              'user': {
+                'id': 'user-logout',
+                'contactAddress': 'logout@example.com',
+                'displayName': 'Logout',
+              },
+            }),
+            200,
+          );
+        }
+        if (request.url.path == '/auth/logout') {
+          logoutCalled = true;
+          expect(request.headers['authorization'], 'Bearer logout-token');
+          return http.Response('', 204);
+        }
+        return http.Response('not found', 404);
+      });
+      final service = RemoteDataService(
+        apiClient: ApiClient(httpClient: client, baseUrl: 'http://server.test'),
+      );
+
+      await service.login('logout@example.com', 'secret123');
+      await service.logout();
+
+      expect(logoutCalled, isTrue);
+    },
+  );
+
+  for (final status in [401, 500, 502, 503, 504]) {
+    test(
+      'RemoteDataService clears token when logout returns $status',
+      () async {
+        var meCalls = 0;
+        final client = MockClient((request) async {
+          if (request.url.path == '/auth/login') {
+            return http.Response(
+              jsonEncode({
+                'accessToken': 'logout-token',
+                'user': {
+                  'id': 'user-logout',
+                  'contactAddress': 'logout@example.com',
+                  'displayName': 'Logout',
+                },
+              }),
+              200,
+            );
+          }
+          if (request.url.path == '/auth/logout') {
+            return http.Response('logout failure $status', status);
+          }
+          if (request.url.path == '/auth/me') {
+            meCalls++;
+            expect(request.headers['authorization'], isNull);
+            return http.Response('Unauthorized', 401);
+          }
+          return http.Response('not found', 404);
+        });
+        final service = RemoteDataService(
+          apiClient: ApiClient(
+            httpClient: client,
+            baseUrl: 'http://server.test',
+          ),
         );
-      }
-      if (request.url.path == '/auth/logout') {
-        logoutCalled = true;
-        expect(request.headers['authorization'], 'Bearer logout-token');
-        return http.Response('', 204);
-      }
-      return http.Response('not found', 404);
-    });
-    final service = RemoteDataService(
-      apiClient: ApiClient(httpClient: client, baseUrl: 'http://server.test'),
+        await service.login('logout@example.com', 'secret123');
+
+        if (status == 401) {
+          await service.logout();
+        } else {
+          await expectLater(
+            service.logout(),
+            throwsA(
+              isA<ApiException>().having(
+                (error) => error.statusCode,
+                'statusCode',
+                status,
+              ),
+            ),
+          );
+        }
+
+        expect(await service.getCurrentUser(), isNull);
+        expect(meCalls, 1);
+      },
     );
+  }
 
-    await service.login('logout@example.com', 'secret123');
-    await service.logout();
+  for (final transport in ['network', 'timeout']) {
+    test(
+      'RemoteDataService clears token when logout has a $transport error',
+      () async {
+        var meCalls = 0;
+        final failure = transport == 'network'
+            ? http.ClientException('network down')
+            : TimeoutException('logout timed out');
+        final client = MockClient((request) async {
+          if (request.url.path == '/auth/login') {
+            return http.Response(
+              jsonEncode({
+                'accessToken': 'logout-token',
+                'user': {
+                  'id': 'user-logout',
+                  'contactAddress': 'logout@example.com',
+                  'displayName': 'Logout',
+                },
+              }),
+              200,
+            );
+          }
+          if (request.url.path == '/auth/logout') throw failure;
+          if (request.url.path == '/auth/me') {
+            meCalls++;
+            expect(request.headers['authorization'], isNull);
+            return http.Response('Unauthorized', 401);
+          }
+          return http.Response('not found', 404);
+        });
+        final service = RemoteDataService(
+          apiClient: ApiClient(
+            httpClient: client,
+            baseUrl: 'http://server.test',
+          ),
+        );
+        await service.login('logout@example.com', 'secret123');
 
-    expect(logoutCalled, isTrue);
-  });
+        await expectLater(service.logout(), throwsA(same(failure)));
+
+        expect(await service.getCurrentUser(), isNull);
+        expect(meCalls, 1);
+      },
+    );
+  }
+
+  test(
+    'RemoteDataService continueAsGuest clears locally without logout request',
+    () async {
+      var logoutCalls = 0;
+      var meCalls = 0;
+      final client = MockClient((request) async {
+        if (request.url.path == '/auth/login') {
+          return http.Response(
+            jsonEncode({
+              'accessToken': 'guest-token',
+              'user': {
+                'id': 'user-guest',
+                'contactAddress': 'guest@example.com',
+                'displayName': 'Guest source',
+              },
+            }),
+            200,
+          );
+        }
+        if (request.url.path == '/auth/logout') {
+          logoutCalls++;
+          return http.Response('', 204);
+        }
+        if (request.url.path == '/auth/me') {
+          meCalls++;
+          expect(request.headers['authorization'], isNull);
+          return http.Response('Unauthorized', 401);
+        }
+        return http.Response('not found', 404);
+      });
+      final service = RemoteDataService(
+        apiClient: ApiClient(httpClient: client, baseUrl: 'http://server.test'),
+      );
+      await service.login('guest@example.com', 'secret123');
+
+      await service.continueAsGuest();
+
+      expect(logoutCalls, 0);
+      expect(await service.getCurrentUser(), isNull);
+      expect(meCalls, 1);
+    },
+  );
 
   test('RemoteDataService books a team meeting through the server', () async {
     var booked = false;
@@ -374,240 +625,243 @@ void main() {
     expect(await service.getCurrentUser(), isNull);
   });
 
-  test('RemoteDataService handles emotion energy goals and team basics', () async {
-    final emotionCheckIns = <Map<String, Object?>>[];
-    final goals = <Map<String, Object?>>[];
-    final teamMembers = <Map<String, Object?>>[];
-    const token = 'token-2';
+  test(
+    'RemoteDataService handles emotion energy goals and team basics',
+    () async {
+      final emotionCheckIns = <Map<String, Object?>>[];
+      final goals = <Map<String, Object?>>[];
+      final teamMembers = <Map<String, Object?>>[];
+      const token = 'token-2';
 
-    final client = MockClient((request) async {
-      final path = request.url.path;
-      final method = request.method;
-      final auth =
-          request.headers['authorization'] ?? request.headers['Authorization'];
+      final client = MockClient((request) async {
+        final path = request.url.path;
+        final method = request.method;
+        final auth =
+            request.headers['authorization'] ??
+            request.headers['Authorization'];
 
-      Map<String, Object?> decodeBody() {
-        final raw = request.body.trim();
-        if (raw.isEmpty) return {};
-        return Map<String, Object?>.from(jsonDecode(raw) as Map);
-      }
+        Map<String, Object?> decodeBody() {
+          final raw = request.body.trim();
+          if (raw.isEmpty) return {};
+          return Map<String, Object?>.from(jsonDecode(raw) as Map);
+        }
 
-      if (path == '/auth/login' && method == 'POST') {
-        return http.Response(
-          jsonEncode({
-            'accessToken': token,
-            'tokenType': 'Bearer',
-            'user': {
-              'id': 'user-2',
-              'contactAddress': 'bob@example.com',
-              'displayName': 'Bob',
-            },
-          }),
-          200,
-        );
-      }
+        if (path == '/auth/login' && method == 'POST') {
+          return http.Response(
+            jsonEncode({
+              'accessToken': token,
+              'tokenType': 'Bearer',
+              'user': {
+                'id': 'user-2',
+                'contactAddress': 'bob@example.com',
+                'displayName': 'Bob',
+              },
+            }),
+            200,
+          );
+        }
 
-      if (auth != 'Bearer $token') {
-        return http.Response('Unauthorized', 401);
-      }
+        if (auth != 'Bearer $token') {
+          return http.Response('Unauthorized', 401);
+        }
 
-      if (path == '/emotion/current' && method == 'GET') {
-        return http.Response(
-          jsonEncode(
-            emotionCheckIns.isEmpty
-                ? {
-                    'id': null,
-                    'at': null,
-                    'state': 'stable',
-                    'note': null,
-                  }
-                : emotionCheckIns.last,
-          ),
-          200,
-        );
-      }
+        if (path == '/emotion/current' && method == 'GET') {
+          return http.Response(
+            jsonEncode(
+              emotionCheckIns.isEmpty
+                  ? {'id': null, 'at': null, 'state': 'stable', 'note': null}
+                  : emotionCheckIns.last,
+            ),
+            200,
+          );
+        }
 
-      if (path == '/emotion/checkins' && method == 'POST') {
-        final body = decodeBody();
-        emotionCheckIns
-          ..clear()
-          ..add(body);
-        return http.Response(jsonEncode(body), 200);
-      }
+        if (path == '/emotion/checkins' && method == 'POST') {
+          final body = decodeBody();
+          emotionCheckIns
+            ..clear()
+            ..add(body);
+          return http.Response(jsonEncode(body), 200);
+        }
 
-      if (path == '/emotion/checkins' && method == 'GET') {
-        expect(request.url.queryParameters['day'], '2026-08-09');
-        return http.Response(jsonEncode(emotionCheckIns), 200);
-      }
+        if (path == '/emotion/checkins' && method == 'GET') {
+          expect(request.url.queryParameters['day'], '2026-08-09');
+          return http.Response(jsonEncode(emotionCheckIns), 200);
+        }
 
-      if (path == '/energy/current' && method == 'GET') {
-        return http.Response(
-          jsonEncode({
-            'id': 'energy-1',
-            'at': '2026-08-09T10:00:00',
-            'level': 'high',
-            'status': 'flow',
-            'description': 'Manual sample',
-            'batteryPercent': 88,
-            'emotion': 'stable',
-            'flowState': 'focused',
-            'source': 'manual',
-          }),
-          200,
-        );
-      }
+        if (path == '/energy/current' && method == 'GET') {
+          return http.Response(
+            jsonEncode({
+              'id': 'energy-1',
+              'at': '2026-08-09T10:00:00',
+              'level': 'high',
+              'status': 'flow',
+              'description': 'Manual sample',
+              'batteryPercent': 88,
+              'emotion': 'stable',
+              'flowState': 'focused',
+              'source': 'manual',
+            }),
+            200,
+          );
+        }
 
-      if (path == '/goals' && method == 'GET') {
-        return http.Response(jsonEncode(goals), 200);
-      }
+        if (path == '/goals' && method == 'GET') {
+          return http.Response(jsonEncode(goals), 200);
+        }
 
-      if (path == '/goals' && method == 'POST') {
-        final body = decodeBody();
-        goals
-          ..clear()
-          ..add(body);
-        return http.Response(jsonEncode(body), 200);
-      }
+        if (path == '/goals' && method == 'POST') {
+          final body = decodeBody();
+          goals
+            ..clear()
+            ..add(body);
+          return http.Response(jsonEncode(body), 200);
+        }
 
-      if (path.startsWith('/goals/') && method == 'PUT') {
-        final body = decodeBody();
-        goals
-          ..clear()
-          ..add(body);
-        return http.Response(jsonEncode(body), 200);
-      }
+        if (path.startsWith('/goals/') && method == 'PUT') {
+          final body = decodeBody();
+          goals
+            ..clear()
+            ..add(body);
+          return http.Response(jsonEncode(body), 200);
+        }
 
-      if (path.startsWith('/goals/') && method == 'DELETE') {
-        goals.clear();
-        return http.Response('', 204);
-      }
+        if (path.startsWith('/goals/') && method == 'DELETE') {
+          goals.clear();
+          return http.Response('', 204);
+        }
 
-      if (path == '/team/members' && method == 'GET') {
-        return http.Response(jsonEncode(teamMembers), 200);
-      }
+        if (path == '/team/members' && method == 'GET') {
+          return http.Response(jsonEncode(teamMembers), 200);
+        }
 
-      if (path == '/team/members' && method == 'POST') {
-        final body = decodeBody();
-        teamMembers
-          ..clear()
-          ..add(body);
-        return http.Response(jsonEncode(body), 200);
-      }
+        if (path == '/team/members' && method == 'POST') {
+          final body = decodeBody();
+          teamMembers
+            ..clear()
+            ..add(body);
+          return http.Response(jsonEncode(body), 200);
+        }
 
-      if (path.startsWith('/team/members/') &&
-          !path.endsWith('/permission') &&
-          method == 'PUT') {
-        final body = decodeBody();
-        teamMembers
-          ..clear()
-          ..add(body);
-        return http.Response(jsonEncode(body), 200);
-      }
+        if (path.startsWith('/team/members/') &&
+            !path.endsWith('/permission') &&
+            method == 'PUT') {
+          final body = decodeBody();
+          teamMembers
+            ..clear()
+            ..add(body);
+          return http.Response(jsonEncode(body), 200);
+        }
 
-      if (path.startsWith('/team/members/') &&
-          path.endsWith('/permission') &&
-          method == 'PUT') {
-        final body = decodeBody();
-        final updated = {
-          ...teamMembers.single,
-          'permission': body['permission'],
-        };
-        teamMembers
-          ..clear()
-          ..add(updated);
-        return http.Response(jsonEncode(updated), 200);
-      }
+        if (path.startsWith('/team/members/') &&
+            path.endsWith('/permission') &&
+            method == 'PUT') {
+          final body = decodeBody();
+          final updated = {
+            ...teamMembers.single,
+            'permission': body['permission'],
+          };
+          teamMembers
+            ..clear()
+            ..add(updated);
+          return http.Response(jsonEncode(updated), 200);
+        }
 
-      if (path == '/team/calendars' && method == 'GET') {
-        expect(request.url.queryParameters['day'], '2026-08-09');
-        return http.Response(jsonEncode(teamMembers), 200);
-      }
+        if (path == '/team/calendars' && method == 'GET') {
+          expect(request.url.queryParameters['day'], '2026-08-09');
+          return http.Response(jsonEncode(teamMembers), 200);
+        }
 
-      return http.Response('not found', 404);
-    });
+        return http.Response('not found', 404);
+      });
 
-    final api = ApiClient(httpClient: client, baseUrl: 'http://server.test');
-    final service = RemoteDataService(apiClient: api);
+      final api = ApiClient(httpClient: client, baseUrl: 'http://server.test');
+      final service = RemoteDataService(apiClient: api);
 
-    expect(await service.login('bob@example.com', 'secret123'), isTrue);
+      expect(await service.login('bob@example.com', 'secret123'), isTrue);
 
-    await service.addEmotionCheckIn(
-      EmotionCheckIn(
-        id: 'emotion-1',
-        at: DateTime(2026, 8, 9, 9),
-        state: EmotionState.tired,
-        note: 'Need recovery',
-      ),
-    );
-    expect(
-      (await service.getEmotionCheckIns(DateTime(2026, 8, 9))).single.state,
-      EmotionState.tired,
-    );
-    expect(await service.getEmotionState(), EmotionState.tired);
-    expect(await service.getCurrentEmotion(), EmotionType.fatigue);
-
-    final energy = await service.getEnergyStatus();
-    expect(energy.level, 'high');
-    expect(energy.batteryPercent, 88);
-    expect(energy.flowState, 'focused');
-
-    final goal = Goal(
-      id: 'goal-1',
-      title: 'Ship API',
-      due: DateTime(2026, 8, 30, 18),
-      priority: 5,
-      tasks: const [
-        GoalTask(
-          id: 'goal-task-1',
-          title: 'Remote methods',
-          durationMinutes: 30,
-          load: CognitiveLoad.medium,
-          tag: 'Backend',
-          dependsOn: ['spec'],
+      await service.addEmotionCheckIn(
+        EmotionCheckIn(
+          id: 'emotion-1',
+          at: DateTime(2026, 8, 9, 9),
+          state: EmotionState.tired,
+          note: 'Need recovery',
         ),
-      ],
-    );
-    await service.upsertGoal(goal);
-    expect((await service.getGoals()).single.tasks.single.dependsOn, ['spec']);
+      );
+      expect(
+        (await service.getEmotionCheckIns(DateTime(2026, 8, 9))).single.state,
+        EmotionState.tired,
+      );
+      expect(await service.getEmotionState(), EmotionState.tired);
+      expect(await service.getCurrentEmotion(), EmotionType.fatigue);
 
-    await service.deleteGoal('goal-1');
-    expect(await service.getGoals(), isEmpty);
+      final energy = await service.getEnergyStatus();
+      expect(energy.level, 'high');
+      expect(energy.batteryPercent, 88);
+      expect(energy.flowState, 'focused');
 
-    await service.upsertTeamMember(
-      TeamMemberCalendar(
-        memberId: 'member-1',
-        displayName: 'Li Ming',
-        role: 'PM',
-        energy: EnergyTier.high,
-        permission: TeamSharePermission.details,
-        busy: [
-          ScheduleEntry(
-            id: 'busy-1',
-            day: DateTime(2026, 8, 9),
-            title: 'Sync',
-            tag: 'Meeting',
-            height: 80,
-            color: const Color(0xFF2196F3),
-            time: const TimeOfDay(hour: 9, minute: 0),
+      final goal = Goal(
+        id: 'goal-1',
+        title: 'Ship API',
+        due: DateTime(2026, 8, 30, 18),
+        priority: 5,
+        tasks: const [
+          GoalTask(
+            id: 'goal-task-1',
+            title: 'Remote methods',
+            durationMinutes: 30,
+            load: CognitiveLoad.medium,
+            tag: 'Backend',
+            dependsOn: ['spec'],
           ),
         ],
-      ),
-    );
-    final calendars = await service.getTeamCalendars(DateTime(2026, 8, 9));
-    expect(calendars.single.memberId, 'member-1');
-    expect(calendars.single.busy.single.title, 'Sync');
+      );
+      await service.upsertGoal(goal);
+      expect((await service.getGoals()).single.tasks.single.dependsOn, [
+        'spec',
+      ]);
 
-    final overview = await service.getTeamMembers();
-    expect(overview.single.name, 'Li Ming');
-    expect(overview.single.isHighEnergy, isTrue);
+      await service.deleteGoal('goal-1');
+      expect(await service.getGoals(), isEmpty);
 
-    await service.updateTeamSharePermission(
-      'member-1',
-      TeamSharePermission.freeBusy,
-    );
-    expect(
-      (await service.getTeamCalendars(DateTime(2026, 8, 9))).single.permission,
-      TeamSharePermission.freeBusy,
-    );
-  });
+      await service.upsertTeamMember(
+        TeamMemberCalendar(
+          memberId: 'member-1',
+          displayName: 'Li Ming',
+          role: 'PM',
+          energy: EnergyTier.high,
+          permission: TeamSharePermission.details,
+          busy: [
+            ScheduleEntry(
+              id: 'busy-1',
+              day: DateTime(2026, 8, 9),
+              title: 'Sync',
+              tag: 'Meeting',
+              height: 80,
+              color: const Color(0xFF2196F3),
+              time: const TimeOfDay(hour: 9, minute: 0),
+            ),
+          ],
+        ),
+      );
+      final calendars = await service.getTeamCalendars(DateTime(2026, 8, 9));
+      expect(calendars.single.memberId, 'member-1');
+      expect(calendars.single.busy.single.title, 'Sync');
+
+      final overview = await service.getTeamMembers();
+      expect(overview.single.name, 'Li Ming');
+      expect(overview.single.isHighEnergy, isTrue);
+
+      await service.updateTeamSharePermission(
+        'member-1',
+        TeamSharePermission.freeBusy,
+      );
+      expect(
+        (await service.getTeamCalendars(
+          DateTime(2026, 8, 9),
+        )).single.permission,
+        TeamSharePermission.freeBusy,
+      );
+    },
+  );
 }
