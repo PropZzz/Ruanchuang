@@ -76,7 +76,13 @@ void main() {
       await pumpShell(tester, width);
       expectNoShellDiagnostics(tester, width);
 
-      if (width >= 720) {
+      if (width >= 1200) {
+        expect(
+          find.byKey(const ValueKey('shell-rail-expanded')),
+          findsOneWidget,
+        );
+        expect(find.byType(NavigationBar), findsNothing);
+      } else if (width >= 720) {
         expect(find.byType(NavigationRail), findsOneWidget);
         expect(find.byType(NavigationBar), findsNothing);
       } else {
@@ -94,7 +100,19 @@ void main() {
 
     final railFinder = find.byKey(const ValueKey('shell-rail-expanded'));
     expect(railFinder, findsOneWidget);
-    expect(tester.widget<NavigationRail>(railFinder).extended, isTrue);
+    expect(tester.getSize(railFinder).width, greaterThan(200));
+    for (final group in [
+      'nav_group_today',
+      'nav_group_plan',
+      'nav_group_collab',
+      'nav_group_system',
+    ]) {
+      expect(
+        find.byKey(ValueKey('shell-rail-group-$group')),
+        findsOneWidget,
+        reason: 'missing sidebar group $group',
+      );
+    }
     expectNoShellDiagnostics(tester, 1440);
     tester.view.reset();
   });

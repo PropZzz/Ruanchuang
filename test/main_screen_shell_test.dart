@@ -48,21 +48,27 @@ void main() {
       find.byKey(const ValueKey('workspace-status-bar-material')),
       findsNothing,
     );
-    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.byKey(const ValueKey('shell-rail-expanded')), findsOneWidget);
     expect(find.byKey(const ValueKey('shell-rail-material')), findsOneWidget);
     tester.view.reset();
   });
 
-  testWidgets('wide shell starts with an expanded navigation rail', (
+  testWidgets('wide shell starts with a grouped expanded sidebar', (
     tester,
   ) async {
     await pumpShell(tester, const Size(1440, 900));
 
-    final railFinder = find.byKey(const ValueKey('shell-rail-expanded'));
-    final rail = tester.widget<NavigationRail>(railFinder);
+    final sidebarFinder = find.byKey(const ValueKey('shell-rail-expanded'));
 
-    expect(rail.extended, isTrue);
-    expect(tester.getSize(railFinder).width, 260);
+    expect(tester.getSize(sidebarFinder).width, greaterThan(200));
+    for (final group in [
+      'nav_group_today',
+      'nav_group_plan',
+      'nav_group_collab',
+      'nav_group_system',
+    ]) {
+      expect(find.byKey(ValueKey('shell-rail-group-$group')), findsOneWidget);
+    }
     expect(find.byKey(const ValueKey('shell-rail-toggle')), findsOneWidget);
     expect(find.byTooltip('收起导航栏'), findsOneWidget);
     final focusLabel = find.byKey(const ValueKey('shell-rail-focus-label'));
@@ -70,6 +76,32 @@ void main() {
     expect(tester.getSize(focusLabel).width, greaterThan(0));
     tester.view.reset();
   });
+
+  testWidgets(
+    'wide shell marks reserved notifications and selection semantics',
+    (tester) async {
+      await pumpShell(tester, const Size(1440, 900));
+
+      expect(find.byTooltip('通知（预留能力，待接入）'), findsOneWidget);
+
+      final selectedFocus = find.byWidgetPredicate((widget) {
+        if (widget is! Semantics) return false;
+        return widget.properties.button == true &&
+            widget.properties.selected == true &&
+            widget.properties.label == '专注';
+      });
+      expect(selectedFocus, findsOneWidget);
+
+      final unselectedTeam = find.byWidgetPredicate((widget) {
+        if (widget is! Semantics) return false;
+        return widget.properties.button == true &&
+            widget.properties.selected == false &&
+            widget.properties.label == '团队';
+      });
+      expect(unselectedTeam, findsOneWidget);
+      tester.view.reset();
+    },
+  );
 
   testWidgets('wide shell toggle expands the rail and reveals labels', (
     tester,
@@ -129,5 +161,39 @@ void main() {
 
   test('text scale resolver preserves a 200 percent system scale', () {
     expect(resolveAppTextScale(2.0), 2.0);
+  });
+
+  testWidgets('shell renders final state when animations are disabled', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('zh'), Locale('en')],
+        theme: AppTheme.light,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: true),
+          child: child!,
+        ),
+        home: const MainScreen(),
+      ),
+    );
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    final switcher = tester.widget<AnimatedSwitcher>(
+      find.byType(AnimatedSwitcher).first,
+    );
+    expect(switcher.duration, Duration.zero);
+    expect(switcher.reverseDuration, Duration.zero);
+    expect(find.byKey(const ValueKey('shell-rail-expanded')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    tester.view.reset();
   });
 }

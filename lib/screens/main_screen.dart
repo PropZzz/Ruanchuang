@@ -88,30 +88,35 @@ class _MainScreenState extends State<MainScreen> {
     return [
       _ShellDestination(
         id: 'focus',
+        group: 'nav_group_today',
         icon: Icons.timer_outlined,
         selectedIcon: Icons.timer,
         label: AppStrings.of(context, 'nav_focus'),
       ),
       _ShellDestination(
         id: 'schedule',
+        group: 'nav_group_today',
         icon: Icons.calendar_month_outlined,
         selectedIcon: Icons.calendar_month,
         label: AppStrings.of(context, 'nav_schedule'),
       ),
       _ShellDestination(
         id: 'micro',
+        group: 'nav_group_plan',
         icon: Icons.bubble_chart_outlined,
         selectedIcon: Icons.bubble_chart,
         label: AppStrings.of(context, 'nav_micro'),
       ),
       _ShellDestination(
         id: 'team',
+        group: 'nav_group_collab',
         icon: Icons.group_outlined,
         selectedIcon: Icons.group,
         label: AppStrings.of(context, 'nav_team'),
       ),
       _ShellDestination(
         id: 'profile',
+        group: 'nav_group_system',
         icon: Icons.person_outline,
         selectedIcon: Icons.person,
         label: AppStrings.of(context, 'nav_profile'),
@@ -341,47 +346,49 @@ class _WideShell extends StatelessWidget {
                       ),
                     ),
                   Expanded(
-                    child: NavigationRail(
-                      key: ValueKey(
-                        compact
-                            ? 'shell-rail-compact'
-                            : railExpanded
-                            ? 'shell-rail-expanded'
-                            : 'shell-rail-collapsed',
-                      ),
-                      backgroundColor: Colors.transparent,
-                      extended: railExpanded,
-                      minWidth: compact ? 88 : 76,
-                      minExtendedWidth: 260,
-                      labelType: railExpanded
-                          ? null
-                          : NavigationRailLabelType.none,
-                      selectedIndex: selectedIndex,
-                      onDestinationSelected: onSelect,
-                      destinations: [
-                        for (final destination in destinations)
-                          NavigationRailDestination(
-                            icon: Icon(
-                              destination.icon,
-                              key: ValueKey(
-                                'shell-rail-${destination.id}-icon',
-                              ),
+                    child: railExpanded
+                        ? _GroupedSidebar(
+                            key: const ValueKey('shell-rail-expanded'),
+                            destinations: destinations,
+                            selectedIndex: selectedIndex,
+                            onSelect: onSelect,
+                          )
+                        : NavigationRail(
+                            key: ValueKey(
+                              compact
+                                  ? 'shell-rail-compact'
+                                  : 'shell-rail-collapsed',
                             ),
-                            selectedIcon: Icon(
-                              destination.selectedIcon,
-                              key: ValueKey(
-                                'shell-rail-${destination.id}-selected-icon',
-                              ),
-                            ),
-                            label: Text(
-                              destination.label,
-                              key: ValueKey(
-                                'shell-rail-${destination.id}-label',
-                              ),
-                            ),
+                            backgroundColor: Colors.transparent,
+                            extended: false,
+                            minWidth: compact ? 88 : 76,
+                            labelType: NavigationRailLabelType.none,
+                            selectedIndex: selectedIndex,
+                            onDestinationSelected: onSelect,
+                            destinations: [
+                              for (final destination in destinations)
+                                NavigationRailDestination(
+                                  icon: Icon(
+                                    destination.icon,
+                                    key: ValueKey(
+                                      'shell-rail-${destination.id}-icon',
+                                    ),
+                                  ),
+                                  selectedIcon: Icon(
+                                    destination.selectedIcon,
+                                    key: ValueKey(
+                                      'shell-rail-${destination.id}-selected-icon',
+                                    ),
+                                  ),
+                                  label: Text(
+                                    destination.label,
+                                    key: ValueKey(
+                                      'shell-rail-${destination.id}-label',
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                      ],
-                    ),
                   ),
                   if (railExpanded)
                     Container(
@@ -419,7 +426,11 @@ class _WideShell extends StatelessWidget {
                                             ProfilePage.globalNameNotifier,
                                         builder: (context, name, _) {
                                           return Text(
-                                            name ?? '未登录',
+                                            name ??
+                                                AppStrings.of(
+                                                  context,
+                                                  'nav_signed_out',
+                                                ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: text.bodySmall?.copyWith(
@@ -439,7 +450,10 @@ class _WideShell extends StatelessWidget {
                               Icons.notifications_none,
                               size: 20,
                             ),
-                            tooltip: '通知',
+                            tooltip: AppStrings.of(
+                              context,
+                              'nav_notifications_reserved',
+                            ),
                             color: scheme.onSurfaceVariant,
                             onPressed: null,
                           ),
@@ -501,15 +515,149 @@ class _WideShell extends StatelessWidget {
   }
 }
 
+class _GroupedSidebar extends StatelessWidget {
+  const _GroupedSidebar({
+    super.key,
+    required this.destinations,
+    required this.selectedIndex,
+    required this.onSelect,
+  });
+
+  final List<_ShellDestination> destinations;
+  final int selectedIndex;
+  final ValueChanged<int> onSelect;
+
+  static const List<String> _groupOrder = [
+    'nav_group_today',
+    'nav_group_plan',
+    'nav_group_collab',
+    'nav_group_system',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final text = theme.textTheme;
+
+    final children = <Widget>[];
+    for (final groupKey in _groupOrder) {
+      final groupDestinations = <_ShellDestination>[];
+      for (final destination in destinations) {
+        if (destination.group == groupKey) {
+          groupDestinations.add(destination);
+        }
+      }
+      if (groupDestinations.isEmpty) continue;
+      children.add(
+        Padding(
+          key: ValueKey('shell-rail-group-$groupKey'),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+          child: Text(
+            AppStrings.of(context, groupKey),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: text.labelSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+      for (final destination in groupDestinations) {
+        final index = destinations.indexOf(destination);
+        children.add(
+          _GroupedSidebarItem(
+            destination: destination,
+            selected: index == selectedIndex,
+            onTap: () => onSelect(index),
+          ),
+        );
+      }
+    }
+
+    return ListView(padding: EdgeInsets.zero, children: children);
+  }
+}
+
+class _GroupedSidebarItem extends StatelessWidget {
+  const _GroupedSidebarItem({
+    required this.destination,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _ShellDestination destination;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final foreground = selected ? scheme.primary : scheme.onSurfaceVariant;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: Tooltip(
+        message: destination.label,
+        child: Semantics(
+          button: true,
+          selected: selected,
+          label: destination.label,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: onTap,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                color: selected ? scheme.secondaryContainer : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    selected ? destination.selectedIcon : destination.icon,
+                    key: ValueKey('shell-rail-${destination.id}-icon'),
+                    size: 20,
+                    color: foreground,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      destination.label,
+                      key: ValueKey('shell-rail-${destination.id}-label'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.bodyMedium?.copyWith(
+                        color: foreground,
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ShellDestination {
   const _ShellDestination({
     required this.id,
+    required this.group,
     required this.icon,
     required this.selectedIcon,
     required this.label,
   });
 
   final String id;
+  final String group;
   final IconData icon;
   final IconData selectedIcon;
   final String label;
