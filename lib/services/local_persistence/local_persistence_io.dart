@@ -49,31 +49,41 @@ class IoLocalPersistence implements LocalPersistence {
     return basePath;
   }
 
-  Future<File> _file() async {
+  String _fileNameForNamespace(String namespace) {
+    if (namespace == legacyLocalNamespace) return _fileName;
+    final encoded = encodeLocalPersistenceNamespace(namespace);
+    return 'sxzppp_data_v2_$encoded.json';
+  }
+
+  Future<File> _file(String namespace) async {
     final base = await _baseDirPath();
     final dir = Directory('$base${Platform.pathSeparator}$_dirName');
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
-    return File('${dir.path}${Platform.pathSeparator}$_fileName');
+    final fileName = _fileNameForNamespace(namespace);
+    return File('${dir.path}${Platform.pathSeparator}$fileName');
   }
 
-  Future<File> _backupFile() async {
-    final f = await _file();
-    return File('${f.parent.path}${Platform.pathSeparator}$_backupFileName');
+  Future<File> _backupFile(String namespace) async {
+    final f = await _file(namespace);
+    if (namespace == legacyLocalNamespace) {
+      return File('${f.parent.path}${Platform.pathSeparator}$_backupFileName');
+    }
+    return File('${f.path}.bak');
   }
 
   @override
-  Future<bool> exists() async {
-    final f = await _file();
+  Future<bool> exists({String namespace = legacyLocalNamespace}) async {
+    final f = await _file(namespace);
     if (await f.exists()) return true;
-    final backup = await _backupFile();
+    final backup = await _backupFile(namespace);
     return backup.exists();
   }
 
   @override
-  Future<String?> read() async {
-    final f = await _file();
+  Future<String?> read({String namespace = legacyLocalNamespace}) async {
+    final f = await _file(namespace);
     if (await f.exists()) {
       final primary = await f.readAsString();
       if (primary.trim().isNotEmpty) {
@@ -81,15 +91,18 @@ class IoLocalPersistence implements LocalPersistence {
       }
     }
 
-    final backup = await _backupFile();
+    final backup = await _backupFile(namespace);
     if (!await backup.exists()) return null;
     return backup.readAsString();
   }
 
   @override
-  Future<void> write(String content) async {
-    final f = await _file();
-    final backup = await _backupFile();
+  Future<void> write(
+    String content, {
+    String namespace = legacyLocalNamespace,
+  }) async {
+    final f = await _file(namespace);
+    final backup = await _backupFile(namespace);
     final tmp = File('${f.path}.tmp');
 
     await tmp.writeAsString(content, flush: true);
