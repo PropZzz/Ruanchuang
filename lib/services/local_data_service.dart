@@ -1301,17 +1301,15 @@ class LocalDataService implements DataService, LocalIdentityStore {
     await _persistence.write(jsonEncode(payload), namespace: _sessionNamespace);
   }
 
-  Future<void> _switchIdentity(UserAccount? nextUser) {
+  Future<void> _switchIdentity(UserAccount nextUser) {
     final result = _mutationQueue.then((_) async {
-      await _ensureLoaded();
+      await _ensureIdentityLoaded();
       final previousState = _captureState();
       final previousNamespace = _activeNamespace;
       final previousLoaded = _loaded;
       try {
         _currentUser = nextUser;
-        _activeNamespace = nextUser == null
-            ? _guestNamespace
-            : 'user:${nextUser.userId}';
+        _activeNamespace = 'user:${nextUser.userId}';
         _loaded = false;
         _loadFuture = null;
         await _loadAndMigrate();
@@ -1322,6 +1320,23 @@ class LocalDataService implements DataService, LocalIdentityStore {
         _restoreState(previousState);
         rethrow;
       }
+    });
+    _mutationQueue = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return result;
+  }
+
+  Future<void> _switchToGuest() {
+    final result = _mutationQueue.then((_) async {
+      await _ensureIdentityLoaded();
+      _currentUser = null;
+      _activeNamespace = _guestNamespace;
+      _loaded = false;
+      _loadFuture = null;
+      await _writeSession(null);
+      await _loadAndMigrate();
     });
     _mutationQueue = result.then<void>(
       (_) {},
@@ -1349,7 +1364,7 @@ class LocalDataService implements DataService, LocalIdentityStore {
   }
 
   @override
-  Future<void> activateGuest() => _switchIdentity(null);
+  Future<void> activateGuest() => _switchToGuest();
 
   @override
   Future<void> continueAsGuest() => activateGuest();

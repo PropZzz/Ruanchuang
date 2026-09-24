@@ -19,19 +19,23 @@ abstract class LocalPersistence {
 class InMemoryLocalPersistence implements LocalPersistence {
   final Map<String, String> _contentByNamespace = <String, String>{};
 
+  String _storageKey(String namespace) => namespace == legacyLocalNamespace
+      ? legacyLocalNamespace
+      : encodeLocalPersistenceNamespace(namespace);
+
   @override
   Future<bool> exists({String namespace = legacyLocalNamespace}) async =>
-      _contentByNamespace.containsKey(namespace);
+      _contentByNamespace.containsKey(_storageKey(namespace));
 
   @override
   Future<String?> read({String namespace = legacyLocalNamespace}) async =>
-      _contentByNamespace[namespace];
+      _contentByNamespace[_storageKey(namespace)];
 
   @override
   Future<void> write(
     String content, {
     String namespace = legacyLocalNamespace,
   }) async {
-    _contentByNamespace[namespace] = content;
+    _contentByNamespace[_storageKey(namespace)] = content;
   }
 }

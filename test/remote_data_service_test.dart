@@ -10,6 +10,10 @@ import 'package:shixuzhipei/models/models.dart';
 import 'package:shixuzhipei/services/api_client.dart';
 import 'package:shixuzhipei/services/remote_data_service.dart';
 
+Matcher _throwsApiStatus(int status) => throwsA(
+  isA<ApiException>().having((error) => error.statusCode, 'statusCode', status),
+);
+
 void main() {
   for (final operation in ['login', 'register']) {
     final invalidResponses = <String, Map<String, Object?>>{
@@ -73,7 +77,7 @@ void main() {
                   password: 'secret123',
                 );
           await expectLater(auth, throwsA(isA<RemoteDataException>()));
-          expect(await service.getCurrentUser(), isNull);
+          await expectLater(service.getCurrentUser(), _throwsApiStatus(401));
           expect(meCalls, 1);
         },
       );
@@ -108,6 +112,32 @@ void main() {
 
       expect(user?.userId, 'stable-user-id');
       expect(user?.identityState, ClientIdentityState.remoteAuthenticated);
+    },
+  );
+
+  test(
+    'RemoteDataService preserves /auth/me 401 and clears stale token',
+    () async {
+      var meCalls = 0;
+      final client = MockClient((request) async {
+        expect(request.url.path, '/auth/me');
+        meCalls++;
+        if (meCalls == 1) {
+          expect(request.headers['authorization'], 'Bearer stale-token');
+        } else {
+          expect(request.headers['authorization'], isNull);
+        }
+        return http.Response('Unauthorized', 401);
+      });
+      final apiClient = ApiClient(
+        httpClient: client,
+        baseUrl: 'http://server.test',
+      )..setToken('stale-token');
+      final service = RemoteDataService(apiClient: apiClient);
+
+      await expectLater(service.getCurrentUser(), _throwsApiStatus(401));
+      await expectLater(service.getCurrentUser(), _throwsApiStatus(401));
+      expect(meCalls, 2);
     },
   );
 
@@ -200,7 +230,7 @@ void main() {
           );
         }
 
-        expect(await service.getCurrentUser(), isNull);
+        await expectLater(service.getCurrentUser(), _throwsApiStatus(401));
         expect(meCalls, 1);
       },
     );
@@ -246,7 +276,7 @@ void main() {
 
         await expectLater(service.logout(), throwsA(same(failure)));
 
-        expect(await service.getCurrentUser(), isNull);
+        await expectLater(service.getCurrentUser(), _throwsApiStatus(401));
         expect(meCalls, 1);
       },
     );
@@ -290,7 +320,7 @@ void main() {
       await service.continueAsGuest();
 
       expect(logoutCalls, 0);
-      expect(await service.getCurrentUser(), isNull);
+      await expectLater(service.getCurrentUser(), _throwsApiStatus(401));
       expect(meCalls, 1);
     },
   );
@@ -622,7 +652,7 @@ void main() {
     expect(savedTuning.tagDurationMultiplier['Writing'], 1.25);
 
     await service.logout();
-    expect(await service.getCurrentUser(), isNull);
+    await expectLater(service.getCurrentUser(), _throwsApiStatus(401));
   });
 
   test(

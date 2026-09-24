@@ -355,6 +355,41 @@ void main() {
     expect(local.activateAuthenticatedUserCalls, 0);
   });
 
+  final authFailures = <Object>[
+    const ApiException('unauthorized', statusCode: 401),
+    http.ClientException('network unavailable'),
+    TimeoutException('authentication timed out'),
+    for (final status in [500, 502, 503, 504])
+      ApiException('authentication $status', statusCode: status),
+  ];
+  for (final operation in ['login', 'register']) {
+    for (final error in authFailures) {
+      test(
+        '$operation preserves $error without local authentication',
+        () async {
+          final local = _IdentityDataService();
+          final remote = _IdentityDataService(
+            loginError: operation == 'login' ? error : null,
+            registerError: operation == 'register' ? error : null,
+          );
+          final service = composite(local: local, remote: remote);
+
+          final authentication = operation == 'login'
+              ? service.login('alice@example.com', 'password')
+              : service.registerAccount(
+                  username: 'alice@example.com',
+                  password: 'password',
+                );
+          await expectLater(authentication, throwsA(same(error)));
+
+          expect(local.loginCalls, 0);
+          expect(local.registerCalls, 0);
+          expect(local.activateAuthenticatedUserCalls, 0);
+        },
+      );
+    }
+  }
+
   test('valid remote login activates the stable local user id', () async {
     const user = UserAccount(
       userId: 'server-user-1',
@@ -580,6 +615,7 @@ class _IdentityDataService implements DataService, LocalIdentityStore {
     this.registerResult = false,
     this.currentUser,
     this.loginError,
+    this.registerError,
     this.activationError,
     this.logoutError,
     this.activateGuestError,
@@ -590,6 +626,7 @@ class _IdentityDataService implements DataService, LocalIdentityStore {
   final bool registerResult;
   final UserAccount? currentUser;
   final Object? loginError;
+  final Object? registerError;
   final Object? activationError;
   final Object? logoutError;
   final Object? activateGuestError;
@@ -616,6 +653,8 @@ class _IdentityDataService implements DataService, LocalIdentityStore {
     required String password,
   }) async {
     registerCalls++;
+    final error = registerError;
+    if (error != null) throw error;
     return registerResult;
   }
 

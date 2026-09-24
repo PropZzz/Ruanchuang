@@ -93,7 +93,7 @@ abstract class LocalPersistence {
 Keep the existing file/key names only for `legacy`. For every other namespace,
 append the encoded suffix to a fixed application-controlled prefix. Give every
 IO namespace its own primary, temporary, and backup file. Store in-memory test
-values in a map keyed by logical namespace.
+values under the same encoded namespace key rule.
 
 - [ ] **Step 5: Verify GREEN and commit**
 

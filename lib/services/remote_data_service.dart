@@ -331,7 +331,8 @@ class RemoteDataService implements DataService {
       return _currentUser;
     } on ApiException catch (error) {
       if (error.statusCode == 401) {
-        return null;
+        _api.setToken(null);
+        _currentUser = null;
       }
       rethrow;
     }

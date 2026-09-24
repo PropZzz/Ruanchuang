@@ -238,6 +238,20 @@ Future<void> _expectIdentityValues(
 }
 
 void main() {
+  test(
+    'legacy UserAccount JSON remains an offline identity without user id',
+    () {
+      final account = UserAccount.fromJson({
+        'contactAddress': 'legacy@example.com',
+        'displayName': 'Legacy user',
+      });
+
+      expect(account.userId, isNull);
+      expect(account.identityState, ClientIdentityState.offlineCached);
+      expect(account.toJson(), isNot(contains('id')));
+    },
+  );
+
   test('LocalDataService migrates legacy keys and persists ids', () async {
     final persistence = InMemoryLocalPersistence();
     final legacyEntry = <String, Object?>{
@@ -1346,6 +1360,36 @@ void main() {
       service = LocalDataService.forPersistence(persistence);
       await service.activateAuthenticatedUser(_cachedUser('user-a'));
       await _expectIdentityValues(service, 'a', present: true);
+    },
+  );
+
+  test(
+    'logout clears cached identity even when user data is malformed',
+    () async {
+      final persistence = InMemoryLocalPersistence();
+      await persistence.write(
+        jsonEncode({
+          'version': 1,
+          'kind': 'authenticated',
+          'user': {
+            'id': 'user-a',
+            'contactAddress': 'alice@example.com',
+            'displayName': 'Alice',
+          },
+        }),
+        namespace: 'session',
+      );
+      await persistence.write('{not-json', namespace: 'user:user-a');
+      final service = LocalDataService.forPersistence(persistence);
+
+      await service.logout();
+
+      final session =
+          jsonDecode((await persistence.read(namespace: 'session'))!)
+              as Map<String, dynamic>;
+      expect(session['kind'], 'guest');
+      expect(await service.getCurrentUser(), isNull);
+      expect(await persistence.read(namespace: 'user:user-a'), '{not-json');
     },
   );
 
