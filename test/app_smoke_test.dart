@@ -198,6 +198,9 @@ class _FatigueDataService implements DataService {
 
   @override
   Future<void> logout() => _inner.logout();
+
+  @override
+  Future<void> continueAsGuest() => _inner.continueAsGuest();
 }
 
 class _UndoPersistenceFailingDataService extends _FatigueDataService {
