@@ -11,6 +11,7 @@ import 'micro_task_page.dart';
 import 'profile_page.dart';
 import 'smart_calendar_page.dart';
 import 'team_page.dart';
+import '../widgets/stitch_mobile_scaffold.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key, this.secondaryPage, this.secondaryTabIndex = 0});
@@ -170,6 +171,7 @@ class _MainScreenState extends State<MainScreen> {
                 )
               : _NarrowShell(
                   key: const ValueKey('narrow-shell'),
+                  title: AppStrings.of(context, 'app_title'),
                   selectedIndex: _selectedIndex,
                   destinations: destinations,
                   onSelect: _onSelect,
@@ -192,12 +194,14 @@ class _MainScreenState extends State<MainScreen> {
 class _NarrowShell extends StatelessWidget {
   const _NarrowShell({
     super.key,
+    required this.title,
     required this.selectedIndex,
     required this.destinations,
     required this.onSelect,
     required this.child,
   });
 
+  final String title;
   final int selectedIndex;
   final List<_ShellDestination> destinations;
   final ValueChanged<int> onSelect;
@@ -206,83 +210,15 @@ class _NarrowShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(child: ClipRRect(child: child)),
-        Padding(
-          key: const ValueKey('shell-bottom-capsule'),
-          padding: EdgeInsets.zero,
-          child: theme.platform == TargetPlatform.iOS
-              ? Container(
-                  key: const ValueKey('shell-bottom-cupertino'),
-                  child: CupertinoTabBar(
-                    backgroundColor: theme.colorScheme.surface,
-                    activeColor: theme.colorScheme.primary,
-                    inactiveColor: theme.colorScheme.onSurfaceVariant,
-                    border: Border(
-                      top: BorderSide(color: theme.colorScheme.outline),
-                    ),
-                    currentIndex: selectedIndex,
-                    onTap: onSelect,
-                    items: [
-                      for (final destination in destinations)
-                        BottomNavigationBarItem(
-                          icon: Icon(_cupertinoIcon(destination.id), size: 22),
-                          label: destination.label,
-                        ),
-                    ],
-                  ),
-                )
-              : Material(
-                  key: const ValueKey('shell-bottom-material'),
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.zero,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: theme.colorScheme.outline),
-                      ),
-                    ),
-                    child: SafeArea(
-                      top: false,
-                      child: NavigationBar(
-                        backgroundColor: theme.colorScheme.surface,
-                        elevation: 0,
-                        height: 68,
-                        indicatorColor: Colors.transparent,
-                        labelBehavior:
-                            NavigationDestinationLabelBehavior.alwaysShow,
-                        selectedIndex: selectedIndex,
-                        onDestinationSelected: onSelect,
-                        destinations: [
-                          for (final d in destinations)
-                            NavigationDestination(
-                              key: ValueKey('shell-nav-${d.id}'),
-                              icon: Icon(d.icon, size: 22),
-                              selectedIcon: Icon(d.selectedIcon, size: 22),
-                              label: d.label,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-        ),
-      ],
+    return StitchMobileScaffold(
+      title: title,
+      pageLabel: destinations[selectedIndex].label,
+      selectedIndex: selectedIndex,
+      onSelect: onSelect,
+      onNotify: () {},
+      onProfile: () => onSelect(destinations.length - 1),
+      child: ClipRRect(child: child),
     );
-  }
-
-  IconData _cupertinoIcon(String destinationId) {
-    return switch (destinationId) {
-      'focus' => CupertinoIcons.timer,
-      'schedule' => CupertinoIcons.calendar,
-      'micro' => CupertinoIcons.square_grid_2x2,
-      'team' => CupertinoIcons.person_2,
-      'profile' => CupertinoIcons.person,
-      _ => CupertinoIcons.circle,
-    };
   }
 }
 

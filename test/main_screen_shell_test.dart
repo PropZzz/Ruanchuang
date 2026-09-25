@@ -148,6 +148,25 @@ void main() {
     tester.view.reset();
   });
 
+  testWidgets('mobile shell uses Stitch chrome', (tester) async {
+    await pumpShell(tester, const Size(390, 844));
+
+    expect(find.byKey(const ValueKey('stitch-mobile-header')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('stitch-mobile-bottom-bar')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('stitch-mobile-nav-focus')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('stitch-mobile-nav-profile')),
+      findsOneWidget,
+    );
+    tester.view.reset();
+  });
+
   testWidgets('narrow iOS shell uses Cupertino tab navigation', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
