@@ -99,6 +99,11 @@
 
   function routeForButton(button) {
     const label = `${button.innerText || ''} ${button.title || ''} ${button.getAttribute('aria-label') || ''}`.toLowerCase();
+    if (label.includes('关闭') || label.includes('close') || label.includes('cancel') || label.includes('取消')) {
+      if (activeRoute === 'settings-drawer') return 'profile';
+      if (activeRoute === 'rescue-comparison' || activeRoute === 'urgent-task' || activeRoute === 'create-schedule') return 'schedule';
+      if (activeRoute === 'microtask-entry') return 'micro';
+    }
     if (label.includes('设置') || label.includes('settings')) return 'settings-drawer';
     if (label.includes('目标') || label.includes('goals')) return 'goals';
     if (label.includes('复盘') || label.includes('review')) return 'review';
@@ -109,16 +114,15 @@
     if (label.includes('插入紧急') || label.includes('urgent task')) return mobileQuery.matches ? 'urgent-task' : 'rescue-comparison';
     if (label.includes('新增日程') || label.includes('新建日程') || label.includes('add schedule') || label.includes('new schedule')) return mobileQuery.matches ? 'create-schedule' : null;
     if (label.includes('添加微任务') || label.includes('add microtask') || label.includes('import list') || label.includes('导入清单')) return 'microtask-entry';
-    if (label.includes('救援方案') || label.includes('比较方案') || label.includes('rescue plan') || label.includes('重新规划') || label.includes('replan')) return 'rescue-comparison';
+    if (label.includes('救援方案') || label.includes('比较方案') || label.includes('三方案救援对比') || label.includes('rescue plan') || label.includes('重新规划') || label.includes('replan')) return 'rescue-comparison';
+    if (activeRoute === 'create-schedule' && (label.includes('保存') || label.includes('save'))) return 'schedule';
+    if (activeRoute === 'urgent-task' && (label.includes('生成三方案') || label.includes('救援对比'))) return 'rescue-comparison';
+    if (activeRoute === 'microtask-entry' && (label.includes('存入沙盒') || label.includes('confirm') || label.includes('完成'))) return 'micro';
+    if (activeRoute === 'settings-drawer' && (label.includes('保存') || label.includes('save'))) return 'profile';
     if (label.includes('采用此方案') || label.includes('apply plan') || label.includes('导入') || label.includes('save')) {
       if (activeRoute === 'rescue-comparison' || activeRoute === 'create-schedule' || activeRoute === 'urgent-task') return 'schedule';
       if (activeRoute === 'microtask-entry') return 'micro';
       if (activeRoute === 'settings-drawer') return 'profile';
-    }
-    if (label.includes('取消') || label.includes('关闭') || label.includes('close') || label.includes('cancel')) {
-      if (activeRoute === 'settings-drawer') return 'profile';
-      if (activeRoute === 'rescue-comparison' || activeRoute === 'urgent-task' || activeRoute === 'create-schedule') return 'schedule';
-      if (activeRoute === 'microtask-entry') return 'micro';
     }
     return null;
   }
