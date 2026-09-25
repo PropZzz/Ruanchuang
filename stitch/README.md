@@ -8,12 +8,15 @@ Stitch 项目 ID：`2037391297990000917`
 - `index.html`：已本地化的页面代码，可直接从本地打开
 - `hosted.html`：从 Stitch hosted URL 原样下载的 HTML
 - `screen.json`：Stitch `get_screen` 返回的屏幕元数据、原始 HTML URL 和截图 URL
-- `screenshot.png`：对应页面截图
+- `screenshot.png`：按 `screen.json` 原生像素尺寸从本地 HTML 渲染的高清截图
+- `hosted-screenshot.png`：Stitch 提供的原始预览截图
 - `asset-manifest.json`：该页面引用的远程资源与本地映射
 
 公共资源位于 `stitch/assets/`：包括 Google Fonts、Material Symbols 字体、Tailwind CDN 脚本和页面图片。`index.html` 已将这些引用改写为相对路径；本地页面不再依赖网络资源。
 
 `manifest.json` 保存 13 个画板的 Stitch ID、中文标题、原始托管 URL 与本地文件路径。
+
+高清截图由本地化 HTML 按 `screen.json` 的原始像素尺寸离线渲染。重新拉取需要 Chrome 或 Chromium；可通过 `CHROME_PATH` 指定浏览器位置。原始 Stitch 预览图单独保存在 `hosted-screenshot.png`。
 
 ## 画板
 

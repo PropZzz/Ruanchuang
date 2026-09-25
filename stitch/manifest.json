@@ -13,7 +13,13 @@
       "screenJsonFile": "screens/smart-calendar/screen.json",
       "assetManifestFile": "screens/smart-calendar/asset-manifest.json",
       "htmlFile": "screens/smart-calendar/index.html",
-      "imageFile": "screens/smart-calendar/screenshot.png"
+      "imageFile": "screens/smart-calendar/screenshot.png",
+      "hostedScreenshotFile": "screens/smart-calendar/hosted-screenshot.png",
+      "screenshotFile": "screens/smart-calendar/screenshot.png",
+      "screenshotSize": {
+        "width": 2560,
+        "height": 3300
+      }
     },
     {
       "id": "5096e8843b104fc8bcefdb95b6192be5",
@@ -27,7 +33,13 @@
       "screenJsonFile": "screens/rescue-comparison/screen.json",
       "assetManifestFile": "screens/rescue-comparison/asset-manifest.json",
       "htmlFile": "screens/rescue-comparison/index.html",
-      "imageFile": "screens/rescue-comparison/screenshot.png"
+      "imageFile": "screens/rescue-comparison/screenshot.png",
+      "hostedScreenshotFile": "screens/rescue-comparison/hosted-screenshot.png",
+      "screenshotFile": "screens/rescue-comparison/screenshot.png",
+      "screenshotSize": {
+        "width": 2560,
+        "height": 3076
+      }
     },
     {
       "id": "7de8368b293749c0ab5bc5bfb802bb75",
@@ -41,7 +53,13 @@
       "screenJsonFile": "screens/focus/screen.json",
       "assetManifestFile": "screens/focus/asset-manifest.json",
       "htmlFile": "screens/focus/index.html",
-      "imageFile": "screens/focus/screenshot.png"
+      "imageFile": "screens/focus/screenshot.png",
+      "hostedScreenshotFile": "screens/focus/hosted-screenshot.png",
+      "screenshotFile": "screens/focus/screenshot.png",
+      "screenshotSize": {
+        "width": 2560,
+        "height": 2984
+      }
     },
     {
       "id": "ce58f38674a14dafb39cc9ba469e0dc4",
@@ -55,7 +73,13 @@
       "screenJsonFile": "screens/team/screen.json",
       "assetManifestFile": "screens/team/asset-manifest.json",
       "htmlFile": "screens/team/index.html",
-      "imageFile": "screens/team/screenshot.png"
+      "imageFile": "screens/team/screenshot.png",
+      "hostedScreenshotFile": "screens/team/hosted-screenshot.png",
+      "screenshotFile": "screens/team/screenshot.png",
+      "screenshotSize": {
+        "width": 2560,
+        "height": 3918
+      }
     },
     {
       "id": "c529c8cd69854a0eb5357eff5deac03c",
@@ -69,7 +93,13 @@
       "screenJsonFile": "screens/microtasks/screen.json",
       "assetManifestFile": "screens/microtasks/asset-manifest.json",
       "htmlFile": "screens/microtasks/index.html",
-      "imageFile": "screens/microtasks/screenshot.png"
+      "imageFile": "screens/microtasks/screenshot.png",
+      "hostedScreenshotFile": "screens/microtasks/hosted-screenshot.png",
+      "screenshotFile": "screens/microtasks/screenshot.png",
+      "screenshotSize": {
+        "width": 2560,
+        "height": 3534
+      }
     },
     {
       "id": "1623975f700f4227be2fc1cdcec663a3",
@@ -83,7 +113,13 @@
       "screenJsonFile": "screens/profile/screen.json",
       "assetManifestFile": "screens/profile/asset-manifest.json",
       "htmlFile": "screens/profile/index.html",
-      "imageFile": "screens/profile/screenshot.png"
+      "imageFile": "screens/profile/screenshot.png",
+      "hostedScreenshotFile": "screens/profile/hosted-screenshot.png",
+      "screenshotFile": "screens/profile/screenshot.png",
+      "screenshotSize": {
+        "width": 2560,
+        "height": 3560
+      }
     },
     {
       "id": "286623cdc28f41a8997a1288a8dbc4e0",
@@ -97,7 +133,13 @@
       "screenJsonFile": "screens/goals/screen.json",
       "assetManifestFile": "screens/goals/asset-manifest.json",
       "htmlFile": "screens/goals/index.html",
-      "imageFile": "screens/goals/screenshot.png"
+      "imageFile": "screens/goals/screenshot.png",
+      "hostedScreenshotFile": "screens/goals/hosted-screenshot.png",
+      "screenshotFile": "screens/goals/screenshot.png",
+      "screenshotSize": {
+        "width": 3712,
+        "height": 3094
+      }
     },
     {
       "id": "43d2faea5a904c35b39f65a83c7fd703",
@@ -111,7 +153,13 @@
       "screenJsonFile": "screens/review/screen.json",
       "assetManifestFile": "screens/review/asset-manifest.json",
       "htmlFile": "screens/review/index.html",
-      "imageFile": "screens/review/screenshot.png"
+      "imageFile": "screens/review/screenshot.png",
+      "hostedScreenshotFile": "screens/review/hosted-screenshot.png",
+      "screenshotFile": "screens/review/screenshot.png",
+      "screenshotSize": {
+        "width": 2560,
+        "height": 3188
+      }
     },
     {
       "id": "fa721a17b50b4b1c8bbd1bf8d199cf9b",
@@ -125,7 +173,13 @@
       "screenJsonFile": "screens/integrations/screen.json",
       "assetManifestFile": "screens/integrations/asset-manifest.json",
       "htmlFile": "screens/integrations/index.html",
-      "imageFile": "screens/integrations/screenshot.png"
+      "imageFile": "screens/integrations/screenshot.png",
+      "hostedScreenshotFile": "screens/integrations/hosted-screenshot.png",
+      "screenshotFile": "screens/integrations/screenshot.png",
+      "screenshotSize": {
+        "width": 2560,
+        "height": 2926
+      }
     },
     {
       "id": "366e02e8368f474eb62f0328f2b206d9",
@@ -139,7 +193,13 @@
       "screenJsonFile": "screens/settings-drawer/screen.json",
       "assetManifestFile": "screens/settings-drawer/asset-manifest.json",
       "htmlFile": "screens/settings-drawer/index.html",
-      "imageFile": "screens/settings-drawer/screenshot.png"
+      "imageFile": "screens/settings-drawer/screenshot.png",
+      "hostedScreenshotFile": "screens/settings-drawer/hosted-screenshot.png",
+      "screenshotFile": "screens/settings-drawer/screenshot.png",
+      "screenshotSize": {
+        "width": 2560,
+        "height": 2048
+      }
     },
     {
       "id": "d86aa9d3733c410083bb1f2929cf6640",
@@ -153,7 +213,13 @@
       "screenJsonFile": "screens/bluetooth/screen.json",
       "assetManifestFile": "screens/bluetooth/asset-manifest.json",
       "htmlFile": "screens/bluetooth/index.html",
-      "imageFile": "screens/bluetooth/screenshot.png"
+      "imageFile": "screens/bluetooth/screenshot.png",
+      "hostedScreenshotFile": "screens/bluetooth/hosted-screenshot.png",
+      "screenshotFile": "screens/bluetooth/screenshot.png",
+      "screenshotSize": {
+        "width": 2560,
+        "height": 2570
+      }
     },
     {
       "id": "9eef5f7ba36c4b6295dbe69f17231967",
@@ -167,7 +233,13 @@
       "screenJsonFile": "screens/emotion-energy/screen.json",
       "assetManifestFile": "screens/emotion-energy/asset-manifest.json",
       "htmlFile": "screens/emotion-energy/index.html",
-      "imageFile": "screens/emotion-energy/screenshot.png"
+      "imageFile": "screens/emotion-energy/screenshot.png",
+      "hostedScreenshotFile": "screens/emotion-energy/hosted-screenshot.png",
+      "screenshotFile": "screens/emotion-energy/screenshot.png",
+      "screenshotSize": {
+        "width": 2560,
+        "height": 2268
+      }
     },
     {
       "id": "ddffac1354d14106b5ae99f206099cb6",
@@ -181,7 +253,13 @@
       "screenJsonFile": "screens/diagnostics/screen.json",
       "assetManifestFile": "screens/diagnostics/asset-manifest.json",
       "htmlFile": "screens/diagnostics/index.html",
-      "imageFile": "screens/diagnostics/screenshot.png"
+      "imageFile": "screens/diagnostics/screenshot.png",
+      "hostedScreenshotFile": "screens/diagnostics/hosted-screenshot.png",
+      "screenshotFile": "screens/diagnostics/screenshot.png",
+      "screenshotSize": {
+        "width": 2560,
+        "height": 2326
+      }
     }
   ]
 }

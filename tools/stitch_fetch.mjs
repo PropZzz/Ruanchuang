@@ -1,6 +1,10 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { pathToFileURL } from 'node:url';
 import { stitch } from '@google/stitch-sdk';
 
 const projectId = '2037391297990000917';
@@ -133,6 +137,47 @@ async function localizeHtml(hostedHtml, screenDir) {
   return { html: localizedHtml, assets };
 }
 
+function chromePath() {
+  const candidates = [
+    process.env.CHROME_PATH,
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+  ].filter(Boolean);
+  const path = candidates.find((candidate) => existsSync(candidate));
+  if (!path) throw new Error('Chrome/Chromium is required to render full-resolution screenshots. Set CHROME_PATH if needed.');
+  return path;
+}
+
+async function renderScreenshot(screenDir, width, height) {
+  const pixelWidth = Number(width);
+  const pixelHeight = Number(height);
+  if (!Number.isInteger(pixelWidth) || !Number.isInteger(pixelHeight) || pixelWidth < 1 || pixelHeight < 1 || pixelWidth % 2 || pixelHeight % 2) {
+    throw new Error(`Invalid screen dimensions for high-resolution render: ${width}x${height}`);
+  }
+  const profileDir = await mkdtemp(join(tmpdir(), 'stitch-render-'));
+  const htmlUrl = pathToFileURL(resolve(screenDir, 'index.html')).href;
+  const result = spawnSync(chromePath(), [
+    '--headless=new',
+    '--disable-gpu',
+    '--hide-scrollbars',
+    '--no-first-run',
+    `--window-size=${pixelWidth / 2},${pixelHeight / 2}`,
+    '--force-device-scale-factor=2',
+    `--user-data-dir=${profileDir}`,
+    `--screenshot=${resolve(screenDir, 'screenshot.png')}`,
+    htmlUrl,
+  ], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+  await rm(profileDir, { recursive: true, force: true });
+  if (result.error) throw result.error;
+  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+  if (result.status !== 0 || !existsSync(resolve(screenDir, 'screenshot.png'))) {
+    throw new Error(`High-resolution screenshot render failed for ${screenDir}: ${output.slice(-2000)}`);
+  }
+}
+
 for (const [screenId, slug, title] of requestedScreens) {
   const screen = byId.get(screenId);
   if (!screen) throw new Error(`Screen not found: ${screenId}`);
@@ -154,10 +199,9 @@ for (const [screenId, slug, title] of requestedScreens) {
     projectId,
     title,
   }, null, 2) + '\n');
-  const imageType = imageResponse.headers.get('content-type') ?? 'image/png';
-  const extension = imageType.includes('jpeg') || imageType.includes('jpg') ? 'jpg' : imageType.includes('webp') ? 'webp' : 'png';
-  const imageFile = `screenshot.${extension}`;
-  await writeFile(join(screenDir, imageFile), Buffer.from(await imageResponse.arrayBuffer()));
+  const hostedScreenshotFile = 'hosted-screenshot.png';
+  await writeFile(join(screenDir, hostedScreenshotFile), Buffer.from(await imageResponse.arrayBuffer()));
+  await renderScreenshot(screenDir, screen.data.width, screen.data.height);
   manifest.push({
     id: screenId,
     slug,
@@ -170,7 +214,10 @@ for (const [screenId, slug, title] of requestedScreens) {
     screenJsonFile: `screens/${slug}/screen.json`,
     assetManifestFile: `screens/${slug}/asset-manifest.json`,
     htmlFile: `screens/${slug}/index.html`,
-    imageFile: `screens/${slug}/${imageFile}`,
+    hostedScreenshotFile: `screens/${slug}/${hostedScreenshotFile}`,
+    screenshotFile: `screens/${slug}/screenshot.png`,
+    screenshotSize: { width: Number(screen.data.width), height: Number(screen.data.height) },
+    imageFile: `screens/${slug}/screenshot.png`,
   });
   console.log(`${slug}: downloaded`);
 }
