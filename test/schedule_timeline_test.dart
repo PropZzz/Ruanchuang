@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shixuzhipei/models/models.dart';
 import 'package:shixuzhipei/theme/app_theme.dart';
@@ -130,6 +131,74 @@ void main() {
       find.byKey(const ValueKey('schedule-timeline-gantt-bar-gantt-1-0')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('gantt axis and date labels fit at large system text scales', (
+    tester,
+  ) async {
+    for (final scale in [2.0, 3.0]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(scale)),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: ScheduleTimeline(
+              view: ScheduleTimelineView.gantt,
+              selectedDay: day,
+              entries: const [],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final trackFinder = find.byKey(
+        const ValueKey('schedule-timeline-gantt-track'),
+      );
+      final tickFinder = find.text('12:00');
+      final tick = tester.renderObject<RenderParagraph>(tickFinder);
+      final trackSize = tester.getSize(trackFinder);
+      final tickText = _measure(tick);
+      expect(
+        tickText.width,
+        lessThanOrEqualTo(trackSize.width / 24),
+        reason: 'axis ticks overlap at scale $scale',
+      );
+      expect(
+        tickText.height,
+        lessThanOrEqualTo(trackSize.height),
+        reason: 'axis tick clips at scale $scale',
+      );
+      final lastTickFinder = find.text('24:00');
+      final lastTickRight =
+          tester.getTopLeft(lastTickFinder).dx +
+          tester.getSize(lastTickFinder).width;
+      final trackRight = tester.getTopLeft(trackFinder).dx + trackSize.width;
+      expect(
+        lastTickRight,
+        lessThanOrEqualTo(trackRight),
+        reason: 'last axis tick clips at scale $scale',
+      );
+
+      final dateTextFinder = find.byWidgetPredicate(
+        (widget) => widget is Text && (widget.data?.contains('8/31') ?? false),
+      );
+      final dateText = tester.renderObject<RenderParagraph>(
+        dateTextFinder.first,
+      );
+      final dateLayout = _measure(dateText);
+      expect(
+        dateText.size.height,
+        greaterThanOrEqualTo(dateLayout.height),
+        reason: 'date label clips at scale $scale',
+      );
+      expect(tester.takeException(), isNull, reason: 'scale $scale');
+    }
   });
 
   testWidgets('month summary keeps visible event metadata', (tester) async {
@@ -452,3 +521,9 @@ void main() {
     );
   });
 }
+
+TextPainter _measure(RenderParagraph paragraph) => TextPainter(
+  text: paragraph.text,
+  textDirection: paragraph.textDirection,
+  textScaler: paragraph.textScaler,
+)..layout();

@@ -664,6 +664,18 @@ class ScheduleTimeline extends StatelessWidget {
     const ganttHours = ganttEndHour - ganttStartHour;
     final totalMinutes = ganttHours * 60.0;
     final theme = Theme.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
+    final direction = Directionality.of(context);
+    final axisText = TextPainter(
+      text: const TextSpan(text: '12:00', style: TextStyle(fontSize: 10)),
+      textDirection: direction,
+      textScaler: textScaler,
+    )..layout();
+    final ganttTrackWidth = textScaler.scale(10) <= 10
+        ? _minTrackWidth
+        : math.max(_minTrackWidth, axisText.width * ganttHours);
+    final ganttAxisHeight = math.max(32.0, textScaler.scale(10) * 1.5);
+    final ganttDateHeight = math.max(24.0, textScaler.scale(11) * 1.5);
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         12,
@@ -674,7 +686,7 @@ class ScheduleTimeline extends StatelessWidget {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SizedBox(
-          width: _gutterWidth + _labelLaneWidth + _minTrackWidth,
+          width: _gutterWidth + _labelLaneWidth + ganttTrackWidth,
           child: Column(
             children: [
               Row(
@@ -683,18 +695,28 @@ class ScheduleTimeline extends StatelessWidget {
                   SizedBox(width: _labelLaneWidth, child: Text(taskLaneLabel)),
                   ConstrainedBox(
                     key: const ValueKey('schedule-timeline-gantt-track'),
-                    constraints: const BoxConstraints(minWidth: _minTrackWidth),
+                    constraints: BoxConstraints(minWidth: ganttTrackWidth),
                     child: SizedBox(
-                      width: _minTrackWidth,
-                      height: 32,
+                      width: ganttTrackWidth,
+                      height: ganttAxisHeight,
                       child: Stack(
                         children: [
                           for (var hour = 0; hour <= ganttHours; hour++)
                             Positioned(
-                              left: hour / ganttHours * _minTrackWidth,
+                              left:
+                                  (hour / ganttHours * ganttTrackWidth -
+                                          axisText.width / 2)
+                                      .clamp(
+                                        0.0,
+                                        ganttTrackWidth - axisText.width,
+                                      ),
                               top: 0,
+                              width: axisText.width,
                               child: Text(
                                 '${ganttStartHour + hour}:00',
+                                maxLines: 1,
+                                softWrap: false,
+                                textAlign: TextAlign.center,
                                 style: const TextStyle(fontSize: 10),
                               ),
                             ),
@@ -711,7 +733,7 @@ class ScheduleTimeline extends StatelessWidget {
                 final selected = sameDay(day, selectedDay);
                 final rowHeight = math.max(
                   148.0,
-                  24.0 + dayEntries.length * 120.0,
+                  ganttDateHeight + dayEntries.length * 120.0,
                 );
                 return SizedBox(
                   height: rowHeight,
@@ -759,7 +781,7 @@ class ScheduleTimeline extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               SizedBox(
-                                height: 24,
+                                height: ganttDateHeight,
                                 child: Text(
                                   '${MaterialLocalizations.of(context).narrowWeekdays[day.weekday % 7]} ${day.month}/${day.day}',
                                   style: TextStyle(
@@ -820,12 +842,12 @@ class ScheduleTimeline extends StatelessWidget {
                         ),
                       ),
                       SizedBox(
-                        width: _minTrackWidth,
+                        width: ganttTrackWidth,
                         child: Stack(
                           children: [
                             for (var hour = 0; hour <= ganttHours; hour++)
                               Positioned(
-                                left: hour / ganttHours * _minTrackWidth,
+                                left: hour / ganttHours * ganttTrackWidth,
                                 top: 0,
                                 bottom: 0,
                                 child: Container(
@@ -855,14 +877,14 @@ class ScheduleTimeline extends StatelessWidget {
                                 (entry.height / 80.0) * 60.0,
                               );
                               final left =
-                                  start / totalMinutes * _minTrackWidth;
+                                  start / totalMinutes * ganttTrackWidth;
                               final remaining = math.max(
                                 0.0,
-                                _minTrackWidth - left,
+                                ganttTrackWidth - left,
                               );
                               if (remaining <= 0) return <Widget>[];
                               final desiredWidth =
-                                  duration / totalMinutes * _minTrackWidth;
+                                  duration / totalMinutes * ganttTrackWidth;
                               final edgeMarker = remaining < 48.0;
                               final width = edgeMarker
                                   ? 48.0
@@ -871,7 +893,7 @@ class ScheduleTimeline extends StatelessWidget {
                                       math.max(48.0, desiredWidth),
                                     );
                               final barLeft = edgeMarker
-                                  ? math.max(0.0, _minTrackWidth - 48.0)
+                                  ? math.max(0.0, ganttTrackWidth - 48.0)
                                   : left;
                               return <Widget>[
                                 Positioned(
@@ -879,7 +901,7 @@ class ScheduleTimeline extends StatelessWidget {
                                     'schedule-timeline-gantt-bar-${entry.id ?? entry.title}-$entryIndex',
                                   ),
                                   left: barLeft,
-                                  top: 24.0 + entryIndex * 120.0,
+                                  top: ganttDateHeight + entryIndex * 120.0,
                                   width: width,
                                   child: width < 140
                                       ? _buildCompactEventBar(
