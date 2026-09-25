@@ -7,6 +7,13 @@ import 'package:shixuzhipei/widgets/glass_surface.dart';
 import 'package:shixuzhipei/widgets/workbench_surface.dart';
 
 void main() {
+  test('blur tokens keep structural blur restrained', () {
+    expect(AppMaterialTokens.chromeBlur, greaterThan(0));
+    expect(AppMaterialTokens.chromeBlur, lessThan(22));
+    expect(AppMaterialTokens.overlayBlur, greaterThan(0));
+    expect(AppMaterialTokens.overlayBlur, lessThan(28));
+  });
+
   test('light and dark themes expose the approved semantic tokens', () {
     final light = AppTheme.light;
     final dark = AppTheme.dark;

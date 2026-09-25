@@ -22,8 +22,8 @@ void main() {
     () {
       expect(AppTheme.shellBreakpoint, 1200);
       expect(AppTheme.comparisonBreakpoint, 760);
-      expect(AppMaterialTokens.chromeBlur, 22);
-      expect(AppMaterialTokens.overlayBlur, 28);
+      expect(AppMaterialTokens.chromeBlur, 16);
+      expect(AppMaterialTokens.overlayBlur, 20);
       expect(AppMaterialTokens.chromeLightOpacity, closeTo(0.76, 0.001));
       expect(AppMaterialTokens.overlayDarkOpacity, closeTo(0.82, 0.001));
     },

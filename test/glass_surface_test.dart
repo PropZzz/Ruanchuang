@@ -41,6 +41,24 @@ void main() {
     expect(find.text('fallback content'), findsOneWidget);
   });
 
+  testWidgets('content surfaces do not render a blur layer', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(
+          body: GlassSurface(
+            level: AppMaterialLevel.surface,
+            child: Text('content surface'),
+          ),
+        ),
+      ),
+    );
+
+    expect(AppMaterialTokens.blur(AppMaterialLevel.surface), 0);
+    expect(find.byType(BackdropFilter), findsNothing);
+    expect(find.text('content surface'), findsOneWidget);
+  });
+
   testWidgets('glass falls back in high contrast mode', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

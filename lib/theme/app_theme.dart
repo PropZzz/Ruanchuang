@@ -47,8 +47,8 @@ abstract final class AppMaterialTokens {
   static const chromeDarkOpacity = 0.72;
   static const overlayLightOpacity = 0.86;
   static const overlayDarkOpacity = 0.82;
-  static const chromeBlur = 22.0;
-  static const overlayBlur = 28.0;
+  static const chromeBlur = 16.0;
+  static const overlayBlur = 20.0;
 
   static double opacity(Brightness brightness, AppMaterialLevel level) {
     final isDark = brightness == Brightness.dark;
