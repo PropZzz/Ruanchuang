@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif:wght@600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Noto+Serif:wght@100..900&display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}.tabular-nums{font-variant-numeric:tabular-nums;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"outline":"#717978","error-container":"#ffdad6","on-primary-container":"#81a8a7","secondary-fixed":"#d6e3ff","surface-variant":"#e3e2e7","on-secondary":"#ffffff","tertiary-fixed-dim":"#53e16f","on-error":"#ffffff","surface-bright":"#faf8fe","primary-fixed-dim":"#a7cecd","on-tertiary-fixed":"#002107","inverse-on-surface":"#f1f0f6","surface":"#faf8fe","on-surface-variant":"#414848","primary-container":"#163d3d","inverse-surface":"#2f3034","on-tertiary-fixed-variant":"#00531c","secondary":"#005db5","on-secondary-fixed-variant":"#00468b","primary-fixed":"#c2eae9","surface-container-highest":"#e3e2e7","outline-variant":"#c0c8c7","surface-container-low":"#f4f3f8","on-surface":"#1a1b1f","surface-tint":"#3f6564","on-secondary-container":"#00376f","tertiary-container":"#004114","surface-dim":"#dbd9df","on-error-container":"#93000a","secondary-fixed-dim":"#a8c8ff","surface-container-high":"#e9e7ed","error":"#ba1a1a","on-secondary-fixed":"#001b3d","tertiary":"#00290a","surface-container":"#efedf3","primary":"#002727","secondary-container":"#62a1fe","tertiary-fixed":"#72fe88","background":"#faf8fe","on-tertiary-container":"#1db84d","inverse-primary":"#a7cecd","on-background":"#1a1b1f","on-tertiary":"#ffffff","surface-container-lowest":"#ffffff","on-primary":"#ffffff","on-primary-fixed-variant":"#274d4d","on-primary-fixed":"#002020"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{},"fontFamily":{"headline":["Noto Serif"],"display":["Noto Serif"],"body":["Inter"],"label":["Inter"]},"fontSize":{}}}}</script></head><body class="bg-surface font-body text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[260px] bg-surface-container-lowest z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col flex-1 overflow-y-auto px-4 pt-5 pb-3"><div class="flex items-center gap-3 px-2 mb-6"><img alt="Brand logo. - Primary color: #163d3d
+- Font: notoSerif
+- Mode: light
+- Roundness: rounded-md
+" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1XuCHKt46wtQiojBg85I2fCRPWiJv54qhKQOffqcMljR1XAIxdoPBVYoJL-o90t8ytUt76hHA4ulQaTNFhUXcslEhPPo4K3BQQtO_DFCf29ArXjn8CXUf5fvvrcymJxS96eYBuMnxdrhEwRs9EaafG_tz7iSvgcjucWy-_nEA1qe3UVAQmzIBiEj7pJWiRePAABz7NVezMTq13EuU87d5NFq6NOd9BFBtmqI8N4sDU_0FDeMOV43B5Atv4"/><div class="flex flex-col"><span class="font-headline text-base font-bold tracking-tight text-primary leading-tight">时序智配</span><span class="font-label text-[11px] text-on-surface-variant font-medium tracking-wide mt-0.5">时间地图工作台</span></div></div><nav class="flex flex-col gap-5 flex-1" data-active-classes="bg-primary-container text-on-primary-container font-semibold shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]"><div class="flex flex-col gap-1"><span class="px-2.5 text-[10px] font-bold tracking-wider uppercase text-outline">今天</span><a class="flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="focus" href="#"><span class="material-symbols-outlined text-[19px]">timer</span><span>专注</span></a><a aria-current="page" class="flex items-center gap-3 px-2.5 py-2 rounded-lg transition-all bg-primary-container text-on-primary-container font-semibold shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]" data-path="schedule" href="#"><span class="material-symbols-outlined text-[19px]">calendar_today</span><span>智能日历</span></a></div><div class="flex flex-col gap-1"><span class="px-2.5 text-[10px] font-bold tracking-wider uppercase text-outline">规划</span><a class="flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="micro-tasks" href="#"><span class="material-symbols-outlined text-[19px]">check_box</span><span>微任务</span></a><a class="flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="goals" href="#"><span class="material-symbols-outlined text-[19px]">flag</span><span>目标</span></a></div><div class="flex flex-col gap-1"><span class="px-2.5 text-[10px] font-bold tracking-wider uppercase text-outline">协作</span><a class="flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="team" href="#"><span class="material-symbols-outlined text-[19px]">group</span><span>团队</span></a></div><div class="flex flex-col gap-1"><span class="px-2.5 text-[10px] font-bold tracking-wider uppercase text-outline">系统</span><a class="flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="review" href="#"><span class="material-symbols-outlined text-[19px]">analytics</span><span>智能复盘</span></a><a class="flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="diagnostics" href="#"><span class="material-symbols-outlined text-[19px]">memory</span><span>接入与诊断</span></a><a class="flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-all" data-path="profile" href="#"><span class="material-symbols-outlined text-[19px]">account_circle</span><span>我的</span></a></div></nav></div><div class="p-3 flex flex-col gap-2.5 bg-surface-container-low"><div class="flex items-center justify-between px-2 py-1.5 rounded-lg bg-surface-container text-on-surface-variant"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-[17px] text-outline">notifications_paused</span><span class="text-[11px] font-label font-medium">通知</span></div><span class="text-[10px] text-outline px-1.5 py-0.5 rounded-full bg-surface-container-highest">预留待接</span></div><div class="flex items-center justify-between p-2 rounded-xl bg-surface-container-lowest shadow-[0_1px_4px_rgba(0,0,0,0.03)]"><div class="flex items-center gap-2.5"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex flex-col"><span class="text-xs font-semibold text-on-surface">知行</span><span class="text-[10px] font-label text-outline flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-on-tertiary-container"></span>本地优先 · 已加密</span></div></div><button aria-label="账户设置" class="w-7 h-7 flex items-center justify-center rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors" type="button"><span class="material-symbols-outlined text-[16px]">more_vert</span></button></div></div></aside><div class="pl-[260px]"><header class="fixed top-0 left-[260px] right-0 h-16 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-6"><div class="flex items-center gap-4 min-w-[280px]"><div class="flex flex-col"><div class="flex items-center gap-2"><span class="text-sm font-semibold text-on-surface">智能日历</span><span class="text-xs text-outline">/</span><span class="text-xs font-medium text-on-surface-variant">时间地图</span></div><span class="text-[11px] text-outline font-label tabular-nums mt-0.5">2026年9月25日 星期五</span></div></div><div class="hidden xl:flex items-center gap-3"><div class="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container text-xs"><span class="w-2 h-2 rounded-full bg-on-tertiary-container animate-pulse"></span><span class="font-label font-medium text-on-surface-variant">已同步 · 本地优先 SQLite</span></div><div class="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container text-xs text-on-surface-variant"><span class="material-symbols-outlined text-[15px] text-secondary">bolt</span><span class="font-label tabular-nums">能量 86 分 · 平静专注 · 恢复缓冲 25m</span></div></div><div class="flex items-center gap-2.5"><button class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-error text-on-error text-xs font-semibold hover:opacity-95 transition-all shadow-[0_1px_4px_rgba(186,26,26,0.2)]" type="button"><span class="material-symbols-outlined text-[16px]">alarm_add</span><span>+ 插入紧急任务</span></button><button class="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary text-on-secondary text-xs font-semibold hover:opacity-95 transition-all" type="button"><span class="material-symbols-outlined text-[16px]">add</span><span>+ 新增日程</span></button><div class="flex items-center rounded-lg bg-surface-container p-0.5"><button class="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-md transition-colors" title="导入/导出 ICS 日历" type="button"><span class="material-symbols-outlined text-[16px]">sync_alt</span><span>ICS</span></button><button aria-label="工作台系统设置" class="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-md transition-colors" type="button"><span class="material-symbols-outlined text-[17px]">settings</span></button></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="relative pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full px-6 py-8 max-w-[1360px] mx-auto text-on-surface">
+<!-- 1. 顶部决策横幅 & 紧急任务元数据卡 (PRD O-05) -->
+<header class="flex flex-col gap-6 mb-8">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<div class="flex items-center gap-2 text-xs font-label uppercase tracking-widest text-outline mb-1">
+<span class="w-2 h-2 rounded-full bg-error animate-ping"></span>
+<span>调度引擎 · 实时时空约束求解</span>
+<span class="text-outline-variant">/</span>
+<span>规格代码 O-05</span>
+</div>
+<h1 class="font-headline text-3xl md:text-4xl font-bold tracking-tight text-primary">
+          日程救援方案决策 · 紧急任务重排
+        </h1>
+</div>
+<div class="flex items-center gap-3 self-start md:self-auto">
+<span class="px-3 py-1.5 rounded-full text-xs font-label bg-surface-container-high text-on-surface-variant flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-tertiary-fixed-dim">verified_user</span>
+<span>双重确认与状态可逆保障</span>
+</span>
+</div>
+</div>
+<!-- 紧急任务卡 (突出显示核心约束与代价背景) -->
+<div class="relative overflow-hidden rounded-xl bg-surface-container-lowest p-6 shadow-sm border-l-4 border-l-error">
+<div class="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-error-container/20 blur-3xl pointer-events-none"></div>
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+<div class="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+<div class="w-14 h-14 rounded-xl bg-error-container flex items-center justify-center shrink-0 text-error">
+<span class="material-symbols-outlined text-3xl">priority_high</span>
+</div>
+<div>
+<div class="flex flex-wrap items-center gap-2.5 mb-1.5">
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-error text-on-error uppercase tracking-wider">P0 核心中断</span>
+<h2 class="text-xl font-bold text-on-surface font-headline">生产网关鉴权补丁上线</h2>
+<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary-container text-on-primary-container">极高认知负荷 · 需完整沉浸块</span>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed">
+              调度引擎在不突破硬约束的前提下完成三次空间推演，提供 3 种可解释的权衡方案。请对比代价后主动确认。
+            </p>
+</div>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-surface-container">
+<div class="bg-surface-container-low px-4 py-2.5 rounded-lg flex flex-col">
+<span class="text-[11px] text-outline font-label">预估净耗时</span>
+<span class="text-base font-bold text-on-surface tabular-nums">75 <span class="text-xs font-normal text-outline">分钟</span></span>
+</div>
+<div class="bg-surface-container-low px-4 py-2.5 rounded-lg flex flex-col">
+<span class="text-[11px] text-outline font-label">硬截止时间</span>
+<span class="text-base font-bold text-error tabular-nums">今天 14:00</span>
+</div>
+<div class="col-span-2 sm:col-span-1 bg-surface-container-low px-4 py-2.5 rounded-lg flex flex-col">
+<span class="text-[11px] text-outline font-label">距离截止倒计时</span>
+<span class="text-base font-bold text-on-surface tabular-nums flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-error">hourglass_bottom</span>
+              3h 15m
+            </span>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- 2. 核心比较矩阵：三列横向决策卡 (PRD 7.1 统一字段规范) -->
+<section class="mb-10">
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-xl">compare_arrows</span>
+<h3 class="font-headline text-lg font-bold text-on-surface">3 种智能救援策略权衡矩阵</h3>
+</div>
+<span class="text-xs text-outline font-label">所有方案均已通过硬碰撞物理检查</span>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- 方案 A：优先保住截止时间 (推荐方案) -->
+<div class="relative flex flex-col justify-between rounded-xl bg-surface-container-lowest p-6 shadow-md transition-all duration-200 hover:shadow-lg border-2 border-secondary/40">
+<!-- 推荐徽标 -->
+<div class="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-secondary text-on-secondary text-xs font-bold shadow-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+<span>系统首选推荐 · 兼顾风险与进度</span>
+</div>
+<div>
+<!-- 标题与适用场景 -->
+<div class="pt-2 mb-4">
+<div class="flex items-center justify-between">
+<h4 class="text-xl font-bold font-headline text-on-surface">方案 A：优先保住截止时间</h4>
+<span class="text-xs font-bold text-secondary font-label">Deadline First</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-2 leading-relaxed h-12">
+              确保紧急任务与临近截止工作绝对不逾期，适度压缩次要会议与后移低优先级任务。
+            </p>
+</div>
+<!-- 标签 Tags -->
+<div class="flex flex-wrap gap-1.5 mb-5">
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-secondary-fixed text-on-secondary-fixed">截止强保障</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container-high text-on-surface-variant">高优先级置顶</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container-high text-on-surface-variant">适度移动任务</span>
+</div>
+<!-- 核心指标网格 (7.1 标准字段) -->
+<div class="grid grid-cols-2 gap-2.5 mb-5 bg-surface-container-low p-3.5 rounded-lg text-xs">
+<div>
+<span class="text-outline text-[11px] block">新增任务 / 移动</span>
+<span class="font-bold text-on-surface text-sm tabular-nums">1 项 / 3 项</span>
+</div>
+<div>
+<span class="text-outline text-[11px] block">保留原排期</span>
+<span class="font-bold text-on-surface text-sm tabular-nums">8 项未改动</span>
+</div>
+<div>
+<span class="text-outline text-[11px] block">可能逾期风险</span>
+<span class="font-bold text-on-tertiary-container text-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px]">check_circle</span>
+                0 项 (0%)
+              </span>
+</div>
+<div>
+<span class="text-outline text-[11px] block">恢复缓冲时长</span>
+<span class="font-bold text-on-surface text-sm tabular-nums">保留 15 分钟</span>
+</div>
+<div class="col-span-2 pt-2 border-t border-surface-container flex items-center justify-between">
+<span class="text-outline text-[11px]">紧急任务最早完成时刻</span>
+<span class="font-headline font-bold text-secondary text-sm tabular-nums">今天 12:15 (提前 105m)</span>
+</div>
+</div>
+<!-- 差异时间线对比缩略图 (Before vs After) -->
+<div class="mb-6">
+<div class="flex items-center justify-between text-[11px] font-label text-outline mb-1.5">
+<span>时间块结构变化 (10:30 - 15:00)</span>
+<span class="text-secondary font-semibold">耗时紧凑</span>
+</div>
+<!-- 时间条 -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center text-[10px] text-outline gap-1.5">
+<span class="w-8 shrink-0">当前:</span>
+<div class="h-3.5 w-full bg-surface-container-high rounded flex overflow-hidden">
+<div class="w-[30%] bg-surface-variant border-r border-surface" title="体验走查"></div>
+<div class="w-[20%] bg-tertiary-fixed-dim/40 border-r border-surface" title="午餐缓冲"></div>
+<div class="w-[50%] bg-surface-variant" title="产品周例会"></div>
+</div>
+</div>
+<div class="flex items-center text-[10px] text-on-surface gap-1.5 font-semibold">
+<span class="w-8 shrink-0 text-secondary">方案:</span>
+<div class="h-5 w-full bg-surface-container-high rounded flex overflow-hidden">
+<div class="w-[45%] bg-error text-on-error text-[9px] flex items-center justify-center font-bold" title="生产网关鉴权补丁上线">网关补丁 75m</div>
+<div class="w-[15%] bg-tertiary-fixed text-on-tertiary-fixed text-[9px] flex items-center justify-center" title="恢复缓冲 15m">缓冲</div>
+<div class="w-[40%] bg-surface-container-highest text-on-surface-variant text-[9px] flex items-center justify-center" title="原会议顺延">会议移位</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 底部主操作 -->
+<button class="w-full py-3 px-4 rounded-lg bg-secondary text-on-secondary font-semibold text-sm hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">done_all</span>
+<span>采用此方案并写入日程</span>
+</button>
+</div>
+<!-- 方案 B：优先保留恢复时间 (Recovery First) -->
+<div class="flex flex-col justify-between rounded-xl bg-surface-container-lowest p-6 shadow-sm hover:shadow-md transition-all duration-200">
+<div>
+<!-- 标题与适用场景 -->
+<div class="mb-4">
+<div class="flex items-center justify-between">
+<h4 class="text-xl font-bold font-headline text-on-surface">方案 B：优先保留恢复时间</h4>
+<span class="text-xs font-bold text-on-tertiary-container font-label">Recovery First</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-2 leading-relaxed h-12">
+              在高压任务前后强制预留认知恢复缓冲，避免连续疲惫导致认知崩溃与决策失误。
+            </p>
+</div>
+<!-- 标签 Tags -->
+<div class="flex flex-wrap gap-1.5 mb-5">
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-tertiary-fixed text-on-tertiary-fixed">精力匹配最佳</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container-high text-on-surface-variant">防疲劳过载</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-tertiary-fixed-dim/30 text-on-surface">双倍恢复缓冲</span>
+</div>
+<!-- 核心指标网格 (7.1 标准字段) -->
+<div class="grid grid-cols-2 gap-2.5 mb-5 bg-surface-container-low p-3.5 rounded-lg text-xs">
+<div>
+<span class="text-outline text-[11px] block">新增任务 / 移动</span>
+<span class="font-bold text-on-surface text-sm tabular-nums">1 项 / 4 项</span>
+</div>
+<div>
+<span class="text-outline text-[11px] block">保留原排期</span>
+<span class="font-bold text-on-surface text-sm tabular-nums">7 项未改动</span>
+</div>
+<div>
+<span class="text-outline text-[11px] block">可能逾期风险</span>
+<span class="font-bold text-on-tertiary-container text-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px]">check_circle</span>
+                0 项 (0%)
+              </span>
+</div>
+<div>
+<span class="text-outline text-[11px] block">恢复缓冲时长</span>
+<span class="font-bold text-on-tertiary-container text-sm tabular-nums">充裕 30 分钟</span>
+</div>
+<div class="col-span-2 pt-2 border-t border-surface-container flex items-center justify-between">
+<span class="text-outline text-[11px]">紧急任务最早完成时刻</span>
+<span class="font-headline font-bold text-on-surface text-sm tabular-nums">今天 13:30 (提前 30m)</span>
+</div>
+</div>
+<!-- 差异时间线对比缩略图 (Before vs After) -->
+<div class="mb-6">
+<div class="flex items-center justify-between text-[11px] font-label text-outline mb-1.5">
+<span>时间块结构变化 (10:30 - 15:00)</span>
+<span class="text-on-tertiary-container font-semibold">认知舒缓</span>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center text-[10px] text-outline gap-1.5">
+<span class="w-8 shrink-0">当前:</span>
+<div class="h-3.5 w-full bg-surface-container-high rounded flex overflow-hidden">
+<div class="w-[30%] bg-surface-variant border-r border-surface"></div>
+<div class="w-[20%] bg-tertiary-fixed-dim/40 border-r border-surface"></div>
+<div class="w-[50%] bg-surface-variant"></div>
+</div>
+</div>
+<div class="flex items-center text-[10px] text-on-surface gap-1.5 font-semibold">
+<span class="w-8 shrink-0 text-on-tertiary-container">方案:</span>
+<div class="h-5 w-full bg-surface-container-high rounded flex overflow-hidden">
+<div class="w-[20%] bg-tertiary-fixed text-on-tertiary-fixed text-[9px] flex items-center justify-center font-bold">前置休</div>
+<div class="w-[45%] bg-error text-on-error text-[9px] flex items-center justify-center font-bold">网关补丁 75m</div>
+<div class="w-[20%] bg-tertiary-fixed text-on-tertiary-fixed text-[9px] flex items-center justify-center font-bold">深度缓冲 30m</div>
+<div class="w-[15%] bg-surface-container-highest"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 底部主操作 -->
+<button class="w-full py-3 px-4 rounded-lg bg-surface-container-high text-on-surface font-semibold text-sm hover:bg-surface-container-highest active:scale-[0.98] transition-all flex items-center justify-center gap-2" type="button">
+<span>采用此方案并写入日程</span>
+</button>
+</div>
+<!-- 方案 C：尽量少动原计划 (Minimal Disruption) -->
+<div class="flex flex-col justify-between rounded-xl bg-surface-container-lowest p-6 shadow-sm hover:shadow-md transition-all duration-200">
+<div>
+<!-- 标题与适用场景 -->
+<div class="mb-4">
+<div class="flex items-center justify-between">
+<h4 class="text-xl font-bold font-headline text-on-surface">方案 C：尽量少动原计划</h4>
+<span class="text-xs font-bold text-outline font-label">Minimal Disruption</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-2 leading-relaxed h-12">
+              最大限度锁定已有排期与团队协作约定，仅利用现有碎片空档见缝插针，微调个人任务。
+            </p>
+</div>
+<!-- 标签 Tags -->
+<div class="flex flex-wrap gap-1.5 mb-5">
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container-high text-on-surface-variant">锁定原计划 90%</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container-high text-on-surface-variant">团队零打扰</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-error-container text-on-error-container">低缓冲容错率</span>
+</div>
+<!-- 核心指标网格 (7.1 标准字段) -->
+<div class="grid grid-cols-2 gap-2.5 mb-5 bg-surface-container-low p-3.5 rounded-lg text-xs">
+<div>
+<span class="text-outline text-[11px] block">新增任务 / 移动</span>
+<span class="font-bold text-on-surface text-sm tabular-nums">1 项 / 仅 1 项</span>
+</div>
+<div>
+<span class="text-outline text-[11px] block">保留原排期</span>
+<span class="font-bold text-on-surface text-sm tabular-nums">10 项未改动</span>
+</div>
+<div>
+<span class="text-outline text-[11px] block">可能逾期风险</span>
+<span class="font-bold text-error text-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px]">warning</span>
+                1 项潜在压线
+              </span>
+</div>
+<div>
+<span class="text-outline text-[11px] block">恢复缓冲时长</span>
+<span class="font-bold text-error text-sm tabular-nums">仅 5 分钟微缓冲</span>
+</div>
+<div class="col-span-2 pt-2 border-t border-surface-container flex items-center justify-between">
+<span class="text-outline text-[11px]">紧急任务最早完成时刻</span>
+<span class="font-headline font-bold text-error text-sm tabular-nums">今天 13:55 (压线 5m)</span>
+</div>
+</div>
+<!-- 差异时间线对比缩略图 (Before vs After) -->
+<div class="mb-6">
+<div class="flex items-center justify-between text-[11px] font-label text-outline mb-1.5">
+<span>时间块结构变化 (10:30 - 15:00)</span>
+<span class="text-error font-semibold">容错极限</span>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center text-[10px] text-outline gap-1.5">
+<span class="w-8 shrink-0">当前:</span>
+<div class="h-3.5 w-full bg-surface-container-high rounded flex overflow-hidden">
+<div class="w-[30%] bg-surface-variant border-r border-surface"></div>
+<div class="w-[20%] bg-tertiary-fixed-dim/40 border-r border-surface"></div>
+<div class="w-[50%] bg-surface-variant"></div>
+</div>
+</div>
+<div class="flex items-center text-[10px] text-on-surface gap-1.5 font-semibold">
+<span class="w-8 shrink-0 text-error">方案:</span>
+<div class="h-5 w-full bg-surface-container-high rounded flex overflow-hidden">
+<div class="w-[30%] bg-surface-container-highest text-on-surface-variant text-[9px] flex items-center justify-center">微任务压缩</div>
+<div class="w-[45%] bg-error text-on-error text-[9px] flex items-center justify-center font-bold">网关补丁 75m</div>
+<div class="w-[5%] bg-error-container text-on-error-container text-[8px] flex items-center justify-center font-bold">5m</div>
+<div class="w-[20%] bg-surface-container-highest"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 底部主操作 -->
+<button class="w-full py-3 px-4 rounded-lg bg-surface-container-high text-on-surface font-semibold text-sm hover:bg-surface-container-highest active:scale-[0.98] transition-all flex items-center justify-center gap-2" type="button">
+<span>采用此方案并写入日程</span>
+</button>
+</div>
+</div>
+</section>
+<!-- 3. 底部详细差异与可解释性时间线 (Diff Timeline & Operational Breakdown) -->
+<section class="rounded-xl bg-surface-container-lowest p-6 shadow-sm mb-12">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6 pb-4 border-b border-surface-container">
+<div>
+<h3 class="font-headline text-lg font-bold text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">track_changes</span>
+<span>执行调度详情与受影响项目清单 (以方案 A 为基准)</span>
+</h3>
+<p class="text-xs text-on-surface-variant mt-1">每个任务变动均附带算法权衡理由与防冲突保护说明</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="px-2.5 py-1 rounded bg-surface-container text-xs text-on-surface-variant font-label">
+          锁死防移日程：1 项
+        </span>
+<span class="px-2.5 py-1 rounded bg-secondary-fixed text-xs text-on-secondary-fixed font-label">
+          动态优化顺延：2 项
+        </span>
+</div>
+</div>
+<!-- 变动条目列表 -->
+<div class="flex flex-col gap-3">
+<!-- 条目 1：移动任务 -->
+<div class="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors gap-4">
+<div class="flex items-start gap-3.5">
+<div class="w-9 h-9 rounded-lg bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">schedule_send</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-semibold text-sm text-on-surface">Q3 体验走查与交互评审</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-surface-variant text-on-surface-variant">非关键路径</span>
+</div>
+<div class="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant mt-1">
+<span class="line-through text-outline">原定今天 11:00 - 12:00</span>
+<span class="material-symbols-outlined text-[14px] text-secondary">arrow_forward</span>
+<span class="font-semibold text-secondary">调整至 明天 10:00 - 11:00</span>
+<span class="text-outline">·</span>
+<span class="text-outline">相关 3 名协作者日程无冲突</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3 shrink-0 self-end md:self-auto">
+<span class="text-xs text-tertiary-fixed-dim font-medium flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-on-tertiary-container"></span>
+            已就绪预通知
+          </span>
+<button class="text-xs text-secondary hover:underline font-label" type="button">查看细节</button>
+</div>
+</div>
+<!-- 条目 2：平移认知缓冲 -->
+<div class="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors gap-4">
+<div class="flex items-start gap-3.5">
+<div class="w-9 h-9 rounded-lg bg-tertiary-fixed flex items-center justify-center text-on-tertiary-fixed shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">spa</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-semibold text-sm text-on-surface">午间进餐与认知重置缓冲</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-tertiary-fixed-dim/30 text-on-surface">生理节律保障</span>
+</div>
+<div class="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant mt-1">
+<span class="line-through text-outline">原定今天 12:00 - 13:00</span>
+<span class="material-symbols-outlined text-[14px] text-secondary">arrow_forward</span>
+<span class="font-semibold text-on-surface">平移至 12:15 - 13:00 (净留 45m)</span>
+<span class="text-outline">·</span>
+<span class="text-outline">紧接高压补丁上线后无缝衔接</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3 shrink-0 self-end md:self-auto">
+<span class="text-xs text-on-surface-variant font-medium">能量恢复指数 85%</span>
+<button class="text-xs text-secondary hover:underline font-label" type="button">调整时长</button>
+</div>
+</div>
+<!-- 条目 3：硬性锁定任务 -->
+<div class="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors gap-4">
+<div class="flex items-start gap-3.5">
+<div class="w-9 h-9 rounded-lg bg-surface-variant flex items-center justify-center text-outline shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-semibold text-sm text-on-surface">跨团队敏捷全员站会 (Sprint Sync)</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-primary-container text-on-primary-container">硬约束 · 绝对锁定</span>
+</div>
+<div class="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant mt-1">
+<span class="font-medium text-on-surface">保持今天 15:00 - 16:00 不动</span>
+<span class="text-outline">·</span>
+<span class="text-outline">调度求解器判定权重极高，全程绕开保护</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3 shrink-0 self-end md:self-auto">
+<span class="text-xs text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">lock_clock</span>
+            固定时段
+          </span>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. 全局底栏操作与安全可逆回滚承诺 (PRD 8 节调度规则) -->
+<footer class="sticky bottom-4 z-30 rounded-xl bg-surface-container-highest/95 backdrop-blur-xl p-4 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed shrink-0">
+<span class="material-symbols-outlined text-[18px]">history</span>
+</div>
+<p class="text-xs text-on-surface leading-snug">
+<span class="font-semibold">写入后自动生成快照：</span>系统支持 24 小时内随时一键无损撤回并完全还原旧排期。
+      </p>
+</div>
+<div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+<button class="px-4 py-2 rounded-lg text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors" type="button">
+        放弃本次插入并返回
+      </button>
+<button class="px-4 py-2 rounded-lg text-xs font-semibold text-secondary hover:bg-secondary-fixed/50 transition-colors flex items-center gap-1" type="button">
+<span>比较更多微调参数</span>
+<span class="material-symbols-outlined text-[14px]">tune</span>
+</button>
+</div>
+</footer>
+</div>
+<script>
+  // 简易交互状态：点击卡片可直接切换默认采用焦点
+  document.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      if (this.innerText.includes('采用此方案')) {
+        const planTitle = this.closest('.rounded-xl').querySelector('h4').innerText;
+        const confirmMsg = `已确认选择【${planTitle}】！\n正在写入本地 SQLite 数据库并广播 ICS 变更...`;
+        alert(confirmMsg);
+      }
+    });
+  });
+</script></main></div></body></html>

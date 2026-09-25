@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Serif:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-secondary-fixed-variant": "#00468b", "primary-fixed": "#c2eae9", "secondary-container": "#62a1fe", "tertiary-fixed-dim": "#53e16f", "surface-tint": "#3f6564", "inverse-primary": "#a7cecd", "on-tertiary-container": "#1db84d", "surface-container-lowest": "#ffffff", "surface": "#faf8fe", "error-container": "#ffdad6", "surface-container-low": "#f4f3f8", "on-tertiary": "#ffffff", "inverse-on-surface": "#f1f0f6", "primary-fixed-dim": "#a7cecd", "primary": "#002727", "on-primary-container": "#81a8a7", "surface-variant": "#e3e2e7", "tertiary": "#00290a", "on-primary-fixed": "#002020", "on-tertiary-fixed-variant": "#00531c", "on-surface-variant": "#414848", "secondary": "#005db5", "error": "#ba1a1a", "surface-bright": "#faf8fe", "on-error-container": "#93000a", "surface-dim": "#dbd9df", "on-secondary-container": "#00376f", "surface-container": "#efedf3", "on-secondary-fixed": "#001b3d", "surface-container-high": "#e9e7ed", "surface-container-highest": "#e3e2e7", "on-error": "#ffffff", "background": "#faf8fe", "on-background": "#1a1b1f", "secondary-fixed": "#d6e3ff", "primary-container": "#163d3d", "tertiary-fixed": "#72fe88", "outline-variant": "#c0c8c7", "inverse-surface": "#2f3034", "on-surface": "#1a1b1f", "outline": "#717978", "secondary-fixed-dim": "#a8c8ff", "tertiary-container": "#004114", "on-tertiary-fixed": "#002107", "on-primary": "#ffffff", "on-secondary": "#ffffff", "on-primary-fixed-variant": "#274d4d" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": {}, "fontFamily": { "headline": [ "Noto Serif" ], "display": [ "Noto Serif" ], "body": [ "Inter" ], "label": [ "Inter" ] }, "fontSize": {} } } }</script></head><body class="bg-surface font-body text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[260px] bg-surface-container-low z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col flex-1 min-h-0"><div class="px-5 pt-5 pb-4 flex items-center gap-3"><img alt="Brand logo. - Primary color: #163d3d
+- Font: notoSerif
+- Mode: light
+- Roundness: rounded-md
+" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1XuCHKt46wtQiojBg85I2fCRPWiJv54qhKQOffqcMljR1XAIxdoPBVYoJL-o90t8ytUt76hHA4ulQaTNFhUXcslEhPPo4K3BQQtO_DFCf29ArXjn8CXUf5fvvrcymJxS96eYBuMnxdrhEwRs9EaafG_tz7iSvgcjucWy-_nEA1qe3UVAQmzIBiEj7pJWiRePAABz7NVezMTq13EuU87d5NFq6NOd9BFBtmqI8N4sDU_0FDeMOV43B5Atv4"/><div class="flex flex-col min-w-0"><span class="font-headline font-bold text-base leading-tight text-primary tracking-tight truncate">时序智配</span><span class="text-[11px] font-label font-medium text-on-surface-variant truncate">时间地图工作台</span></div></div><div class="overflow-y-auto flex-1 px-3 py-2 space-y-5"><div class="space-y-1"><div class="px-2.5 text-[11px] font-label font-semibold text-outline uppercase tracking-wider">今天</div><nav class="space-y-0.5" data-active-classes="bg-primary-container text-on-primary font-medium rounded-lg"><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="focus" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">timer</span><span class="truncate font-medium">专注</span></a><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="schedule" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">calendar_today</span><span class="truncate font-medium">智能日历</span></a></nav></div><div class="space-y-1"><div class="px-2.5 text-[11px] font-label font-semibold text-outline uppercase tracking-wider">规划</div><nav class="space-y-0.5" data-active-classes="bg-primary-container text-on-primary font-medium rounded-lg"><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="microtasks" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">checklist</span><span class="truncate font-medium">微任务</span></a><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="goals" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">flag</span><span class="truncate font-medium">目标</span></a></nav></div><div class="space-y-1"><div class="px-2.5 text-[11px] font-label font-semibold text-outline uppercase tracking-wider">协作</div><nav class="space-y-0.5" data-active-classes="bg-primary-container text-on-primary font-medium rounded-lg"><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="team" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">group</span><span class="truncate font-medium">团队</span></a></nav></div><div class="space-y-1"><div class="px-2.5 text-[11px] font-label font-semibold text-outline uppercase tracking-wider">系统</div><nav class="space-y-0.5" data-active-classes="bg-primary-container text-on-primary font-medium rounded-lg"><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="review" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">insights</span><span class="truncate font-medium">智能复盘</span></a><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="diagnostics" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">hub</span><span class="truncate font-medium">接入与诊断</span></a><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="profile" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">person</span><span class="truncate font-medium">我的</span></a></nav></div></div></div><div class="p-3 bg-surface-container-low space-y-2 shrink-0"><button class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-surface hover:bg-surface-container transition-colors text-on-surface-variant" type="button"><div class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[18px]">notifications</span><span class="text-xs font-label">系统通知</span></div><span class="text-[10px] font-label px-1.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-medium">预留</span></button><div class="flex items-center gap-3 p-2.5 rounded-xl bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex flex-col min-w-0 flex-1"><div class="flex items-center justify-between"><span class="text-xs font-semibold text-on-surface truncate">知行</span><span class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim"></span></div><span class="text-[10px] text-outline truncate">本地优先 · 已加密</span></div></div></div></aside><div class="pl-[260px]"><header class="fixed top-0 left-[260px] right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-6 lg:px-8"><div class="flex items-center gap-4 min-w-0"><img alt="Brand logo. - Primary color: #163d3d
+- Font: notoSerif
+- Mode: light
+- Roundness: rounded-md
+" class="h-8 w-auto object-contain md:hidden" src="https://lh3.googleusercontent.com/aida/AEtjO1XuCHKt46wtQiojBg85I2fCRPWiJv54qhKQOffqcMljR1XAIxdoPBVYoJL-o90t8ytUt76hHA4ulQaTNFhUXcslEhPPo4K3BQQtO_DFCf29ArXjn8CXUf5fvvrcymJxS96eYBuMnxdrhEwRs9EaafG_tz7iSvgcjucWy-_nEA1qe3UVAQmzIBiEj7pJWiRePAABz7NVezMTq13EuU87d5NFq6NOd9BFBtmqI8N4sDU_0FDeMOV43B5Atv4"/><div class="flex items-center gap-2 text-xs font-label text-on-surface-variant min-w-0"><span class="shrink-0">时序智配</span><span class="text-outline shrink-0">/</span><span class="font-medium text-on-surface truncate">时间工作台</span></div><div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high text-[11px] font-label font-medium text-on-surface"><span class="material-symbols-outlined text-[14px] text-on-tertiary-container">cloud_done</span><span class="truncate">已同步 · 本地优先 SQLite</span></div></div><div class="flex items-center gap-3"><div class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container text-xs font-label"><span class="w-2 h-2 rounded-full bg-on-tertiary-container shrink-0"></span><span class="font-medium text-on-surface">能量 86 分</span><span class="text-outline">·</span><span class="text-on-surface-variant">平静专注</span><span class="text-outline">·</span><span class="font-medium text-primary">恢复缓冲 25m</span></div><div class="flex items-center gap-2"><button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container text-xs font-medium text-on-surface transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" type="button"><span class="material-symbols-outlined text-[16px] text-error">bolt</span><span class="hidden md:inline">插入紧急任务</span></button><button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-on-secondary-fixed-variant text-xs font-medium text-on-secondary transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" type="button"><span class="material-symbols-outlined text-[16px]">add</span><span class="hidden md:inline">新增日程</span></button></div><div class="flex items-center gap-2 pl-1"><button class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[18px]">settings</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<div class="max-w-[1320px] mx-auto w-full px-6 lg:px-8 py-8 space-y-8">
+<!-- Top Bar & Meta Information -->
+<header class="flex flex-col md:flex-row md:items-end justify-between gap-5">
+<div class="space-y-1.5">
+<nav aria-label="Breadcrumb" class="flex items-center gap-2 text-xs font-label text-on-surface-variant">
+<span class="hover:text-primary transition-colors cursor-pointer">系统</span>
+<span class="text-outline-variant">/</span>
+<span class="hover:text-primary transition-colors cursor-pointer">个人状态</span>
+<span class="text-outline-variant">/</span>
+<span class="font-medium text-primary">情绪与能量</span>
+</nav>
+<div class="flex items-baseline gap-3">
+<h1 class="font-headline text-3xl font-bold text-primary tracking-tight">情绪与能量追踪</h1>
+<span class="font-label text-xs uppercase tracking-wider text-outline font-semibold">Emotion &amp; Energy Hub</span>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-high text-xs font-label font-medium text-on-surface">
+<span class="w-2 h-2 rounded-full bg-on-tertiary-container animate-pulse"></span>
+<span>今日已打卡 <span class="font-semibold text-primary" id="checkin-count">3</span> 次</span>
+<span class="text-outline-variant">|</span>
+<span class="text-on-surface-variant text-[11px]">本地优先 · SQLite</span>
+</div>
+<button class="h-9 w-9 flex items-center justify-center rounded-lg bg-surface-container-lowest text-on-surface-variant hover:text-primary hover:bg-surface-container transition-all shadow-sm" id="refresh-pulse" title="重新校准生物节律">
+<span class="material-symbols-outlined text-[19px]">sync</span>
+</button>
+<button class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-primary-container text-on-primary text-xs font-semibold hover:bg-primary transition-all shadow-sm" id="quick-care-trigger">
+<span class="material-symbols-outlined text-[17px] text-tertiary-fixed">spa</span>
+<span>关怀建议</span>
+</button>
+</div>
+</header>
+<!-- Top Bento Section: Current Energy Status & Dynamic Check-in -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Energy Meter Hero Card (5 Cols) -->
+<div class="lg:col-span-5 bg-surface-container-lowest rounded-xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
+<div class="absolute -right-12 -top-12 w-48 h-48 bg-gradient-to-br from-primary-fixed/20 to-transparent rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-start justify-between relative z-10">
+<div>
+<span class="text-xs font-label uppercase tracking-widest text-outline font-semibold">实时认知能量池</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline text-5xl font-bold text-primary tracking-tight" id="score-display" style="font-variant-numeric: tabular-nums;">86</span>
+<span class="text-xs font-label font-medium text-on-surface-variant">/ 100 分</span>
+<span class="px-2 py-0.5 ml-2 rounded-full bg-primary-fixed text-on-primary-fixed-variant text-xs font-semibold">清醒专注</span>
+</div>
+</div>
+<div class="w-12 h-12 rounded-xl bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+</div>
+<!-- Gauge Bar Visualization -->
+<div class="my-6 space-y-2 relative z-10">
+<div class="flex items-center justify-between text-xs font-label">
+<span class="text-on-surface-variant font-medium">抗干扰深度负荷承载力</span>
+<span class="text-primary font-bold">高裕量 (+8.4% 优于基线)</span>
+</div>
+<div class="w-full h-3 rounded-full bg-surface-container p-0.5 flex">
+<div class="h-full rounded-full bg-gradient-to-r from-secondary-container via-primary-container to-on-tertiary-container transition-all duration-700" style="width: 86%;"></div>
+</div>
+<div class="flex justify-between text-[11px] font-label text-outline pt-0.5">
+<span>重度耗竭 (0-40)</span>
+<span>平衡阈值 (65)</span>
+<span>最佳心流 (80-100)</span>
+</div>
+</div>
+<!-- Stat Capsules -->
+<div class="grid grid-cols-2 gap-3 pt-3 border-t-0 bg-surface-container-low/60 p-3 rounded-lg relative z-10">
+<div class="flex flex-col">
+<span class="text-[11px] font-label text-outline font-medium">恢复缓冲时长 (Buffer)</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="material-symbols-outlined text-base text-on-tertiary-container">hourglass_top</span>
+<span class="text-sm font-bold text-primary font-body" style="font-variant-numeric: tabular-nums;">25 分钟可用</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="text-[11px] font-label text-outline font-medium">当前生物节律波谷</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="material-symbols-outlined text-base text-secondary">trending_flat</span>
+<span class="text-sm font-bold text-on-surface font-body">15:30 预期平稳</span>
+</div>
+</div>
+</div>
+</div>
+<!-- State Check-in Selector Card (7 Cols) -->
+<div class="lg:col-span-7 bg-surface-container-lowest rounded-xl p-6 shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<div>
+<h2 class="font-headline text-lg font-bold text-primary">即时心境打卡记录</h2>
+<p class="text-xs text-on-surface-variant mt-0.5">选择当下感受，时序算法将依据情绪自动调适日历专注块跨度</p>
+</div>
+<span class="text-[11px] font-label px-2.5 py-1 rounded-md bg-surface-container font-medium text-on-surface-variant">点击极速更新</span>
+</div>
+<!-- Emotion Grid Options -->
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 my-4" id="emotion-selector">
+<button class="emotion-btn group flex flex-col items-center justify-between p-3 rounded-lg bg-surface hover:bg-surface-container-low transition-all text-center relative overflow-hidden" data-color="border-primary" data-emotion="Serene" type="button">
+<span class="w-2.5 h-2.5 rounded-full bg-surface-tint mb-2 group-hover:scale-125 transition-transform"></span>
+<span class="text-xs font-bold text-on-surface group-hover:text-primary">平静</span>
+<span class="text-[10px] font-label text-outline uppercase tracking-wider">Serene</span>
+</button>
+<button class="emotion-btn group flex flex-col items-center justify-between p-3 rounded-lg bg-primary-container text-on-primary transition-all text-center relative overflow-hidden shadow-sm" data-active="true" data-emotion="Focused" type="button">
+<span class="w-2.5 h-2.5 rounded-full bg-tertiary-fixed mb-2"></span>
+<span class="text-xs font-bold text-on-primary">专注</span>
+<span class="text-[10px] font-label text-inverse-primary uppercase tracking-wider">Focused</span>
+</button>
+<button class="emotion-btn group flex flex-col items-center justify-between p-3 rounded-lg bg-surface hover:bg-surface-container-low transition-all text-center relative overflow-hidden" data-emotion="Fatigued" type="button">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary-container mb-2 group-hover:scale-125 transition-transform"></span>
+<span class="text-xs font-bold text-on-surface group-hover:text-primary">轻微疲倦</span>
+<span class="text-[10px] font-label text-outline uppercase tracking-wider">Fatigued</span>
+</button>
+<button class="emotion-btn group flex flex-col items-center justify-between p-3 rounded-lg bg-surface hover:bg-surface-container-low transition-all text-center relative overflow-hidden" data-emotion="Anxious" type="button">
+<span class="w-2.5 h-2.5 rounded-full bg-error mb-2 group-hover:scale-125 transition-transform"></span>
+<span class="text-xs font-bold text-on-surface group-hover:text-primary">焦虑烦躁</span>
+<span class="text-[10px] font-label text-outline uppercase tracking-wider">Anxious</span>
+</button>
+<button class="emotion-btn group flex flex-col items-center justify-between p-3 rounded-lg bg-surface hover:bg-surface-container-low transition-all text-center relative overflow-hidden col-span-2 sm:col-span-1" data-emotion="Exhausted" type="button">
+<span class="w-2.5 h-2.5 rounded-full bg-outline mb-2 group-hover:scale-125 transition-transform"></span>
+<span class="text-xs font-bold text-on-surface group-hover:text-primary">深度倦怠</span>
+<span class="text-[10px] font-label text-outline uppercase tracking-wider">Exhausted</span>
+</button>
+</div>
+<!-- Quick Log Input Strip -->
+<div class="flex items-center gap-2 pt-2">
+<div class="relative flex-1">
+<input class="w-full h-10 px-3.5 pr-8 rounded-lg bg-surface-container-low text-xs font-body text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container transition-all" id="note-input" placeholder="添加简短状态笔记（例如：刚完成主流程架构重构，注意力收敛）..." type="text"/>
+<span class="material-symbols-outlined absolute right-2.5 top-2.5 text-base text-outline pointer-events-none">edit_note</span>
+</div>
+<button class="h-10 px-4 rounded-lg bg-secondary text-on-secondary text-xs font-semibold hover:bg-on-secondary-fixed-variant transition-all shrink-0 flex items-center gap-1.5 shadow-sm" id="commit-checkin">
+<span class="material-symbols-outlined text-base">check</span>
+<span>记录打卡</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Contextual Adaptive Care Recommendation (PRD O-23 Rule Engine) -->
+<section class="bg-gradient-to-r from-surface-container-low via-surface-container to-surface-container-low rounded-xl p-5 shadow-sm relative overflow-hidden">
+<div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
+<div class="flex items-start gap-3.5 max-w-3xl">
+<div class="w-10 h-10 rounded-xl bg-primary-container text-tertiary-fixed flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[22px]">psychology_alt</span>
+</div>
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="text-[11px] font-label uppercase tracking-wider font-bold text-primary">算法关怀调度 (O-23)</span>
+<span class="text-[10px] font-label px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-medium">下午节律微低谷</span>
+</div>
+<p class="text-xs text-on-surface leading-relaxed">
+              检测到午后认知能量呈现轻微收敛走向。时序引擎已自动保护 <strong>25 分钟恢复缓冲区</strong>，建议执行一次 5 分钟低压呼吸以重塑多巴胺敏感度，或消化 2 项轻量微任务。
+            </p>
+</div>
+</div>
+<div class="flex items-center gap-2 shrink-0 w-full md:w-auto justify-end">
+<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-lowest hover:bg-surface text-primary text-xs font-semibold transition-all shadow-sm" id="btn-breathe">
+<span class="material-symbols-outlined text-[17px] text-on-tertiary-container">self_improvement</span>
+<span>启动 5m 极简呼吸</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-lowest hover:bg-surface text-secondary text-xs font-semibold transition-all shadow-sm" id="btn-microtask">
+<span class="material-symbols-outlined text-[17px]">checklist</span>
+<span>填入碎片微任务</span>
+</button>
+<button class="p-2 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-all" id="btn-snooze" title="稍后提醒">
+<span class="material-symbols-outlined text-[18px]">alarm</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Rhythm Trend Chart & Timeline Stream -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- Energy & Emotional Rhythm Line Chart (7 Cols) -->
+<section class="lg:col-span-7 bg-surface-container-lowest rounded-xl p-6 shadow-sm space-y-4">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+<div>
+<h3 class="font-headline text-base font-bold text-primary">今日精力与情绪节律曲线 (08:00 - 20:00)</h3>
+<span class="text-[11px] text-outline font-label">认知负荷 vs 实际能量走势与情绪标记锚点</span>
+</div>
+<div class="flex items-center gap-3 text-xs font-label">
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="w-2.5 h-1 rounded-full bg-primary"></span>
+<span>实测精力</span>
+</div>
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="w-2.5 h-1 rounded-full bg-outline-variant"></span>
+<span>负荷基线</span>
+</div>
+</div>
+</div>
+<!-- Vector Rhythm Visualization SVG -->
+<div class="w-full pt-2">
+<svg class="w-full h-auto text-primary" fill="none" viewbox="0 0 700 240" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<lineargradient id="energyFill" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#163d3d" stop-opacity="0.18"></stop>
+<stop offset="100%" stop-color="#163d3d" stop-opacity="0.0"></stop>
+</lineargradient>
+<lineargradient id="loadFill" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#005db5" stop-opacity="0.08"></stop>
+<stop offset="100%" stop-color="#005db5" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Horizontal Grid Guidelines -->
+<line stroke="#efedf3" stroke-dasharray="4 4" stroke-width="1" x1="40" x2="680" y1="40" y2="40"></line>
+<line stroke="#efedf3" stroke-dasharray="4 4" stroke-width="1" x1="40" x2="680" y1="90" y2="90"></line>
+<line stroke="#efedf3" stroke-dasharray="4 4" stroke-width="1" x1="40" x2="680" y1="140" y2="140"></line>
+<line stroke="#efedf3" stroke-width="1" x1="40" x2="680" y1="190" y2="190"></line>
+<!-- Y Axis Numeric Labels -->
+<text fill="#717978" font-family="Inter" font-size="10" text-anchor="end" x="24" y="44">100</text>
+<text fill="#717978" font-family="Inter" font-size="10" text-anchor="end" x="24" y="94">75</text>
+<text fill="#717978" font-family="Inter" font-size="10" text-anchor="end" x="24" y="144">50</text>
+<text fill="#717978" font-family="Inter" font-size="10" text-anchor="end" x="24" y="194">25</text>
+<!-- Predicted Baseline Load Area -->
+<path d="M 60 150 C 130 110, 200 80, 260 95 C 320 110, 380 160, 440 145 C 500 130, 560 100, 640 130 L 640 190 L 60 190 Z" fill="url(#loadFill)"></path>
+<path d="M 60 150 C 130 110, 200 80, 260 95 C 320 110, 380 160, 440 145 C 500 130, 560 100, 640 130" stroke="#c0c8c7" stroke-linecap="round" stroke-width="2"></path>
+<!-- Actual Measured Energy Path & Area -->
+<path d="M 60 130 C 120 70, 180 50, 240 60 C 310 70, 370 145, 430 138 C 480 130, 530 65, 580 62" fill="url(#energyFill)"></path>
+<path d="M 60 130 C 120 70, 180 50, 240 60 C 310 70, 370 145, 430 138 C 480 130, 530 65, 580 62" stroke="#163d3d" stroke-linecap="round" stroke-width="2.5"></path>
+<!-- Future Estimation Dotted Path -->
+<path d="M 580 62 C 610 65, 630 110, 650 125" opacity="0.6" stroke="#163d3d" stroke-dasharray="3 3" stroke-width="2"></path>
+<!-- Checkpoint 1: 09:30 Focused -->
+<g class="cursor-pointer">
+<circle cx="160" cy="55" fill="#faf8fe" r="5" stroke="#163d3d" stroke-width="2.5"></circle>
+<circle cx="160" cy="55" fill="#1db84d" r="2.5"></circle>
+<text fill="#1a1b1f" font-family="Inter" font-size="10" font-weight="600" text-anchor="middle" x="160" y="42">9:30 专注 92</text>
+</g>
+<!-- Checkpoint 2: 11:30 Fatigued (Meeting Dip) -->
+<g class="cursor-pointer">
+<circle cx="330" cy="115" fill="#faf8fe" r="5" stroke="#ba1a1a" stroke-width="2.5"></circle>
+<circle cx="330" cy="115" fill="#ba1a1a" r="2.5"></circle>
+<text fill="#ba1a1a" font-family="Inter" font-size="10" font-weight="600" text-anchor="middle" x="330" y="105">11:30 疲惫 62</text>
+</g>
+<!-- Checkpoint 3: 14:15 Focused Current Peak -->
+<g class="cursor-pointer">
+<circle cx="530" cy="65" fill="#163d3d" r="6"></circle>
+<circle cx="530" cy="65" fill="#ffffff" r="2.5"></circle>
+<text fill="#163d3d" font-family="Inter" font-size="10" font-weight="700" text-anchor="middle" x="530" y="48">当前 14:15 · 86分</text>
+</g>
+<!-- X Axis Timestamps -->
+<text fill="#717978" font-family="Inter" font-size="10" text-anchor="middle" x="60" y="212">08:00</text>
+<text fill="#717978" font-family="Inter" font-size="10" text-anchor="middle" x="160" y="212">10:00</text>
+<text fill="#717978" font-family="Inter" font-size="10" text-anchor="middle" x="260" y="212">12:00</text>
+<text fill="#717978" font-family="Inter" font-size="10" text-anchor="middle" x="360" y="212">14:00</text>
+<text fill="#717978" font-family="Inter" font-size="10" text-anchor="middle" x="460" y="212">16:00</text>
+<text fill="#717978" font-family="Inter" font-size="10" text-anchor="middle" x="560" y="212">18:00</text>
+<text fill="#717978" font-family="Inter" font-size="10" text-anchor="middle" x="650" y="212">20:00</text>
+</svg>
+</div>
+<div class="flex items-center justify-between pt-2 text-xs text-on-surface-variant font-label bg-surface-container-low p-3 rounded-lg">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-tertiary-fixed-dim">insights</span>
+<span>波峰预测：预计 16:30 - 17:45 迎来今日第二次深度工作最佳心流区。</span>
+</div>
+<span class="text-outline text-[11px]">置信度 94%</span>
+</div>
+</section>
+<!-- Timeline Log Stream (5 Cols) -->
+<section class="lg:col-span-5 bg-surface-container-lowest rounded-xl p-6 shadow-sm flex flex-col justify-between space-y-4">
+<div class="flex items-center justify-between pb-1">
+<div class="flex items-center gap-2">
+<h3 class="font-headline text-base font-bold text-primary">今日打卡流水</h3>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-[11px] font-semibold text-outline">Timeline Log</span>
+</div>
+<button class="text-xs font-semibold text-secondary hover:text-on-secondary-fixed-variant flex items-center gap-1" id="add-manual-log">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>补记一条</span>
+</button>
+</div>
+<!-- Activity Stream Container -->
+<div class="space-y-3 overflow-y-auto max-h-[340px] pr-1" id="timeline-list">
+<!-- Item 1 (Most Recent) -->
+<div class="p-3.5 rounded-lg bg-surface-container-low transition-all hover:bg-surface-container relative pl-4 border-l-0">
+<div class="flex items-center justify-between text-xs">
+<div class="flex items-center gap-2">
+<span class="font-bold text-primary font-body" style="font-variant-numeric: tabular-nums;">14:15</span>
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant font-semibold text-[10px]">平静专注</span>
+</div>
+<span class="text-xs font-bold text-primary font-body" style="font-variant-numeric: tabular-nums;">能量 88</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-2 leading-relaxed">
+              完成核心时间智能算法评审，心流状态良好。已自然进入 25m 恢复缓冲。
+            </p>
+</div>
+<!-- Item 2 (Mid-day dip) -->
+<div class="p-3.5 rounded-lg bg-surface-container-low transition-all hover:bg-surface-container relative pl-4">
+<div class="flex items-center justify-between text-xs">
+<div class="flex items-center gap-2">
+<span class="font-bold text-on-surface font-body" style="font-variant-numeric: tabular-nums;">11:30</span>
+<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-semibold text-[10px]">轻微疲劳</span>
+</div>
+<span class="text-xs font-bold text-outline font-body" style="font-variant-numeric: tabular-nums;">能量 62</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-2 leading-relaxed">
+              连续跨部门会议超过 2 小时，注意力略有涣散。饮用柠檬温水并进行了 5 分钟闭目休息。
+            </p>
+</div>
+<!-- Item 3 (Morning High) -->
+<div class="p-3.5 rounded-lg bg-surface-container-low transition-all hover:bg-surface-container relative pl-4">
+<div class="flex items-center justify-between text-xs">
+<div class="flex items-center gap-2">
+<span class="font-bold text-on-surface font-body" style="font-variant-numeric: tabular-nums;">09:10</span>
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant font-semibold text-[10px]">高能警觉</span>
+</div>
+<span class="text-xs font-bold text-primary font-body" style="font-variant-numeric: tabular-nums;">能量 92</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-2 leading-relaxed">
+              晨间规划打卡。无外部干扰，启动今日首个 90 分钟深度代码攻坚块。
+            </p>
+</div>
+</div>
+<!-- Footer Metric Snapshot -->
+<div class="pt-3 border-t-0 flex items-center justify-between text-xs text-outline font-label">
+<span>今日认知负荷均衡指数：<strong class="text-primary font-bold">A 级 (优良)</strong></span>
+<span class="text-on-tertiary-container flex items-center gap-1 font-medium">
+<span class="material-symbols-outlined text-sm">verified_user</span>
+            已对齐智能日历
+          </span>
+</div>
+</section>
+</div>
+<!-- Micro-Tasks Care Drawer Modal / Flyout (Toggled via button) -->
+<div class="fixed inset-0 z-50 bg-inverse-surface/40 backdrop-blur-sm flex items-center justify-center p-4 hidden" id="care-dialog">
+<div class="bg-surface-container-lowest rounded-xl max-w-md w-full p-6 shadow-xl space-y-4 transform transition-all">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">self_improvement</span>
+<h4 class="font-headline text-base font-bold text-primary">5分钟极简节律重置</h4>
+</div>
+<button class="text-outline hover:text-on-surface" id="close-care-modal">
+<span class="material-symbols-outlined text-lg">close</span>
+</button>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+          4-7-8 呼吸节律：吸气 4 秒，屏气 7 秒，慢呼 8 秒。研究表明此循环能迅速降低前额叶交感神经活跃度，平复午后认知压力。
+        </p>
+<div class="w-full py-8 flex flex-col items-center justify-center bg-surface-container-low rounded-lg space-y-2">
+<div class="w-16 h-16 rounded-full bg-primary-container text-tertiary-fixed flex items-center justify-center text-lg font-bold animate-ping">
+            4s
+          </div>
+<span class="text-xs font-label text-outline">缓慢深吸气...</span>
+</div>
+<div class="flex items-center justify-end gap-2 pt-2">
+<button class="px-4 py-2 rounded-lg bg-secondary text-on-secondary text-xs font-semibold hover:bg-on-secondary-fixed-variant transition-all" id="complete-breath">
+            完成呼吸并记入恢复
+          </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  (function initEmotionDashboard() {
+    let currentSelectedEmotion = 'Focused';
+    let checkinTimes = 3;
+
+    const emotionButtons = document.querySelectorAll('.emotion-btn');
+    const noteInput = document.getElementById('note-input');
+    const commitButton = document.getElementById('commit-checkin');
+    const timelineList = document.getElementById('timeline-list');
+    const checkinCountEl = document.getElementById('checkin-count');
+    const scoreDisplay = document.getElementById('score-display');
+    const refreshBtn = document.getElementById('refresh-pulse');
+
+    const careTrigger = document.getElementById('quick-care-trigger');
+    const breatheBtn = document.getElementById('btn-breathe');
+    const careDialog = document.getElementById('care-dialog');
+    const closeCareModal = document.getElementById('close-care-modal');
+    const completeBreath = document.getElementById('complete-breath');
+
+    // Emotion selection handler
+    emotionButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        emotionButtons.forEach(b => {
+          b.classList.remove('bg-primary-container', 'text-on-primary', 'shadow-sm');
+          b.classList.add('bg-surface', 'hover:bg-surface-container-low');
+          const txt = b.querySelector('.font-bold');
+          if (txt) {
+            txt.classList.remove('text-on-primary');
+            txt.classList.add('text-on-surface');
+          }
+        });
+
+        btn.classList.remove('bg-surface', 'hover:bg-surface-container-low');
+        btn.classList.add('bg-primary-container', 'text-on-primary', 'shadow-sm');
+        const activeTxt = btn.querySelector('.font-bold');
+        if (activeTxt) {
+          activeTxt.classList.remove('text-on-surface');
+          activeTxt.classList.add('text-on-primary');
+        }
+
+        currentSelectedEmotion = btn.getAttribute('data-emotion');
+      });
+    });
+
+    // Commit a quick check-in log
+    commitButton.addEventListener('click', () => {
+      const noteText = noteInput.value.trim() || '无附带备注，已记录即时情绪指标。';
+      const now = new Date();
+      const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+      let labelText = '专注';
+      let tagBg = 'bg-primary-fixed text-on-primary-fixed-variant';
+      let energyScore = 86;
+
+      if (currentSelectedEmotion === 'Serene') {
+        labelText = '平静';
+        energyScore = 82;
+      } else if (currentSelectedEmotion === 'Fatigued') {
+        labelText = '轻度疲倦';
+        tagBg = 'bg-secondary-fixed text-on-secondary-fixed-variant';
+        energyScore = 65;
+      } else if (currentSelectedEmotion === 'Anxious') {
+        labelText = '焦虑烦躁';
+        tagBg = 'bg-error-container text-on-error-container';
+        energyScore = 58;
+      } else if (currentSelectedEmotion === 'Exhausted') {
+        labelText = '深度倦怠';
+        tagBg = 'bg-surface-container-highest text-on-surface-variant';
+        energyScore = 40;
+      }
+
+      // Prepend to timeline
+      const newEntry = document.createElement('div');
+      newEntry.className = 'p-3.5 rounded-lg bg-surface-container-low transition-all hover:bg-surface-container relative pl-4 animate-fade-in';
+      newEntry.innerHTML = `
+        <div class="flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-primary font-body" style="font-variant-numeric: tabular-nums;">${timeStr}</span>
+            <span class="px-2 py-0.5 rounded-full ${tagBg} font-semibold text-[10px]">${labelText}</span>
+          </div>
+          <span class="text-xs font-bold text-primary font-body" style="font-variant-numeric: tabular-nums;">能量 ${energyScore}</span>
+        </div>
+        <p class="text-xs text-on-surface-variant mt-2 leading-relaxed">${noteText}</p>
+      `;
+
+      timelineList.insertBefore(newEntry, timelineList.firstChild);
+      
+      checkinTimes += 1;
+      checkinCountEl.innerText = checkinTimes;
+      scoreDisplay.innerText = energyScore;
+      noteInput.value = '';
+    });
+
+    // Refresh simulation
+    refreshBtn.addEventListener('click', () => {
+      refreshBtn.classList.add('rotate-180');
+      setTimeout(() => {
+        refreshBtn.classList.remove('rotate-180');
+      }, 500);
+    });
+
+    // Modal triggers
+    const toggleModal = (show) => {
+      if (show) {
+        careDialog.classList.remove('hidden');
+      } else {
+        careDialog.classList.add('hidden');
+      }
+    };
+
+    careTrigger.addEventListener('click', () => toggleModal(true));
+    breatheBtn.addEventListener('click', () => toggleModal(true));
+    closeCareModal.addEventListener('click', () => toggleModal(false));
+    completeBreath.addEventListener('click', () => {
+      toggleModal(false);
+      const noteEntry = document.getElementById('note-input');
+      noteEntry.value = '完成了 5 分钟 4-7-8 极简呼吸调理，头脑清爽。';
+      commitButton.click();
+    });
+
+  })();
+</script></main></div></body></html>
