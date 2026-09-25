@@ -8,6 +8,8 @@ import 'package:shixuzhipei/services/mock_data_service.dart';
 import 'package:shixuzhipei/theme/app_theme.dart';
 import 'package:shixuzhipei/utils/schedule_occurrence.dart';
 
+import 'support/noop_reminder_service.dart';
+
 /// Five-size layout baseline for the member-C main path (Focus + calendar).
 ///
 /// Golden PNGs render with the test font, so they capture layout, overflow
@@ -25,7 +27,10 @@ void main() {
   };
 
   setUp(() {
-    AppServices.installTestOverrides(dataService: MockDataService());
+    AppServices.installTestOverrides(
+      dataService: MockDataService(),
+      reminderService: NoopReminderService(),
+    );
   });
 
   tearDown(AppServices.resetForTests);

@@ -6,11 +6,16 @@ import 'package:shixuzhipei/services/mock_data_service.dart';
 import 'package:shixuzhipei/theme/app_theme.dart';
 import 'package:shixuzhipei/widgets/rescue_plan_comparison.dart';
 
+import 'support/noop_reminder_service.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
-    AppServices.installTestOverrides(dataService: MockDataService());
+    AppServices.installTestOverrides(
+      dataService: MockDataService(),
+      reminderService: NoopReminderService(),
+    );
   });
 
   tearDown(AppServices.resetForTests);
