@@ -1,5 +1,4 @@
 // lib/screens/main_screen.dart
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../services/app_services.dart';
@@ -209,13 +208,23 @@ class _NarrowShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return StitchMobileScaffold(
       title: title,
-      pageLabel: destinations[selectedIndex].label,
+      pageLabel: switch (destinations[selectedIndex].id) {
+        'focus' => 'Focus',
+        'schedule' => 'Schedule',
+        'micro' => 'Micro',
+        'team' => 'Team',
+        'profile' => 'Profile',
+        _ => destinations[selectedIndex].label,
+      },
       selectedIndex: selectedIndex,
       onSelect: onSelect,
-      onNotify: () {},
+      onNotify: () {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('通知与提醒待接入')));
+      },
       onProfile: () => onSelect(destinations.length - 1),
       child: ClipRRect(child: child),
     );

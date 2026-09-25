@@ -78,6 +78,10 @@ class FocusTaskCard extends StatelessWidget {
       );
     }
 
+    if (MediaQuery.sizeOf(context).width < 480) {
+      return _buildMobileCard(context, current, theme);
+    }
+
     final accent = current.color;
     return GlassSurface(
       key: const ValueKey('focus-current-task'),
@@ -189,6 +193,148 @@ class FocusTaskCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildMobileCard(
+    BuildContext context,
+    ScheduleEntry current,
+    ThemeData theme,
+  ) {
+    final scheme = theme.colorScheme;
+    final totalSeconds = math.max(60, ((current.height / 80) * 3600).round());
+    final progress = (1 - remainingSeconds / totalSeconds).clamp(0.0, 1.0);
+    return GlassSurface(
+      key: const ValueKey('focus-current-task'),
+      level: AppMaterialLevel.surface,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      borderRadius: BorderRadius.circular(14),
+      tint: AppWindowTones.surface(context, AppWindowTone.focus),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: scheme.errorContainer,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'P0 核心攻坚',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: scheme.onErrorContainer,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            _timeRange(context, current),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      current.title,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontFamily: 'NotoSerifSC',
+                        fontWeight: FontWeight.w700,
+                        color: scheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${current.tag} · ${isRunning ? '专注状态中' : '等待开始'}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                key: const ValueKey('focus-mobile-timer'),
+                width: 112,
+                height: 112,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      key: const ValueKey('focus-mobile-progress'),
+                      value: progress,
+                      strokeWidth: 5,
+                      backgroundColor: scheme.surfaceContainerHighest,
+                      color: scheme.secondary,
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _formatDuration(remainingSeconds),
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          isRunning ? '专注状态中' : '准备开始',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: isRunning ? onPause : onStart,
+                  icon: Icon(
+                    isRunning
+                        ? Icons.pause_circle_outline
+                        : Icons.play_circle_outline,
+                  ),
+                  label: Text(isRunning ? '暂停专注' : '开始专注'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: onFinish,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('结算'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

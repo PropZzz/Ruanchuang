@@ -9,6 +9,7 @@ import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/responsive_page_frame.dart';
+import '../widgets/stitch_mobile_scaffold.dart';
 
 class MicroTaskPage extends StatefulWidget {
   const MicroTaskPage({super.key});
@@ -203,7 +204,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
         ),
         child: Material(
           color: scheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           clipBehavior: Clip.antiAlias,
           child: ConstrainedBox(
             constraints: BoxConstraints(
@@ -1740,35 +1741,38 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
         : 'desktop';
 
     return Scaffold(
+      key: ValueKey(isMobile ? 'stitch-microtasks-mobile' : 'microtasks-page'),
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
-      appBar: AppBar(
-        title: Text(
-          AppStrings.of(context, 'micro_title'),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: AppStrings.of(context, 'common_refresh'),
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _loadMicroTasks,
-          ),
-          IconButton(
-            tooltip: _batchMode ? '退出批量' : '批量模式',
-            icon: Icon(
-              _batchMode ? Icons.close_rounded : Icons.checklist_rounded,
+      appBar: isMobile && StitchMobileShellScope.isHosted(context)
+          ? null
+          : AppBar(
+              title: Text(
+                AppStrings.of(context, 'micro_title'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              actions: [
+                IconButton(
+                  tooltip: AppStrings.of(context, 'common_refresh'),
+                  icon: const Icon(Icons.refresh_rounded),
+                  onPressed: _loadMicroTasks,
+                ),
+                IconButton(
+                  tooltip: _batchMode ? '退出批量' : '批量模式',
+                  icon: Icon(
+                    _batchMode ? Icons.close_rounded : Icons.checklist_rounded,
+                  ),
+                  onPressed: () => _setBatchMode(!_batchMode),
+                ),
+                IconButton(
+                  tooltip: '导入清单',
+                  icon: const Icon(Icons.upload_file_rounded),
+                  onPressed: _showImportMicroTasksDialog,
+                ),
+                const SizedBox(width: 8),
+              ],
             ),
-            onPressed: () => _setBatchMode(!_batchMode),
-          ),
-          IconButton(
-            tooltip: '导入清单',
-            icon: const Icon(Icons.upload_file_rounded),
-            onPressed: _showImportMicroTasksDialog,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : LayoutBuilder(

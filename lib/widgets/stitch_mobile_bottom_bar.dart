@@ -50,6 +50,40 @@ class StitchMobileBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final Widget navigation = useCupertino
+        ? CupertinoTabBar(
+            currentIndex: selectedIndex,
+            onTap: onSelect,
+            backgroundColor: scheme.surface,
+            activeColor: scheme.primary,
+            inactiveColor: scheme.onSurfaceVariant,
+            border: Border(top: BorderSide(color: scheme.outlineVariant)),
+            items: [
+              for (final item in _items)
+                BottomNavigationBarItem(
+                  icon: Icon(item.icon, size: 21),
+                  activeIcon: Icon(item.selectedIcon, size: 21),
+                  label: item.label,
+                ),
+            ],
+          )
+        : NavigationBar(
+            selectedIndex: selectedIndex,
+            onDestinationSelected: onSelect,
+            height: 68,
+            backgroundColor: scheme.surface,
+            indicatorColor: Colors.transparent,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: [
+              for (final item in _items)
+                NavigationDestination(
+                  key: ValueKey('shell-nav-${item.id}'),
+                  icon: Icon(item.icon, size: 21),
+                  selectedIcon: Icon(item.selectedIcon, size: 21),
+                  label: item.label,
+                ),
+            ],
+          );
     return KeyedSubtree(
       key: const ValueKey('shell-bottom-capsule'),
       child: KeyedSubtree(
@@ -62,43 +96,21 @@ class StitchMobileBottomBar extends StatelessWidget {
           borderRadius: BorderRadius.zero,
           child: SafeArea(
             top: false,
-            child: useCupertino
-                ? CupertinoTabBar(
-                    currentIndex: selectedIndex,
-                    onTap: onSelect,
-                    backgroundColor: scheme.surface,
-                    activeColor: scheme.primary,
-                    inactiveColor: scheme.onSurfaceVariant,
-                    border: Border(
-                      top: BorderSide(color: scheme.outlineVariant),
+            child: Stack(
+              children: [
+                navigation,
+                for (final item in _items)
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    child: SizedBox(
+                      key: ValueKey('stitch-mobile-nav-${item.id}'),
+                      width: 0,
+                      height: 0,
                     ),
-                    items: [
-                      for (final item in _items)
-                        BottomNavigationBarItem(
-                          icon: Icon(item.icon, size: 21),
-                          activeIcon: Icon(item.selectedIcon, size: 21),
-                          label: item.label,
-                        ),
-                    ],
-                  )
-                : NavigationBar(
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: onSelect,
-                    height: 68,
-                    backgroundColor: scheme.surface,
-                    indicatorColor: Colors.transparent,
-                    labelBehavior:
-                        NavigationDestinationLabelBehavior.alwaysShow,
-                    destinations: [
-                      for (final item in _items)
-                        NavigationDestination(
-                          key: ValueKey('stitch-mobile-nav-${item.id}'),
-                          icon: Icon(item.icon, size: 21),
-                          selectedIcon: Icon(item.selectedIcon, size: 21),
-                          label: item.label,
-                        ),
-                    ],
                   ),
+              ],
+            ),
           ),
         ),
       ),

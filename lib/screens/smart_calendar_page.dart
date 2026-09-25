@@ -24,6 +24,7 @@ import '../widgets/responsive_page_frame.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/schedule_timeline.dart';
 import '../widgets/stitch_form_sheet.dart';
+import '../widgets/stitch_mobile_scaffold.dart';
 import '../widgets/urgent_task_dialog.dart';
 import '../widgets/add_schedule_entry_dialog.dart';
 import '../widgets/workbench_surface.dart';
@@ -709,155 +710,175 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
           });
 
     return Scaffold(
-      backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(AppStrings.of(context, 'calendar_title')),
-            DataSourceBadge(
-              key: const ValueKey('calendar-source-label'),
-              label: _dataSourceLabel(context),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: _mode == _CalendarMode.manual
-                ? AppStrings.of(context, 'calendar_tooltip_switch_to_smart')
-                : AppStrings.of(context, 'calendar_tooltip_switch_to_manual'),
-            icon: Icon(
-              _mode == _CalendarMode.manual ? Icons.bolt : Icons.edit_calendar,
-            ),
-            onPressed: _isLoading
-                ? null
-                : () async {
-                    setState(() {
-                      _mode = _mode == _CalendarMode.manual
-                          ? _CalendarMode.smart
-                          : _CalendarMode.manual;
-                    });
-                    await _loadSchedule();
-                  },
-          ),
-          if (!isCompactAppBar)
-            IconButton(
-              tooltip: AppStrings.of(context, 'calendar_tooltip_insert_urgent'),
-              icon: const Icon(Icons.add_alert),
-              onPressed: _isLoading ? null : _showInsertUrgentDialog,
-            ),
-          IconButton(
-            tooltip: AppStrings.of(context, 'calendar_refresh'),
-            icon: const Icon(Icons.refresh),
-            onPressed: _isLoading ? null : _loadSchedule,
-          ),
-          PopupMenuButton<String>(
-            tooltip: AppStrings.of(context, 'tooltip_more'),
-            onSelected: (v) async {
-              if (v == 'emotion') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const MainScreen(
-                      secondaryPage: EmotionPage(),
-                      secondaryTabIndex: 1,
-                    ),
-                  ),
-                );
-              } else if (v == 'goals') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const MainScreen(
-                      secondaryPage: GoalsPage(),
-                      secondaryTabIndex: 1,
-                    ),
-                  ),
-                );
-              } else if (v == 'mcp') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const MainScreen(
-                      secondaryPage: IntegrationsPage(),
-                      secondaryTabIndex: 1,
-                    ),
-                  ),
-                );
-              } else if (v == 'urgent') {
-                if (!_isLoading) _showInsertUrgentDialog();
-              } else if (v == 'export') {
-                await _exportIcs();
-              } else if (v == 'import') {
-                await _importIcs();
-              } else if (v == 'field_time') {
-                _toggleField(_CalendarField.time);
-              } else if (v == 'field_tag') {
-                _toggleField(_CalendarField.tag);
-              } else if (v == 'field_status') {
-                _toggleField(_CalendarField.status);
-              } else if (v == 'field_reminder') {
-                _toggleField(_CalendarField.reminder);
-              } else if (v == 'field_goal') {
-                _toggleField(_CalendarField.goal);
-              }
-            },
-            itemBuilder: (ctx) => [
-              PopupMenuItem(
-                value: 'goals',
-                child: Text(AppStrings.of(ctx, 'goal_title')),
-              ),
-              if (isCompactAppBar)
-                PopupMenuItem(
-                  value: 'urgent',
-                  enabled: !_isLoading,
-                  child: Text(
-                    AppStrings.of(ctx, 'calendar_tooltip_insert_urgent'),
-                  ),
-                ),
-              CheckedPopupMenuItem(
-                value: 'field_time',
-                checked: _visibleFields.contains(_CalendarField.time),
-                child: Text(_fieldLabel(ctx, _CalendarField.time)),
-              ),
-              CheckedPopupMenuItem(
-                value: 'field_tag',
-                checked: _visibleFields.contains(_CalendarField.tag),
-                child: Text(_fieldLabel(ctx, _CalendarField.tag)),
-              ),
-              CheckedPopupMenuItem(
-                value: 'field_status',
-                checked: _visibleFields.contains(_CalendarField.status),
-                child: Text(_fieldLabel(ctx, _CalendarField.status)),
-              ),
-              CheckedPopupMenuItem(
-                value: 'field_reminder',
-                checked: _visibleFields.contains(_CalendarField.reminder),
-                child: Text(_fieldLabel(ctx, _CalendarField.reminder)),
-              ),
-              CheckedPopupMenuItem(
-                value: 'field_goal',
-                checked: _visibleFields.contains(_CalendarField.goal),
-                child: Text(_fieldLabel(ctx, _CalendarField.goal)),
-              ),
-              PopupMenuItem(
-                value: 'export',
-                child: Text(AppStrings.of(ctx, 'calendar_tooltip_export_ics')),
-              ),
-              PopupMenuItem(
-                value: 'import',
-                enabled: !_isLoading,
-                child: Text(AppStrings.of(ctx, 'calendar_tooltip_import_ics')),
-              ),
-              PopupMenuItem(
-                value: 'emotion',
-                child: Text(AppStrings.of(ctx, 'emo_title')),
-              ),
-              PopupMenuItem(
-                value: 'mcp',
-                child: Text(AppStrings.of(ctx, 'mcp_title')),
-              ),
-            ],
-          ),
-        ],
+      key: ValueKey(
+        isCompactAppBar ? 'stitch-schedule-mobile' : 'schedule-page',
       ),
+      backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
+      appBar: isCompactAppBar && StitchMobileShellScope.isHosted(context)
+          ? null
+          : AppBar(
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(AppStrings.of(context, 'calendar_title')),
+                  DataSourceBadge(
+                    key: const ValueKey('calendar-source-label'),
+                    label: _dataSourceLabel(context),
+                  ),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  tooltip: _mode == _CalendarMode.manual
+                      ? AppStrings.of(
+                          context,
+                          'calendar_tooltip_switch_to_smart',
+                        )
+                      : AppStrings.of(
+                          context,
+                          'calendar_tooltip_switch_to_manual',
+                        ),
+                  icon: Icon(
+                    _mode == _CalendarMode.manual
+                        ? Icons.bolt
+                        : Icons.edit_calendar,
+                  ),
+                  onPressed: _isLoading
+                      ? null
+                      : () async {
+                          setState(() {
+                            _mode = _mode == _CalendarMode.manual
+                                ? _CalendarMode.smart
+                                : _CalendarMode.manual;
+                          });
+                          await _loadSchedule();
+                        },
+                ),
+                if (!isCompactAppBar)
+                  IconButton(
+                    tooltip: AppStrings.of(
+                      context,
+                      'calendar_tooltip_insert_urgent',
+                    ),
+                    icon: const Icon(Icons.add_alert),
+                    onPressed: _isLoading ? null : _showInsertUrgentDialog,
+                  ),
+                IconButton(
+                  tooltip: AppStrings.of(context, 'calendar_refresh'),
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _isLoading ? null : _loadSchedule,
+                ),
+                PopupMenuButton<String>(
+                  tooltip: AppStrings.of(context, 'tooltip_more'),
+                  onSelected: (v) async {
+                    if (v == 'emotion') {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const MainScreen(
+                            secondaryPage: EmotionPage(),
+                            secondaryTabIndex: 1,
+                          ),
+                        ),
+                      );
+                    } else if (v == 'goals') {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const MainScreen(
+                            secondaryPage: GoalsPage(),
+                            secondaryTabIndex: 1,
+                          ),
+                        ),
+                      );
+                    } else if (v == 'mcp') {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const MainScreen(
+                            secondaryPage: IntegrationsPage(),
+                            secondaryTabIndex: 1,
+                          ),
+                        ),
+                      );
+                    } else if (v == 'urgent') {
+                      if (!_isLoading) _showInsertUrgentDialog();
+                    } else if (v == 'export') {
+                      await _exportIcs();
+                    } else if (v == 'import') {
+                      await _importIcs();
+                    } else if (v == 'field_time') {
+                      _toggleField(_CalendarField.time);
+                    } else if (v == 'field_tag') {
+                      _toggleField(_CalendarField.tag);
+                    } else if (v == 'field_status') {
+                      _toggleField(_CalendarField.status);
+                    } else if (v == 'field_reminder') {
+                      _toggleField(_CalendarField.reminder);
+                    } else if (v == 'field_goal') {
+                      _toggleField(_CalendarField.goal);
+                    }
+                  },
+                  itemBuilder: (ctx) => [
+                    PopupMenuItem(
+                      value: 'goals',
+                      child: Text(AppStrings.of(ctx, 'goal_title')),
+                    ),
+                    if (isCompactAppBar)
+                      PopupMenuItem(
+                        value: 'urgent',
+                        enabled: !_isLoading,
+                        child: Text(
+                          AppStrings.of(ctx, 'calendar_tooltip_insert_urgent'),
+                        ),
+                      ),
+                    CheckedPopupMenuItem(
+                      value: 'field_time',
+                      checked: _visibleFields.contains(_CalendarField.time),
+                      child: Text(_fieldLabel(ctx, _CalendarField.time)),
+                    ),
+                    CheckedPopupMenuItem(
+                      value: 'field_tag',
+                      checked: _visibleFields.contains(_CalendarField.tag),
+                      child: Text(_fieldLabel(ctx, _CalendarField.tag)),
+                    ),
+                    CheckedPopupMenuItem(
+                      value: 'field_status',
+                      checked: _visibleFields.contains(_CalendarField.status),
+                      child: Text(_fieldLabel(ctx, _CalendarField.status)),
+                    ),
+                    CheckedPopupMenuItem(
+                      value: 'field_reminder',
+                      checked: _visibleFields.contains(_CalendarField.reminder),
+                      child: Text(_fieldLabel(ctx, _CalendarField.reminder)),
+                    ),
+                    CheckedPopupMenuItem(
+                      value: 'field_goal',
+                      checked: _visibleFields.contains(_CalendarField.goal),
+                      child: Text(_fieldLabel(ctx, _CalendarField.goal)),
+                    ),
+                    PopupMenuItem(
+                      value: 'export',
+                      child: Text(
+                        AppStrings.of(ctx, 'calendar_tooltip_export_ics'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'import',
+                      enabled: !_isLoading,
+                      child: Text(
+                        AppStrings.of(ctx, 'calendar_tooltip_import_ics'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'emotion',
+                      child: Text(AppStrings.of(ctx, 'emo_title')),
+                    ),
+                    PopupMenuItem(
+                      value: 'mcp',
+                      child: Text(AppStrings.of(ctx, 'mcp_title')),
+                    ),
+                  ],
+                ),
+              ],
+            ),
       body: !_hasLoadedOnce && _isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(

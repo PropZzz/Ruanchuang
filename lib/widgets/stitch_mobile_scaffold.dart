@@ -1,9 +1,19 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import 'stitch_mobile_bottom_bar.dart';
 import 'stitch_mobile_header.dart';
+
+class StitchMobileShellScope extends InheritedWidget {
+  const StitchMobileShellScope({super.key, required super.child});
+
+  static bool isHosted(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<StitchMobileShellScope>() !=
+      null;
+
+  @override
+  bool updateShouldNotify(covariant StitchMobileShellScope oldWidget) => false;
+}
 
 class StitchMobileScaffold extends StatelessWidget {
   const StitchMobileScaffold({
@@ -59,9 +69,11 @@ class StitchMobileScaffold extends StatelessWidget {
               recoveryLabel: recoveryLabel ?? '恢复缓冲 25m',
             ),
             Expanded(
-              child: ColoredBox(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: child,
+              child: StitchMobileShellScope(
+                child: ColoredBox(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: child,
+                ),
               ),
             ),
             StitchMobileBottomBar(

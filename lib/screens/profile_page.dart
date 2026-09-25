@@ -12,6 +12,7 @@ import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 import '../widgets/glass_surface.dart';
 import '../widgets/responsive_page_frame.dart';
+import '../widgets/stitch_mobile_scaffold.dart';
 import 'bluetooth_page.dart';
 import 'debug/diagnostics_page.dart';
 import 'emotion_page.dart';
@@ -276,37 +277,41 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 720;
     return Scaffold(
+      key: ValueKey(isMobile ? 'stitch-profile-mobile' : 'profile-page'),
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(AppStrings.of(context, 'profile_title')),
-            Text(
-              'PROFILE & WORKSPACE',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+      appBar: isMobile && StitchMobileShellScope.isHosted(context)
+          ? null
+          : AppBar(
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(AppStrings.of(context, 'profile_title')),
+                  Text(
+                    'PROFILE & WORKSPACE',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
+              actions: [
+                IconButton(
+                  key: const ValueKey('profile-refresh-action'),
+                  tooltip: AppStrings.of(context, 'calendar_refresh'),
+                  onPressed: _refreshDashboard,
+                  icon: const Icon(Icons.refresh),
+                ),
+                IconButton(
+                  key: const ValueKey('profile-settings-action'),
+                  icon: const Icon(Icons.settings_outlined),
+                  tooltip: AppStrings.of(context, 'settings_title'),
+                  onPressed: () => _openSettingsPanel(context),
+                ),
+                const SizedBox(width: 8),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            key: const ValueKey('profile-refresh-action'),
-            tooltip: AppStrings.of(context, 'calendar_refresh'),
-            onPressed: _refreshDashboard,
-            icon: const Icon(Icons.refresh),
-          ),
-          IconButton(
-            key: const ValueKey('profile-settings-action'),
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: AppStrings.of(context, 'settings_title'),
-            onPressed: () => _openSettingsPanel(context),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: SafeArea(
         child: ResponsivePageFrame(
           maxWidth: 1240,
@@ -331,6 +336,30 @@ class _ProfilePageState extends State<ProfilePage> {
                   MediaQuery.paddingOf(context).bottom + 100,
                 ),
                 children: [
+                  if (isMobile)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              AppStrings.of(context, 'profile_title'),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    fontFamily: 'NotoSerifSC',
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          ),
+                          IconButton(
+                            key: const ValueKey('profile-settings-action'),
+                            tooltip: AppStrings.of(context, 'settings_title'),
+                            onPressed: () => _openSettingsPanel(context),
+                            icon: const Icon(Icons.settings_outlined),
+                          ),
+                        ],
+                      ),
+                    ),
                   _buildUserProfileCard(context, data),
                   if (data.isPartial) ...[
                     const SizedBox(height: 10),

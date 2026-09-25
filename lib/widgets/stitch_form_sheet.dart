@@ -27,7 +27,7 @@ class StitchFormSheet extends StatelessWidget {
     return Material(
       key: const ValueKey('stitch-form-sheet'),
       color: scheme.surface,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       clipBehavior: Clip.antiAlias,
       child: SafeArea(
         top: false,

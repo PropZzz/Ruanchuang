@@ -167,6 +167,31 @@ void main() {
     tester.view.reset();
   });
 
+  testWidgets('mobile destinations expose Stitch page roots', (tester) async {
+    await pumpShell(tester, const Size(390, 844));
+
+    expect(find.byKey(const ValueKey('stitch-focus-mobile')), findsOneWidget);
+    await tester.tap(find.text('日程'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(
+      find.byKey(const ValueKey('stitch-schedule-mobile')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('微任务'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(
+      find.byKey(const ValueKey('stitch-microtasks-mobile')),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('团队'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(find.byKey(const ValueKey('stitch-team-mobile')), findsOneWidget);
+    await tester.tap(find.text('我的'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(find.byKey(const ValueKey('stitch-profile-mobile')), findsOneWidget);
+    tester.view.reset();
+  });
+
   testWidgets('narrow iOS shell uses Cupertino tab navigation', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

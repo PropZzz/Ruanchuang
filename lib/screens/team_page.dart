@@ -7,6 +7,7 @@ import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 import '../widgets/responsive_page_frame.dart';
+import '../widgets/stitch_mobile_scaffold.dart';
 
 class TeamPage extends StatefulWidget {
   const TeamPage({super.key});
@@ -134,7 +135,7 @@ class _TeamPageState extends State<TeamPage> {
         ),
         child: Material(
           color: scheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           clipBehavior: Clip.antiAlias,
           child: ConstrainedBox(
             constraints: BoxConstraints(
@@ -837,70 +838,75 @@ class _TeamPageState extends State<TeamPage> {
     final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
 
     return Scaffold(
+      key: ValueKey(isCompactAppBar ? 'stitch-team-mobile' : 'team-page'),
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
-      appBar: AppBar(
-        title: Text(
-          AppStrings.of(context, 'team_title'),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          if (!isCompactAppBar) ...[
-            IconButton(
-              icon: const Icon(Icons.person_add_rounded),
-              tooltip: isZh ? '添加成员' : 'Add Member',
-              onPressed: _showAddMemberDialog,
-            ),
-            IconButton(
-              icon: const Icon(Icons.plagiarism_rounded),
-              tooltip: isZh ? '冲突检查' : 'Check Conflict',
-              onPressed: _showConflictCheck,
-            ),
-          ],
-          IconButton(
-            tooltip: AppStrings.of(context, 'common_refresh'),
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _load,
-          ),
-          if (isCompactAppBar)
-            PopupMenuButton<String>(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+      appBar: isCompactAppBar && StitchMobileShellScope.isHosted(context)
+          ? null
+          : AppBar(
+              title: Text(
+                AppStrings.of(context, 'team_title'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              onSelected: (value) {
-                if (value == 'conflict') {
-                  _showConflictCheck();
-                } else if (value == 'add') {
-                  _showAddMemberDialog();
-                }
-              },
-              itemBuilder: (ctx) => [
-                PopupMenuItem(
-                  value: 'add',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.person_add_rounded, size: 20),
-                      const SizedBox(width: 8),
-                      Text(isZh ? '添加成员' : 'Add Member'),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              actions: [
+                if (!isCompactAppBar) ...[
+                  IconButton(
+                    icon: const Icon(Icons.person_add_rounded),
+                    tooltip: isZh ? '添加成员' : 'Add Member',
+                    onPressed: _showAddMemberDialog,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.plagiarism_rounded),
+                    tooltip: isZh ? '冲突检查' : 'Check Conflict',
+                    onPressed: _showConflictCheck,
+                  ),
+                ],
+                IconButton(
+                  tooltip: AppStrings.of(context, 'common_refresh'),
+                  icon: const Icon(Icons.refresh_rounded),
+                  onPressed: _load,
+                ),
+                if (isCompactAppBar)
+                  PopupMenuButton<String>(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'conflict') {
+                        _showConflictCheck();
+                      } else if (value == 'add') {
+                        _showAddMemberDialog();
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      PopupMenuItem(
+                        value: 'add',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.person_add_rounded, size: 20),
+                            const SizedBox(width: 8),
+                            Text(isZh ? '添加成员' : 'Add Member'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'conflict',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.plagiarism_rounded, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              AppStrings.of(ctx, 'team_conflict_check_title'),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
-                ),
-                PopupMenuItem(
-                  value: 'conflict',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.plagiarism_rounded, size: 20),
-                      const SizedBox(width: 8),
-                      Text(AppStrings.of(ctx, 'team_conflict_check_title')),
-                    ],
-                  ),
-                ),
+                const SizedBox(width: 8),
               ],
             ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: _loading
           ? const _TeamLoadingState()
           : LayoutBuilder(

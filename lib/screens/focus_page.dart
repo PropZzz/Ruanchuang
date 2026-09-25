@@ -422,6 +422,11 @@ class _FocusPageState extends State<FocusPage> {
         '${MaterialLocalizations.of(context).formatMediumDate(DateTime.now())} '
         '\u00b7 ${AppStrings.of(context, 'focus_workbench_label')}';
     return Scaffold(
+      key: ValueKey(
+        MediaQuery.sizeOf(context).width < 720
+            ? 'stitch-focus-mobile'
+            : 'focus-page',
+      ),
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
       appBar: null,
       body: !_hasLoadedOnce && _isLoading
