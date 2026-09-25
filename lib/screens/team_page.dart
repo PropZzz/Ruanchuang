@@ -858,7 +858,11 @@ class _TeamPageState extends State<TeamPage> {
               onPressed: _showConflictCheck,
             ),
           ],
-          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _load),
+          IconButton(
+            tooltip: AppStrings.of(context, 'common_refresh'),
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _load,
+          ),
           if (isCompactAppBar)
             PopupMenuButton<String>(
               shape: RoundedRectangleBorder(

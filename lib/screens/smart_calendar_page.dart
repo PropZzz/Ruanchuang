@@ -1183,10 +1183,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 children: [
                   IconButton(
                     onPressed: () => _shiftSelectedPeriod(-1),
-                    tooltip:
-                        Localizations.localeOf(context).languageCode == 'en'
-                        ? 'Previous period'
-                        : '上一周期',
+                    tooltip: AppStrings.of(context, 'calendar_previous_period'),
                     icon: const Icon(Icons.chevron_left),
                   ),
                   Expanded(
@@ -1208,10 +1205,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   ),
                   IconButton(
                     onPressed: () => _shiftSelectedPeriod(1),
-                    tooltip:
-                        Localizations.localeOf(context).languageCode == 'en'
-                        ? 'Next period'
-                        : '下一周期',
+                    tooltip: AppStrings.of(context, 'calendar_next_period'),
                     icon: const Icon(Icons.chevron_right),
                   ),
                 ],
@@ -1709,7 +1703,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             label,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -2050,7 +2044,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 12,
                                 color: theme.colorScheme.outline,
                               ),
                             ),
@@ -2091,7 +2085,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface,
                 height: 1.05,
@@ -2112,7 +2106,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         Text(
           entry.time.format(context),
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 12,
             color: Theme.of(context).colorScheme.outline,
           ),
         ),
@@ -2124,7 +2118,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
           _tagLabel(context, entry.tag),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         ),
       );
     }
@@ -2134,7 +2128,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         Text(
           '-${entry.reminderMinutesBefore}m',
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 12,
             color: Theme.of(context).colorScheme.outline,
           ),
         ),
@@ -2145,7 +2139,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         Text(
           _statusLabel(status),
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 12,
             color: Theme.of(context).colorScheme.outline,
           ),
         ),
@@ -2157,7 +2151,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         Text(
           _fieldLabel(context, _CalendarField.goal),
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 12,
             color: Theme.of(context).colorScheme.outline,
           ),
         ),
@@ -2372,7 +2366,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 12,
                   color: theme.colorScheme.outline,
                 ),
               ),
@@ -2449,7 +2443,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -2460,7 +2454,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                             '-${entry.reminderMinutesBefore}m',
                             style: const TextStyle(
                               color: Colors.white70,
-                              fontSize: 10,
+                              fontSize: 12,
                             ),
                           ),
                       ],
@@ -2894,7 +2888,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
       ),
       child: Text(
         label,
-        style: const TextStyle(color: Colors.white, fontSize: 9),
+        style: const TextStyle(color: Colors.white, fontSize: 12),
       ),
     );
   }

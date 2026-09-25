@@ -42,6 +42,7 @@ class AppStrings {
       'btn_close': '关闭',
       'btn_check': '检查',
       'btn_import': '导入',
+      'common_refresh': '刷新',
 
       'label_title': '标题',
       'label_tag': '标签',
@@ -109,6 +110,8 @@ class AppStrings {
       'focus_btn_one_click_insert': '一键插入',
 
       'calendar_title': '智能日程',
+      'calendar_previous_period': '上一周期',
+      'calendar_next_period': '下一周期',
       'calendar_view_day': '日',
       'calendar_view_week': '周',
       'calendar_week_empty': '暂无日程',
@@ -434,6 +437,7 @@ class AppStrings {
       'btn_close': 'Close',
       'btn_check': 'Check',
       'btn_import': 'Import',
+      'common_refresh': 'Refresh',
 
       'label_title': 'Title',
       'label_tag': 'Tag',
@@ -506,6 +510,8 @@ class AppStrings {
       'focus_btn_one_click_insert': 'One-click insert',
 
       'calendar_title': 'Smart Schedule',
+      'calendar_previous_period': 'Previous period',
+      'calendar_next_period': 'Next period',
       'calendar_view_day': 'Day',
       'calendar_view_week': 'Week',
       'calendar_week_empty': 'No events',

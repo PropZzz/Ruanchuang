@@ -1750,6 +1750,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
         elevation: 0,
         actions: [
           IconButton(
+            tooltip: AppStrings.of(context, 'common_refresh'),
             icon: const Icon(Icons.refresh_rounded),
             onPressed: _loadMicroTasks,
           ),

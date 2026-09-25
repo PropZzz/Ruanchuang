@@ -629,20 +629,20 @@ class ScheduleTimeline extends StatelessWidget {
                   titleBuilder?.call(context, firstEntry) ?? firstEntry.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11),
+                  style: const TextStyle(fontSize: 12),
                 ),
                 Text(
                   _compactMetadataSummary(context, firstEntry, firstStatus),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10),
+                  style: const TextStyle(fontSize: 12),
                 ),
                 if (dayEntries.length > 1)
                   Text(
                     '+${dayEntries.length - 1}',
                     style: TextStyle(
                       color: theme.colorScheme.outline,
-                      fontSize: 11,
+                      fontSize: 12,
                     ),
                   ),
               ],
@@ -795,7 +795,7 @@ class ScheduleTimeline extends StatelessWidget {
                                         Text(
                                           '${entry.time.format(context)} / ${_durationLabel(entry)}',
                                           style: TextStyle(
-                                            fontSize: 10,
+                                            fontSize: 12,
                                             color: theme.colorScheme.outline,
                                           ),
                                         ),
