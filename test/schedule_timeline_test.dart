@@ -160,15 +160,33 @@ void main() {
       final trackFinder = find.byKey(
         const ValueKey('schedule-timeline-gantt-track'),
       );
-      final tickFinder = find.text('12:00');
-      final tick = tester.renderObject<RenderParagraph>(tickFinder);
       final trackSize = tester.getSize(trackFinder);
-      final tickText = _measure(tick);
-      expect(
-        tickText.width,
-        lessThanOrEqualTo(trackSize.width / 24),
-        reason: 'axis ticks overlap at scale $scale',
+      final tickFinders = find.byWidgetPredicate(
+        (widget) =>
+            widget is Text && RegExp(r'^\d+:00$').hasMatch(widget.data ?? ''),
       );
+      expect(tickFinders, findsNWidgets(25));
+      final glyphRects = <Rect>[];
+      for (var index = 0; index < 25; index++) {
+        final tickFinder = tickFinders.at(index);
+        final paragraph = tester.renderObject<RenderParagraph>(tickFinder);
+        final glyphWidth = _measure(paragraph).width;
+        final center = tester.getCenter(tickFinder).dx;
+        glyphRects.add(
+          Rect.fromLTRB(center - glyphWidth / 2, 0, center + glyphWidth / 2, 1),
+        );
+      }
+      glyphRects.sort((a, b) => a.left.compareTo(b.left));
+      for (var index = 1; index < glyphRects.length; index++) {
+        expect(
+          glyphRects[index].left,
+          greaterThanOrEqualTo(glyphRects[index - 1].right),
+          reason: 'axis glyphs overlap at scale $scale, tick $index',
+        );
+      }
+
+      final tick = tester.renderObject<RenderParagraph>(find.text('12:00'));
+      final tickText = _measure(tick);
       expect(
         tickText.height,
         lessThanOrEqualTo(trackSize.height),
