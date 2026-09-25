@@ -1,0 +1,130 @@
+{
+  "assets": [
+    {
+      "url": "https://fonts.gstatic.com/s/notoserif/v33/ga6daw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTYf3D33Esw.woff2",
+      "file": "00f6caeab0971b1a.woff2",
+      "contentType": "font/woff2",
+      "bytes": 89100
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa0ZL7SUc.woff2",
+      "file": "1e8edb2fc100b7f7.woff2",
+      "contentType": "font/woff2",
+      "bytes": 18748
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/materialsymbolsoutlined/v374/kJEPBvYX7BgnkSrUwT8OhrdQw4oELdPIeeII9v6oDMzBwG-RpA6RzaxHMPdY40KH8nGzv3fzfVJO1Q.woff2",
+      "file": "268cf3cf3732097a.woff2",
+      "contentType": "font/woff2",
+      "bytes": 1137516
+    },
+    {
+      "url": "https://cdn.tailwindcss.com",
+      "file": "3f13e7495584e13d.js",
+      "contentType": "text/javascript",
+      "bytes": 407279
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa2pL7SUc.woff2",
+      "file": "4c2d4a14f23a8ed5.woff2",
+      "contentType": "font/woff2",
+      "bytes": 10252
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/notoserif/v33/ga6daw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTYf0D33Esw.woff2",
+      "file": "4c691c5168abdc50.woff2",
+      "contentType": "font/woff2",
+      "bytes": 186552
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/notoserif/v33/ga6daw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTYf-D33Esw.woff2",
+      "file": "5a45a06a09e7e14c.woff2",
+      "contentType": "font/woff2",
+      "bytes": 24572
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa2ZL7SUc.woff2",
+      "file": "6d0a674525fee3dd.woff2",
+      "contentType": "font/woff2",
+      "bytes": 11232
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/notoserif/v33/ga6daw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTYf6D30.woff2",
+      "file": "75ae01a3afa6df44.woff2",
+      "contentType": "font/woff2",
+      "bytes": 36756
+    },
+    {
+      "url": "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap",
+      "file": "85b88de6c1273900.css",
+      "contentType": "text/css; charset=utf-8",
+      "bytes": 573
+    },
+    {
+      "url": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif:wght@600;700&display=swap",
+      "file": "882ac670af7a73c9.css",
+      "contentType": "text/css; charset=utf-8",
+      "bytes": 14938
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/materialsymbolsoutlined/v374/kJEhBvYX7BgnkSrUwT8OhrdQw4oELdPIeeII9v6oFsI.woff2",
+      "file": "9024d22caeb441ed.woff2",
+      "contentType": "font/woff2",
+      "bytes": 4001608
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa2JL7SUc.woff2",
+      "file": "95b9ea830580b57e.woff2",
+      "contentType": "font/woff2",
+      "bytes": 25960
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/notoserif/v33/ga6daw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTYf5D33Esw.woff2",
+      "file": "9670553f7c1f2238.woff2",
+      "contentType": "font/woff2",
+      "bytes": 27844
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa25L7SUc.woff2",
+      "file": "a9d11b3ffe7aa537.woff2",
+      "contentType": "font/woff2",
+      "bytes": 85068
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1pL7SUc.woff2",
+      "file": "dbc85b0dfbaaa315.woff2",
+      "contentType": "font/woff2",
+      "bytes": 18996
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2",
+      "file": "e3237528af752eed.woff2",
+      "contentType": "font/woff2",
+      "bytes": 48256
+    },
+    {
+      "url": "https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200",
+      "file": "e6154908c44c742b.css",
+      "contentType": "text/css; charset=utf-8",
+      "bytes": 551
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/notoserif/v33/ga6daw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTYf1D33Esw.woff2",
+      "file": "ee5c5d7524bf5c3d.woff2",
+      "contentType": "font/woff2",
+      "bytes": 14704
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/notoserif/v33/ga6daw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTYf2D33Esw.woff2",
+      "file": "f04022bb00b69557.woff2",
+      "contentType": "font/woff2",
+      "bytes": 12704
+    },
+    {
+      "url": "https://fonts.gstatic.com/s/notoserif/v33/ga6daw1J5X9T9RW6j9bNVls-hfgvz8JcMofYTYeGD33Esw.woff2",
+      "file": "fde06860540643bd.woff2",
+      "contentType": "font/woff2",
+      "bytes": 65124
+    }
+  ]
+}
