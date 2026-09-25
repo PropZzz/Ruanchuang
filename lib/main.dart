@@ -9,6 +9,7 @@ import 'services/app_services.dart';
 import 'theme/app_theme.dart';
 import 'utils/app_strings.dart';
 import 'utils/mobile_feedback.dart';
+import 'widgets/fatal_error_dialog.dart';
 
 double resolveAppTextScale(double currentScale) {
   return currentScale > 0 ? currentScale : 1.0;
@@ -82,38 +83,7 @@ void _showFatalError(Object error, StackTrace stack) {
       return;
     }
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        backgroundColor: const Color(0xFFFFFFFF),
-        title: const Text(
-          '\u64cd\u4f5c\u672a\u5b8c\u6210',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '\u5e94\u7528\u9047\u5230\u5f02\u5e38\uff0c\u5df2\u81ea\u52a8\u8bb0\u5f55\u3002\u8bf7\u8fd4\u56de\u540e\u91cd\u8bd5\uff1b\u5982\u679c\u95ee\u9898\u6301\u7eed\uff0c\u8bf7\u5230\u201c\u6211\u7684 > \u8bca\u65ad\u201d\u67e5\u770b\u65e5\u5fd7\u3002',
-                style: TextStyle(color: Color(0xFF8E8E93)),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text(
-              '\u5173\u95ed',
-              style: TextStyle(color: Color(0xFF2D2D2D)),
-            ),
-          ),
-        ],
-      ),
-    );
+    showDialog(context: context, builder: (_) => const FatalErrorDialog());
   });
 }
 

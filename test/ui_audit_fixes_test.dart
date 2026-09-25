@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shixuzhipei/models/models.dart';
 import 'package:shixuzhipei/screens/micro_task_page.dart';
@@ -9,6 +10,7 @@ import 'package:shixuzhipei/services/app_services.dart';
 import 'package:shixuzhipei/services/mock_data_service.dart';
 import 'package:shixuzhipei/theme/app_theme.dart';
 import 'package:shixuzhipei/utils/app_strings.dart';
+import 'package:shixuzhipei/widgets/fatal_error_dialog.dart';
 import 'package:shixuzhipei/widgets/schedule_timeline.dart';
 
 import 'support/noop_reminder_service.dart';
@@ -236,6 +238,58 @@ void main() {
     );
     expect(duration, findsOneWidget);
     expect(_effectiveFontSize(tester, duration), greaterThanOrEqualTo(12));
+  });
+
+  testWidgets('fatal error dialog follows the active dark theme', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: const Scaffold(body: FatalErrorDialog()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final colorScheme = AppTheme.dark.colorScheme;
+    final alertDialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
+    final dialogMaterial = tester.widget<Material>(
+      find
+          .descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    expect(
+      alertDialog.backgroundColor ?? AppTheme.dark.dialogTheme.backgroundColor,
+      colorScheme.surface,
+    );
+    expect(dialogMaterial.color, colorScheme.surface);
+
+    const title = '操作未完成';
+    const content = '应用遇到异常，已自动记录。请返回后重试；如果问题持续，请到“我的 > 诊断”查看日志。';
+    expect(find.text(title), findsOneWidget);
+    expect(find.text(content), findsOneWidget);
+    expect(
+      tester.renderObject<RenderParagraph>(find.text(title)).text.style?.color,
+      colorScheme.onSurface,
+    );
+    expect(
+      tester
+          .renderObject<RenderParagraph>(find.text(content))
+          .text
+          .style
+          ?.color,
+      colorScheme.onSurfaceVariant,
+    );
+
+    expect(find.text('关闭'), findsOneWidget);
+    expect(tester.getSemantics(find.text('关闭')).label, '关闭');
+    expect(
+      tester.renderObject<RenderParagraph>(find.text('关闭')).text.style?.color,
+      AppTheme.dark.textButtonTheme.style!.foregroundColor!.resolve({}),
+    );
   });
 }
 
