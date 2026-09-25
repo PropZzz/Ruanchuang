@@ -1,5 +1,6 @@
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { stitch } from '@google/stitch-sdk';
 
 const projectId = '2037391297990000917';
@@ -26,26 +27,133 @@ if (!process.env.STITCH_API_KEY && !process.env.STITCH_ACCESS_TOKEN) {
 }
 
 const project = stitch.project(projectId);
-const screens = await project.screens();
-const byId = new Map(screens.map((screen) => [screen.id, screen]));
+const screenList = await project.screens();
+const byId = new Map(screenList.map((screen) => [screen.id, screen]));
 const manifest = [];
 
 await mkdir(join(outputDir, 'screens'), { recursive: true });
+await rm(join(outputDir, 'assets'), { recursive: true, force: true });
+
+const decodeEntities = (value) => value
+  .replaceAll('&amp;', '&')
+  .replaceAll('&#x2F;', '/')
+  .replaceAll('&#47;', '/');
+
+const hash = (value) => createHash('sha1').update(value).digest('hex').slice(0, 12);
+
+const extensionFor = (contentType, url, fallback) => {
+  const mime = contentType.split(';')[0].toLowerCase();
+  const mimeExtensions = new Map([
+    ['text/css', 'css'],
+    ['text/javascript', 'js'],
+    ['application/javascript', 'js'],
+    ['application/x-javascript', 'js'],
+    ['image/png', 'png'],
+    ['image/jpeg', 'jpg'],
+    ['image/webp', 'webp'],
+    ['image/gif', 'gif'],
+    ['font/woff2', 'woff2'],
+    ['font/woff', 'woff'],
+    ['application/font-woff', 'woff'],
+    ['application/octet-stream', fallback],
+  ]);
+  if (mimeExtensions.has(mime)) return mimeExtensions.get(mime);
+  const pathname = new URL(url).pathname;
+  const match = pathname.match(/\.([a-z0-9]+)$/i);
+  return match?.[1]?.toLowerCase() ?? fallback;
+};
+
+const assetUrlPattern = /https?:\/\/[^\s"'<>\)]+/g;
+
+async function fetchAsset(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Asset download failed (${response.status}): ${url}`);
+  return {
+    contentType: response.headers.get('content-type') ?? 'application/octet-stream',
+    body: Buffer.from(await response.arrayBuffer()),
+  };
+}
+
+async function localizeHtml(hostedHtml, screenDir) {
+  const assetRoot = join(outputDir, 'assets');
+  const relativeAssetRoot = '../../assets';
+  const assetDirs = {
+    images: join(assetRoot, 'images'),
+    fonts: join(assetRoot, 'fonts'),
+    vendor: join(assetRoot, 'vendor'),
+  };
+  await Promise.all(Object.values(assetDirs).map((directory) => mkdir(directory, { recursive: true })));
+  const assets = [];
+  const replacements = new Map();
+
+  const save = async (url, category, fallbackExtension, contents, contentType) => {
+    const extension = extensionFor(contentType, url, fallbackExtension);
+    const filename = `${hash(url)}.${extension}`;
+    const relative = `${relativeAssetRoot}/${category}/${filename}`;
+    await writeFile(join(assetRoot, category, filename), contents);
+    assets.push({ url, localPath: relative, contentType, bytes: contents.length });
+    replacements.set(url, relative);
+    return relative;
+  };
+
+  const externalUrls = [...new Set((hostedHtml.match(assetUrlPattern) ?? []).map(decodeEntities))];
+  for (const url of externalUrls) {
+    if (url.startsWith('https://fonts.googleapis.com/css')) {
+      const css = await fetchAsset(url);
+      let cssText = css.body.toString('utf8');
+      const cssUrls = [...new Set((cssText.match(assetUrlPattern) ?? []).map(decodeEntities))];
+      for (const fontUrl of cssUrls) {
+        if (!fontUrl.startsWith('https://fonts.gstatic.com/')) continue;
+        const font = await fetchAsset(fontUrl);
+        const localFont = await save(fontUrl, 'fonts', 'bin', font.body, font.contentType);
+        cssText = cssText.split(fontUrl).join(localFont.split('/').pop());
+      }
+      const localCss = await save(url, 'fonts', 'css', Buffer.from(cssText), 'text/css');
+      replacements.set(url, localCss);
+      continue;
+    }
+    if (url === 'https://cdn.tailwindcss.com') {
+      const script = await fetchAsset(url);
+      await save(url, 'vendor', 'js', script.body, script.contentType);
+      continue;
+    }
+    if (url.startsWith('https://lh3.googleusercontent.com/') || url.startsWith('https://lh4.googleusercontent.com/') || url.startsWith('https://lh5.googleusercontent.com/') || url.startsWith('https://lh6.googleusercontent.com/')) {
+      const image = await fetchAsset(url);
+      await save(url, 'images', 'bin', image.body, image.contentType);
+    }
+  }
+
+  let localizedHtml = hostedHtml;
+  for (const [url, localPath] of replacements) {
+    localizedHtml = localizedHtml.split(url).join(localPath);
+    localizedHtml = localizedHtml.split(url.replaceAll('&', '&amp;')).join(localPath);
+  }
+  localizedHtml = localizedHtml.replace(/<link[^>]+rel=["']preconnect["'][^>]*>/gi, '');
+  await writeFile(join(screenDir, 'asset-manifest.json'), JSON.stringify({ assets }, null, 2) + '\n');
+  return { html: localizedHtml, assets };
+}
 
 for (const [screenId, slug, title] of requestedScreens) {
-  const screen = byId.get(screenId) ?? await project.getScreen(screenId);
+  const screen = byId.get(screenId);
   if (!screen) throw new Error(`Screen not found: ${screenId}`);
   const htmlUrl = await screen.getHtml();
   const imageUrl = await screen.getImage();
   const screenDir = join(outputDir, 'screens', slug);
   await mkdir(screenDir, { recursive: true });
-  const [htmlResponse, imageResponse] = await Promise.all([
-    fetch(htmlUrl),
-    fetch(imageUrl),
-  ]);
+  await rm(join(screenDir, 'assets'), { recursive: true, force: true });
+  const [htmlResponse, imageResponse] = await Promise.all([fetch(htmlUrl), fetch(imageUrl)]);
   if (!htmlResponse.ok) throw new Error(`HTML download failed for ${screenId}: ${htmlResponse.status}`);
   if (!imageResponse.ok) throw new Error(`Image download failed for ${screenId}: ${imageResponse.status}`);
-  await writeFile(join(screenDir, 'index.html'), await htmlResponse.text());
+  const hostedHtml = await htmlResponse.text();
+  await writeFile(join(screenDir, 'hosted.html'), hostedHtml);
+  const { html: localizedHtml } = await localizeHtml(hostedHtml, screenDir);
+  await writeFile(join(screenDir, 'index.html'), localizedHtml);
+  await writeFile(join(screenDir, 'screen.json'), JSON.stringify({
+    ...(screen.data ?? {}),
+    id: screen.id,
+    projectId,
+    title,
+  }, null, 2) + '\n');
   const imageType = imageResponse.headers.get('content-type') ?? 'image/png';
   const extension = imageType.includes('jpeg') || imageType.includes('jpg') ? 'jpg' : imageType.includes('webp') ? 'webp' : 'png';
   const imageFile = `screenshot.${extension}`;
@@ -54,9 +162,13 @@ for (const [screenId, slug, title] of requestedScreens) {
     id: screenId,
     slug,
     title,
-    name: screen.name ?? null,
+    name: screen.data?.name ?? null,
     htmlUrl,
     imageUrl,
+    hostedHtmlFile: `screens/${slug}/hosted.html`,
+    localizedHtmlFile: `screens/${slug}/index.html`,
+    screenJsonFile: `screens/${slug}/screen.json`,
+    assetManifestFile: `screens/${slug}/asset-manifest.json`,
     htmlFile: `screens/${slug}/index.html`,
     imageFile: `screens/${slug}/${imageFile}`,
   });

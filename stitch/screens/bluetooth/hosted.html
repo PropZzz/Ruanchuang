@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Serif:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-secondary-fixed-variant": "#00468b", "primary-fixed": "#c2eae9", "secondary-container": "#62a1fe", "tertiary-fixed-dim": "#53e16f", "surface-tint": "#3f6564", "inverse-primary": "#a7cecd", "on-tertiary-container": "#1db84d", "surface-container-lowest": "#ffffff", "surface": "#faf8fe", "error-container": "#ffdad6", "surface-container-low": "#f4f3f8", "on-tertiary": "#ffffff", "inverse-on-surface": "#f1f0f6", "primary-fixed-dim": "#a7cecd", "primary": "#002727", "on-primary-container": "#81a8a7", "surface-variant": "#e3e2e7", "tertiary": "#00290a", "on-primary-fixed": "#002020", "on-tertiary-fixed-variant": "#00531c", "on-surface-variant": "#414848", "secondary": "#005db5", "error": "#ba1a1a", "surface-bright": "#faf8fe", "on-error-container": "#93000a", "surface-dim": "#dbd9df", "on-secondary-container": "#00376f", "surface-container": "#efedf3", "on-secondary-fixed": "#001b3d", "surface-container-high": "#e9e7ed", "surface-container-highest": "#e3e2e7", "on-error": "#ffffff", "background": "#faf8fe", "on-background": "#1a1b1f", "secondary-fixed": "#d6e3ff", "primary-container": "#163d3d", "tertiary-fixed": "#72fe88", "outline-variant": "#c0c8c7", "inverse-surface": "#2f3034", "on-surface": "#1a1b1f", "outline": "#717978", "secondary-fixed-dim": "#a8c8ff", "tertiary-container": "#004114", "on-tertiary-fixed": "#002107", "on-primary": "#ffffff", "on-secondary": "#ffffff", "on-primary-fixed-variant": "#274d4d" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": {}, "fontFamily": { "headline": [ "Noto Serif" ], "display": [ "Noto Serif" ], "body": [ "Inter" ], "label": [ "Inter" ] }, "fontSize": {} } } }</script></head><body class="bg-surface font-body text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[260px] bg-surface-container-low z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col flex-1 min-h-0"><div class="px-5 pt-5 pb-4 flex items-center gap-3"><img alt="Brand logo. - Primary color: #163d3d
+- Font: notoSerif
+- Mode: light
+- Roundness: rounded-md
+" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1XuCHKt46wtQiojBg85I2fCRPWiJv54qhKQOffqcMljR1XAIxdoPBVYoJL-o90t8ytUt76hHA4ulQaTNFhUXcslEhPPo4K3BQQtO_DFCf29ArXjn8CXUf5fvvrcymJxS96eYBuMnxdrhEwRs9EaafG_tz7iSvgcjucWy-_nEA1qe3UVAQmzIBiEj7pJWiRePAABz7NVezMTq13EuU87d5NFq6NOd9BFBtmqI8N4sDU_0FDeMOV43B5Atv4"/><div class="flex flex-col min-w-0"><span class="font-headline font-bold text-base leading-tight text-primary tracking-tight truncate">时序智配</span><span class="text-[11px] font-label font-medium text-on-surface-variant truncate">时间地图工作台</span></div></div><div class="overflow-y-auto flex-1 px-3 py-2 space-y-5"><div class="space-y-1"><div class="px-2.5 text-[11px] font-label font-semibold text-outline uppercase tracking-wider">今天</div><nav class="space-y-0.5" data-active-classes="bg-primary-container text-on-primary font-medium rounded-lg"><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="focus" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">timer</span><span class="truncate font-medium">专注</span></a><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="schedule" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">calendar_today</span><span class="truncate font-medium">智能日历</span></a></nav></div><div class="space-y-1"><div class="px-2.5 text-[11px] font-label font-semibold text-outline uppercase tracking-wider">规划</div><nav class="space-y-0.5" data-active-classes="bg-primary-container text-on-primary font-medium rounded-lg"><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="microtasks" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">checklist</span><span class="truncate font-medium">微任务</span></a><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="goals" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">flag</span><span class="truncate font-medium">目标</span></a></nav></div><div class="space-y-1"><div class="px-2.5 text-[11px] font-label font-semibold text-outline uppercase tracking-wider">协作</div><nav class="space-y-0.5" data-active-classes="bg-primary-container text-on-primary font-medium rounded-lg"><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="team" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">group</span><span class="truncate font-medium">团队</span></a></nav></div><div class="space-y-1"><div class="px-2.5 text-[11px] font-label font-semibold text-outline uppercase tracking-wider">系统</div><nav class="space-y-0.5" data-active-classes="bg-primary-container text-on-primary font-medium rounded-lg"><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="review" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">insights</span><span class="truncate font-medium">智能复盘</span></a><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="diagnostics" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">hub</span><span class="truncate font-medium">接入与诊断</span></a><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="profile" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">person</span><span class="truncate font-medium">我的</span></a></nav></div></div></div><div class="p-3 bg-surface-container-low space-y-2 shrink-0"><button class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-surface hover:bg-surface-container transition-colors text-on-surface-variant" type="button"><div class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[18px]">notifications</span><span class="text-xs font-label">系统通知</span></div><span class="text-[10px] font-label px-1.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-medium">预留</span></button><div class="flex items-center gap-3 p-2.5 rounded-xl bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex flex-col min-w-0 flex-1"><div class="flex items-center justify-between"><span class="text-xs font-semibold text-on-surface truncate">知行</span><span class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim"></span></div><span class="text-[10px] text-outline truncate">本地优先 · 已加密</span></div></div></div></aside><div class="pl-[260px]"><header class="fixed top-0 left-[260px] right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-6 lg:px-8"><div class="flex items-center gap-4 min-w-0"><img alt="Brand logo. - Primary color: #163d3d
+- Font: notoSerif
+- Mode: light
+- Roundness: rounded-md
+" class="h-8 w-auto object-contain md:hidden" src="https://lh3.googleusercontent.com/aida/AEtjO1XuCHKt46wtQiojBg85I2fCRPWiJv54qhKQOffqcMljR1XAIxdoPBVYoJL-o90t8ytUt76hHA4ulQaTNFhUXcslEhPPo4K3BQQtO_DFCf29ArXjn8CXUf5fvvrcymJxS96eYBuMnxdrhEwRs9EaafG_tz7iSvgcjucWy-_nEA1qe3UVAQmzIBiEj7pJWiRePAABz7NVezMTq13EuU87d5NFq6NOd9BFBtmqI8N4sDU_0FDeMOV43B5Atv4"/><div class="flex items-center gap-2 text-xs font-label text-on-surface-variant min-w-0"><span class="shrink-0">时序智配</span><span class="text-outline shrink-0">/</span><span class="font-medium text-on-surface truncate">时间工作台</span></div><div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high text-[11px] font-label font-medium text-on-surface"><span class="material-symbols-outlined text-[14px] text-on-tertiary-container">cloud_done</span><span class="truncate">已同步 · 本地优先 SQLite</span></div></div><div class="flex items-center gap-3"><div class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container text-xs font-label"><span class="w-2 h-2 rounded-full bg-on-tertiary-container shrink-0"></span><span class="font-medium text-on-surface">能量 86 分</span><span class="text-outline">·</span><span class="text-on-surface-variant">平静专注</span><span class="text-outline">·</span><span class="font-medium text-primary">恢复缓冲 25m</span></div><div class="flex items-center gap-2"><button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container text-xs font-medium text-on-surface transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" type="button"><span class="material-symbols-outlined text-[16px] text-error">bolt</span><span class="hidden md:inline">插入紧急任务</span></button><button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-on-secondary-fixed-variant text-xs font-medium text-on-secondary transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" type="button"><span class="material-symbols-outlined text-[16px]">add</span><span class="hidden md:inline">新增日程</span></button></div><div class="flex items-center gap-2 pl-1"><button class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[18px]">settings</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<div class="p-6 lg:p-8 space-y-6 max-w-[1360px] mx-auto w-full">
+<!-- 面包屑与顶部操作区 -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-2 text-xs font-label text-on-surface-variant">
+<span>系统</span>
+<span class="text-outline">/</span>
+<span>外设与传感器</span>
+<span class="text-outline">/</span>
+<span class="font-medium text-primary">蓝牙设备管理</span>
+</div>
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<div class="flex items-center gap-2">
+<span class="text-xs uppercase tracking-widest font-label font-bold text-secondary">GATT Hardware Matrix</span>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-label font-semibold bg-surface-container-high text-on-surface-variant">PRD 6.5 &amp; 6.6</span>
+</div>
+<h1 class="text-2xl lg:text-3xl font-headline font-bold text-primary tracking-tight mt-1">蓝牙外设连接与传感器管理</h1>
+<p class="text-xs font-label text-on-surface-variant mt-0.5">Hardware &amp; Bluetooth Sensors · 实时遥测信令与特征值诊断基准</p>
+</div>
+<!-- 扫描动作与状态控制 -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container text-xs font-label">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+<span class="font-medium text-on-surface" id="scan-state-label">正在监听 BLE 广播</span>
+<span class="text-outline">·</span>
+<span class="text-[11px] font-mono text-on-surface-variant" id="scan-countdown">Auto 15s</span>
+</div>
+<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary hover:bg-on-secondary-fixed-variant text-xs font-medium text-on-secondary transition-all shadow-sm active:scale-95" id="btn-rescan">
+<span class="material-symbols-outlined text-[16px]">radar</span>
+<span>重新扫描设备</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container text-xs font-medium text-on-surface transition-all active:scale-95" id="btn-stopscan">
+<span class="material-symbols-outlined text-[16px] text-error">stop_circle</span>
+<span>停止扫描</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 真实性声明警示横幅 (PRD 1.3 / 6.5 规范) -->
+<div class="flex items-start gap-3.5 p-4 rounded-xl bg-amber-50/80 text-amber-950 shadow-sm">
+<span class="material-symbols-outlined text-[20px] text-amber-700 shrink-0 mt-0.5">verified_user</span>
+<div class="flex-1 text-xs leading-relaxed space-y-1">
+<div class="flex items-center gap-2 font-semibold text-amber-900">
+<span>沙箱运行环境安全约束声明 (Web Bluetooth Limitation)</span>
+<span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-200/80 text-amber-900 font-mono">STRICT_POLICY_ENV</span>
+</div>
+<p class="text-amber-800/90 font-body">
+          当前环境为 Web 端浏览器沙箱，Web Bluetooth API 依赖显式用户手势授权且受域安全性严格限制。生产环境下高频生理传感器（连续 HRV 计算与毫秒级 R-R 间期流）建议由
+          <strong class="font-semibold text-amber-950">时序智配原生桌面客户端</strong> 或本地自托管守护进程代理（Local Proxy Daemon）进行硬件握手接入。
+        </p>
+</div>
+</div>
+<!-- 主工作区：双列布局 (设备拓扑 + 特征值检查器) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+<!-- 左侧：发现与已配对设备栏 (xl:col-span-5) -->
+<div class="xl:col-span-5 space-y-5">
+<!-- 核心卡片：当前连接主生理传感器 -->
+<div class="space-y-3">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary">sensors</span>
+<h2 class="text-sm font-label font-bold text-on-surface uppercase tracking-wider">已连接生理传感器</h2>
+</div>
+<span class="text-[11px] font-label text-on-tertiary-container font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-on-tertiary-container"></span>
+              GATT 会话活跃
+            </span>
+</div>
+<div class="p-5 rounded-xl bg-surface-container-lowest shadow-sm space-y-4 hover:shadow-md transition-shadow">
+<div class="flex items-start justify-between gap-3">
+<div class="flex items-center gap-3">
+<div class="w-11 h-11 rounded-xl bg-primary-container text-on-primary flex items-center justify-center shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[24px]">cardiology</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-headline font-bold text-base text-primary">Polar H10 心率带</h3>
+<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-medium">0x180D</span>
+</div>
+<div class="flex items-center gap-3 mt-1 text-[11px] font-mono text-outline">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-on-tertiary-container">network_wifi_3_bar</span>
+<span>RSSI -62 dBm</span>
+</span>
+<span>·</span>
+<span class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[13px] text-secondary">battery_horiz_075</span>
+<span>82%</span>
+</span>
+<span>·</span>
+<span class="text-[10px] text-on-surface-variant font-body">固件 v3.2.1</span>
+</div>
+</div>
+</div>
+<span class="px-2 py-1 rounded-md text-[10px] font-semibold bg-tertiary-fixed text-on-tertiary-fixed uppercase">
+                Active Master
+              </span>
+</div>
+<!-- 遥测实时仪表区 -->
+<div class="grid grid-cols-2 gap-3 p-3.5 rounded-lg bg-surface-container-low">
+<div class="space-y-1">
+<div class="flex items-center justify-between text-[11px] text-on-surface-variant font-label">
+<span>实时脉率 (HR)</span>
+<span class="material-symbols-outlined text-[14px] text-error animate-pulse">favorite</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="text-3xl font-headline font-bold text-primary font-mono tabular-nums" id="live-hr">72</span>
+<span class="text-xs font-label text-outline">BPM</span>
+</div>
+<span class="text-[10px] text-on-surface-variant font-label">静息基准偏移 ±1.8 bpm</span>
+</div>
+<div class="space-y-1">
+<div class="flex items-center justify-between text-[11px] text-on-surface-variant font-label">
+<span>R-R 间期 (RR-Interval)</span>
+<span class="material-symbols-outlined text-[14px] text-secondary">timelapse</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="text-3xl font-headline font-bold text-secondary font-mono tabular-nums" id="live-rr">820</span>
+<span class="text-xs font-label text-outline">ms</span>
+</div>
+<span class="text-[10px] text-on-tertiary-container font-label font-medium">心流状态适配中 (良好)</span>
+</div>
+</div>
+<!-- 动态微脉冲波形与控制 -->
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-2">
+<svg class="w-24 h-6 text-primary" fill="none" viewbox="0 0 96 24">
+<path d="M0 12 L20 12 L26 4 L34 20 L40 12 L50 12 L56 2 L64 22 L72 12 L96 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="text-[10px] font-mono text-outline">采样率 1000Hz (BLE 20ms)</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1.5 text-xs font-label font-medium text-secondary hover:bg-secondary-fixed/50 rounded-lg transition-colors flex items-center gap-1" id="btn-inspect-device">
+<span class="material-symbols-outlined text-[14px]">account_tree</span>
+<span>服务与特征值</span>
+</button>
+<button class="px-2.5 py-1.5 text-xs font-label font-medium text-error hover:bg-error-container/60 rounded-lg transition-colors flex items-center gap-1" id="btn-disconnect">
+<span class="material-symbols-outlined text-[14px]">link_off</span>
+<span>断开</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- 周边发现设备列表 -->
+<div class="space-y-3 pt-2">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-outline">devices</span>
+<h2 class="text-sm font-label font-bold text-on-surface uppercase tracking-wider">周边发现的 BLE 设备</h2>
+</div>
+<span class="text-xs font-mono text-outline">3 个节点待命</span>
+</div>
+<div class="space-y-2.5">
+<!-- 设备 1 -->
+<div class="p-3.5 rounded-xl bg-surface-container-lowest shadow-sm flex items-center justify-between hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[18px]">radio_button_checked</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-label font-semibold text-on-surface">Oura Ring Gen3</span>
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-label">指环</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5 text-[11px] font-mono text-outline">
+<span>RSSI: -78 dBm</span>
+<span>·</span>
+<span>广播睡眠体温数据</span>
+</div>
+</div>
+</div>
+<button class="px-3 py-1.5 rounded-lg bg-surface-container-highest hover:bg-secondary hover:text-on-secondary text-xs font-label font-medium text-on-surface transition-all active:scale-95">
+                配对连接
+              </button>
+</div>
+<!-- 设备 2 -->
+<div class="p-3.5 rounded-xl bg-surface-container-lowest shadow-sm flex items-center justify-between hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined text-[18px]">watch</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-label font-semibold text-on-surface">Apple Watch Local Proxy</span>
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed-variant font-label font-medium">本地守护节点</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5 text-[11px] font-mono text-outline">
+<span>RSSI: -54 dBm</span>
+<span>·</span>
+<span>127.0.0.1:8765 桥接通道</span>
+</div>
+</div>
+</div>
+<button class="px-3 py-1.5 rounded-lg bg-secondary text-on-secondary hover:bg-on-secondary-fixed-variant text-xs font-label font-medium transition-all active:scale-95 shadow-sm">
+                快速接入
+              </button>
+</div>
+<!-- 设备 3 -->
+<div class="p-3.5 rounded-xl bg-surface-container-lowest shadow-sm flex items-center justify-between hover:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-[18px]">bluetooth_searching</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-label font-semibold text-on-surface-variant font-mono">TX-Beacon-09</span>
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-container-highest text-outline font-label">未识别节点</span>
+</div>
+<div class="flex items-center gap-2 mt-0.5 text-[11px] font-mono text-outline">
+<span>RSSI: -88 dBm</span>
+<span>·</span>
+<span>UUID 未公开</span>
+</div>
+</div>
+</div>
+<button class="px-3 py-1.5 rounded-lg bg-surface-container-highest hover:bg-surface-container text-xs font-label font-medium text-on-surface-variant transition-all">
+                配对
+              </button>
+</div>
+</div>
+</div>
+<!-- 认知节律协同设置模块 -->
+<div class="p-4 rounded-xl bg-surface-container-lowest shadow-sm space-y-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-tertiary-container">tune</span>
+<h3 class="text-xs font-label font-bold text-on-surface tracking-wide uppercase">认知节律协同模型配置</h3>
+</div>
+<label class="flex items-start gap-3 cursor-pointer group">
+<div class="relative flex items-center mt-0.5">
+<input checked="" class="w-4 h-4 rounded text-secondary focus:ring-0 cursor-pointer accent-secondary" id="hrv-weight-toggle" type="checkbox"/>
+</div>
+<div class="space-y-0.5">
+<span class="text-xs font-label font-medium text-on-surface group-hover:text-primary transition-colors">
+                将硬件心率变异度 (HRV) 波动作为认知负荷计算的次要参考权重
+              </span>
+<p class="text-[11px] text-on-surface-variant font-body">
+                基于 RMSSD (均方根差) 算法识别脑力疲劳指数。此选项处于系统灰度联调中 (待完整接入主调度器)。
+              </p>
+</div>
+</label>
+<div class="p-2.5 rounded-lg bg-surface-container-low flex items-center justify-between text-[11px] text-on-surface-variant font-mono">
+<span>当前算法权重系数:</span>
+<span class="font-bold text-primary">w_hrv = 0.15 (Secondary)</span>
+</div>
+</div>
+</div>
+<!-- 右侧：GATT 架构与特征值读写检查器 (xl:col-span-7) -->
+<div class="xl:col-span-7 space-y-5">
+<!-- 检查器顶栏 -->
+<div class="p-5 rounded-xl bg-surface-container-lowest shadow-sm space-y-4">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 bg-surface-container-low/40 p-3 rounded-lg gap-2">
+<div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary">schema</span>
+<span class="text-sm font-label font-bold text-primary">GATT 服务与特征值检查器</span>
+</div>
+<span class="text-[11px] font-mono text-outline">Polar H10 (UUID: 0000180D-0000-1000-8000-00805F9B34FB)</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container text-xs font-label font-medium text-on-surface transition-all flex items-center gap-1" id="btn-read-all">
+<span class="material-symbols-outlined text-[14px]">refresh</span>
+<span>刷新全树</span>
+</button>
+</div>
+</div>
+<!-- GATT 树形节点展示 -->
+<div class="space-y-4">
+<!-- Service 1: Heart Rate Service -->
+<div class="rounded-xl bg-surface-container-low p-4 space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-secondary">favorite</span>
+<div>
+<span class="text-xs font-mono font-bold text-on-surface">Service 1: Heart Rate Service</span>
+<span class="text-[11px] font-mono text-secondary ml-1.5">(UUID: 0x180D)</span>
+</div>
+</div>
+<span class="text-[10px] px-2 py-0.5 rounded font-mono font-semibold bg-surface-container-highest text-on-surface-variant">Primary Service</span>
+</div>
+<!-- Characteristic 1.1: Heart Rate Measurement -->
+<div class="p-3 rounded-lg bg-surface-container-lowest shadow-sm space-y-2.5">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+<div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-mono font-semibold text-primary">Characteristic: Heart Rate Measurement</span>
+<span class="text-[10px] font-mono text-outline">(0x2A37)</span>
+</div>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="text-[10px] font-label font-medium px-1.5 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed-variant">Notify</span>
+<span class="text-[10px] font-label font-medium px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">Read</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[11px] font-label text-outline">通知流:</span>
+<label class="inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" id="notify-toggle-hr" type="checkbox"/>
+<div class="w-8 h-4 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-secondary"></div>
+</label>
+<span class="text-[10px] font-mono font-bold text-secondary" id="notify-status-text">已开启</span>
+</div>
+</div>
+<!-- 数据包解析视窗 -->
+<div class="p-2.5 rounded bg-surface-container font-mono text-xs space-y-1.5">
+<div class="flex items-center justify-between text-on-surface-variant text-[11px]">
+<span>最新 Hex 数据包:</span>
+<span class="text-[10px] text-outline font-label">PRD O-28 遥测帧</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-primary font-bold bg-surface-container-lowest px-2 py-1 rounded tracking-wider" id="hr-raw-hex">0x16 0x48 0x03 0x34</span>
+<span class="text-[11px] text-on-surface font-body font-medium">解析结果: 心率 <strong class="text-secondary font-mono">72 bpm</strong>, RR-间期 <strong class="text-secondary font-mono">820 ms</strong></span>
+</div>
+</div>
+</div>
+<!-- Characteristic 1.2: Body Sensor Location -->
+<div class="p-3 rounded-lg bg-surface-container-lowest shadow-sm space-y-2">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+<div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-mono font-semibold text-primary">Characteristic: Body Sensor Location</span>
+<span class="text-[10px] font-mono text-outline">(0x2A38)</span>
+</div>
+<div class="flex items-center gap-1 mt-1">
+<span class="text-[10px] font-label font-medium px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">Read</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container text-[11px] font-label font-medium text-on-surface flex items-center gap-1 transition-colors" id="btn-read-location">
+<span class="material-symbols-outlined text-[13px]">download</span>
+<span>读取特征值</span>
+</button>
+</div>
+</div>
+<div class="p-2 rounded bg-surface-container flex items-center justify-between font-mono text-xs">
+<span class="text-[11px] text-on-surface-variant">读取结果:</span>
+<span class="font-bold text-on-surface">Chest (0x01) - 胸带接触正常</span>
+</div>
+</div>
+</div>
+<!-- Service 2: Battery Service -->
+<div class="rounded-xl bg-surface-container-low p-4 space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-on-tertiary-container">battery_charging_full</span>
+<div>
+<span class="text-xs font-mono font-bold text-on-surface">Service 2: Battery Service</span>
+<span class="text-[11px] font-mono text-secondary ml-1.5">(UUID: 0x180F)</span>
+</div>
+</div>
+<span class="text-[10px] px-2 py-0.5 rounded font-mono font-semibold bg-surface-container-highest text-on-surface-variant">Standard Service</span>
+</div>
+<!-- Characteristic 2.1: Battery Level -->
+<div class="p-3 rounded-lg bg-surface-container-lowest shadow-sm space-y-2">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+<div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-mono font-semibold text-primary">Characteristic: Battery Level</span>
+<span class="text-[10px] font-mono text-outline">(0x2A19)</span>
+</div>
+<div class="flex items-center gap-1 mt-1">
+<span class="text-[10px] font-label font-medium px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">Read</span>
+<span class="text-[10px] font-label font-medium px-1.5 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed-variant">Notify</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-2 py-1 rounded bg-surface-container-high hover:bg-surface-container text-[11px] font-label font-medium text-on-surface flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[13px]">refresh</span>
+<span>单次读取</span>
+</button>
+</div>
+</div>
+<div class="p-2 rounded bg-surface-container flex items-center justify-between font-mono text-xs">
+<span class="text-[11px] text-on-surface-variant">当前值:</span>
+<div class="flex items-center gap-1.5">
+<div class="w-16 h-2 rounded-full bg-surface-container-highest overflow-hidden">
+<div class="h-full bg-on-tertiary-container rounded-full" style="width: 82%"></div>
+</div>
+<span class="font-bold text-on-surface">82% (0x52)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 十六进制读写与下发操作台 (PRD O-29) -->
+<div class="pt-4 border-t border-surface-container-high space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-primary">terminal</span>
+<span class="text-xs font-label font-bold text-on-surface uppercase">硬件指令直接写入 (PRD O-29 Hex Dispatch)</span>
+</div>
+<span class="text-[10px] font-mono text-outline">GATT Write Without Response</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+<div class="sm:col-span-4">
+<select class="w-full text-xs font-mono rounded-lg bg-surface-container-low text-on-surface p-2 focus:ring-1 focus:ring-secondary">
+<option>0x2A37 (Heart Rate Control Point)</option>
+<option>0x2A38 (Custom Sensor Config)</option>
+<option>0x2A19 (Battery Notification Trigger)</option>
+</select>
+</div>
+<div class="sm:col-span-5">
+<input class="w-full text-xs font-mono rounded-lg bg-surface-container-low text-on-surface p-2 focus:ring-1 focus:ring-secondary placeholder:text-outline" id="hex-payload-input" placeholder="如 0x01 0x00..." type="text" value="0x01 0x00 0xFF"/>
+</div>
+<div class="sm:col-span-3">
+<button class="w-full py-2 px-3 rounded-lg bg-primary hover:bg-primary-container text-on-primary text-xs font-label font-medium transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1" id="btn-dispatch-hex">
+<span class="material-symbols-outlined text-[14px]">send</span>
+<span>十六进制写入</span>
+</button>
+</div>
+</div>
+<div class="p-2 rounded bg-surface-container text-[11px] font-mono text-on-surface-variant flex items-center justify-between" id="dispatch-feedback">
+<span>状态回执: 0x00 SUCCESS · 写入耗时 14ms · 无缓冲区丢包</span>
+<span class="text-[10px] text-on-tertiary-container font-semibold">ACK OK</span>
+</div>
+</div>
+</div>
+<!-- 遥测基准说明卡片 -->
+<div class="p-4 rounded-xl bg-surface-container-low text-xs text-on-surface-variant space-y-2">
+<div class="flex items-center gap-2 text-on-surface font-semibold">
+<span class="material-symbols-outlined text-[16px] text-secondary">info</span>
+<span>低开销心流映射基准 (Telemetry Baseline Policy)</span>
+</div>
+<p class="leading-relaxed font-body">
+            心率带在测量模式下持续以通知流推送采样点。前端通过轻量环形缓冲区暂存最近 120 秒 RR 间期，在客户端即时完成频域 LF/HF 功率比估算，杜绝不必要的云端遥测通信，保障隐私与高离线可用性。
+          </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // 简单交互模拟与心率数据抖动效果
+  (function initBluetoothPage() {
+    const hrEl = document.getElementById('live-hr');
+    const rrEl = document.getElementById('live-rr');
+    const hexEl = document.getElementById('hr-raw-hex');
+    const rescanBtn = document.getElementById('btn-rescan');
+    const stopScanBtn = document.getElementById('btn-stopscan');
+    const scanStateLabel = document.getElementById('scan-state-label');
+    const notifyToggle = document.getElementById('notify-toggle-hr');
+    const notifyStatusText = document.getElementById('notify-status-text');
+    const dispatchBtn = document.getElementById('btn-dispatch-hex');
+    const dispatchFeedback = document.getElementById('dispatch-feedback');
+
+    let hrBase = 72;
+    let rrBase = 820;
+    let timer = null;
+
+    // 模拟实时采样波动
+    function startTelemetry() {
+      if (timer) clearInterval(timer);
+      timer = setInterval(() => {
+        if (!notifyToggle.checked) return;
+        const deltaHr = Math.floor(Math.random() * 3) - 1;
+        const currentHr = Math.min(85, Math.max(65, hrBase + deltaHr));
+        const currentRr = Math.round(60000 / currentHr);
+        
+        hrEl.textContent = currentHr;
+        rrEl.textContent = currentRr;
+        
+        const hrHex = '0x' + currentHr.toString(16).toUpperCase();
+        hexEl.textContent = `0x16 ${hrHex} 0x03 0x34`;
+      }, 1500);
+    }
+
+    startTelemetry();
+
+    // 扫描控制按钮
+    if (rescanBtn) {
+      rescanBtn.addEventListener('click', () => {
+        scanStateLabel.textContent = '正在重新广播扫描 (Active)...';
+        rescanBtn.classList.add('opacity-80');
+        setTimeout(() => {
+          scanStateLabel.textContent = '正在监听 BLE 广播';
+          rescanBtn.classList.remove('opacity-80');
+        }, 1200);
+      });
+    }
+
+    if (stopScanBtn) {
+      stopScanBtn.addEventListener('click', () => {
+        scanStateLabel.textContent = '扫描已挂起 (Idle)';
+      });
+    }
+
+    // 通知开关
+    if (notifyToggle) {
+      notifyToggle.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          notifyStatusText.textContent = '已开启';
+          notifyStatusText.className = 'text-[10px] font-mono font-bold text-secondary';
+        } else {
+          notifyStatusText.textContent = '已暂停';
+          notifyStatusText.className = 'text-[10px] font-mono font-bold text-outline';
+        }
+      });
+    }
+
+    // 十六进制写入指令
+    if (dispatchBtn && dispatchFeedback) {
+      dispatchBtn.addEventListener('click', () => {
+        const input = document.getElementById('hex-payload-input');
+        const val = input ? input.value : '0x01';
+        dispatchFeedback.innerHTML = `<span>下发成功: [${val}] · 确认回执 ACK · 延迟 12ms</span><span class="text-[10px] text-on-tertiary-container font-semibold">WRITE OK</span>`;
+      });
+    }
+  })();
+</script></main></div></body></html>

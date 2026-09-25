@@ -3,12 +3,17 @@
 项目：`Ruanchuang Design System`
 Stitch 项目 ID：`2037391297990000917`
 
-每个目录包含：
+每个屏幕目录包含：
 
-- `index.html`：Stitch 生成的页面代码
+- `index.html`：已本地化的页面代码，可直接从本地打开
+- `hosted.html`：从 Stitch hosted URL 原样下载的 HTML
+- `screen.json`：Stitch `get_screen` 返回的屏幕元数据、原始 HTML URL 和截图 URL
 - `screenshot.png`：对应页面截图
+- `asset-manifest.json`：该页面引用的远程资源与本地映射
 
-`manifest.json` 保存 13 个画板的 Stitch ID、中文标题、托管 URL 与本地文件路径。
+公共资源位于 `stitch/assets/`：包括 Google Fonts、Material Symbols 字体、Tailwind CDN 脚本和页面图片。`index.html` 已将这些引用改写为相对路径；本地页面不再依赖网络资源。
+
+`manifest.json` 保存 13 个画板的 Stitch ID、中文标题、原始托管 URL 与本地文件路径。
 
 ## 画板
 
