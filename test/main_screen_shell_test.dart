@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -145,6 +146,39 @@ void main() {
     expect(find.text('团队'), findsOneWidget);
     expect(find.text('我的'), findsOneWidget);
     tester.view.reset();
+  });
+
+  testWidgets('narrow iOS shell uses Cupertino tab navigation', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('zh'), Locale('en')],
+        theme: AppTheme.light.copyWith(platform: TargetPlatform.iOS),
+        home: const MainScreen(),
+      ),
+    );
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    expect(find.byType(CupertinoTabBar), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
+
+    await tester.tap(find.text('团队'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    expect(
+      tester.widget<CupertinoTabBar>(find.byType(CupertinoTabBar)).currentIndex,
+      3,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('secondary page keeps the mobile shell and primary navigation', (

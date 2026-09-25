@@ -1,4 +1,5 @@
 // lib/screens/main_screen.dart
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../services/app_services.dart';
@@ -204,6 +205,8 @@ class _NarrowShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -211,42 +214,75 @@ class _NarrowShell extends StatelessWidget {
         Padding(
           key: const ValueKey('shell-bottom-capsule'),
           padding: EdgeInsets.zero,
-          child: Material(
-            key: const ValueKey('shell-bottom-material'),
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.zero,
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: Theme.of(context).colorScheme.outline),
-                ),
-              ),
-              child: SafeArea(
-                top: false,
-                child: NavigationBar(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  elevation: 0,
-                  height: 68,
-                  indicatorColor: Colors.transparent,
-                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                  selectedIndex: selectedIndex,
-                  onDestinationSelected: onSelect,
-                  destinations: [
-                    for (final d in destinations)
-                      NavigationDestination(
-                        key: ValueKey('shell-nav-${d.id}'),
-                        icon: Icon(d.icon, size: 22),
-                        selectedIcon: Icon(d.selectedIcon, size: 22),
-                        label: d.label,
+          child: theme.platform == TargetPlatform.iOS
+              ? Container(
+                  key: const ValueKey('shell-bottom-cupertino'),
+                  child: CupertinoTabBar(
+                    backgroundColor: theme.colorScheme.surface,
+                    activeColor: theme.colorScheme.primary,
+                    inactiveColor: theme.colorScheme.onSurfaceVariant,
+                    border: Border(
+                      top: BorderSide(color: theme.colorScheme.outline),
+                    ),
+                    currentIndex: selectedIndex,
+                    onTap: onSelect,
+                    items: [
+                      for (final destination in destinations)
+                        BottomNavigationBarItem(
+                          icon: Icon(_cupertinoIcon(destination.id), size: 22),
+                          label: destination.label,
+                        ),
+                    ],
+                  ),
+                )
+              : Material(
+                  key: const ValueKey('shell-bottom-material'),
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.zero,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: theme.colorScheme.outline),
                       ),
-                  ],
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: NavigationBar(
+                        backgroundColor: theme.colorScheme.surface,
+                        elevation: 0,
+                        height: 68,
+                        indicatorColor: Colors.transparent,
+                        labelBehavior:
+                            NavigationDestinationLabelBehavior.alwaysShow,
+                        selectedIndex: selectedIndex,
+                        onDestinationSelected: onSelect,
+                        destinations: [
+                          for (final d in destinations)
+                            NavigationDestination(
+                              key: ValueKey('shell-nav-${d.id}'),
+                              icon: Icon(d.icon, size: 22),
+                              selectedIcon: Icon(d.selectedIcon, size: 22),
+                              label: d.label,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
         ),
       ],
     );
+  }
+
+  IconData _cupertinoIcon(String destinationId) {
+    return switch (destinationId) {
+      'focus' => CupertinoIcons.timer,
+      'schedule' => CupertinoIcons.calendar,
+      'micro' => CupertinoIcons.square_grid_2x2,
+      'team' => CupertinoIcons.person_2,
+      'profile' => CupertinoIcons.person,
+      _ => CupertinoIcons.circle,
+    };
   }
 }
 
