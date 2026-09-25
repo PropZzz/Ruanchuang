@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_blank" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Serif:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-primary-container": "#81a8a7", "on-secondary-fixed-variant": "#00468b", "on-error": "#ffffff", "on-error-container": "#93000a", "surface": "#faf8fe", "tertiary": "#00290a", "on-tertiary-container": "#1db84d", "outline-variant": "#c0c8c7", "secondary-container": "#62a1fe", "on-primary-fixed": "#002020", "inverse-primary": "#a7cecd", "tertiary-container": "#004114", "on-background": "#1a1b1f", "surface-variant": "#e3e2e7", "primary-fixed-dim": "#a7cecd", "on-primary": "#ffffff", "outline": "#717978", "error": "#ba1a1a", "on-secondary-container": "#00376f", "on-primary-fixed-variant": "#274d4d", "secondary": "#005db5", "surface-container-high": "#e9e7ed", "on-tertiary-fixed-variant": "#00531c", "surface-dim": "#dbd9df", "surface-container-lowest": "#ffffff", "inverse-on-surface": "#f1f0f6", "surface-container-highest": "#e3e2e7", "primary-container": "#163d3d", "surface-tint": "#3f6564", "surface-container": "#efedf3", "secondary-fixed": "#d6e3ff", "surface-bright": "#faf8fe", "primary": "#002727", "tertiary-fixed": "#72fe88", "surface-container-low": "#f4f3f8", "inverse-surface": "#2f3034", "on-surface": "#1a1b1f", "primary-fixed": "#c2eae9", "on-secondary": "#ffffff", "on-surface-variant": "#414848", "on-tertiary-fixed": "#002107", "tertiary-fixed-dim": "#53e16f", "error-container": "#ffdad6", "on-secondary-fixed": "#001b3d", "secondary-fixed-dim": "#a8c8ff", "on-tertiary": "#ffffff", "background": "#faf8fe" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: {}, fontFamily: { "headline": ["Noto Serif"], "display": ["Noto Serif"], "body": ["Inter"], "label": ["Inter"] }, fontSize: {} } } };</script><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-[rgba(24,50,56,0.45)] backdrop-blur-md font-body text-on-surface min-h-screen flex flex-col justify-end"><div class="fixed inset-0 -z-10" onclick="if(window.history.length &gt; 1){history.back();}"></div><section class="w-full max-w-[420px] mx-auto bg-surface rounded-t-3xl shadow-[0_-8px_32px_rgba(22,61,61,0.18)] flex flex-col max-h-[813px] overflow-hidden"><div class="w-full pt-3 pb-1 flex justify-center items-center cursor-grab active:cursor-grabbing"><div class="w-12 h-1.5 rounded-full bg-outline-variant/60"></div></div><div class="h-14 px-5 flex items-center justify-between shrink-0"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-on-tertiary-container"></span><h2 class="text-base font-headline font-bold text-on-surface tracking-tight leading-none">Quick Reschedule Drawer</h2></div><button aria-label="关闭抽屉" class="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container active:scale-95 transition-all" onclick="history.back()"><span class="material-symbols-outlined text-[20px]">close</span></button></div><main class="flex-1 overflow-y-auto px-5 pt-1 pb-safe bg-surface"><div class="flex flex-col w-full pb-8">
+<div class="flex flex-col gap-4">
+<!-- Schedule Title Input -->
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-medium text-on-surface-variant tracking-wider flex items-center justify-between">
+<span>日程主题</span>
+<span class="text-[11px] text-outline font-normal">必填项</span>
+</label>
+<div class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-1 shadow-sm">
+<textarea class="w-full bg-transparent text-sm font-semibold text-on-surface placeholder:text-outline focus:outline-none resize-none leading-relaxed" placeholder="输入日程名称..." rows="2">前端组件系统无障碍交互走查与键盘焦点陷阱防护</textarea>
+<div class="flex items-center justify-between pt-1">
+<span class="inline-flex items-center gap-1 text-[11px] text-primary font-medium bg-primary-fixed/50 px-2 py-0.5 rounded-full">
+<span class="material-symbols-outlined text-[13px]">auto_awesome</span>
+<span>已由智能语义提炼</span>
+</span>
+<span class="text-[11px] font-mono text-outline">24/60</span>
+</div>
+</div>
+</div>
+<!-- Category Tag Carousel -->
+<div class="flex flex-col gap-2">
+<label class="text-xs font-medium text-on-surface-variant tracking-wider">日程属性标签</label>
+<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5" id="tagGroup">
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all flex items-center gap-1.5" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+<span>方案评审</span>
+</button>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary-container text-on-secondary-container transition-all flex items-center gap-1.5 shadow-sm active-tag" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<span>跨部门协同</span>
+</button>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all flex items-center gap-1.5" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+<span>架构编码</span>
+</button>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all flex items-center gap-1.5" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+<span>随笔调研</span>
+</button>
+</div>
+</div>
+<!-- Temporal Slot & Duration -->
+<div class="bg-surface-container-low rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
+<span class="text-sm font-semibold text-on-surface tracking-tight">2026年9月25日 周五</span>
+</div>
+<span class="text-[11px] font-semibold text-primary bg-primary-fixed px-2.5 py-0.5 rounded-full">第39周</span>
+</div>
+<div class="grid grid-cols-2 gap-2.5 pt-1">
+<div class="bg-surface-container-lowest rounded-xl p-3 flex flex-col gap-1 shadow-sm">
+<span class="text-[11px] font-medium text-outline">开始时刻</span>
+<div class="flex items-baseline gap-1">
+<span class="text-xl font-headline font-bold text-on-surface tracking-tight tabular-nums">13:30</span>
+<span class="text-[11px] font-medium text-on-surface-variant">下午</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-3 flex flex-col gap-1 shadow-sm">
+<span class="text-[11px] font-medium text-outline">结束时刻</span>
+<div class="flex items-baseline gap-1">
+<span class="text-xl font-headline font-bold text-on-surface tracking-tight tabular-nums">15:00</span>
+<span class="text-[11px] font-medium text-on-surface-variant">下午</span>
+</div>
+</div>
+</div>
+<!-- Duration Micro Strip -->
+<div class="bg-surface-container rounded-xl p-2.5 flex items-center justify-between text-xs">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant">timelapse</span>
+<span class="text-on-surface-variant font-medium">总预估时长</span>
+</div>
+<div class="flex items-center gap-1.5 font-mono">
+<span class="font-bold text-primary tabular-nums">90</span>
+<span class="text-[11px] text-outline">分钟 (1.5h)</span>
+</div>
+</div>
+</div>
+<!-- Cognitive Load & Scheduling Constraints -->
+<div class="bg-surface-container-low rounded-2xl p-4 flex flex-col gap-4 shadow-sm">
+<!-- Cognitive Load Gauge -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px] text-primary">psychology</span>
+<span class="text-xs font-semibold text-on-surface">认知负荷评估</span>
+</div>
+<span class="text-xs font-bold text-on-surface tabular-nums">中等 (3/5)</span>
+</div>
+<!-- Multi-segment visual bar -->
+<div class="flex items-center gap-1.5 w-full">
+<div class="h-2 flex-1 rounded-full bg-on-tertiary-container"></div>
+<div class="h-2 flex-1 rounded-full bg-on-tertiary-container"></div>
+<div class="h-2 flex-1 rounded-full bg-secondary-container"></div>
+<div class="h-2 flex-1 rounded-full bg-surface-container-highest"></div>
+<div class="h-2 flex-1 rounded-full bg-surface-container-highest"></div>
+</div>
+<p class="text-[11px] text-on-surface-variant">常态脑力消耗 · 适宜进行多方方案校准与系统边界验证</p>
+</div>
+<!-- Toggles -->
+<div class="flex flex-col gap-3 pt-2">
+<!-- Toggle 1: Elastic Reschedule -->
+<div class="flex items-center justify-between gap-3">
+<div class="flex flex-col min-w-0">
+<span class="text-xs font-semibold text-on-surface truncate">排期灵活性微调</span>
+<span class="text-[11px] text-outline">允许算法在冲突时前后弹性微调 (±15m)</span>
+</div>
+<button aria-checked="true" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full bg-primary-container p-0.5 transition-colors duration-200 ease-in-out" onclick="toggleSwitch(this)" role="switch" type="button">
+<span class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-surface-container-lowest shadow-md transition duration-200 ease-in-out"></span>
+</button>
+</div>
+<!-- Toggle 2: Hard Constraint Lock -->
+<div class="flex items-center justify-between gap-3">
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="text-xs font-semibold text-on-surface truncate">硬约束防挤压锁定</span>
+<span class="material-symbols-outlined text-[14px] text-outline">lock</span>
+</div>
+<span class="text-[11px] text-outline">不可被后续紧急任务或突发会议静默挤占</span>
+</div>
+<button aria-checked="false" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full bg-surface-container-highest p-0.5 transition-colors duration-200 ease-in-out" onclick="toggleSwitch(this)" role="switch" type="button">
+<span class="translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-surface-container-lowest shadow-md transition duration-200 ease-in-out"></span>
+</button>
+</div>
+</div>
+</div>
+<!-- Alert & Repeat Parameters -->
+<div class="bg-surface-container-low rounded-2xl p-4 flex flex-col gap-3.5 shadow-sm">
+<!-- Reminder Segment -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline">notifications_active</span>
+<span class="text-xs font-semibold text-on-surface">提前提醒</span>
+</div>
+<div class="grid grid-cols-3 gap-2" id="reminderGroup">
+<button class="py-2 px-1 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'reminderGroup')" type="button">
+            提前 10 分钟
+          </button>
+<button class="py-2 px-1 text-center rounded-xl bg-primary text-on-primary text-xs font-semibold shadow-sm transition-all active-radio" onclick="selectRadio(this, 'reminderGroup')" type="button">
+            提前 30 分钟
+          </button>
+<button class="py-2 px-1 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'reminderGroup')" type="button">
+            不提醒
+          </button>
+</div>
+</div>
+<!-- Recurrence Segment -->
+<div class="flex flex-col gap-2 pt-1">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-outline">autorenew</span>
+<span class="text-xs font-semibold text-on-surface">重复周期</span>
+</div>
+<div class="grid grid-cols-4 gap-1.5" id="repeatGroup">
+<button class="py-2 text-center rounded-xl bg-primary text-on-primary text-xs font-semibold shadow-sm transition-all active-radio" onclick="selectRadio(this, 'repeatGroup')" type="button">
+            不重复
+          </button>
+<button class="py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'repeatGroup')" type="button">
+            每天
+          </button>
+<button class="py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'repeatGroup')" type="button">
+            每周
+          </button>
+<button class="py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'repeatGroup')" type="button">
+            每月
+          </button>
+</div>
+</div>
+</div>
+<!-- Algorithmic Spatiotemporal Alignment Card -->
+<div class="bg-primary-fixed/40 rounded-2xl p-3.5 flex items-start gap-3 shadow-sm">
+<div class="w-8 h-8 rounded-full bg-on-tertiary-container/15 flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[18px] text-on-tertiary-container">verified</span>
+</div>
+<div class="flex flex-col gap-1 min-w-0">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-primary">算法时空适配检查通过</span>
+<span class="text-[10px] font-semibold text-on-tertiary-container bg-surface-container-lowest px-1.5 py-0.5 rounded-full">零冲突</span>
+</div>
+<p class="text-[12px] text-on-primary-fixed-variant leading-relaxed">
+          当前时段处于午后轻度低谷，与当前任务认知负荷相符，未与团队黄金协作窗口冲突。
+        </p>
+</div>
+</div>
+<!-- Bottom Actions -->
+<div class="flex flex-col gap-2 pt-2">
+<button class="w-full h-12 bg-primary text-on-primary font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform" onclick="handleSubmit()" type="button">
+<span class="material-symbols-outlined text-[18px]">event_available</span>
+<span>保存并写入日程</span>
+</button>
+<button class="w-full h-10 text-on-surface-variant text-xs font-semibold rounded-xl flex items-center justify-center hover:bg-surface-container transition-colors" onclick="if(window.history.length &gt; 1){history.back();}" type="button">
+        取消
+      </button>
+</div>
+</div>
+</div>
+<script>
+  function toggleSwitch(btn) {
+    const isChecked = btn.getAttribute('aria-checked') === 'true';
+    const thumb = btn.firstElementChild;
+    if (isChecked) {
+      btn.setAttribute('aria-checked', 'false');
+      btn.classList.remove('bg-primary-container');
+      btn.classList.add('bg-surface-container-highest');
+      thumb.classList.remove('translate-x-5');
+      thumb.classList.add('translate-x-0');
+    } else {
+      btn.setAttribute('aria-checked', 'true');
+      btn.classList.remove('bg-surface-container-highest');
+      btn.classList.add('bg-primary-container');
+      thumb.classList.remove('translate-x-0');
+      thumb.classList.add('translate-x-5');
+    }
+  }
+
+  function selectTag(selectedBtn) {
+    const container = document.getElementById('tagGroup');
+    const buttons = container.querySelectorAll('.tag-pill');
+    buttons.forEach(btn => {
+      btn.classList.remove('bg-secondary-container', 'text-on-secondary-container', 'shadow-sm', 'font-semibold');
+      btn.classList.add('bg-surface-container', 'text-on-surface-variant', 'font-medium');
+      const dot = btn.querySelector('span');
+      if (dot) {
+        dot.classList.remove('bg-secondary');
+        dot.classList.add('bg-outline');
+      }
+    });
+
+    selectedBtn.classList.remove('bg-surface-container', 'text-on-surface-variant', 'font-medium');
+    selectedBtn.classList.add('bg-secondary-container', 'text-on-secondary-container', 'shadow-sm', 'font-semibold');
+    const dot = selectedBtn.querySelector('span');
+    if (dot) {
+      dot.classList.remove('bg-outline');
+      dot.classList.add('bg-secondary');
+    }
+  }
+
+  function selectRadio(selectedBtn, groupName) {
+    const group = document.getElementById(groupName);
+    const buttons = group.querySelectorAll('button');
+    buttons.forEach(btn => {
+      btn.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm', 'font-semibold');
+      btn.classList.add('bg-surface-container', 'text-on-surface-variant', 'font-medium');
+    });
+
+    selectedBtn.classList.remove('bg-surface-container', 'text-on-surface-variant', 'font-medium');
+    selectedBtn.classList.add('bg-primary', 'text-on-primary', 'shadow-sm', 'font-semibold');
+  }
+
+  function handleSubmit() {
+    const mainBtn = event.currentTarget;
+    mainBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span><span>写入排期池...</span>';
+    setTimeout(() => {
+      mainBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span><span>已排入 9月25日 13:30</span>';
+      mainBtn.classList.remove('bg-primary');
+      mainBtn.classList.add('bg-primary-container');
+      setTimeout(() => {
+        if(window.history.length > 1) {
+          history.back();
+        }
+      }, 700);
+    }, 600);
+  }
+</script></main></section></body></html>
