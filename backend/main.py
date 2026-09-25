@@ -16,6 +16,7 @@ from .routers_rescue import router as rescue_router
 from .routers_reserved import router as reserved_router
 from .routers_review import router as review_router
 from .routers_schedule import router as schedule_router
+from .routers_settings import router as settings_router
 from .routers_team import router as team_router
 from .routers_sync import router as sync_router
 
@@ -49,6 +50,7 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
     app.include_router(platform_router)
     app.include_router(events_router)
     app.include_router(schedule_router)
+    app.include_router(settings_router)
     app.include_router(rescue_router)
     app.include_router(microtasks_router)
     app.include_router(review_router)

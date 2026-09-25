@@ -221,11 +221,27 @@ def init_db(db_path: str | Path | None = None, connection: sqlite3.Connection | 
             CREATE TABLE IF NOT EXISTS settings (
                 user_id TEXT PRIMARY KEY,
                 scheduling_tuning_json TEXT NOT NULL,
+                theme_mode TEXT NOT NULL DEFAULT 'system',
+                locale TEXT NOT NULL DEFAULT 'zh_CN',
+                favorite_device_id TEXT,
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             )
             """
         )
+        # Keep databases created by older releases readable after the settings
+        # contract gained per-user theme and locale fields.
+        columns = {
+            row["name"]
+            for row in connection.execute("PRAGMA table_info(settings)").fetchall()
+        }
+        for name, definition in (
+            ("theme_mode", "TEXT NOT NULL DEFAULT 'system'"),
+            ("locale", "TEXT NOT NULL DEFAULT 'zh_CN'"),
+            ("favorite_device_id", "TEXT"),
+        ):
+            if name not in columns:
+                connection.execute(f"ALTER TABLE settings ADD COLUMN {name} {definition}")
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS emotion_checkins (
@@ -1297,6 +1313,52 @@ def set_scheduling_tuning(
         )
         connection.commit()
     return normalized
+
+
+def get_user_settings(db_path: str | Path | None, user_id: str) -> dict[str, object]:
+    with _connect(db_path) as connection:
+        row = connection.execute(
+            "SELECT theme_mode, locale, favorite_device_id FROM settings WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        if row is None:
+            return {"themeMode": "system", "locale": "zh_CN", "favoriteDeviceId": None}
+        return {
+            "themeMode": row["theme_mode"] or "system",
+            "locale": row["locale"] or "zh_CN",
+            "favoriteDeviceId": row["favorite_device_id"],
+        }
+
+
+def update_user_settings(
+    db_path: str | Path | None,
+    user_id: str,
+    values: dict[str, object],
+) -> dict[str, object]:
+    current = get_user_settings(db_path, user_id)
+    theme_mode = str(values.get("themeMode", current["themeMode"]) or "system")
+    locale = str(values.get("locale", current["locale"]) or "zh_CN")
+    favorite = values.get("favoriteDeviceId", current["favoriteDeviceId"])
+    if theme_mode not in {"system", "light", "dark"}:
+        raise RepositoryValidationError("themeMode must be system, light, or dark")
+    if locale not in {"zh_CN", "en_US"}:
+        raise RepositoryValidationError("locale must be zh_CN or en_US")
+    now = _now()
+    with _connect(db_path) as connection:
+        connection.execute(
+            """
+            INSERT INTO settings (user_id, scheduling_tuning_json, theme_mode, locale, favorite_device_id, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                theme_mode = excluded.theme_mode,
+                locale = excluded.locale,
+                favorite_device_id = excluded.favorite_device_id,
+                updated_at = excluded.updated_at
+            """,
+            (user_id, json.dumps(default_scheduling_tuning()), theme_mode, locale, favorite, now),
+        )
+        connection.commit()
+    return {"themeMode": theme_mode, "locale": locale, "favoriteDeviceId": favorite}
 
 
 def _iso_day(value: object | None) -> str:

@@ -80,3 +80,29 @@ def test_diagnostics_counts_only_the_authenticated_user(tmp_path):
         assert response.status_code == 200, response.text
         assert response.json()["counts"]["schedules"] == 0
         assert response.json()["database"] == "sqlite"
+
+
+def test_settings_are_persisted_and_isolated_per_user(tmp_path):
+    reset_token_store()
+    with TestClient(create_app(tmp_path / "settings.sqlite3")) as client:
+        first = _register(client, "settings-first@example.com")
+        second = _register(client, "settings-second@example.com")
+
+        updated = client.put(
+            "/settings",
+            headers=first,
+            json={"themeMode": "dark", "locale": "en_US"},
+        )
+        assert updated.status_code == 200, updated.text
+        assert updated.json()["themeMode"] == "dark"
+        assert updated.json()["locale"] == "en_US"
+
+        first_read = client.get("/settings", headers=first)
+        second_read = client.get("/settings", headers=second)
+        assert first_read.json()["themeMode"] == "dark"
+        assert first_read.json()["locale"] == "en_US"
+        assert second_read.json()["themeMode"] == "system"
+        assert second_read.json()["locale"] == "zh_CN"
+
+        invalid = client.put("/settings", headers=first, json={"themeMode": "neon"})
+        assert invalid.status_code == 422

@@ -21,6 +21,23 @@ void main() {
   );
 
   test(
+    'remote reads are the default and do not use stale local values',
+    () async {
+      final local = _ThemeModeDataService(themeMode: 'dark');
+      final remote = _ThemeModeDataService(themeMode: 'light');
+
+      final result = await CompositeDataService(
+        local: local,
+        remote: remote,
+      ).getThemeMode();
+
+      expect(result, 'light');
+      expect(remote.getThemeModeCalls, 1);
+      expect(local.getThemeModeCalls, 0);
+    },
+  );
+
+  test(
     'getThemeMode falls back locally for an unimplemented remote endpoint',
     () async {
       final local = _ThemeModeDataService(themeMode: 'dark');
@@ -39,6 +56,36 @@ void main() {
       expect(local.getThemeModeCalls, 1);
     },
   );
+
+  test('guest session keeps reads and writes in local storage', () async {
+    final local = _ThemeModeDataService(themeMode: 'dark');
+    final remote = _ThemeModeDataService(
+      getThemeModeError: ApiException('Unauthorized', statusCode: 401),
+      setThemeModeError: ApiException('Unauthorized', statusCode: 401),
+    );
+    final service = composite(local: local, remote: remote);
+
+    await service.startGuestSession();
+    expect(await service.getThemeMode(), 'dark');
+    await service.setThemeMode('light');
+
+    expect(local.getThemeModeCalls, 1);
+    expect(local.setThemeModeCalls, 1);
+    expect(remote.getThemeModeCalls, 0);
+    expect(remote.setThemeModeCalls, 0);
+  });
+
+  test('successful login exits guest-only storage mode', () async {
+    final local = _ThemeModeDataService(themeMode: 'dark');
+    final remote = _ThemeModeDataService(themeMode: 'light', loginResult: true);
+    final service = composite(local: local, remote: remote);
+
+    await service.startGuestSession();
+    expect(await service.login('alice@example.com', 'secret'), isTrue);
+
+    expect(await service.getThemeMode(), 'light');
+    expect(remote.getThemeModeCalls, 1);
+  });
 
   test('getThemeMode rethrows a remote 401 without calling local', () async {
     final error = ApiException('Unauthorized', statusCode: 401);
@@ -239,35 +286,23 @@ void main() {
     },
   );
 
-  test(
-    'an unsupported real remote endpoint is unavailable and falls back locally',
-    () async {
-      final remote = RemoteDataService(
-        apiClient: ApiClient(
-          baseUrl: 'https://example.test',
-          httpClient: MockClient((_) async {
-            throw StateError(
-              'Unsupported endpoint must not make an HTTP call.',
-            );
-          }),
-        ),
-      );
-      final local = _ThemeModeDataService(themeMode: 'dark');
+  test('a failing real remote settings endpoint falls back locally', () async {
+    final remote = RemoteDataService(
+      apiClient: ApiClient(
+        baseUrl: 'https://example.test',
+        httpClient: MockClient((request) async {
+          expect(request.url.path, '/settings');
+          return http.Response('server error', 503);
+        }),
+      ),
+    );
+    final local = _ThemeModeDataService(themeMode: 'dark');
 
-      await expectLater(
-        remote.getThemeMode(),
-        throwsA(isA<RemoteUnavailableException>()),
-      );
+    final result = await composite(local: local, remote: remote).getThemeMode();
 
-      final result = await composite(
-        local: local,
-        remote: remote,
-      ).getThemeMode();
-
-      expect(result, 'dark');
-      expect(local.getThemeModeCalls, 1);
-    },
-  );
+    expect(result, 'dark');
+    expect(local.getThemeModeCalls, 1);
+  });
 
   test(
     'a malformed real auth response rethrows without calling local',

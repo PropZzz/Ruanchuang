@@ -7,6 +7,9 @@ import '../models/models.dart';
 /// - Swappable implementations (local/remote/mock)
 /// - Stable contract for UI (screens)
 abstract class DataService {
+  /// Mark the current app session as unauthenticated.
+  Future<void> startGuestSession();
+
   Future<EmotionType> getCurrentEmotion();
   Future<EnergyStatus> getEnergyStatus();
   Future<EmotionState> getEmotionState();

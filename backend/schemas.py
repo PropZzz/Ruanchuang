@@ -78,6 +78,18 @@ class DiagnosticsOut(APIModel):
     database: str
 
 
+class UserSettingsOut(APIModel):
+    theme_mode: str = Field(default="system", alias="themeMode")
+    locale: str = "zh_CN"
+    favorite_device_id: str | None = Field(default=None, alias="favoriteDeviceId")
+
+
+class UserSettingsUpdate(APIModel):
+    theme_mode: str | None = Field(default=None, alias="themeMode")
+    locale: str | None = None
+    favorite_device_id: str | None = Field(default=None, alias="favoriteDeviceId")
+
+
 class ScheduleEntryIn(APIModel):
     id: str | None = None
     day: date | None = None

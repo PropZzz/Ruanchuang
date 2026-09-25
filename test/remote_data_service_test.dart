@@ -10,6 +10,34 @@ import 'package:shixuzhipei/services/api_client.dart';
 import 'package:shixuzhipei/services/remote_data_service.dart';
 
 void main() {
+  test('RemoteDataService reads and writes per-user settings', () async {
+    final requests = <String>[];
+    final client = MockClient((request) async {
+      requests.add('${request.method} ${request.url.path}');
+      if (request.method == 'GET') {
+        return http.Response(
+          jsonEncode({'themeMode': 'dark', 'locale': 'en_US'}),
+          200,
+        );
+      }
+      expect(request.method, 'PUT');
+      expect(request.url.path, '/settings');
+      expect(jsonDecode(request.body), {'locale': 'zh_CN'});
+      return http.Response(
+        jsonEncode({'themeMode': 'dark', 'locale': 'zh_CN'}),
+        200,
+      );
+    });
+    final service = RemoteDataService(
+      apiClient: ApiClient(httpClient: client, baseUrl: 'http://server.test'),
+    );
+
+    expect(await service.getThemeMode(), 'dark');
+    expect(await service.getLocale(), 'en_US');
+    await service.setLocale('zh_CN');
+    expect(requests, ['GET /settings', 'GET /settings', 'PUT /settings']);
+  });
+
   test('RemoteDataService logs out through the server before clearing token', () async {
     var logoutCalled = false;
     final client = MockClient((request) async {

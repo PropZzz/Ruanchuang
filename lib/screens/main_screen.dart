@@ -142,43 +142,73 @@ class _MainScreenState extends State<MainScreen> {
         ? widget.secondaryPage!
         : IndexedStack(index: _selectedIndex, children: _pages);
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: AnimatedSwitcher(
-          duration: AppMotion.resolve(context, AppMotion.enter),
-          reverseDuration: AppMotion.resolve(context, AppMotion.exit),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          child: isWide
-              ? _WideShell(
-                  key: const ValueKey('wide-shell'),
-                  title: AppStrings.of(context, 'app_title'),
-                  selectedIndex: _selectedIndex,
-                  destinations: destinations,
-                  onSelect: _onSelect,
-                  compact: !isDesktop,
-                  railExpanded: isDesktop && _railExpanded,
-                  onToggleRail: () {
-                    setState(() {
-                      _railExpanded = !_railExpanded;
-                    });
-                  },
-                  child: pageStack,
-                )
-              : _NarrowShell(
-                  key: const ValueKey('narrow-shell'),
-                  title: AppStrings.of(context, 'app_title'),
-                  selectedIndex: _selectedIndex,
-                  destinations: destinations,
-                  onSelect: _onSelect,
-                  child: pageStack,
-                ),
+    final canPopRoute = Navigator.of(context).canPop();
+    return PopScope<void>(
+      canPop: !_showSecondaryPage || canPopRoute,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _showSecondaryPage) {
+          setState(() => _showSecondaryPage = false);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: AnimatedSwitcher(
+            duration: AppMotion.resolve(context, AppMotion.enter),
+            reverseDuration: AppMotion.resolve(context, AppMotion.exit),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: isWide
+                ? _WideShell(
+                    key: const ValueKey('wide-shell'),
+                    title: AppStrings.of(context, 'app_title'),
+                    selectedIndex: _selectedIndex,
+                    destinations: destinations,
+                    onSelect: _onSelect,
+                    onBack: _exitSecondary,
+                    showBack: _showSecondaryPage,
+                    onNotify: _showNotifications,
+                    compact: !isDesktop,
+                    railExpanded: isDesktop && _railExpanded,
+                    onToggleRail: () {
+                      setState(() {
+                        _railExpanded = !_railExpanded;
+                      });
+                    },
+                    child: pageStack,
+                  )
+                : _NarrowShell(
+                    key: const ValueKey('narrow-shell'),
+                    title: AppStrings.of(context, 'app_title'),
+                    selectedIndex: _selectedIndex,
+                    destinations: destinations,
+                    onSelect: _onSelect,
+                    onBack: _exitSecondary,
+                    showBack: _showSecondaryPage,
+                    onNotify: _showNotifications,
+                    child: pageStack,
+                  ),
+          ),
         ),
       ),
     );
+  }
+
+  void _exitSecondary() {
+    if (!_showSecondaryPage) return;
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() => _showSecondaryPage = false);
+  }
+
+  void _showNotifications() {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('通知与提醒暂未接入，当前不会发送提醒。')));
   }
 
   void _onSelect(int index) {
@@ -197,6 +227,9 @@ class _NarrowShell extends StatelessWidget {
     required this.selectedIndex,
     required this.destinations,
     required this.onSelect,
+    required this.onBack,
+    required this.showBack,
+    required this.onNotify,
     required this.child,
   });
 
@@ -204,6 +237,9 @@ class _NarrowShell extends StatelessWidget {
   final int selectedIndex;
   final List<_ShellDestination> destinations;
   final ValueChanged<int> onSelect;
+  final VoidCallback onBack;
+  final bool showBack;
+  final VoidCallback onNotify;
   final Widget child;
 
   @override
@@ -220,12 +256,10 @@ class _NarrowShell extends StatelessWidget {
       },
       selectedIndex: selectedIndex,
       onSelect: onSelect,
-      onNotify: () {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('通知与提醒待接入')));
-      },
+      onNotify: onNotify,
       onProfile: () => onSelect(destinations.length - 1),
+      showBack: showBack,
+      onBack: onBack,
       child: ClipRRect(child: child),
     );
   }
@@ -238,6 +272,9 @@ class _WideShell extends StatelessWidget {
     required this.selectedIndex,
     required this.destinations,
     required this.onSelect,
+    required this.onBack,
+    required this.showBack,
+    required this.onNotify,
     required this.railExpanded,
     required this.onToggleRail,
     required this.child,
@@ -248,6 +285,9 @@ class _WideShell extends StatelessWidget {
   final int selectedIndex;
   final List<_ShellDestination> destinations;
   final ValueChanged<int> onSelect;
+  final VoidCallback onBack;
+  final bool showBack;
+  final VoidCallback onNotify;
   final bool railExpanded;
   final VoidCallback onToggleRail;
   final Widget child;
@@ -291,6 +331,13 @@ class _WideShell extends StatelessWidget {
                           ? MainAxisAlignment.start
                           : MainAxisAlignment.center,
                       children: [
+                        if (showBack)
+                          IconButton(
+                            key: const ValueKey('shell-secondary-back'),
+                            tooltip: '返回',
+                            onPressed: onBack,
+                            icon: const Icon(Icons.arrow_back_rounded),
+                          ),
                         Image.asset(
                           'stitch/assets/images/a2aaefce0709.png',
                           width: 28,
@@ -444,7 +491,7 @@ class _WideShell extends StatelessWidget {
                               'nav_notifications_reserved',
                             ),
                             color: scheme.onSurfaceVariant,
-                            onPressed: null,
+                            onPressed: onNotify,
                           ),
                           IconButton(
                             icon: const Icon(Icons.settings_outlined, size: 20),

@@ -12,6 +12,11 @@ class MockDataService implements DataService {
   MockDataService._internal();
 
   @override
+  Future<void> startGuestSession() async {
+    _currentUser = null;
+  }
+
+  @override
   Future<EmotionType> getCurrentEmotion() async {
     // Mock data remains deterministic enough for tests.
     final rand = DateTime.now().millisecond % 4;

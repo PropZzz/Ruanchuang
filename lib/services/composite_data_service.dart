@@ -11,7 +11,7 @@ import 'remote_data_service.dart';
 /// Composite remote service with a local cache and offline fallback.
 ///
 /// Policy:
-/// - Reads prefer local unless [preferRemoteReads] is enabled.
+/// - Reads prefer the remote source unless it is unavailable.
 /// - Writes commit remotely first; local cache synchronization after a remote
 ///   commit is best effort and must not invite a duplicate remote write.
 /// - A local write is the fallback only when the remote is unavailable.
@@ -21,12 +21,29 @@ class CompositeDataService implements DataService {
 
   /// If true, reads attempt remote first, then local fallback.
   bool preferRemoteReads;
+  bool _guestOnly = false;
 
   CompositeDataService({
     required this.local,
     required this.remote,
-    this.preferRemoteReads = false,
+    this.preferRemoteReads = true,
   });
+
+  /// Keep unauthenticated sessions on their isolated local cache.
+  @override
+  Future<void> startGuestSession() async {
+    _guestOnly = true;
+    try {
+      await local.startGuestSession();
+    } catch (_) {
+      // Cache implementations may not need session reset support.
+    }
+    try {
+      await remote.startGuestSession();
+    } catch (_) {
+      // Remote session reset is best effort before the first sign-in.
+    }
+  }
 
   bool _isRemoteFallbackError(Object error) {
     if (error is RemoteUnavailableException ||
@@ -42,6 +59,7 @@ class CompositeDataService implements DataService {
   }
 
   Future<T> _read<T>(Future<T> Function(DataService s) fn) async {
+    if (_guestOnly) return fn(local);
     if (preferRemoteReads) {
       try {
         return await fn(remote);
@@ -63,6 +81,10 @@ class CompositeDataService implements DataService {
   }
 
   Future<void> _writeVoid(Future<void> Function(DataService s) fn) async {
+    if (_guestOnly) {
+      await fn(local);
+      return;
+    }
     var remoteSucceeded = false;
     try {
       await fn(remote);
@@ -75,25 +97,6 @@ class CompositeDataService implements DataService {
       await fn(local);
     } catch (_) {
       if (!remoteSucceeded) rethrow;
-    }
-  }
-
-  Future<T> _writeValue<T>(Future<T> Function(DataService s) fn) async {
-    T? remoteResult;
-    var remoteSucceeded = false;
-    try {
-      remoteResult = await fn(remote);
-      remoteSucceeded = true;
-    } catch (error) {
-      if (!_isRemoteFallbackError(error)) rethrow;
-    }
-
-    try {
-      final localResult = await fn(local);
-      return remoteSucceeded ? remoteResult as T : localResult;
-    } catch (_) {
-      if (!remoteSucceeded) rethrow;
-      return remoteResult as T;
     }
   }
 
@@ -237,17 +240,60 @@ class CompositeDataService implements DataService {
   Future<UserAccount?> getCurrentUser() => _read((s) => s.getCurrentUser());
 
   @override
-  Future<bool> login(String account, String password) =>
-      _writeValue((s) => s.login(account, password));
+  Future<bool> login(String account, String password) async {
+    bool result;
+    try {
+      result = await remote.login(account, password);
+    } catch (error) {
+      if (!_isRemoteFallbackError(error)) rethrow;
+      return local.login(account, password);
+    }
+    _guestOnly = false;
+    try {
+      await local.login(account, password);
+    } catch (_) {
+      // Local cache synchronization is best effort after remote auth.
+    }
+    return result;
+  }
 
   @override
   Future<bool> registerAccount({
     required String username,
     required String password,
-  }) => _writeValue(
-    (s) => s.registerAccount(username: username, password: password),
-  );
+  }) async {
+    bool result;
+    try {
+      result = await remote.registerAccount(
+        username: username,
+        password: password,
+      );
+    } catch (error) {
+      if (!_isRemoteFallbackError(error)) rethrow;
+      return local.registerAccount(username: username, password: password);
+    }
+    _guestOnly = false;
+    try {
+      await local.registerAccount(username: username, password: password);
+    } catch (_) {
+      // Local cache synchronization is best effort after remote auth.
+    }
+    return result;
+  }
 
   @override
-  Future<void> logout() => _writeVoid((s) => s.logout());
+  Future<void> logout() async {
+    if (!_guestOnly) {
+      try {
+        await remote.logout();
+      } catch (error) {
+        if (!_isRemoteFallbackError(error)) rethrow;
+      }
+    }
+    try {
+      await local.logout();
+    } finally {
+      _guestOnly = true;
+    }
+  }
 }

@@ -53,6 +53,9 @@ class _FatigueDataService implements DataService {
   final Map<String, TaskEvent> _taskEvents = {};
 
   @override
+  Future<void> startGuestSession() => _inner.startGuestSession();
+
+  @override
   Future<EmotionType> getCurrentEmotion() async => EmotionType.fatigue;
 
   @override

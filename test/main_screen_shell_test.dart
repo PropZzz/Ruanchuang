@@ -260,6 +260,45 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('secondary page exposes a back action and exits from the shell', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('zh'), Locale('en')],
+        theme: AppTheme.light,
+        home: const MainScreen(
+          secondaryPage: Text('Secondary page'),
+          secondaryTabIndex: 1,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('stitch-mobile-header-back')),
+      findsOneWidget,
+    );
+    await tester.tap(find.byKey(const ValueKey('stitch-mobile-header-back')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Secondary page'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('stitch-schedule-mobile')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('tablet shell uses a compact navigation rail', (tester) async {
     await pumpShell(tester, const Size(768, 900));
 

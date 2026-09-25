@@ -72,6 +72,12 @@ class LocalDataService implements DataService {
 
   SchedulingTuning _tuning = const SchedulingTuning();
 
+  @override
+  Future<void> startGuestSession() async {
+    await _ensureLoaded();
+    _currentUser = null;
+  }
+
   String _newId(String prefix) {
     final ts = DateTime.now().microsecondsSinceEpoch;
     return '$prefix$ts';

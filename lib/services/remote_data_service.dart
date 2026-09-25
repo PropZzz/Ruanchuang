@@ -23,6 +23,12 @@ class RemoteDataService implements DataService {
   final ApiClient _api;
   UserAccount? _currentUser;
 
+  @override
+  Future<void> startGuestSession() async {
+    _api.setToken(null);
+    _currentUser = null;
+  }
+
   Never _unavailable(String method) {
     throw RemoteUnavailableException(
       '$method is not available from remote service yet.',
@@ -260,10 +266,7 @@ class RemoteDataService implements DataService {
   }
 
   @override
-  Future<void> bookTeamMeeting(
-    DateTime day,
-    TeamMeetingRequest request,
-  ) async {
+  Future<void> bookTeamMeeting(DateTime day, TeamMeetingRequest request) async {
     await _api.post('/team/book-meeting', {
       'day': _dateOnly(day),
       'title': request.title,
@@ -278,18 +281,31 @@ class RemoteDataService implements DataService {
     await _api.put('/review/tuning', tuning.toJson());
   }
 
-  @override
-  Future<String> getThemeMode() async => _unavailable('getThemeMode');
+  Future<Map<String, Object?>> _getSettings() async {
+    return _map(await _api.get('/settings'));
+  }
 
   @override
-  Future<void> setThemeMode(String themeMode) async =>
-      _unavailable('setThemeMode');
+  Future<String> getThemeMode() async {
+    final settings = await _getSettings();
+    return settings['themeMode'] as String? ?? 'system';
+  }
 
   @override
-  Future<String> getLocale() async => _unavailable('getLocale');
+  Future<void> setThemeMode(String themeMode) async {
+    await _api.put('/settings', {'themeMode': themeMode});
+  }
 
   @override
-  Future<void> setLocale(String locale) async => _unavailable('setLocale');
+  Future<String> getLocale() async {
+    final settings = await _getSettings();
+    return settings['locale'] as String? ?? 'zh_CN';
+  }
+
+  @override
+  Future<void> setLocale(String locale) async {
+    await _api.put('/settings', {'locale': locale});
+  }
 
   @override
   Future<UserAccount?> getCurrentUser() async {

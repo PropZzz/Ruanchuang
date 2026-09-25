@@ -36,6 +36,20 @@
     diagnostics: 'diagnostics',
   };
 
+  const parentRoutes = {
+    goals: 'profile',
+    review: 'profile',
+    integrations: 'profile',
+    bluetooth: 'profile',
+    'emotion-energy': 'profile',
+    diagnostics: 'profile',
+    'settings-drawer': 'profile',
+    'rescue-comparison': 'schedule',
+    'create-schedule': 'schedule',
+    'urgent-task': 'schedule',
+    'microtask-entry': 'micro',
+  };
+
   const frame = document.getElementById('prototype-screen');
   const mobileQuery = window.matchMedia('(max-width: 780px)');
   let activeRoute = 'focus';
@@ -146,6 +160,38 @@
     renderRoute(route);
   }
 
+  function returnFromSecondary() {
+    const parent = parentRoutes[activeRoute];
+    if (parent) {
+      navigate(parent);
+      return;
+    }
+    history.back();
+  }
+
+  function showNotice(document, message) {
+    document.getElementById('stitch-router-notice')?.remove();
+    const notice = document.createElement('div');
+    notice.id = 'stitch-router-notice';
+    notice.textContent = message;
+    Object.assign(notice.style, {
+      position: 'fixed',
+      left: '50%',
+      bottom: '24px',
+      transform: 'translateX(-50%)',
+      zIndex: '9999',
+      maxWidth: 'min(90vw, 420px)',
+      padding: '10px 14px',
+      borderRadius: '10px',
+      background: '#163d3d',
+      color: '#ffffff',
+      font: '500 13px/1.4 system-ui, sans-serif',
+      boxShadow: '0 4px 18px rgba(0,0,0,.2)',
+    });
+    document.body.appendChild(notice);
+    window.setTimeout(() => notice.remove(), 2600);
+  }
+
   function routeForLink(anchor) {
     const path = anchor.dataset.path;
     if (path && aliases[path]) return aliases[path];
@@ -165,10 +211,19 @@
 
   function routeForButton(button) {
     const label = `${button.innerText || ''} ${button.title || ''} ${button.getAttribute('aria-label') || ''}`.toLowerCase();
-    if (label.includes('关闭') || label.includes('close') || label.includes('cancel') || label.includes('取消')) {
-      if (activeRoute === 'settings-drawer') return 'profile';
-      if (activeRoute === 'rescue-comparison' || activeRoute === 'urgent-task' || activeRoute === 'create-schedule') return 'schedule';
-      if (activeRoute === 'microtask-entry') return 'micro';
+    if (label.includes('通知') || label.includes('notification')) {
+      return '__notice__';
+    }
+    if (
+      label.includes('返回') ||
+      label.includes('back') ||
+      label.includes('previous') ||
+      label.includes('关闭') ||
+      label.includes('close') ||
+      label.includes('cancel') ||
+      label.includes('取消')
+    ) {
+      return parentRoutes[activeRoute] || null;
     }
     if (label.includes('设置') || label.includes('settings')) return 'settings-drawer';
     if (label.includes('目标') || label.includes('goals')) return 'goals';
@@ -178,7 +233,8 @@
     if (label.includes('蓝牙') || label.includes('bluetooth')) return 'bluetooth';
     if (label.includes('mcp') || label.includes('接入')) return 'integrations';
     if (label.includes('插入紧急') || label.includes('urgent task')) return mobileQuery.matches ? 'urgent-task' : 'rescue-comparison';
-    if (label.includes('新增日程') || label.includes('新建日程') || label.includes('add schedule') || label.includes('new schedule')) return mobileQuery.matches ? 'create-schedule' : null;
+    if (label.includes('ics') || label.includes('导入/导出')) return 'integrations';
+    if (label.includes('新增日程') || label.includes('新建日程') || label.includes('add schedule') || label.includes('new schedule')) return 'create-schedule';
     if (label.includes('添加微任务') || label.includes('add microtask') || label.includes('import list') || label.includes('导入清单')) return 'microtask-entry';
     if (label.includes('救援方案') || label.includes('比较方案') || label.includes('三方案救援对比') || label.includes('rescue plan') || label.includes('重新规划') || label.includes('replan')) return 'rescue-comparison';
     if (activeRoute === 'create-schedule' && (label.includes('保存') || label.includes('save'))) return 'schedule';
@@ -216,6 +272,11 @@
       const button = event.target.closest('button');
       if (!button) return;
       const route = routeForButton(button);
+      if (route === '__notice__') {
+        event.preventDefault();
+        showNotice(childDocument, '通知与提醒暂未接入，当前不会发送提醒。');
+        return;
+      }
       if (route) {
         event.preventDefault();
         navigate(route);
@@ -230,7 +291,7 @@
   mobileQuery.addEventListener('change', () => renderRoute(activeRoute));
   window.addEventListener('resize', applyCanvasSize);
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') history.back();
+    if (event.key === 'Escape') returnFromSecondary();
   });
 
   activeRoute = routeFromHash();

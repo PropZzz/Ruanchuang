@@ -31,6 +31,10 @@ Future<void> main() async {
 
       AppServices.logStore.info('app', 'start');
 
+      // Authentication tokens are session-scoped. Until the user signs in,
+      // keep settings and cached data on the isolated local guest store.
+      await AppServices.dataService.startGuestSession();
+
       final prewarmSuccess = await AppServices.prewarm();
       if (!prewarmSuccess) {
         AppServices.logStore.warn('app', 'prewarm_failed_continuing_anyway');
