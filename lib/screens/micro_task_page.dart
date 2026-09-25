@@ -25,6 +25,14 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
 
   bool _batchMode = false;
   final Set<String> _selected = <String>{};
+  final TextEditingController _quickEntryController = TextEditingController();
+  String _taskFilter = 'all';
+
+  @override
+  void dispose() {
+    _quickEntryController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -155,20 +163,103 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     return '批量完成，+$points 积分';
   }
 
+  bool _isMobileViewport(BuildContext context) =>
+      MediaQuery.sizeOf(context).width < 720;
+
+  Future<T?> _showResponsiveForm<T>({required WidgetBuilder builder}) {
+    if (_isMobileViewport(context)) {
+      return showModalBottomSheet<T>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        backgroundColor: Colors.transparent,
+        builder: builder,
+      );
+    }
+    return showDialog<T>(context: context, builder: builder);
+  }
+
+  Widget _formSurface(
+    BuildContext context, {
+    required Widget title,
+    required Widget content,
+    required List<Widget> actions,
+  }) {
+    if (!_isMobileViewport(context)) {
+      return AlertDialog(
+        title: title,
+        content: content,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: actions,
+      );
+    }
+
+    final scheme = Theme.of(context).colorScheme;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Material(
+          color: scheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 10, bottom: 14),
+                  decoration: BoxDecoration(
+                    color: scheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: Align(alignment: Alignment.centerLeft, child: title),
+                ),
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: content,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: actions,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _showImportMicroTasksDialog() async {
     final rawCtrl = TextEditingController();
     MicroTaskImportSummary? preview;
 
-    final ok = await showDialog<bool>(
-      context: context,
+    final ok = await _showResponsiveForm<bool>(
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx2, setInner) => AlertDialog(
+        builder: (ctx2, setInner) => _formSurface(
+          ctx2,
           title: const Text(
             '导入清单',
             style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
           ),
           content: ConstrainedBox(
             constraints: MobileFeedback.dialogConstraints(ctx2, maxWidth: 560),
@@ -355,16 +446,13 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     int minutes = 10;
     int priority = 3;
 
-    showDialog(
-      context: context,
+    _showResponsiveForm<void>(
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx2, setInner) => AlertDialog(
+        builder: (ctx2, setInner) => _formSurface(
+          ctx2,
           title: Text(
             AppStrings.of(context, 'micro_dialog_add'),
             style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -465,16 +553,13 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     int minutes = task.minutes;
     int priority = task.priority;
 
-    showDialog(
-      context: context,
+    _showResponsiveForm<void>(
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx2, setInner) => AlertDialog(
+        builder: (ctx2, setInner) => _formSurface(
+          ctx2,
           title: Text(
             AppStrings.of(context, 'micro_dialog_edit'),
             style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -716,16 +801,13 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     DateTime day = dateOnly(DateTime.now());
     TimeOfDay time = TimeOfDay.now();
 
-    final ok = await showDialog<bool>(
-      context: context,
+    final ok = await _showResponsiveForm<bool>(
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx2, setInner) => AlertDialog(
+        builder: (ctx2, setInner) => _formSurface(
+          ctx2,
           title: Text(
             AppStrings.of(context, 'micro_schedule_dialog_title'),
             style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -951,77 +1033,250 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     );
   }
 
-  Widget _buildHeaderCard(int doneCount, int totalPoints, int completedPoints) {
-    final theme = Theme.of(context);
+  Future<void> _addQuickTask() async {
+    final title = _quickEntryController.text.trim();
+    if (title.isEmpty) return;
 
+    try {
+      await _dataService.addMicroTask(
+        MicroTask(title: title, tag: '任意', minutes: 15, priority: 3),
+      );
+      _quickEntryController.clear();
+      if (mounted) await _loadMicroTasks();
+    } catch (e, st) {
+      if (!mounted) return;
+      MobileFeedback.showError(
+        context,
+        category: 'microtask',
+        message: 'quick add micro task failed',
+        zhMessage: '暂时无法添加微任务，请稍后重试。',
+        enMessage: 'Unable to add the micro task right now.',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  Widget _buildPageHeading({required bool mobile}) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'SANDBOX DISPATCH',
+                  style: TextStyle(
+                    color: scheme.secondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '微任务沙盒与心流调度',
+                  style: TextStyle(
+                    color: scheme.primary,
+                    fontSize: mobile ? 21 : 28,
+                    fontWeight: FontWeight.w800,
+                    height: 1.15,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '把零散事务拆成可完成的短任务，按优先级安排下一步。',
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 13,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!mobile) ...[
+            const SizedBox(width: 16),
+            FilledButton.icon(
+              onPressed: () => _showAddMicroTaskDialog(context),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('添加微任务'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetrics() {
+    final pending = _tasks.where((task) => !task.done).toList();
+    final doneCount = _tasks.length - pending.length;
+    final pendingMinutes = pending.fold<int>(
+      0,
+      (sum, task) => sum + task.minutes,
+    );
+    final metrics = [
+      (
+        label: '待处理',
+        value: '${pending.length}',
+        detail: '约 ${(pendingMinutes / 60).toStringAsFixed(1)}h 负荷',
+        icon: Icons.bubble_chart_outlined,
+        color: Theme.of(context).colorScheme.secondary,
+      ),
+      (
+        label: '已完成',
+        value: '$doneCount',
+        detail: '今日完成任务',
+        icon: Icons.check_circle_outline_rounded,
+        color: Theme.of(context).colorScheme.tertiary,
+      ),
+      (
+        label: '已获得积分',
+        value: '$_completedPointsValue',
+        detail: '按已完成任务累计',
+        icon: Icons.bolt_rounded,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        children: [
+          for (var index = 0; index < metrics.length; index++) ...[
+            if (index > 0) const SizedBox(width: 10),
+            Expanded(
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 96),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          metrics[index].icon,
+                          size: 16,
+                          color: metrics[index].color,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            metrics[index].label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      metrics[index].value,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    Text(
+                      metrics[index].detail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  int get _completedPointsValue => _completedPoints();
+
+  Widget _buildQuickEntryCard() {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppWindowTones.surface(context, AppWindowTone.micro),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: theme.colorScheme.outline),
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final title = Text(
-                AppStrings.of(context, 'micro_ai_suggestion'),
-                maxLines: constraints.maxWidth < 480 ? 3 : 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: theme.colorScheme.onSurface,
-                ),
-              );
-              final action = ElevatedButton.icon(
-                onPressed: _fillQuickTasks,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
-                  elevation: 0,
-                ),
-                icon: const Icon(Icons.auto_awesome, size: 16),
-                label: const Text('AI 填充'),
-              );
-              if (constraints.maxWidth < 480) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    title,
-                    const SizedBox(height: 12),
-                    Align(alignment: Alignment.centerRight, child: action),
-                  ],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: title),
-                  const SizedBox(width: 12),
-                  action,
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 24),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildHeaderStatItem(
-                '已完成',
-                '$doneCount/${_tasks.length}',
-                Icons.check_circle_rounded,
+              Icon(
+                Icons.playlist_add_rounded,
+                color: scheme.secondary,
+                size: 18,
               ),
-              _buildHeaderStatItem(
-                '已获积分',
-                '$completedPoints',
-                Icons.stars_rounded,
+              const SizedBox(width: 7),
+              const Text(
+                '快速录入',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
               ),
-              _buildHeaderStatItem('总计积分', '$totalPoints', Icons.bolt_rounded),
+              const Spacer(),
+              Text(
+                '默认 15 分钟 · 任意标签',
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 11),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _quickEntryController,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _addQuickTask(),
+                  decoration: InputDecoration(
+                    hintText: '快速输入一项待办',
+                    prefixIcon: const Icon(Icons.edit_note_rounded),
+                    isDense: true,
+                    filled: true,
+                    fillColor: scheme.surfaceContainerLow,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(9),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: _addQuickTask,
+                icon: const Icon(Icons.arrow_forward_rounded, size: 17),
+                label: const Text('添加'),
+              ),
             ],
           ),
         ],
@@ -1029,25 +1284,440 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     );
   }
 
-  Widget _buildHeaderStatItem(String label, String value, IconData icon) {
+  Widget _buildSprintBanner() {
+    final scheme = Theme.of(context).colorScheme;
+    final quickCount = _tasks
+        .where((task) => !task.done && task.minutes <= 15)
+        .length;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: scheme.tertiaryFixed.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.bolt_rounded, color: scheme.tertiaryFixed),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '聚焦沙盒 · 闪电防线',
+                  style: TextStyle(
+                    color: scheme.tertiaryFixed,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  quickCount == 0 ? '当前没有短时待办' : '有 $quickCount 项短时待办可优先清理',
+                  style: TextStyle(
+                    color: scheme.onPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '利用会前空隙完成一项，减少任务积压。',
+                  style: TextStyle(
+                    color: scheme.onPrimary.withValues(alpha: 0.8),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.icon(
+            onPressed: _fillQuickTasks,
+            style: FilledButton.styleFrom(
+              backgroundColor: scheme.tertiaryFixed,
+              foregroundColor: scheme.onTertiaryFixed,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            icon: const Icon(Icons.auto_awesome_rounded, size: 16),
+            label: const Text('AI 填充'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskListColumn() {
+    final scheme = Theme.of(context).colorScheme;
+    final visibleTasks = _tasks.where((task) {
+      if (_taskFilter == 'pending') return !task.done;
+      if (_taskFilter == 'done') return task.done;
+      return true;
+    }).toList();
+    final groups = [
+      _MicroTaskGroup(
+        title: '紧急且今日必做',
+        icon: Icons.priority_high_rounded,
+        color: scheme.error,
+        tasks: visibleTasks.where((task) => task.priority == 1).toList(),
+      ),
+      _MicroTaskGroup(
+        title: '随手快速处理（≤5m）',
+        icon: Icons.flash_on_rounded,
+        color: scheme.secondary,
+        tasks: visibleTasks
+            .where((task) => task.priority != 1 && task.minutes <= 5)
+            .toList(),
+      ),
+      _MicroTaskGroup(
+        title: '排队中（待流转）',
+        icon: Icons.queue_rounded,
+        color: scheme.primary,
+        tasks: visibleTasks
+            .where(
+              (task) =>
+                  task.priority != 1 && task.minutes > 5 && task.priority <= 3,
+            )
+            .toList(),
+      ),
+      _MicroTaskGroup(
+        title: '稍后处理（低认知负荷）',
+        icon: Icons.hourglass_bottom_rounded,
+        color: scheme.onSurfaceVariant,
+        tasks: visibleTasks
+            .where((task) => task.priority > 3 && task.minutes > 5)
+            .toList(),
+      ),
+    ];
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(icon, color: Theme.of(context).colorScheme.primary, size: 28),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w900,
-            fontFeatures: [FontFeature.tabularFigures()],
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '任务队列',
+                style: TextStyle(
+                  color: scheme.onSurface,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Text(
+              '${visibleTasks.length} 项',
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        SegmentedButton<String>(
+          showSelectedIcon: false,
+          segments: [
+            ButtonSegment(value: 'all', label: Text('全部 ${_tasks.length}')),
+            ButtonSegment(
+              value: 'pending',
+              label: Text('待处理 ${_tasks.where((task) => !task.done).length}'),
+            ),
+            ButtonSegment(
+              value: 'done',
+              label: Text('已完成 ${_tasks.where((task) => task.done).length}'),
+            ),
+          ],
+          selected: {_taskFilter},
+          onSelectionChanged: (selection) {
+            setState(() => _taskFilter = selection.first);
+          },
+        ),
+        if (_batchMode) _buildTagQuickSelect(),
+        const SizedBox(height: 12),
+        if (_tasks.isEmpty)
+          _buildEmptyTasks()
+        else if (visibleTasks.isEmpty)
+          _buildFilteredEmpty()
+        else
+          for (final group in groups) _buildTaskSection(group),
+      ],
+    );
+  }
+
+  Widget _buildTaskSection(_MicroTaskGroup group) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: group.color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  group.title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                '${group.tasks.length} 项待清',
+                style: TextStyle(
+                  color: group.color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (group.tasks.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                '当前分组暂无任务',
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+              ),
+            )
+          else
+            for (final task in group.tasks) _buildMicroTaskBubble(task),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyTasks() {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.check_circle_outline_rounded,
+            color: scheme.tertiary,
+            size: 30,
+          ),
+          const SizedBox(height: 8),
+          const Text('暂无微任务', style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(
+            '添加一项任务，或导入现有清单。',
+            style: TextStyle(color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => _showAddMicroTaskDialog(context),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('添加微任务'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilteredEmpty() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Center(
+        child: Text(
+          '此筛选条件下暂无任务',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+
+  Widget _buildInsightsPanel() {
+    final scheme = Theme.of(context).colorScheme;
+    final completed = _tasks.where((task) => task.done).length;
+    final ratio = _tasks.isEmpty ? 0.0 : completed / _tasks.length;
+    final quickCount = _tasks
+        .where((task) => !task.done && task.minutes <= 15)
+        .length;
+    final pendingCount = _tasks.length - completed;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.bolt_rounded,
+                    color: scheme.tertiaryFixed,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      '聚焦沙盒 · 闪电防线',
+                      style: TextStyle(
+                        color: scheme.tertiaryFixed,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                quickCount == 0 ? '当前没有短时待办' : '发现 $quickCount 项短时待办',
+                style: TextStyle(
+                  color: scheme.onPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '选一项在下一段空档里完成。',
+                style: TextStyle(
+                  color: scheme.onPrimary.withValues(alpha: 0.8),
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _fillQuickTasks,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: scheme.tertiaryFixed,
+                    foregroundColor: scheme.onTertiaryFixed,
+                  ),
+                  icon: const Icon(Icons.auto_awesome_rounded, size: 17),
+                  label: const Text('AI 填充'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '清零成就与节奏审计',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${(ratio * 100).round()}%',
+                    style: TextStyle(
+                      color: scheme.primary,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      '$completed / ${_tasks.length} 已完成',
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: ratio,
+                  minHeight: 7,
+                  backgroundColor: scheme.surfaceContainerHigh,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '已获得 ${_completedPoints()} 积分',
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: scheme.outlineVariant),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '积压防线预警机制',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                pendingCount == 0
+                    ? '待办已清空，节奏保持稳定。'
+                    : '还有 $pendingCount 项待处理微任务。',
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => _setBatchMode(!_batchMode),
+                icon: Icon(
+                  _batchMode ? Icons.close_rounded : Icons.checklist_rounded,
+                ),
+                label: Text(_batchMode ? '退出批量' : '批量处理'),
+              ),
+            ],
           ),
         ),
       ],
@@ -1060,12 +1730,14 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     final selectedPoints = _selectedTasks()
         .where((t) => !t.done)
         .fold<int>(0, (sum, task) => sum + _pointsFor(task));
-    final doneCount = _tasks.where((t) => t.done).length;
-    final totalPoints = _tasks.fold<int>(
-      0,
-      (sum, task) => sum + _pointsFor(task),
-    );
-    final completedPoints = _completedPoints();
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final isMobile = viewportWidth < 720;
+    final isDesktop = viewportWidth >= 1200;
+    final layout = isMobile
+        ? 'mobile'
+        : viewportWidth < 1200
+        ? 'tablet'
+        : 'desktop';
 
     return Scaffold(
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
@@ -1098,34 +1770,46 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                ResponsivePageFrame(
-                  child: _buildHeaderCard(
-                    doneCount,
-                    totalPoints,
-                    completedPoints,
+          : LayoutBuilder(
+              builder: (context, constraints) => ResponsivePageFrame(
+                child: SingleChildScrollView(
+                  key: ValueKey('microtasks-layout-$layout'),
+                  padding: EdgeInsets.only(
+                    top: 18,
+                    bottom: _batchMode ? 148 : (isMobile ? 104 : 28),
+                  ),
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildPageHeading(mobile: isMobile),
+                      _buildMetrics(),
+                      _buildQuickEntryCard(),
+                      _buildSprintBanner(),
+                      if (isDesktop)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(flex: 7, child: _buildTaskListColumn()),
+                            const SizedBox(width: 16),
+                            Expanded(flex: 3, child: _buildInsightsPanel()),
+                          ],
+                        )
+                      else ...[
+                        _buildTaskListColumn(),
+                        const SizedBox(height: 8),
+                        _buildInsightsPanel(),
+                      ],
+                    ],
                   ),
                 ),
-                if (_batchMode) _buildTagQuickSelect(),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: _tasks.length,
-                    itemBuilder: (context, index) =>
-                        _buildMicroTaskBubble(_tasks[index]),
-                  ),
-                ),
-              ],
+              ),
             ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: _batchMode
           ? _buildBatchActionBar(selectedCount, selectedPoints)
-          : PressScale(
+          : isMobile
+          ? PressScale(
               child: FloatingActionButton.extended(
                 heroTag: 'micro-task-add-fab',
                 onPressed: () => _showAddMicroTaskDialog(context),
@@ -1137,77 +1821,91 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
-            ),
+            )
+          : null,
     );
   }
 
   Widget _buildBatchActionBar(int count, int points) {
+    final scheme = Theme.of(context).colorScheme;
+    final summary = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '已选 $count 项',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        Text(
+          '可获 +$points ${_pointsUnit(context)}',
+          style: TextStyle(
+            color: scheme.primary,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+    final deleteButton = IconButton(
+      tooltip: '删除所选',
+      icon: Icon(Icons.delete_outline, color: scheme.error),
+      onPressed: count == 0 ? null : _batchDelete,
+    );
+    final scheduleButton = OutlinedButton.icon(
+      onPressed: count == 0 ? null : _batchSchedule,
+      icon: const Icon(Icons.event_available_rounded, size: 17),
+      label: const Text('集中安排'),
+    );
+    final completeButton = FilledButton.icon(
+      onPressed: count == 0 ? null : _batchMarkComplete,
+      icon: const Icon(Icons.check_rounded, size: 17),
+      label: const Text('完成'),
+    );
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Theme.of(context).colorScheme.outline),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '已选 $count 项',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-                Text(
-                  '可获 +$points ${_pointsUnit(context)}',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  onPressed: count == 0 ? null : _batchDelete,
-                ),
-                const SizedBox(width: 4),
-                ElevatedButton(
-                  onPressed: count == 0 ? null : _batchSchedule,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.tertiary,
-                    foregroundColor: Theme.of(context).colorScheme.onTertiary,
-                  ),
-                  child: const Text('集中安排'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: count == 0 ? null : _batchMarkComplete,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  ),
-                  child: const Text('完成'),
-                ),
-              ],
-            ),
-          ],
-        ),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            color: scheme.shadow.withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
+      child: _isMobileViewport(context)
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Align(alignment: Alignment.centerLeft, child: summary),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    deleteButton,
+                    const SizedBox(width: 4),
+                    Expanded(child: scheduleButton),
+                    const SizedBox(width: 8),
+                    Expanded(child: completeButton),
+                  ],
+                ),
+              ],
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                summary,
+                const SizedBox(width: 20),
+                deleteButton,
+                const SizedBox(width: 4),
+                scheduleButton,
+                const SizedBox(width: 8),
+                completeButton,
+              ],
+            ),
     );
   }
 
@@ -1250,189 +1948,365 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           },
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                if (_batchMode) ...[
-                  Checkbox(
-                    value: selected,
-                    onChanged: (_) => _toggleSelected(task),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    activeColor: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                ],
-
-                // 左侧图标区
-                GestureDetector(
-                  onTap: () {
-                    if (!_batchMode) _setDone(task, !task.done);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: task.done
-                          ? scheme.secondary.withValues(alpha: 0.12)
-                          : theme.colorScheme.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      task.done
-                          ? Icons.check_circle_rounded
-                          : Icons.radio_button_unchecked_rounded,
-                      color: task.done
-                          ? scheme.secondary
-                          : theme.colorScheme.primary,
-                      size: 26,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-
-                // 中间信息区
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        task.title,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          decoration: task.done
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: task.done
-                              ? theme.colorScheme.onSurfaceVariant
-                              : theme.colorScheme.onSurface,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 640) {
+                  return _buildCompactMicroTaskBubble(task, selected, scheme);
+                }
+                return Row(
+                  children: [
+                    if (_batchMode) ...[
+                      Checkbox(
+                        value: selected,
+                        onChanged: (_) => _toggleSelected(task),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
                         ),
+                        activeColor: theme.colorScheme.primary,
                       ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          _buildPriorityBadge(task),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: scheme.onSurface.withValues(
-                                alpha: isDark ? 0.1 : 0.05,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.access_time_rounded,
-                                  size: 12,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${task.minutes} min',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: scheme.onSurface.withValues(
-                                alpha: isDark ? 0.1 : 0.05,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.tag_rounded,
-                                  size: 12,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  task.tag.trim().isEmpty ? '未分类' : task.tag,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                      const SizedBox(width: 8),
                     ],
-                  ),
-                ),
 
-                // 右侧操作区
-                if (!_batchMode) ...[
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '+${_pointsFor(task)} ${_pointsUnit(context)}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
+                    // 左侧图标区
+                    GestureDetector(
+                      onTap: () {
+                        if (!_batchMode) _setDone(task, !task.done);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: task.done
+                              ? scheme.secondary.withValues(alpha: 0.12)
+                              : theme.colorScheme.primary.withValues(
+                                  alpha: 0.1,
+                                ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          task.done
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
                           color: task.done
                               ? scheme.secondary
                               : theme.colorScheme.primary,
-                          fontSize: 13,
+                          size: 26,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
+                    ),
+                    const SizedBox(width: 16),
+
+                    // 中间信息区
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          IconButton(
-                            icon: Icon(
-                              Icons.edit_rounded,
-                              size: 20,
-                              color: scheme.onSurfaceVariant,
+                          Text(
+                            task.title,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              decoration: task.done
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              color: task.done
+                                  ? theme.colorScheme.onSurfaceVariant
+                                  : theme.colorScheme.onSurface,
                             ),
-                            onPressed: () =>
-                                _showEditMicroTaskDialog(context, task),
-                            constraints: const BoxConstraints(),
-                            padding: EdgeInsets.zero,
                           ),
-                          const SizedBox(width: 12),
-                          IconButton(
-                            icon: Icon(
-                              Icons.delete_outline_rounded,
-                              size: 20,
-                              color: scheme.error,
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              _buildPriorityBadge(task),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: scheme.onSurface.withValues(
+                                    alpha: isDark ? 0.1 : 0.05,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.access_time_rounded,
+                                      size: 12,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${task.minutes} min',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: scheme.onSurface.withValues(
+                                    alpha: isDark ? 0.1 : 0.05,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.tag_rounded,
+                                      size: 12,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      task.tag.trim().isEmpty
+                                          ? '未分类'
+                                          : task.tag,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // 右侧操作区
+                    if (!_batchMode) ...[
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '+${_pointsFor(task)} ${_pointsUnit(context)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: task.done
+                                  ? scheme.secondary
+                                  : theme.colorScheme.primary,
+                              fontSize: 13,
                             ),
-                            onPressed: () => _confirmDeleteOne(task),
-                            constraints: const BoxConstraints(),
-                            padding: EdgeInsets.zero,
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  Icons.edit_rounded,
+                                  size: 20,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                                onPressed: () =>
+                                    _showEditMicroTaskDialog(context, task),
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                              ),
+                              const SizedBox(width: 12),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 20,
+                                  color: scheme.error,
+                                ),
+                                onPressed: () => _confirmDeleteOne(task),
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ],
-                  ),
-                ],
-              ],
+                  ],
+                );
+              },
             ),
           ),
         ),
       ),
     );
   }
+
+  Widget _buildCompactMicroTaskBubble(
+    MicroTask task,
+    bool selected,
+    ColorScheme scheme,
+  ) {
+    final titleColor = task.done ? scheme.onSurfaceVariant : scheme.onSurface;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_batchMode)
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: Checkbox(
+                  value: selected,
+                  onChanged: (_) => _toggleSelected(task),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+              )
+            else
+              IconButton(
+                tooltip: task.done ? '标记未完成' : '标记完成',
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
+                ),
+                onPressed: () => _setDone(task, !task.done),
+                icon: Icon(
+                  task.done
+                      ? Icons.check_circle_rounded
+                      : Icons.circle_outlined,
+                  color: task.done ? scheme.tertiary : scheme.onSurfaceVariant,
+                  size: 21,
+                ),
+              ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: titleColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        decoration: task.done
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 5,
+                      runSpacing: 5,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _buildPriorityBadge(task),
+                        _taskMetaChip(
+                          Icons.access_time_rounded,
+                          '${task.minutes} min',
+                        ),
+                        _taskMetaChip(
+                          Icons.tag_rounded,
+                          task.tag.trim().isEmpty ? '未分类' : task.tag,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (!_batchMode)
+              PopupMenuButton<String>(
+                tooltip: '任务操作',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 44,
+                  height: 44,
+                ),
+                onSelected: (value) {
+                  if (value == 'edit') _showEditMicroTaskDialog(context, task);
+                  if (value == 'delete') _confirmDeleteOne(task);
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'edit', child: Text('编辑')),
+                  PopupMenuItem(value: 'delete', child: Text('删除')),
+                ],
+                icon: const Icon(Icons.more_horiz_rounded),
+              ),
+          ],
+        ),
+        if (!_batchMode)
+          Padding(
+            padding: const EdgeInsets.only(left: 42, top: 4),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                '+${_pointsFor(task)} ${_pointsUnit(context)}',
+                style: TextStyle(
+                  color: task.done ? scheme.tertiary : scheme.primary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _taskMetaChip(IconData icon, String label) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 150),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 10),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MicroTaskGroup {
+  const _MicroTaskGroup({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.tasks,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color color;
+  final List<MicroTask> tasks;
 }

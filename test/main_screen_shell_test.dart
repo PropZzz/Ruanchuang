@@ -6,7 +6,6 @@ import 'package:shixuzhipei/screens/profile_page.dart';
 import 'package:shixuzhipei/services/app_services.dart';
 import 'package:shixuzhipei/services/mock_data_service.dart';
 import 'package:shixuzhipei/theme/app_theme.dart';
-import 'package:shixuzhipei/widgets/glass_surface.dart';
 import 'package:shixuzhipei/main.dart';
 
 void main() {
@@ -122,30 +121,65 @@ void main() {
     tester.view.reset();
   });
 
-  testWidgets('narrow shell uses material navigation bar', (tester) async {
+  testWidgets('narrow shell uses a full-width flat navigation bar', (
+    tester,
+  ) async {
     await pumpShell(tester, const Size(390, 844));
 
     expect(find.byType(NavigationBar), findsOneWidget);
     final materialFinder = find.byKey(const ValueKey('shell-bottom-material'));
     expect(materialFinder, findsOneWidget);
-    final material = tester.widget<GlassSurface>(materialFinder);
-    expect(material.borderRadius, BorderRadius.circular(24));
-    expect(material.margin, EdgeInsets.zero);
-    expect(material.opacity, 0.9);
-    expect(material.showShadow, isTrue);
+    final material = tester.widget<Material>(materialFinder);
+    expect(material.color, AppTheme.light.colorScheme.surface);
+    expect(material.borderRadius, BorderRadius.zero);
     final capsuleFinder = find.byKey(const ValueKey('shell-bottom-capsule'));
     expect(capsuleFinder, findsOneWidget);
     final materialRect = tester.getRect(materialFinder);
-    expect(materialRect.width, 366);
-    expect(materialRect.left, 12);
-    expect(materialRect.right, 378);
-    expect(materialRect.bottom, lessThanOrEqualTo(834));
+    expect(materialRect.width, 390);
+    expect(materialRect.left, 0);
+    expect(materialRect.right, 390);
+    expect(materialRect.bottom, lessThanOrEqualTo(844));
     expect(tester.takeException(), isNull);
     expect(find.text('日程'), findsOneWidget);
     expect(find.text('微任务'), findsOneWidget);
     expect(find.text('团队'), findsOneWidget);
     expect(find.text('我的'), findsOneWidget);
     tester.view.reset();
+  });
+
+  testWidgets('secondary page keeps the mobile shell and primary navigation', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('zh'), Locale('en')],
+        theme: AppTheme.light,
+        home: const MainScreen(
+          secondaryPage: Text('Secondary page'),
+          secondaryTabIndex: 1,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    expect(find.text('Secondary page'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    await tester.tap(find.text('专注'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    expect(find.text('Secondary page'), findsNothing);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('tablet shell uses a compact navigation rail', (tester) async {

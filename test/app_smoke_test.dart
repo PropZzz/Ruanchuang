@@ -815,7 +815,10 @@ void main() {
       await tester.tap(find.text('导入 iCal（ICS）'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), _validIcsFor(importDay));
-      await tester.tap(find.text('导入'));
+      await tester.tap(find.text('预览日程'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('导入预览'), findsOneWidget);
+      await tester.tap(find.text('导入 1 项'));
       await tester.pump();
 
       final refresh = tester.widget<IconButton>(
@@ -866,8 +869,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('shell-nav-profile')));
       await tester.pumpAndSettle();
 
-      await tester.drag(find.byType(ListView).first, const Offset(0, -420));
-      await tester.pumpAndSettle();
+      await _scrollProfileUntil(tester, find.text('复盘'));
       expect(find.text('复盘'), findsOneWidget);
       expect(find.byTooltip('设置'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -887,10 +889,18 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('shell-nav-profile')));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('AI 认知效率画像（每周更新）'));
+      final capability = find.text('AI 认知效率画像（每周更新）');
+      await _scrollProfileUntil(tester, capability);
+      await tester.tap(capability);
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.textContaining('功能暂未接入'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.textContaining('功能暂未接入'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('关闭'), findsOneWidget);
     } finally {
       _resetSurface(tester);
@@ -965,4 +975,12 @@ void main() {
       _resetSurface(tester);
     }
   });
+}
+
+Future<void> _scrollProfileUntil(WidgetTester tester, Finder target) async {
+  for (var attempt = 0; attempt < 8; attempt++) {
+    if (target.evaluate().isNotEmpty) return;
+    await tester.drag(find.byType(ListView).first, const Offset(0, -560));
+    await tester.pumpAndSettle();
+  }
 }

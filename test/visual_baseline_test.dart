@@ -89,11 +89,13 @@ void main() {
       // Focus is wall-clock dependent (current/next task split), so it gets a
       // structural baseline instead of a pixel golden.
       expect(tester.takeException(), isNull);
+      expect(find.byKey(const ValueKey('focus-source-label')), findsOneWidget);
+      await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
       expect(
         find.byKey(const ValueKey('focus-conflict-summary')),
         findsOneWidget,
       );
-      expect(find.byKey(const ValueKey('focus-source-label')), findsOneWidget);
     });
 
     testWidgets('calendar page baseline ${entry.key}', (tester) async {

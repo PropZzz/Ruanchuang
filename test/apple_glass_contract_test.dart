@@ -5,16 +5,16 @@ import 'package:shixuzhipei/widgets/glass_surface.dart';
 import 'package:shixuzhipei/widgets/workspace_status_bar.dart';
 
 void main() {
-  test('Apple Utility tokens expose the approved light and dark palette', () {
-    expect(AppThemeTokens.canvasLight, const Color(0xFFF5F5F7));
-    expect(AppThemeTokens.canvasDark, const Color(0xFF111214));
-    expect(AppThemeTokens.actionLight, const Color(0xFF007AFF));
-    expect(AppThemeTokens.actionDark, const Color(0xFF0A84FF));
-    expect(AppThemeTokens.brandLight, const Color(0xFF163D3D));
-    expect(AppThemeTokens.brandDark, const Color(0xFFA7D4C6));
-    expect(AppThemeTokens.recoveryLight, const Color(0xFF34C759));
-    expect(AppThemeTokens.pressureLight, const Color(0xFFFF9F0A));
-    expect(AppThemeTokens.riskLight, const Color(0xFFFF3B30));
+  test('Stitch tokens expose the approved light and dark palette', () {
+    expect(AppThemeTokens.canvasLight, const Color(0xFFFAF8FE));
+    expect(AppThemeTokens.canvasDark, const Color(0xFF101B1D));
+    expect(AppThemeTokens.actionLight, const Color(0xFF005DB5));
+    expect(AppThemeTokens.actionDark, const Color(0xFF62A1FE));
+    expect(AppThemeTokens.brandLight, const Color(0xFF002727));
+    expect(AppThemeTokens.brandDark, const Color(0xFFA7CECD));
+    expect(AppThemeTokens.recoveryLight, const Color(0xFF1DB84D));
+    expect(AppThemeTokens.pressureLight, const Color(0xFFE5A15B));
+    expect(AppThemeTokens.riskLight, const Color(0xFFBA1A1A));
   });
 
   test(

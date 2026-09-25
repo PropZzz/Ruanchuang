@@ -28,8 +28,19 @@ flutter:
   
   assets:
     - assets/fonts/
+    - stitch/assets/images/
   
   fonts:
     - family: NotoSerifSC
       fonts:
         - asset: assets/fonts/NotoSerifSC-Subset.ttf
+    - family: StitchInter
+      fonts:
+        - asset: stitch/assets/fonts/bad5f68b18b9.ttf
+          weight: 400
+        - asset: stitch/assets/fonts/11e1d80f42f9.ttf
+          weight: 500
+        - asset: stitch/assets/fonts/e9191f0db3ed.ttf
+          weight: 600
+        - asset: stitch/assets/fonts/1be3d765b0bd.ttf
+          weight: 700

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="../../assets/fonts/14040b85083a.css" rel="stylesheet"/><link href="../../assets/fonts/12238e2340c3.css" rel="stylesheet"/>
+<link href="../../assets/fonts/de9b7b5eb580.css" rel="stylesheet"/>
+<link href="../../assets/fonts/de9b7b5eb580.css" rel="stylesheet"/><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="../../assets/vendor/6f06d28f9027.js"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-secondary-fixed-variant": "#00468b", "primary-fixed": "#c2eae9", "secondary-container": "#62a1fe", "tertiary-fixed-dim": "#53e16f", "surface-tint": "#3f6564", "inverse-primary": "#a7cecd", "on-tertiary-container": "#1db84d", "surface-container-lowest": "#ffffff", "surface": "#faf8fe", "error-container": "#ffdad6", "surface-container-low": "#f4f3f8", "on-tertiary": "#ffffff", "inverse-on-surface": "#f1f0f6", "primary-fixed-dim": "#a7cecd", "primary": "#002727", "on-primary-container": "#81a8a7", "surface-variant": "#e3e2e7", "tertiary": "#00290a", "on-primary-fixed": "#002020", "on-tertiary-fixed-variant": "#00531c", "on-surface-variant": "#414848", "secondary": "#005db5", "error": "#ba1a1a", "surface-bright": "#faf8fe", "on-error-container": "#93000a", "surface-dim": "#dbd9df", "on-secondary-container": "#00376f", "surface-container": "#efedf3", "on-secondary-fixed": "#001b3d", "surface-container-high": "#e9e7ed", "surface-container-highest": "#e3e2e7", "on-error": "#ffffff", "background": "#faf8fe", "on-background": "#1a1b1f", "secondary-fixed": "#d6e3ff", "primary-container": "#163d3d", "tertiary-fixed": "#72fe88", "outline-variant": "#c0c8c7", "inverse-surface": "#2f3034", "on-surface": "#1a1b1f", "outline": "#717978", "secondary-fixed-dim": "#a8c8ff", "tertiary-container": "#004114", "on-tertiary-fixed": "#002107", "on-primary": "#ffffff", "on-secondary": "#ffffff", "on-primary-fixed-variant": "#274d4d" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": {}, "fontFamily": { "headline": [ "Noto Serif" ], "display": [ "Noto Serif" ], "body": [ "Inter" ], "label": [ "Inter" ] }, "fontSize": {} } } }</script></head><body class="bg-surface font-body text-on-surface antialiased"><aside class="fixed left-0 top-0 h-full w-[260px] bg-surface-container-low z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col flex-1 min-h-0"><div class="px-5 pt-5 pb-4 flex items-center gap-3"><img alt="Brand logo. - Primary color: #163d3d
+- Font: notoSerif
+- Mode: light
+- Roundness: rounded-md
+" class="h-8 w-auto object-contain" src="../../assets/images/a2aaefce0709.png"/><div class="flex flex-col min-w-0"><span class="font-headline font-bold text-base leading-tight text-primary tracking-tight truncate">时序智配</span><span class="text-[11px] font-label font-medium text-on-surface-variant truncate">时间地图工作台</span></div></div><div class="overflow-y-auto flex-1 px-3 py-2 space-y-5"><div class="space-y-1"><div class="px-2.5 text-[11px] font-label font-semibold text-outline uppercase tracking-wider">今天</div><nav class="space-y-0.5" data-active-classes="bg-primary-container text-on-primary font-medium rounded-lg"><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="focus" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">timer</span><span class="truncate font-medium">专注</span></a><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="schedule" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">calendar_today</span><span class="truncate font-medium">智能日历</span></a></nav></div><div class="space-y-1"><div class="px-2.5 text-[11px] font-label font-semibold text-outline uppercase tracking-wider">规划</div><nav class="space-y-0.5" data-active-classes="bg-primary-container text-on-primary font-medium rounded-lg"><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="microtasks" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">checklist</span><span class="truncate font-medium">微任务</span></a><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="goals" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">flag</span><span class="truncate font-medium">目标</span></a></nav></div><div class="space-y-1"><div class="px-2.5 text-[11px] font-label font-semibold text-outline uppercase tracking-wider">协作</div><nav class="space-y-0.5" data-active-classes="bg-primary-container text-on-primary font-medium rounded-lg"><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="team" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">group</span><span class="truncate font-medium">团队</span></a></nav></div><div class="space-y-1"><div class="px-2.5 text-[11px] font-label font-semibold text-outline uppercase tracking-wider">系统</div><nav class="space-y-0.5" data-active-classes="bg-primary-container text-on-primary font-medium rounded-lg"><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="review" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">insights</span><span class="truncate font-medium">智能复盘</span></a><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="diagnostics" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">hub</span><span class="truncate font-medium">接入与诊断</span></a><a class="group flex items-center gap-3 px-2.5 py-2 text-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-all" data-path="profile" href="#"><span class="material-symbols-outlined text-[19px] shrink-0">person</span><span class="truncate font-medium">我的</span></a></nav></div></div></div><div class="p-3 bg-surface-container-low space-y-2 shrink-0"><button class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-surface hover:bg-surface-container transition-colors text-on-surface-variant" type="button"><div class="flex items-center gap-2.5"><span class="material-symbols-outlined text-[18px]">notifications</span><span class="text-xs font-label">系统通知</span></div><span class="text-[10px] font-label px-1.5 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-medium">预留</span></button><div class="flex items-center gap-3 p-2.5 rounded-xl bg-surface-container-lowest shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div><div class="flex flex-col min-w-0 flex-1"><div class="flex items-center justify-between"><span class="text-xs font-semibold text-on-surface truncate">知行</span><span class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim"></span></div><span class="text-[10px] text-outline truncate">本地优先 · 已加密</span></div></div></div></aside><div class="pl-[260px]"><header class="fixed top-0 left-[260px] right-0 h-16 bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-6 lg:px-8"><div class="flex items-center gap-4 min-w-0"><img alt="Brand logo. - Primary color: #163d3d
+- Font: notoSerif
+- Mode: light
+- Roundness: rounded-md
+" class="h-8 w-auto object-contain md:hidden" src="../../assets/images/a2aaefce0709.png"/><div class="flex items-center gap-2 text-xs font-label text-on-surface-variant min-w-0"><span class="shrink-0">时序智配</span><span class="text-outline shrink-0">/</span><span class="font-medium text-on-surface truncate">时间工作台</span></div><div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high text-[11px] font-label font-medium text-on-surface"><span class="material-symbols-outlined text-[14px] text-on-tertiary-container">cloud_done</span><span class="truncate">已同步 · 本地优先 SQLite</span></div></div><div class="flex items-center gap-3"><div class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container text-xs font-label"><span class="w-2 h-2 rounded-full bg-on-tertiary-container shrink-0"></span><span class="font-medium text-on-surface">能量 86 分</span><span class="text-outline">·</span><span class="text-on-surface-variant">平静专注</span><span class="text-outline">·</span><span class="font-medium text-primary">恢复缓冲 25m</span></div><div class="flex items-center gap-2"><button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container text-xs font-medium text-on-surface transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" type="button"><span class="material-symbols-outlined text-[16px] text-error">bolt</span><span class="hidden md:inline">插入紧急任务</span></button><button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-on-secondary-fixed-variant text-xs font-medium text-on-secondary transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" type="button"><span class="material-symbols-outlined text-[16px]">add</span><span class="hidden md:inline">新增日程</span></button></div><div class="flex items-center gap-2 pl-1"><button class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[18px]">settings</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<div class="w-full max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+<!-- 顶部状态与层级导航栏 -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2">
+<div class="space-y-2 max-w-3xl">
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-container-high text-xs font-label font-medium text-on-surface-variant">
+<span class="w-2 h-2 rounded-full bg-on-tertiary-container animate-pulse"></span>
+<span>MCP Protocol v1.4</span>
+<span class="text-outline">/</span>
+<span class="text-secondary font-semibold">接入与诊断子系统</span>
+</div>
+<h1 class="font-headline text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-primary">
+          MCP 外部文本接入与日程智能解析
+        </h1>
+<p class="text-sm sm:text-base text-on-surface-variant font-body leading-relaxed">
+          通过模型上下文协议 (Model Context Protocol) 实时解析外部邮件、协同聊天与 ICS 结构流，结合本地认知负荷模型生成自适应日程与微任务切片。
+        </p>
+</div>
+<div class="flex items-center gap-3 shrink-0">
+<div class="hidden sm:flex flex-col items-end">
+<span class="text-[11px] font-label text-outline uppercase tracking-wider">Protocol Pipeline</span>
+<span class="text-xs font-semibold text-primary font-mono">SQLite-FDW · READY</span>
+</div>
+<div class="h-9 w-9 rounded-xl bg-surface-container-highest flex items-center justify-center text-primary shadow-sm">
+<span class="material-symbols-outlined text-xl">hub</span>
+</div>
+</div>
+</div>
+<!-- 主工作区：双栏结构 -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- 左侧：文本摄入与提示配置 (7 Cols) -->
+<div class="lg:col-span-7 space-y-6">
+<!-- 快速模版选择器 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-sm space-y-4">
+<div class="flex items-center justify-between">
+<span class="text-xs font-label font-semibold text-outline uppercase tracking-wider flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-secondary">flash_on</span>
+              预置外部信源模版
+            </span>
+<span class="text-xs text-on-surface-variant">点击即可填入语料</span>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5" id="template-selector">
+<button class="template-btn group px-3 py-2.5 rounded-lg bg-surface-container text-left transition-all hover:bg-secondary-container/20 active:scale-[0.98] shadow-sm" onclick="loadTemplate('outlook')" type="button">
+<div class="flex items-center gap-1.5 text-xs font-semibold text-on-surface group-hover:text-secondary">
+<span class="material-symbols-outlined text-base">mail</span>
+<span>Outlook 邀请</span>
+</div>
+<p class="text-[10px] text-outline mt-0.5 truncate">跨团队评审会议</p>
+</button>
+<button class="template-btn group px-3 py-2.5 rounded-lg bg-surface-container text-left transition-all hover:bg-secondary-container/20 active:scale-[0.98] shadow-sm" onclick="loadTemplate('feishu')" type="button">
+<div class="flex items-center gap-1.5 text-xs font-semibold text-on-surface group-hover:text-secondary">
+<span class="material-symbols-outlined text-base">chat</span>
+<span>飞书/Slack</span>
+</div>
+<p class="text-[10px] text-outline mt-0.5 truncate">突发高优沟通</p>
+</button>
+<button class="template-btn group px-3 py-2.5 rounded-lg bg-surface-container text-left transition-all hover:bg-secondary-container/20 active:scale-[0.98] shadow-sm" onclick="loadTemplate('ics')" type="button">
+<div class="flex items-center gap-1.5 text-xs font-semibold text-on-surface group-hover:text-secondary">
+<span class="material-symbols-outlined text-base">code</span>
+<span>ICS 原生</span>
+</div>
+<p class="text-[10px] text-outline mt-0.5 truncate">iCalendar 文本</p>
+</button>
+<button class="template-btn group px-3 py-2.5 rounded-lg bg-surface-container text-left transition-all hover:bg-secondary-container/20 active:scale-[0.98] shadow-sm" onclick="loadTemplate('chat')" type="button">
+<div class="flex items-center gap-1.5 text-xs font-semibold text-on-surface group-hover:text-secondary">
+<span class="material-symbols-outlined text-base">edit_note</span>
+<span>即时随笔</span>
+</div>
+<p class="text-[10px] text-outline mt-0.5 truncate">自然语言碎片</p>
+</button>
+</div>
+</div>
+<!-- 文本摄取输入区域 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm space-y-4">
+<div class="flex items-center justify-between">
+<label class="text-xs font-label font-semibold text-outline uppercase tracking-wider flex items-center gap-2" for="raw-input">
+<span class="material-symbols-outlined text-base text-primary">data_object</span>
+              外部非结构化上下文 (Raw Payload)
+            </label>
+<div class="flex items-center gap-2 text-[11px] text-on-surface-variant font-mono">
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-on-tertiary-container"></span>
+<span>Context Inspector Ready</span>
+</div>
+</div>
+<div class="relative rounded-lg bg-surface-container-low p-3.5 focus-within:bg-surface-container-lowest focus-within:shadow-md transition-all">
+<textarea class="w-full bg-transparent resize-none outline-none font-mono text-xs sm:text-sm text-on-surface leading-relaxed placeholder:text-outline" id="raw-input" placeholder="在此粘贴任意邮件通知、日历 ICS 字符串或协同软件消息..." rows="11">发件人：张弛 &lt;zhangchi@arch.internal&gt;
+主题：[紧急评审] 时序引擎 v2.5 架构跨部门联调评审
+时间：2026-09-26 14:00 - 15:00 (GMT+8)
+参会人：@知行, @李牧 (调度核心), @周薇 (前端平台)
+会议形式：腾讯会议 (ID: 882-930-114, 密码: 0926)
+优先级标签：[P0-阻塞级]
+
+内容提要：
+针对 Q3 性能基线测试中发现的本地 SQLite 与远程节点冲突回滚异常，需紧急拉通各模块负责人，确认 v2.5 调度解耦方案与补偿回放策略。请知行提前准备时序容灾架构草案。</textarea>
+<div class="flex items-center justify-between pt-3 mt-2 border-t-0 bg-surface-container/60 px-3 py-2 rounded-md">
+<div class="flex items-center gap-2 text-xs text-on-surface-variant font-mono">
+<span class="material-symbols-outlined text-sm">spellcheck</span>
+<span id="char-counter">318 字符</span>
+<span class="text-outline">·</span>
+<span class="text-primary font-medium">自动识别：中文 / 结构化邮件</span>
+</div>
+<button class="text-xs text-outline hover:text-error transition-colors flex items-center gap-1" onclick="clearInput()" type="button">
+<span class="material-symbols-outlined text-sm">clear_all</span>
+                清空
+              </button>
+</div>
+</div>
+<!-- 解析指令触发条 -->
+<div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+<div class="flex items-center gap-2 text-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-base text-primary">security</span>
+<span>数据全程本地解析，不向公网回传隐私正文</span>
+</div>
+<div class="flex items-center gap-2.5 w-full sm:w-auto">
+<button class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-secondary text-on-secondary font-label font-semibold text-sm shadow-md hover:bg-on-secondary-fixed-variant active:scale-[0.97] transition-all" id="btn-parse" onclick="runMcpParse()" type="button">
+<span class="material-symbols-outlined text-lg" id="parse-icon">auto_fix_high</span>
+<span id="parse-text">智能解析 (Parse)</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 协议底层诊断遥测卡片 -->
+<div class="bg-surface-container-low p-4 rounded-xl flex items-center justify-between text-xs text-on-surface-variant font-mono">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-base text-primary">terminal</span>
+<span>MCP Session ID: <strong class="text-on-surface font-semibold">sess_mcp_0926_x89a</strong></span>
+</div>
+<div class="flex items-center gap-3">
+<span>LLM-Token Cost: 0 (Local Model)</span>
+<span class="text-outline">|</span>
+<span class="text-on-tertiary-container font-semibold">Memory: 4.2 MB</span>
+</div>
+</div>
+</div>
+<!-- 右侧：结构化解析预览与动作面板 (5 Cols) -->
+<div class="lg:col-span-5 space-y-6">
+<!-- 核心预览卡片 (Parse Preview Card) -->
+<div class="bg-surface-container-lowest rounded-xl shadow-md overflow-hidden relative" id="preview-panel">
+<!-- 顶部状态指示带 -->
+<div class="bg-primary px-6 py-4 text-on-primary flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-lg text-primary-fixed">rule_folder</span>
+<span class="font-label font-semibold text-sm">解析结果结构化预览</span>
+</div>
+<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-primary-container text-primary-fixed">UID: mcp-event-9842</span>
+</div>
+<div class="p-6 space-y-5">
+<!-- 来源识别徽标 -->
+<div class="flex items-center justify-between pb-3">
+<div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed text-xs font-semibold">
+<span class="material-symbols-outlined text-sm">forward_to_inbox</span>
+<span>Outlook 邮件会话识别</span>
+</div>
+<span class="text-xs font-mono text-outline">置信度 99.4%</span>
+</div>
+<!-- 标题 -->
+<div class="space-y-1">
+<span class="text-[11px] font-label text-outline uppercase tracking-wider">提取日程标题</span>
+<h2 class="text-lg font-headline font-bold text-on-surface leading-snug">
+                时序引擎 v2.5 架构跨部门联调评审
+              </h2>
+</div>
+<!-- 时段与时长 -->
+<div class="grid grid-cols-2 gap-3 p-3.5 rounded-lg bg-surface-container-low">
+<div class="space-y-1">
+<span class="text-[11px] font-label text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">schedule</span>
+                  识别时段
+                </span>
+<p class="text-sm font-semibold text-on-surface font-mono" style="font-variant-numeric: tabular-nums;">
+                  2026-09-26 14:00 - 15:00
+                </p>
+</div>
+<div class="space-y-1">
+<span class="text-[11px] font-label text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">timelapse</span>
+                  预计时长
+                </span>
+<p class="text-sm font-semibold text-primary font-mono" style="font-variant-numeric: tabular-nums;">
+                  60 分钟 (1.0h)
+                </p>
+</div>
+</div>
+<!-- 属性与认知负荷 -->
+<div class="space-y-3">
+<div class="flex items-center justify-between text-xs">
+<span class="text-on-surface-variant font-medium">优先级与会议属性</span>
+<span class="px-2 py-0.5 rounded bg-error-container text-on-error-container font-semibold font-mono text-[11px]">
+                  P0 阻塞级 · 跨部门协同
+                </span>
+</div>
+<!-- 认知负荷预估 -->
+<div class="p-3 rounded-lg bg-surface-container space-y-2">
+<div class="flex items-center justify-between text-xs">
+<span class="font-medium text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-secondary">psychology</span>
+                    认知负荷预估
+                  </span>
+<span class="font-semibold text-primary">中等偏高 (3/5)</span>
+</div>
+<!-- 进度刻度 -->
+<div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden flex">
+<div class="bg-secondary h-full w-[60%] rounded-full"></div>
+</div>
+<p class="text-[11px] text-outline leading-tight">
+                  多参与者多技术断点，建议会前预留 15 分钟情绪与上下文冷启动缓冲。
+                </p>
+</div>
+</div>
+<!-- 会议元信息提取 -->
+<div class="p-3 rounded-lg bg-surface-container-low space-y-1.5 text-xs text-on-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-outline">group</span>
+<span>参会人：张弛 (发起), 知行, 李牧, 周薇</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-outline">video_camera_front</span>
+<span>线上地点：腾讯会议 882-930-114 (密: 0926)</span>
+</div>
+</div>
+<!-- 时空冲突校验 (核心算法反馈) -->
+<div class="p-4 rounded-xl bg-amber-500/10 text-on-surface space-y-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-base text-amber-700">warning</span>
+<span class="text-xs font-semibold text-amber-900 font-label">时空重叠校验报告 (SQLite 碰撞引擎)</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+                经本地日程引擎检测，该时段与原有计划中的 <strong class="text-on-surface">“深度文献调研”</strong> (13:30-14:30) 存在 30 分钟碰撞。
+              </p>
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-lowest text-[11px] font-mono text-primary font-medium shadow-sm">
+<span class="material-symbols-outlined text-xs text-on-tertiary-container">tune</span>
+<span>方案：自动平移微任务调研至 15:30，无需人工解冲突</span>
+</div>
+</div>
+<!-- 动作操作区 -->
+<div class="pt-2 space-y-2.5">
+<button class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-secondary text-on-secondary font-label font-semibold text-sm shadow hover:bg-on-secondary-fixed-variant active:scale-[0.98] transition-all" onclick="confirmImportSchedule()" type="button">
+<span class="material-symbols-outlined text-lg">calendar_add_on</span>
+                确认导入至智能日历
+              </button>
+<div class="grid grid-cols-2 gap-2">
+<button class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-medium text-on-surface active:scale-[0.98] transition-all shadow-sm" onclick="confirmImportTask()" type="button">
+<span class="material-symbols-outlined text-sm text-secondary">playlist_add</span>
+                  导入为待办微任务
+                </button>
+<button class="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-medium text-on-surface active:scale-[0.98] transition-all shadow-sm" onclick="runMcpParse()" type="button">
+<span class="material-symbols-outlined text-sm text-outline">refresh</span>
+                  重新执行解析
+                </button>
+</div>
+</div>
+</div>
+<!-- 操作成功浮层反馈 (隐藏状态由 JS 切换) -->
+<div class="hidden absolute inset-0 bg-surface-container-lowest/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center space-y-3 z-20" id="success-toast">
+<div class="w-12 h-12 rounded-full bg-on-tertiary-container/20 text-on-tertiary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl">check_circle</span>
+</div>
+<div class="space-y-1">
+<h3 class="font-headline font-bold text-base text-primary">日程已成功注入本地时间轴</h3>
+<p class="text-xs text-on-surface-variant max-w-xs">
+                SQLite 本地库已提交事务，时序地图已应用微任务平移补偿算法。
+              </p>
+</div>
+<button class="px-4 py-1.5 rounded-md bg-surface-container-high hover:bg-surface-container text-xs font-medium text-on-surface" onclick="dismissToast()" type="button">
+              完成返回
+            </button>
+</div>
+</div>
+</div>
+</div>
+<!-- 底部区域：已连接的 MCP 协议端点列表 (符合 PRD 不伪装实时能力规范) -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm space-y-4">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+<div class="space-y-0.5">
+<h3 class="text-sm font-label font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-lg text-secondary">lan</span>
+            已注册 MCP 接入协议端点 (Active Context Gateways)
+          </h3>
+<p class="text-xs text-on-surface-variant">
+            端点负责外部数据摄取与本地 SQLite 副本保持双向离线一致性。
+          </p>
+</div>
+<div class="text-[11px] font-mono text-outline">
+          Heartbeat: 3/3 Monitored
+        </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- 端点 1: 本地 SQLite MCP Server -->
+<div class="p-4 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-on-tertiary-container"></span>
+<span class="text-xs font-semibold text-on-surface">本地 SQLite MCP Server</span>
+</div>
+<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-on-tertiary-container/10 text-on-tertiary-container font-semibold">运行中</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+            核心时序存储与冲突检验引擎。本地优先架构，实现毫秒级事件调度与微任务平移计算。
+          </p>
+<div class="flex items-center justify-between text-[11px] font-mono text-outline pt-1">
+<span>延迟: 2ms</span>
+<span class="text-primary font-medium">v1.2 本地进程</span>
+</div>
+</div>
+<!-- 端点 2: Calendar ICS Sync Gateway -->
+<div class="p-4 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+<span class="text-xs font-semibold text-on-surface">Calendar ICS Sync Gateway</span>
+</div>
+<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-semibold">已同步</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+            支持标准 iCalendar 2.0 规格反序列化，自动提取 RRULE 周期规则与时区偏移。
+          </p>
+<div class="flex items-center justify-between text-[11px] font-mono text-outline pt-1">
+<span>上次同步: 4 分钟前</span>
+<span class="text-primary font-medium">Auto-Pull</span>
+</div>
+</div>
+<!-- 端点 3: Slack Event Webhook (严格符合 PRD 不伪装实时能力的规范) -->
+<div class="p-4 rounded-lg bg-surface-container-low hover:bg-surface-container transition-colors space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-outline"></span>
+<span class="text-xs font-semibold text-on-surface">Slack Event Webhook</span>
+</div>
+<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-surface-container-highest text-outline font-semibold">待接入 · 预留</span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+            协议网关处于待命预留状态。未配置客户端安全凭据前不发起轮询或假连接，杜绝假死与虚假同步。
+          </p>
+<div class="flex items-center justify-between text-[11px] font-mono text-outline pt-1">
+<span>状态: 离线等待认证</span>
+<button class="text-secondary hover:underline font-sans font-medium" type="button">配置凭据</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 内联轻量脚本支持交互体验 -->
+<script>
+    const templates = {
+      outlook: `发件人：张弛 <zhangchi@arch.internal>
+主题：[紧急评审] 时序引擎 v2.5 架构跨部门联调评审
+时间：2026-09-26 14:00 - 15:00 (GMT+8)
+参会人：@知行, @李牧 (调度核心), @周薇 (前端平台)
+会议形式：腾讯会议 (ID: 882-930-114, 密码: 0926)
+优先级标签：[P0-阻塞级]
+
+内容提要：
+针对 Q3 性能基线测试中发现的本地 SQLite 与远程节点冲突回滚异常，需紧急拉通各模块负责人，确认 v2.5 调度解耦方案与补偿回放策略。请知行提前准备时序容灾架构草案。`,
+      feishu: `【飞书加急消息】
+王海峰 (产品总监) 11:24:
+@知行 下午三点半能否紧急对齐一下 MCP 接入层的鉴权安全策略？
+时间：今天下午 15:30 - 16:15
+地点：5号会议室 or 飞书线上视频
+目标：锁定外发协议边界与本地存储字段脱敏方案。优先级 P1。`,
+      ics: `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Temporal Engine//CN
+BEGIN:VEVENT
+UID:mcp-event-9842@temporal.local
+DTSTAMP:20260926T020000Z
+DTSTART:20260926T060000Z
+DTEND:20260926T070000Z
+SUMMARY:时序引擎 v2.5 架构跨部门联调评审
+DESCRIPTION:讨论 SQLite 冲突平移逻辑与容灾草案
+LOCATION:Tencent Meeting 882-930-114
+PRIORITY:1
+END:VEVENT
+END:VCALENDAR`,
+      chat: `知行，别忘了今天下午两点把时序引擎 v2.5 的架构评审拉一下，张弛和李牧他们都会到，大概需要 1 个小时。先在腾讯会议聊，记得把昨天的文献调研往后稍稍挪一挪。`
+    };
+
+    function loadTemplate(key) {
+      const textarea = document.getElementById('raw-input');
+      if (templates[key]) {
+        textarea.value = templates[key];
+        updateCounter();
+      }
+    }
+
+    function clearInput() {
+      const textarea = document.getElementById('raw-input');
+      textarea.value = '';
+      updateCounter();
+    }
+
+    function updateCounter() {
+      const textarea = document.getElementById('raw-input');
+      const counter = document.getElementById('char-counter');
+      if (counter) {
+        counter.textContent = textarea.value.length + ' 字符';
+      }
+    }
+
+    document.getElementById('raw-input').addEventListener('input', updateCounter);
+
+    function runMcpParse() {
+      const btn = document.getElementById('btn-parse');
+      const icon = document.getElementById('parse-icon');
+      const text = document.getElementById('parse-text');
+
+      icon.textContent = 'hourglass_top';
+      text.textContent = '协议引擎提取中...';
+      btn.classList.add('opacity-80', 'pointer-events-none');
+
+      setTimeout(() => {
+        icon.textContent = 'auto_fix_high';
+        text.textContent = '智能解析 (Parse)';
+        btn.classList.remove('opacity-80', 'pointer-events-none');
+
+        // 视觉高光一下结果面板
+        const preview = document.getElementById('preview-panel');
+        preview.classList.add('scale-[1.01]');
+        setTimeout(() => preview.classList.remove('scale-[1.01]'), 200);
+      }, 420);
+    }
+
+    function confirmImportSchedule() {
+      const toast = document.getElementById('success-toast');
+      toast.classList.remove('hidden');
+    }
+
+    function confirmImportTask() {
+      alert('已作为待办微任务存入待办池，并标注 P0 阻塞级。');
+    }
+
+    function dismissToast() {
+      const toast = document.getElementById('success-toast');
+      toast.classList.add('hidden');
+    }
+  </script>
+</div></main></div></body></html>

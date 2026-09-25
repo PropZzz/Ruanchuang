@@ -321,101 +321,157 @@ class _ReviewPageState extends State<ReviewPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
-      appBar: AppBar(
-        title: Text(AppStrings.of(context, 'review_title')),
-        actions: [
-          IconButton(
-            tooltip: '上一周',
-            onPressed: _loading ? null : () => _shift(-1),
-            icon: const Icon(Icons.chevron_left),
+      appBar: AppBar(title: Text(AppStrings.of(context, 'review_title'))),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 960;
+          return Stack(
+            children: [
+              ListView(
+                padding: EdgeInsets.all(wide ? 28 : 16),
+                children: [
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1280),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildControls(context, wide: wide),
+                          const SizedBox(height: 18),
+                          KeyedSubtree(
+                            key: const Key('review-metrics'),
+                            child: _range == _ReviewRange.week
+                                ? _buildWeeklySection(context)
+                                : _buildMonthlySection(context),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildRescueHistory(context),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (_loading) const Center(child: CircularProgressIndicator()),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildControls(BuildContext context, {required bool wide}) {
+    final rangeControl = SegmentedButton<_ReviewRange>(
+      segments: const [
+        ButtonSegment(
+          value: _ReviewRange.week,
+          icon: Icon(Icons.view_week_outlined),
+          label: Text('周'),
+        ),
+        ButtonSegment(
+          value: _ReviewRange.month,
+          icon: Icon(Icons.calendar_month_outlined),
+          label: Text('月'),
+        ),
+      ],
+      selected: {_range},
+      onSelectionChanged: _loading
+          ? null
+          : (next) async {
+              if (_loading) return;
+              if (next.isEmpty || next.first == _range) return;
+              final previousRange = _range;
+              final previousWeekStart = _weekStart;
+              final previousMonthStart = _monthStart;
+              setState(() => _range = next.first);
+              final generated = await _generate();
+              if (!mounted || generated) return;
+              setState(() {
+                _range = previousRange;
+                _weekStart = previousWeekStart;
+                _monthStart = previousMonthStart;
+              });
+            },
+    );
+    final periodNavigation = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: _range == _ReviewRange.week ? '上一周' : '上个月',
+          onPressed: _loading ? null : () => _shift(-1),
+          icon: const Icon(Icons.chevron_left),
+        ),
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 108),
+          child: Text(
+            _headerLabel(context),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelLarge,
           ),
-          Center(
-            child: Text(
-              _headerLabel(context),
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        IconButton(
+          tooltip: _range == _ReviewRange.week ? '下一周' : '下个月',
+          onPressed: _loading ? null : () => _shift(1),
+          icon: const Icon(Icons.chevron_right),
+        ),
+      ],
+    );
+    final actions = Row(
+      children: [
+        Expanded(
+          child: PressScale(
+            child: FilledButton.icon(
+              onPressed: _loading ? null : _simulateWeek,
+              icon: const Icon(Icons.science_outlined),
+              label: Text(AppStrings.of(context, 'review_btn_simulate_week')),
             ),
           ),
-          IconButton(
-            tooltip: '下一周',
-            onPressed: _loading ? null : () => _shift(1),
-            icon: const Icon(Icons.chevron_right),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: PressScale(
+            child: OutlinedButton.icon(
+              onPressed: _loading ? null : _generate,
+              icon: const Icon(Icons.refresh),
+              label: Text(AppStrings.of(context, 'review_btn_generate_report')),
+            ),
           ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          ListView(
-            padding: const EdgeInsets.all(16),
+        ),
+      ],
+    );
+
+    if (wide) {
+      return Card(
+        key: const Key('review-period-controls'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          child: Row(
             children: [
-              SegmentedButton<_ReviewRange>(
-                segments: const [
-                  ButtonSegment(
-                    value: _ReviewRange.week,
-                    icon: Icon(Icons.view_week_outlined),
-                    label: Text('周'),
-                  ),
-                  ButtonSegment(
-                    value: _ReviewRange.month,
-                    icon: Icon(Icons.calendar_month_outlined),
-                    label: Text('月'),
-                  ),
-                ],
-                selected: {_range},
-                onSelectionChanged: _loading
-                    ? null
-                    : (next) async {
-                        if (_loading) return;
-                        if (next.isEmpty || next.first == _range) return;
-                        final previousRange = _range;
-                        final previousWeekStart = _weekStart;
-                        final previousMonthStart = _monthStart;
-                        setState(() => _range = next.first);
-                        final generated = await _generate();
-                        if (!mounted || generated) return;
-                        setState(() {
-                          _range = previousRange;
-                          _weekStart = previousWeekStart;
-                          _monthStart = previousMonthStart;
-                        });
-                      },
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: PressScale(
-                      child: ElevatedButton.icon(
-                        onPressed: _loading ? null : _simulateWeek,
-                        icon: const Icon(Icons.science_outlined),
-                        label: Text(
-                          AppStrings.of(context, 'review_btn_simulate_week'),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: PressScale(
-                      child: OutlinedButton.icon(
-                        onPressed: _loading ? null : _generate,
-                        icon: const Icon(Icons.refresh),
-                        label: Text(
-                          AppStrings.of(context, 'review_btn_generate_report'),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              if (_range == _ReviewRange.week) _buildWeeklySection(context),
-              if (_range == _ReviewRange.month) _buildMonthlySection(context),
-              const SizedBox(height: 12),
-              _buildRescueHistory(context),
+              rangeControl,
+              const SizedBox(width: 18),
+              periodNavigation,
+              const Spacer(),
+              SizedBox(width: 390, child: actions),
             ],
           ),
-          if (_loading) const Center(child: CircularProgressIndicator()),
-        ],
+        ),
+      );
+    }
+
+    return Card(
+      key: const Key('review-period-controls'),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Align(alignment: Alignment.centerLeft, child: rangeControl),
+            const SizedBox(height: 8),
+            Center(child: periodNavigation),
+            const SizedBox(height: 8),
+            actions,
+          ],
+        ),
       ),
     );
   }
@@ -423,93 +479,127 @@ class _ReviewPageState extends State<ReviewPage> {
   Widget _buildWeeklySection(BuildContext context) {
     final r = _weeklyReport;
     if (r == null) {
-      return Text(AppStrings.of(context, 'review_empty'));
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Row(
+            children: [
+              Icon(
+                Icons.insights_outlined,
+                size: 26,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  AppStrings.of(context, 'review_empty'),
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _metricCard(
-          title: AppStrings.of(context, 'review_metric_completion'),
-          value:
-              '${(r.completionRate * 100).round()}% (${r.completedCount}/${r.startedCount})',
-        ),
-        _metricCard(
-          title: AppStrings.of(context, 'review_metric_time'),
-          value: AppStrings.of(
-            context,
-            'review_metric_time_value',
-            params: {
-              'planned': r.plannedMinutesTotal.toString(),
-              'actual': r.actualMinutesTotal.toString(),
-            },
+        _metricGrid([
+          _metricCard(
+            title: AppStrings.of(context, 'review_metric_completion'),
+            value:
+                '${(r.completionRate * 100).round()}% (${r.completedCount}/${r.startedCount})',
+          ),
+          _metricCard(
+            title: AppStrings.of(context, 'review_metric_time'),
+            value: AppStrings.of(
+              context,
+              'review_metric_time_value',
+              params: {
+                'planned': r.plannedMinutesTotal.toString(),
+                'actual': r.actualMinutesTotal.toString(),
+              },
+            ),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        _responsivePanels(
+          _section(
+            AppStrings.of(context, 'review_section_duration_buckets'),
+            r.actualDurationBuckets,
+          ),
+          _section(
+            AppStrings.of(context, 'review_section_delay_attribution'),
+            r.delayAttribution,
           ),
         ),
-        const SizedBox(height: 8),
-        _section(
-          AppStrings.of(context, 'review_section_duration_buckets'),
-          r.actualDurationBuckets,
-        ),
-        const SizedBox(height: 8),
-        _section(
-          AppStrings.of(context, 'review_section_delay_attribution'),
-          r.delayAttribution,
-        ),
         const SizedBox(height: 12),
-        Text(
+        _buildSuggestionPanel(
           AppStrings.of(context, 'review_suggestions_title'),
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          r.suggestions,
+          AppStrings.of(context, 'review_suggestions_empty'),
         ),
-        const SizedBox(height: 6),
-        if (r.suggestions.isEmpty)
-          Text(AppStrings.of(context, 'review_suggestions_empty'))
-        else
-          ...r.suggestions.map(
-            (s) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text('- $s'),
-            ),
-          ),
         const SizedBox(height: 12),
-        Text(
-          AppStrings.of(context, 'review_tuning_title'),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          AppStrings.of(
-            context,
-            'review_tuning_default_duration_multiplier',
-            params: {
-              'value': r.tuning.defaultDurationMultiplier.toStringAsFixed(2),
-            },
-          ),
-        ),
-        Text(
-          AppStrings.of(
-            context,
-            'review_tuning_high_load_penalty_low_energy',
-            params: {
-              'value': r.tuning.highLoadPenaltyWhenLowEnergy.toStringAsFixed(2),
-            },
-          ),
-        ),
-        const SizedBox(height: 6),
-        if (r.tuning.tagDurationMultiplier.isEmpty)
-          Text(AppStrings.of(context, 'review_tuning_tag_multiplier_none'))
-        else
-          ...r.tuning.tagDurationMultiplier.entries.map(
-            (e) => Text(
-              AppStrings.of(
-                context,
-                'review_tuning_tag_multiplier_entry',
-                params: {
-                  'tag': _tagLabel(context, e.key),
-                  'value': e.value.toStringAsFixed(2),
-                },
-              ),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sectionHeading(
+                  context,
+                  AppStrings.of(context, 'review_tuning_title'),
+                  Icons.tune,
+                ),
+                const SizedBox(height: 10),
+                _tuningValue(
+                  AppStrings.of(
+                    context,
+                    'review_tuning_default_duration_multiplier',
+                    params: {
+                      'value': r.tuning.defaultDurationMultiplier
+                          .toStringAsFixed(2),
+                    },
+                  ),
+                ),
+                _tuningValue(
+                  AppStrings.of(
+                    context,
+                    'review_tuning_high_load_penalty_low_energy',
+                    params: {
+                      'value': r.tuning.highLoadPenaltyWhenLowEnergy
+                          .toStringAsFixed(2),
+                    },
+                  ),
+                ),
+                const SizedBox(height: 4),
+                if (r.tuning.tagDurationMultiplier.isEmpty)
+                  Text(
+                    AppStrings.of(context, 'review_tuning_tag_multiplier_none'),
+                  )
+                else
+                  ...r.tuning.tagDurationMultiplier.entries.map(
+                    (entry) => _tuningValue(
+                      AppStrings.of(
+                        context,
+                        'review_tuning_tag_multiplier_entry',
+                        params: {
+                          'tag': _tagLabel(context, entry.key),
+                          'value': entry.value.toStringAsFixed(2),
+                        },
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                Text(
+                  AppStrings.of(context, 'review_tip_replan'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
             ),
           ),
+        ),
       ],
     );
   }
@@ -517,7 +607,12 @@ class _ReviewPageState extends State<ReviewPage> {
   Widget _buildMonthlySection(BuildContext context) {
     final s = _monthSummary;
     if (s == null) {
-      return const Text('暂无月度复盘，点击“生成报告”。');
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('暂无月度复盘，点击“生成报告”。'),
+        ),
+      );
     }
 
     final trend = s.dailyTrend
@@ -529,129 +624,263 @@ class _ReviewPageState extends State<ReviewPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _metricCard(
-          title: '月度完成率',
-          value:
-              '${(s.completionRate * 100).round()}% (${s.completedCount}/${s.startedCount})',
-        ),
-        _metricCard(
-          title: '月度时间',
-          value: '计划 ${s.plannedMinutesTotal} 分钟，实际 ${s.actualMinutesTotal} 分钟',
-        ),
-        _section('实际时长分布', s.actualDurationBuckets),
-        const SizedBox(height: 8),
-        _section('瓶颈归因', s.bottleneckAttribution),
-        const SizedBox(height: 8),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '周趋势',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                if (s.weeklyCompletionRate.isEmpty)
-                  const Text('暂无周趋势。')
-                else
-                  ...s.weeklyCompletionRate.entries.map(
-                    (e) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('${e.key}: ${(e.value * 100).round()}%'),
-                    ),
-                  ),
-              ],
-            ),
+        _metricGrid([
+          _metricCard(
+            title: '月度完成率',
+            value:
+                '${(s.completionRate * 100).round()}% (${s.completedCount}/${s.startedCount})',
           ),
+          _metricCard(
+            title: '月度时间',
+            value:
+                '计划 ${s.plannedMinutesTotal} 分钟，实际 ${s.actualMinutesTotal} 分钟',
+          ),
+          if (topBottlenecks.isNotEmpty)
+            _metricCard(
+              title: '主要瓶颈',
+              value:
+                  '${_reviewMapLabel(topBottlenecks.first.key)}: ${topBottlenecks.first.value}',
+            ),
+        ]),
+        const SizedBox(height: 12),
+        _responsivePanels(
+          _section('实际时长分布', s.actualDurationBuckets),
+          _section('瓶颈归因', s.bottleneckAttribution),
         ),
-        const SizedBox(height: 8),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '每日执行概览',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                if (trend.isEmpty)
-                  const Text('本月暂无日常执行记录。')
-                else
-                  ...trend
-                      .take(10)
-                      .map(
-                        (d) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text(
-                            '${d.day.month}/${d.day.day}: ${d.completed}/${d.started} '
-                            '(${(d.completionRate * 100).round()}%)',
-                          ),
+        const SizedBox(height: 12),
+        _responsivePanels(
+          _buildTrendPanel('周趋势', s.weeklyCompletionRate),
+          _buildDailyTrendPanel(trend),
+        ),
+        const SizedBox(height: 12),
+        _buildSuggestionPanel('行动建议', s.suggestions, '本月暂无具体行动建议。'),
+      ],
+    );
+  }
+
+  Widget _buildTrendPanel(String title, Map<String, double> values) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeading(context, title, Icons.show_chart),
+            const SizedBox(height: 14),
+            if (values.isEmpty)
+              const Text('暂无周趋势。')
+            else
+              ...values.entries.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 72, child: Text(entry.key)),
+                      Expanded(
+                        child: LinearProgressIndicator(
+                          value: entry.value.clamp(0.0, 1.0),
+                          minHeight: 8,
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-              ],
-            ),
-          ),
+                      const SizedBox(width: 10),
+                      Text('${(entry.value * 100).round()}%'),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
-        const SizedBox(height: 8),
-        if (topBottlenecks.isNotEmpty)
-          _metricCard(
-            title: '主要瓶颈',
-            value:
-                '${_reviewMapLabel(topBottlenecks.first.key)}: ${topBottlenecks.first.value}',
-          ),
-        const SizedBox(height: 8),
-        const Text('行动建议', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 6),
-        if (s.suggestions.isEmpty)
-          const Text('本月暂无具体行动建议。')
-        else
-          ...s.suggestions.map(
-            (line) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text('- $line'),
+      ),
+    );
+  }
+
+  Widget _buildDailyTrendPanel(List<DailyReviewPoint> trend) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeading(
+              context,
+              '每日执行概览',
+              Icons.calendar_view_week_outlined,
             ),
-          ),
+            const SizedBox(height: 14),
+            if (trend.isEmpty)
+              const Text('本月暂无日常执行记录。')
+            else
+              ...trend.take(10).map((day) {
+                final percent = day.completionRate.clamp(0.0, 1.0);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 54,
+                        child: Text('${day.day.month}/${day.day.day}'),
+                      ),
+                      Expanded(
+                        child: LinearProgressIndicator(
+                          value: percent,
+                          minHeight: 8,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text('${day.completed}/${day.started}'),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSuggestionPanel(
+    String title,
+    List<String> suggestions,
+    String emptyMessage,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionHeading(context, title, Icons.lightbulb_outline),
+            const SizedBox(height: 10),
+            if (suggestions.isEmpty)
+              Text(emptyMessage)
+            else
+              ...suggestions.map(
+                (suggestion) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.arrow_right_alt,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(child: Text(suggestion)),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _tuningValue(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Text(text),
+    );
+  }
+
+  Widget _sectionHeading(BuildContext context, String text, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 19, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+        ),
       ],
+    );
+  }
+
+  Widget _metricGrid(List<Widget> metrics) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 820 ? 2 : 1;
+        final gap = 12.0;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: metrics
+              .map((metric) => SizedBox(width: width, child: metric))
+              .toList(),
+        );
+      },
+    );
+  }
+
+  Widget _responsivePanels(Widget first, Widget second) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 820) {
+          return Column(children: [first, const SizedBox(height: 12), second]);
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: first),
+            const SizedBox(width: 12),
+            Expanded(child: second),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildRescueHistory(BuildContext context) {
     final material = MaterialLocalizations.of(context);
+    final statusColor = Theme.of(context).colorScheme;
     return Card(
+      key: const Key('review-rescue-history'),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const Icon(Icons.route_outlined),
-                const SizedBox(width: 8),
-                Text(
-                  AppStrings.of(context, 'review_rescue_history'),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
+            _sectionHeading(
+              context,
+              AppStrings.of(context, 'review_rescue_history'),
+              Icons.route_outlined,
             ),
             const SizedBox(height: 8),
             if (_rescueEvents.isEmpty)
-              Text(AppStrings.of(context, 'review_rescue_empty'))
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(AppStrings.of(context, 'review_rescue_empty')),
+              )
             else
-              ..._rescueEvents.map(
-                (event) => ListTile(
+              ..._rescueEvents.map((event) {
+                final undone = event.reason!.startsWith('rescue_undo:');
+                return ListTile(
                   contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    undone ? Icons.undo : Icons.check_circle_outline,
+                    color: undone
+                        ? statusColor.onSurfaceVariant
+                        : statusColor.tertiary,
+                  ),
                   title: Text(event.title),
                   subtitle: Text(
                     '${material.formatTimeOfDay(TimeOfDay.fromDateTime(event.at))} - '
                     '${_rescueStrategyLabel(context, event.reason!)}',
                   ),
-                  trailing: Text(_rescueStatusLabel(context, event.reason!)),
-                ),
-              ),
+                  trailing: Text(
+                    _rescueStatusLabel(context, event.reason!),
+                    style: TextStyle(
+                      color: undone
+                          ? statusColor.onSurfaceVariant
+                          : statusColor.tertiary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              }),
           ],
         ),
       ),
@@ -725,24 +954,18 @@ class _ReviewPageState extends State<ReviewPage> {
   Widget _metricCard({required String title, required String value}) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            Flexible(
-              child: Text(
-                value,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
+            Text(title, style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ],
@@ -752,20 +975,51 @@ class _ReviewPageState extends State<ReviewPage> {
   }
 
   Widget _section(String title, Map<String, int> data) {
+    final maximum = data.values.fold<int>(
+      0,
+      (current, value) => value > current ? value : current,
+    );
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            ...data.entries.map(
-              (e) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text('${_reviewMapLabel(e.key)}: ${e.value}'),
+            _sectionHeading(context, title, Icons.bar_chart_outlined),
+            const SizedBox(height: 14),
+            if (data.isEmpty)
+              const Text('当前周期暂无统计数据。')
+            else
+              ...data.entries.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: Text(_reviewMapLabel(entry.key))),
+                          Text(
+                            entry.value.toString(),
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      LinearProgressIndicator(
+                        value: maximum == 0 ? 0.0 : entry.value / maximum,
+                        minHeight: 7,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
           ],
         ),
       ),

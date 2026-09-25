@@ -20,6 +20,7 @@ import '../widgets/responsive_page_frame.dart';
 import '../widgets/workbench_surface.dart';
 import '../widgets/workspace_status_bar.dart';
 import 'smart_calendar_page.dart';
+import 'main_screen.dart';
 
 int completedMinutesForTimer({
   required int plannedMinutes,
@@ -475,6 +476,8 @@ class _FocusPageState extends State<FocusPage> {
                             ],
                           ),
                           const SizedBox(height: 18),
+                          _buildMetricStrip(theme),
+                          const SizedBox(height: 14),
                           ResponsiveCardGrid(
                             children: [
                               Column(
@@ -524,6 +527,108 @@ class _FocusPageState extends State<FocusPage> {
     return AppStrings.of(context, 'source_local');
   }
 
+  Widget _buildMetricStrip(ThemeData theme) {
+    final remainingMinutes = (_remainingSeconds ~/ 60).toString().padLeft(
+      2,
+      '0',
+    );
+    final remainingSeconds = (_remainingSeconds % 60).toString().padLeft(
+      2,
+      '0',
+    );
+    final metrics = [
+      (
+        AppStrings.of(context, 'focus_title'),
+        _currentTask == null ? '--:--' : '$remainingMinutes:$remainingSeconds',
+        _currentTask?.title ?? AppStrings.of(context, 'focus_empty_task'),
+      ),
+      (
+        AppStrings.of(context, 'focus_energy_label'),
+        _energyStatus == null ? '--' : '${_energyStatus!.batteryPercent}%',
+        _energyStatus == null
+            ? AppStrings.of(context, 'focus_energy_unavailable')
+            : AppStrings.of(
+                context,
+                'focus_emotion_label',
+                params: {'emotion': _currentEmotion?.name ?? '--'},
+              ),
+      ),
+      (
+        AppStrings.of(context, 'focus_header_next'),
+        '${_nextTasks.length}',
+        _nextTasks.isEmpty
+            ? AppStrings.of(context, 'focus_empty_task')
+            : _nextTasks.first.title,
+      ),
+      (
+        AppStrings.of(context, 'focus_rescue_title'),
+        '$_conflictCount',
+        _conflictCount == 0
+            ? AppStrings.of(context, 'focus_clear')
+            : AppStrings.of(context, 'focus_attention'),
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 480;
+        return Row(
+          key: const ValueKey('focus-metric-strip'),
+          children: [
+            for (var i = 0; i < metrics.length; i++) ...[
+              if (i > 0) SizedBox(width: compact ? 6 : 12),
+              Expanded(
+                child: Card(
+                  elevation: 0,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 7 : 14,
+                      vertical: compact ? 10 : 12,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          metrics[i].$1,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          metrics[i].$2,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontSize: compact ? 16 : 21,
+                            fontWeight: FontWeight.w700,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                        if (!compact) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            metrics[i].$3,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildRhythmPanel(ThemeData theme) {
     // Conflicts are derived from today's loaded entries. Team windows are a
     // reserved capability and must not pretend to have live data.
@@ -534,9 +639,14 @@ class _FocusPageState extends State<FocusPage> {
         MiniTimeline(
           title: AppStrings.of(context, 'focus_next_four_hours'),
           actionLabel: AppStrings.of(context, 'focus_view_calendar'),
-          onAction: () => Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (_) => const SmartCalendarPage())),
+          onAction: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const MainScreen(
+                secondaryPage: SmartCalendarPage(),
+                secondaryTabIndex: 1,
+              ),
+            ),
+          ),
           segments: [
             theme.colorScheme.tertiary.withValues(alpha: 0.35),
             theme.colorScheme.secondary.withValues(alpha: 0.55),

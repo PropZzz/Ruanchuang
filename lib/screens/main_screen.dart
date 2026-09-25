@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../services/app_services.dart';
 import '../ui/app_theme.dart';
 import '../utils/app_strings.dart';
-import '../widgets/glass_surface.dart';
 import 'auth_dialog.dart';
 import 'focus_page.dart';
 import 'micro_task_page.dart';
@@ -13,7 +12,10 @@ import 'smart_calendar_page.dart';
 import 'team_page.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  const MainScreen({super.key, this.secondaryPage, this.secondaryTabIndex = 0});
+
+  final Widget? secondaryPage;
+  final int secondaryTabIndex;
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -21,6 +23,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  bool _showSecondaryPage = false;
   bool _railExpanded = true;
   bool _startupAuthPromptShown = false;
 
@@ -35,7 +38,11 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    _hydrateCurrentUser();
+    _selectedIndex = widget.secondaryTabIndex
+        .clamp(0, _pages.length - 1)
+        .toInt();
+    _showSecondaryPage = widget.secondaryPage != null;
+    if (!_showSecondaryPage) _hydrateCurrentUser();
   }
 
   Future<void> _hydrateCurrentUser() async {
@@ -130,7 +137,9 @@ class _MainScreenState extends State<MainScreen> {
     final isWide = width >= AppTheme.compactShellBreakpoint;
     final isDesktop = width >= AppTheme.shellBreakpoint;
     final destinations = _destinations(context);
-    final pageStack = IndexedStack(index: _selectedIndex, children: _pages);
+    final pageStack = _showSecondaryPage
+        ? widget.secondaryPage!
+        : IndexedStack(index: _selectedIndex, children: _pages);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -171,9 +180,10 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _onSelect(int index) {
-    if (index == _selectedIndex) return;
+    if (index == _selectedIndex && !_showSecondaryPage) return;
     setState(() {
       _selectedIndex = index;
+      _showSecondaryPage = false;
     });
   }
 }
@@ -195,29 +205,29 @@ class _NarrowShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(child: ClipRRect(child: child)),
         Padding(
           key: const ValueKey('shell-bottom-capsule'),
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-          child: GlassSurface(
+          padding: EdgeInsets.zero,
+          child: Material(
             key: const ValueKey('shell-bottom-material'),
-            level: AppMaterialLevel.chrome,
-            borderRadius: BorderRadius.circular(24),
-            opacity: 0.9,
-            padding: EdgeInsets.zero,
-            showShadow: true,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8.0,
-                  vertical: 4.0,
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.zero,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Theme.of(context).colorScheme.outline),
                 ),
+              ),
+              child: SafeArea(
+                top: false,
                 child: NavigationBar(
-                  backgroundColor: Colors.transparent,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
                   elevation: 0,
-                  height: null,
+                  height: 68,
+                  indicatorColor: Colors.transparent,
                   labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
                   selectedIndex: selectedIndex,
                   onDestinationSelected: onSelect,
@@ -278,12 +288,11 @@ class _WideShell extends StatelessWidget {
       children: [
         SizedBox(
           width: railWidth,
-          child: GlassSurface(
+          child: Material(
             key: const ValueKey('shell-rail-material'),
-            level: AppMaterialLevel.chrome,
-            borderRadius: BorderRadius.zero,
-            padding: EdgeInsets.zero,
-            showShadow: false,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppThemeTokens.sidebarDark
+                : AppThemeTokens.sidebarLight,
             child: SafeArea(
               right: false,
               child: Column(
@@ -301,13 +310,12 @@ class _WideShell extends StatelessWidget {
                           ? MainAxisAlignment.start
                           : MainAxisAlignment.center,
                       children: [
-                        Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: scheme.primary,
-                          ),
+                        Image.asset(
+                          'stitch/assets/images/a2aaefce0709.png',
+                          width: 28,
+                          height: 28,
+                          fit: BoxFit.contain,
+                          semanticLabel: title,
                         ),
                         if (railExpanded) ...[
                           const SizedBox(width: 12),
@@ -318,7 +326,7 @@ class _WideShell extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: text.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
-                                letterSpacing: 1.0,
+                                letterSpacing: 0,
                               ),
                             ),
                           ),
@@ -595,7 +603,9 @@ class _GroupedSidebarItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final foreground = selected ? scheme.primary : scheme.onSurfaceVariant;
+    final foreground = selected
+        ? AppThemeTokens.selectedNavText
+        : scheme.onSurfaceVariant;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
@@ -612,7 +622,7 @@ class _GroupedSidebarItem extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),
-                color: selected ? scheme.secondaryContainer : null,
+                color: selected ? scheme.primaryContainer : null,
               ),
               child: Row(
                 children: [

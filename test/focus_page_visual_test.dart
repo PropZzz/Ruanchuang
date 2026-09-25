@@ -27,7 +27,7 @@ void main() {
       expect(find.byKey(const ValueKey('focus-energy-status')), findsOneWidget);
       expect(find.byKey(const ValueKey('focus-task-empty')), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      expect(find.textContaining('85%'), findsOneWidget);
+      expect(find.textContaining('85%'), findsAtLeastNWidgets(1));
     },
   );
 
@@ -37,7 +37,12 @@ void main() {
     );
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
 
-    await tester.tap(find.textContaining('View full calendar'));
+    final calendarAction = find.textContaining('View full calendar');
+    await tester.drag(find.byType(ListView).first, const Offset(0, -420));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    await tester.ensureVisible(calendarAction);
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    await tester.tap(calendarAction);
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
 
     expect(find.byType(SmartCalendarPage), findsOneWidget);
@@ -70,5 +75,21 @@ void main() {
     ).formatMediumDate(DateTime.now());
     expect(find.textContaining(currentDate), findsOneWidget);
     expect(find.textContaining('08 月 31 日'), findsNothing);
+  });
+
+  testWidgets('desktop focus page exposes its overview metrics', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.light, home: const FocusPage()),
+    );
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    expect(find.byKey(const ValueKey('focus-metric-strip')), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

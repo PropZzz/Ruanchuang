@@ -62,6 +62,130 @@ void main() {
     }
   });
 
+  testWidgets('desktop calendar places rescue context beside the time map', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.light, home: const SmartCalendarPage()),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    expect(
+      find.byKey(const ValueKey('calendar-desktop-rescue-panel')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('phone add-schedule form opens as a bottom sheet', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.light, home: const SmartCalendarPage()),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    await tester.tap(find.byIcon(Icons.add).last);
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(Dialog), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('phone urgent-task form opens as a bottom sheet', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.light, home: const SmartCalendarPage()),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    await tester.tap(find.byIcon(Icons.bolt));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    await tester.tap(find.text('Insert urgent task and replan').last);
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(Dialog), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('phone ICS import previews before writing entries', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final service = MockDataService();
+    AppServices.installTestOverrides(
+      dataService: service,
+      reminderService: NoopReminderService(),
+    );
+    final before =
+        await tester.runAsync(() => service.getScheduleEntries()) ?? const [];
+    final now = DateTime.now();
+    String two(int value) => value.toString().padLeft(2, '0');
+    final start = '${now.year}${two(now.month)}${two(now.day)}T140000';
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.light, home: const SmartCalendarPage()),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) => widget is PopupMenuItem<String> && widget.value == 'import',
+      ),
+    );
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(find.byType(BottomSheet), findsOneWidget);
+
+    await tester.enterText(
+      find.byType(TextField),
+      'BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:mobile-preview\n'
+      'SUMMARY:Mobile preview\nDTSTART:$start\nDURATION:PT45M\n'
+      'END:VEVENT\nEND:VCALENDAR',
+    );
+    await tester.tap(find.text('Preview schedule'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    expect(find.text('Mobile preview'), findsOneWidget);
+    final beforeImport =
+        await tester.runAsync(() => service.getScheduleEntries()) ?? const [];
+    expect(beforeImport, hasLength(before.length));
+    await tester.tap(find.text('Import 1 items'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    final after =
+        await tester.runAsync(() => service.getScheduleEntries()) ?? const [];
+    expect(after, hasLength(before.length + 1));
+    expect(
+      after.where((entry) => entry.title == 'Mobile preview'),
+      hasLength(1),
+    );
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   Future<void> openRescueComparison(WidgetTester tester, Size size) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;

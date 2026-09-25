@@ -23,6 +23,7 @@ import '../widgets/rescue_plan_comparison.dart';
 import '../widgets/responsive_page_frame.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/schedule_timeline.dart';
+import '../widgets/stitch_form_sheet.dart';
 import '../widgets/urgent_task_dialog.dart';
 import '../widgets/add_schedule_entry_dialog.dart';
 import '../widgets/workbench_surface.dart';
@@ -30,6 +31,7 @@ import '../widgets/workspace_status_bar.dart';
 import 'emotion_page.dart';
 import 'goals_page.dart';
 import 'integrations_page.dart';
+import 'main_screen.dart';
 
 enum _CalendarMode { manual, smart }
 
@@ -738,7 +740,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                     await _loadSchedule();
                   },
           ),
-          if (!isCompactAppBar && _mode == _CalendarMode.smart)
+          if (!isCompactAppBar)
             IconButton(
               tooltip: AppStrings.of(context, 'calendar_tooltip_insert_urgent'),
               icon: const Icon(Icons.add_alert),
@@ -753,16 +755,31 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
             tooltip: AppStrings.of(context, 'tooltip_more'),
             onSelected: (v) async {
               if (v == 'emotion') {
-                Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const EmotionPage()));
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const MainScreen(
+                      secondaryPage: EmotionPage(),
+                      secondaryTabIndex: 1,
+                    ),
+                  ),
+                );
               } else if (v == 'goals') {
-                Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const GoalsPage()));
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const MainScreen(
+                      secondaryPage: GoalsPage(),
+                      secondaryTabIndex: 1,
+                    ),
+                  ),
+                );
               } else if (v == 'mcp') {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const IntegrationsPage()),
+                  MaterialPageRoute(
+                    builder: (_) => const MainScreen(
+                      secondaryPage: IntegrationsPage(),
+                      secondaryTabIndex: 1,
+                    ),
+                  ),
                 );
               } else if (v == 'urgent') {
                 if (!_isLoading) _showInsertUrgentDialog();
@@ -787,7 +804,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 value: 'goals',
                 child: Text(AppStrings.of(ctx, 'goal_title')),
               ),
-              if (isCompactAppBar && _mode == _CalendarMode.smart)
+              if (isCompactAppBar)
                 PopupMenuItem(
                   value: 'urgent',
                   enabled: !_isLoading,
@@ -876,26 +893,52 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                   ),
                 ),
                 Expanded(
-                  child: KeyedSubtree(
-                    key: const ValueKey('calendar-time-map'),
-                    child: AnimatedSwitcher(
-                      duration: AppMotion.resolve(
-                        context,
-                        const Duration(milliseconds: 220),
-                      ),
-                      reverseDuration: AppMotion.resolve(
-                        context,
-                        AppMotion.exit,
-                      ),
-                      switchInCurve: Curves.easeOut,
-                      switchOutCurve: Curves.easeIn,
-                      child: KeyedSubtree(
-                        key: ValueKey(
-                          '${_view.name}-${_selectedDay.toIso8601String()}',
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final timeMap = KeyedSubtree(
+                        key: const ValueKey('calendar-time-map'),
+                        child: AnimatedSwitcher(
+                          duration: AppMotion.resolve(
+                            context,
+                            const Duration(milliseconds: 220),
+                          ),
+                          reverseDuration: AppMotion.resolve(
+                            context,
+                            AppMotion.exit,
+                          ),
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          child: KeyedSubtree(
+                            key: ValueKey(
+                              '${_view.name}-${_selectedDay.toIso8601String()}',
+                            ),
+                            child: _buildViewBody(
+                              context,
+                              allEntries,
+                              dayEntries,
+                            ),
+                          ),
                         ),
-                        child: _buildViewBody(context, allEntries, dayEntries),
-                      ),
-                    ),
+                      );
+                      if (MediaQuery.sizeOf(context).width <
+                          AppTheme.shellBreakpoint) {
+                        return timeMap;
+                      }
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: timeMap),
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            width: 288,
+                            child: _buildDesktopRescuePanel(
+                              context,
+                              dayEntries,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ],
@@ -913,6 +956,149 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                 label: Text(AppStrings.of(context, 'calendar_btn_replan')),
                 onPressed: _isLoading ? null : _loadSmartSchedule,
               ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopRescuePanel(
+    BuildContext context,
+    List<ScheduleEntry> dayEntries,
+  ) {
+    final theme = Theme.of(context);
+    final totalMinutes = dayEntries.fold<int>(
+      0,
+      (sum, entry) => sum + _entryDurationMinutes(entry),
+    );
+    final now = TimeOfDay.now();
+    final nowMinutes = now.hour * 60 + now.minute;
+    ScheduleEntry? nextEntry;
+    for (final entry in dayEntries) {
+      if (entry.time.hour * 60 + entry.time.minute >= nowMinutes) {
+        nextEntry = entry;
+        break;
+      }
+    }
+
+    return SingleChildScrollView(
+      key: const ValueKey('calendar-desktop-rescue-panel'),
+      padding: const EdgeInsets.fromLTRB(0, 4, 16, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          WorkbenchSurface(
+            title: AppStrings.of(context, 'calendar_today_rhythm'),
+            trailing: DataSourceBadge(label: _dataSourceLabel(context)),
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                WorkbenchMetric(
+                  label: Localizations.localeOf(context).languageCode == 'en'
+                      ? 'Schedule items'
+                      : '日程项目',
+                  value: '${dayEntries.length}',
+                  supportingText: AppStrings.of(
+                    context,
+                    'calendar_schedule_count',
+                    params: {'count': '${dayEntries.length}'},
+                  ),
+                ),
+                const Divider(height: 24),
+                WorkbenchMetric(
+                  label: Localizations.localeOf(context).languageCode == 'en'
+                      ? 'Planned time'
+                      : '计划时长',
+                  value: '$totalMinutes min',
+                  supportingText: _mode == _CalendarMode.smart
+                      ? AppStrings.of(context, 'calendar_mode_smart')
+                      : AppStrings.of(context, 'calendar_mode_manual'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          WorkbenchSurface(
+            title: Localizations.localeOf(context).languageCode == 'en'
+                ? 'Next up'
+                : '下一项日程',
+            padding: const EdgeInsets.all(14),
+            child: nextEntry == null
+                ? Text(
+                    AppStrings.of(context, 'calendar_week_empty'),
+                    style: theme.textTheme.bodyMedium,
+                  )
+                : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 3,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: nextEntry.color,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              nextEntry.time.format(context),
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: theme.colorScheme.secondary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _scheduleTitleLabel(context, nextEntry.title),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleSmall,
+                            ),
+                            Text(
+                              _tagLabel(context, nextEntry.tag),
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 12),
+          WorkbenchSurface(
+            title: Localizations.localeOf(context).languageCode == 'en'
+                ? 'Rescue status'
+                : '救援状态',
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _acceptedRescue == null
+                      ? AppStrings.of(context, 'calendar_rescue_clear')
+                      : AppStrings.of(
+                          context,
+                          'calendar_rescue_moved',
+                          params: {
+                            'count': '${_acceptedRescue!.movedEntryCount}',
+                          },
+                        ),
+                  style: theme.textTheme.bodyMedium,
+                ),
+                if (_acceptedRescue != null) ...[
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: _isLoading ? null : _undoRescue,
+                    icon: const Icon(Icons.undo, size: 18),
+                    label: Text(AppStrings.of(context, 'calendar_rescue_undo')),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1010,6 +1196,14 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _jumpToDay(DateTime.now()),
+                    child: Text(
+                      Localizations.localeOf(context).languageCode == 'en'
+                          ? 'Today'
+                          : '今天',
                     ),
                   ),
                   IconButton(
@@ -2386,63 +2580,30 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
 
   Future<void> _importIcs() async {
     if (_isLoading) return;
-    final ctrl = TextEditingController();
+    final bool isNarrow =
+        MediaQuery.sizeOf(context).width < AppTheme.compactShellBreakpoint;
+    final DateTime selectedDay = dateOnly(_selectedDay);
+    final List<ScheduleEntry>? imported;
+    if (isNarrow) {
+      imported = await showModalBottomSheet<List<ScheduleEntry>>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: false,
+        builder: (_) => _IcsImportForm(day: selectedDay, bottomSheet: true),
+      );
+    } else {
+      imported = await showDialog<List<ScheduleEntry>>(
+        context: context,
+        builder: (_) => _IcsImportForm(day: selectedDay),
+      );
+    }
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(AppStrings.of(ctx, 'calendar_ics_import_title')),
-        content: ConstrainedBox(
-          constraints: MobileFeedback.dialogConstraints(ctx, maxWidth: 520),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                AppStrings.of(ctx, 'calendar_ics_import_help'),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: ctrl,
-                minLines: 6,
-                maxLines: 12,
-                decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  hintText: AppStrings.of(ctx, 'calendar_ics_import_hint'),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(AppStrings.of(ctx, 'btn_cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(AppStrings.of(ctx, 'btn_import')),
-          ),
-        ],
-      ),
-    );
-
-    if (ok != true) return;
-
-    final text = ctrl.text;
-    if (text.trim().isEmpty) return;
+    if (imported == null || imported.isEmpty) return;
     if (!mounted) return;
 
     setState(() => _isLoading = true);
 
     try {
-      final events = IcsCodec.decodeCalendar(text);
-      final d = dateOnly(_selectedDay);
-      final imported = IcsBridge.eventsToSchedule(day: d, events: events);
-
       final existing = await _dataService.getScheduleEntries();
       final existingById = <String, ScheduleEntry>{
         for (final e in existing)
@@ -2772,5 +2933,166 @@ class _TimelineGridPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _TimelineGridPainter oldDelegate) {
     return oldDelegate.lineColor != lineColor;
+  }
+}
+
+class _IcsImportForm extends StatefulWidget {
+  const _IcsImportForm({required this.day, this.bottomSheet = false});
+
+  final DateTime day;
+  final bool bottomSheet;
+
+  @override
+  State<_IcsImportForm> createState() => _IcsImportFormState();
+}
+
+class _IcsImportFormState extends State<_IcsImportForm> {
+  final TextEditingController _controller = TextEditingController();
+  List<ScheduleEntry>? _preview;
+  String? _validationMessage;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _previewOrImport() {
+    final preview = _preview;
+    if (preview != null) {
+      Navigator.of(context).pop(preview);
+      return;
+    }
+
+    try {
+      final events = IcsCodec.decodeCalendar(_controller.text);
+      if (events.isEmpty) {
+        setState(() {
+          _validationMessage = AppStrings.of(context, 'calendar_ics_invalid');
+        });
+        return;
+      }
+      final entries = IcsBridge.eventsToSchedule(
+        day: widget.day,
+        events: events,
+      );
+      if (entries.isEmpty) {
+        setState(() {
+          _validationMessage = AppStrings.of(context, 'calendar_ics_wrong_day');
+        });
+        return;
+      }
+      setState(() {
+        _preview = entries;
+        _validationMessage = null;
+      });
+    } catch (_) {
+      setState(() {
+        _validationMessage = AppStrings.of(context, 'calendar_ics_invalid');
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = AppStrings.of(context, 'calendar_ics_import_title');
+    final confirmLabel = _preview == null
+        ? AppStrings.of(context, 'calendar_ics_preview')
+        : AppStrings.of(
+            context,
+            'calendar_ics_import_count',
+            params: {'count': '${_preview!.length}'},
+          );
+    final help = AppStrings.of(context, 'calendar_ics_import_help');
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(help, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _controller,
+          minLines: 5,
+          maxLines: 10,
+          onChanged: (_) {
+            if (_preview != null || _validationMessage != null) {
+              setState(() {
+                _preview = null;
+                _validationMessage = null;
+              });
+            }
+          },
+          decoration: InputDecoration(
+            labelText: AppStrings.of(context, 'calendar_ics_input_label'),
+            hintText: AppStrings.of(context, 'calendar_ics_import_hint'),
+            alignLabelWithHint: true,
+          ),
+        ),
+        if (_validationMessage != null) ...[
+          const SizedBox(height: 8),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              _validationMessage!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+        if (_preview != null) ...[
+          const SizedBox(height: 14),
+          Text(
+            AppStrings.of(
+              context,
+              'calendar_ics_preview_title',
+              params: {
+                'date': MaterialLocalizations.of(
+                  context,
+                ).formatMediumDate(widget.day),
+              },
+            ),
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 6),
+          for (final entry in _preview!)
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.event_outlined),
+              title: Text(
+                entry.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                '${entry.time.format(context)} · ${(entry.height / 80 * 60).round()} 分钟 · ${entry.tag}',
+              ),
+            ),
+        ],
+      ],
+    );
+
+    if (widget.bottomSheet) {
+      return StitchFormSheet(
+        title: title,
+        content: content,
+        onCancel: () => Navigator.of(context).pop(),
+        onConfirm: _previewOrImport,
+        confirmLabel: confirmLabel,
+      );
+    }
+    return AlertDialog(
+      title: Text(title),
+      content: ConstrainedBox(
+        constraints: MobileFeedback.dialogConstraints(context, maxWidth: 520),
+        child: SingleChildScrollView(child: content),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(AppStrings.of(context, 'btn_cancel')),
+        ),
+        FilledButton(onPressed: _previewOrImport, child: Text(confirmLabel)),
+      ],
+    );
   }
 }

@@ -6,7 +6,6 @@ import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
-import '../widgets/responsive_card_grid.dart';
 import '../widgets/responsive_page_frame.dart';
 
 class TeamPage extends StatefulWidget {
@@ -93,6 +92,92 @@ class _TeamPageState extends State<TeamPage> {
       (sum, member) => sum + member.progress,
     );
     return (total / _members.length).clamp(0.0, 1.0).toDouble();
+  }
+
+  bool _isMobileViewport(BuildContext context) =>
+      MediaQuery.sizeOf(context).width < 720;
+
+  Future<T?> _showResponsiveForm<T>({required WidgetBuilder builder}) {
+    if (_isMobileViewport(context)) {
+      return showModalBottomSheet<T>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        backgroundColor: Colors.transparent,
+        builder: builder,
+      );
+    }
+    return showDialog<T>(context: context, builder: builder);
+  }
+
+  Widget _formSurface(
+    BuildContext context, {
+    required Widget title,
+    required Widget content,
+    required List<Widget> actions,
+  }) {
+    if (!_isMobileViewport(context)) {
+      return AlertDialog(
+        title: title,
+        content: content,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: actions,
+      );
+    }
+
+    final scheme = Theme.of(context).colorScheme;
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Material(
+          color: scheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 10, bottom: 14),
+                  decoration: BoxDecoration(
+                    color: scheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                  child: Align(alignment: Alignment.centerLeft, child: title),
+                ),
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: content,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: actions,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _recomputeCollab() {
@@ -258,13 +343,10 @@ class _TeamPageState extends State<TeamPage> {
     TimeOfDay start = const TimeOfDay(hour: 15, minute: 0);
     int minutes = _meetingMinutes;
 
-    showDialog(
-      context: context,
+    _showResponsiveForm<void>(
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx2, setInner) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
+        builder: (ctx2, setInner) => _formSurface(
+          ctx2,
           title: Text(
             AppStrings.of(ctx2, 'team_conflict_check_title'),
             style: const TextStyle(fontWeight: FontWeight.bold),
@@ -419,10 +501,9 @@ class _TeamPageState extends State<TeamPage> {
     final taskCtrl = TextEditingController();
     final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    _showResponsiveForm<void>(
+      builder: (ctx) => _formSurface(
+        ctx,
         title: Text(
           isZh ? '添加团队成员' : 'Add Team Member',
           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -519,13 +600,10 @@ class _TeamPageState extends State<TeamPage> {
     double currentProgress = member.progress;
     final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
 
-    showDialog(
-      context: context,
+    _showResponsiveForm<void>(
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx2, setInner) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
+        builder: (ctx2, setInner) => _formSurface(
+          ctx2,
           title: Text(
             isZh ? '修改进度: ${member.name}' : 'Update Progress: ${member.name}',
             style: const TextStyle(fontWeight: FontWeight.bold),
@@ -579,16 +657,184 @@ class _TeamPageState extends State<TeamPage> {
     );
   }
 
+  Widget _buildTeamHeader({required bool mobile}) {
+    final scheme = Theme.of(context).colorScheme;
+    final actions = [
+      OutlinedButton.icon(
+        onPressed: _showAddMemberDialog,
+        icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+        label: Text(
+          Localizations.localeOf(context).languageCode.startsWith('zh')
+              ? '添加成员'
+              : 'Add Member',
+        ),
+      ),
+      OutlinedButton.icon(
+        onPressed: _showConflictCheck,
+        icon: const Icon(Icons.manage_search_rounded, size: 18),
+        label: Text(AppStrings.of(context, 'team_conflict_check_title')),
+      ),
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: EdgeInsets.all(mobile ? 16 : 22),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.groups_rounded, color: scheme.onPrimary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'TEAM WORKSPACE',
+                      style: TextStyle(
+                        color: scheme.secondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '团队协作工作区',
+                      style: TextStyle(
+                        color: scheme.primary,
+                        fontSize: mobile ? 20 : 26,
+                        fontWeight: FontWeight.w800,
+                        height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '汇总成员空闲时段与忙碌边界，快速找到低打扰的协作窗口。',
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 12,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          mobile
+              ? Row(
+                  children: [
+                    for (var index = 0; index < actions.length; index++) ...[
+                      if (index > 0) const SizedBox(width: 8),
+                      Expanded(child: actions[index]),
+                    ],
+                  ],
+                )
+              : Wrap(spacing: 8, runSpacing: 8, children: actions),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTeamMetrics() {
+    final scheme = Theme.of(context).colorScheme;
+    final metrics = [
+      (
+        label: '团队成员',
+        value: '${_calendars.length}',
+        icon: Icons.people_outline_rounded,
+      ),
+      (label: '黄金窗口', value: '${_golden.length}', icon: Icons.stars_rounded),
+      (
+        label: '忙碌重叠',
+        value: '${_conflicts.length}',
+        icon: Icons.warning_amber_rounded,
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        children: [
+          for (var index = 0; index < metrics.length; index++) ...[
+            if (index > 0) const SizedBox(width: 10),
+            Expanded(
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 84),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: scheme.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: scheme.outlineVariant),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          metrics[index].icon,
+                          size: 16,
+                          color: scheme.secondary,
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            metrics[index].label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: scheme.onSurfaceVariant,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      metrics[index].value,
+                      style: TextStyle(
+                        color: scheme.onSurface,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w800,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final isCompactAppBar = MobileFeedback.isNarrow(context, breakpoint: 760);
+    final isCompactAppBar = MobileFeedback.isNarrow(context, breakpoint: 720);
     final isZh = Localizations.localeOf(context).languageCode.startsWith('zh');
-
-    final kpiMembersLabel = isZh ? '成员数' : 'Members';
-    final kpiGoldenLabel = isZh ? '黄金窗口' : 'Golden';
-    final kpiConflictsLabel = isZh ? '冲突数' : 'Conflicts';
 
     return Scaffold(
       backgroundColor: AppWindowTones.canvas(context, AppWindowTone.neutral),
@@ -653,71 +899,87 @@ class _TeamPageState extends State<TeamPage> {
       ),
       body: _loading
           ? const _TeamLoadingState()
-          : Container(
-              color: AppWindowTones.canvas(context, AppWindowTone.neutral),
-              child: SafeArea(
-                child: ResponsivePageFrame(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final bottomPadding =
-                          MediaQuery.of(context).padding.bottom + 100;
-                      return ListView(
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final width = MediaQuery.sizeOf(context).width;
+                final mobile = width < 720;
+                final desktop = width >= 1200;
+                final layout = mobile
+                    ? 'mobile'
+                    : width < 1200
+                    ? 'tablet'
+                    : 'desktop';
+                return Container(
+                  color: AppWindowTones.canvas(context, AppWindowTone.neutral),
+                  child: SafeArea(
+                    child: ResponsivePageFrame(
+                      child: SingleChildScrollView(
+                        key: ValueKey('team-layout-$layout'),
                         physics: const BouncingScrollPhysics(),
-                        padding: EdgeInsets.fromLTRB(0, 16, 0, bottomPadding),
-                        children: [
-                          Card(
-                            elevation: 0,
-                            color: AppWindowTones.surface(
-                              context,
-                              AppWindowTone.team,
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Wrap(
-                                spacing: 10,
-                                runSpacing: 10,
+                        padding: EdgeInsets.fromLTRB(
+                          0,
+                          18,
+                          0,
+                          MediaQuery.of(context).padding.bottom + 100,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildTeamHeader(mobile: mobile),
+                            _buildTeamMetrics(),
+                            if (desktop)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _TeamKpiChip(
-                                    icon: Icons.people_outline,
-                                    label: kpiMembersLabel,
-                                    value: _calendars.length.toString(),
+                                  Expanded(
+                                    flex: 8,
+                                    child: Column(
+                                      children: [
+                                        _buildRecommendationPanel(
+                                          context,
+                                          isDark,
+                                        ),
+                                        const SizedBox(height: 12),
+                                        _buildMemberPanel(context, isDark),
+                                        const SizedBox(height: 12),
+                                        _buildMergedSchedulePanel(
+                                          context,
+                                          isDark,
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                  _TeamKpiChip(
-                                    icon: Icons.stars_outlined,
-                                    label: kpiGoldenLabel,
-                                    value: _golden.length.toString(),
-                                  ),
-                                  _TeamKpiChip(
-                                    icon: Icons.error_outline,
-                                    label: kpiConflictsLabel,
-                                    value: _conflicts.length.toString(),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    flex: 4,
+                                    child: Column(
+                                      children: [
+                                        _buildProgressPanel(context, isDark),
+                                        const SizedBox(height: 12),
+                                        _buildConflictPanel(context, isDark),
+                                      ],
+                                    ),
                                   ),
                                 ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildProgressPanel(context, isDark),
-                          const SizedBox(height: 12),
-                          ResponsiveCardGrid(
-                            children: [
+                              )
+                            else ...[
                               _buildRecommendationPanel(context, isDark),
+                              const SizedBox(height: 12),
                               _buildMergedSchedulePanel(context, isDark),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          ResponsiveCardGrid(
-                            children: [
-                              _buildConflictPanel(context, isDark),
+                              const SizedBox(height: 12),
                               _buildMemberPanel(context, isDark),
+                              const SizedBox(height: 12),
+                              _buildProgressPanel(context, isDark),
+                              const SizedBox(height: 12),
+                              _buildConflictPanel(context, isDark),
                             ],
-                          ),
-                        ],
-                      );
-                    },
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
     );
   }
@@ -869,19 +1131,26 @@ class _TeamPageState extends State<TeamPage> {
   }
 
   Widget _buildRecommendationPanel(BuildContext context, bool isDark) {
-    final compact = MobileFeedback.isNarrow(context, breakpoint: 760);
-    return Card(
-      elevation: 0,
-      color: Theme.of(
-        context,
-      ).colorScheme.secondaryContainer.withValues(alpha: 0.4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    final compact = MobileFeedback.isNarrow(context, breakpoint: 720);
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionTitle(context, AppStrings.of(context, 'team_rec_title')),
+            Text(
+              AppStrings.of(context, 'team_rec_title'),
+              style: TextStyle(
+                color: scheme.onPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
             const SizedBox(height: 8),
             Text(
               AppStrings.of(
@@ -892,14 +1161,17 @@ class _TeamPageState extends State<TeamPage> {
                   'energy': _energyTierLabel(context, _minEnergy),
                 },
               ),
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: scheme.onPrimary.withValues(alpha: 0.86),
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 10),
             if (_golden.isEmpty)
               Text(
                 AppStrings.of(context, 'team_golden_windows_empty'),
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: scheme.onPrimary.withValues(alpha: 0.8),
                 ),
               )
             else
@@ -910,22 +1182,17 @@ class _TeamPageState extends State<TeamPage> {
                   hour: (endMin ~/ 60) % 24,
                   minute: endMin % 60,
                 );
-                return Card(
-                  elevation: 0,
-                  color: isDark
-                      ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.05)
-                      : Theme.of(context).colorScheme.surface,
-                  shape: RoundedRectangleBorder(
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? scheme.onSurface.withValues(alpha: 0.05)
+                        : scheme.surface,
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.secondary.withValues(alpha: 0.3),
+                    border: Border.all(
+                      color: scheme.secondary.withValues(alpha: 0.3),
                     ),
                   ),
-                  margin: const EdgeInsets.only(bottom: 8),
                   child: compact
                       ? Padding(
                           padding: const EdgeInsets.all(12),
@@ -1058,19 +1325,14 @@ class _TeamPageState extends State<TeamPage> {
               )
             else
               ..._conflicts.map(
-                (c) => Card(
-                  elevation: 0,
-                  color: isDark
-                      ? Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.05)
-                      : Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.05),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                (c) => Container(
                   margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: ListTile(
                     leading: Icon(
                       Icons.warning_amber_rounded,
@@ -1288,55 +1550,6 @@ class _TeamLoadingState extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _TeamKpiChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _TeamKpiChip({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final scheme = theme.colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: scheme.onSurface.withValues(alpha: isDark ? 0.08 : 0.04),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18, color: theme.colorScheme.primary),
-          const SizedBox(width: 8),
-          Text(
-            '$label:',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurface,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 15,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-        ],
       ),
     );
   }

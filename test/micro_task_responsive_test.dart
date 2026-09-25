@@ -25,7 +25,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('shell-nav-micro')));
       await tester.pumpAndSettle(const Duration(milliseconds: 300));
 
-      expect(find.text('AI 填充'), findsOneWidget);
+      expect(find.text('AI 填充'), findsAtLeastNWidgets(1));
       expect(tester.takeException(), isNull);
     } finally {
       tester.view.reset();

@@ -12,14 +12,24 @@ void main() {
     final dark = AppTheme.dark;
 
     expect(light.scaffoldBackgroundColor, AppThemeTokens.canvasLight);
-    expect(light.colorScheme.primary, AppThemeTokens.actionLight);
+    expect(light.colorScheme.primary, AppThemeTokens.brandLight);
+    expect(light.colorScheme.secondary, AppThemeTokens.actionLight);
     expect(light.colorScheme.tertiary, AppThemeTokens.recoveryLight);
     expect(light.colorScheme.error, AppThemeTokens.riskLight);
 
     expect(dark.scaffoldBackgroundColor, AppThemeTokens.canvasDark);
-    expect(dark.colorScheme.primary, AppThemeTokens.actionDark);
+    expect(dark.colorScheme.primary, AppThemeTokens.brandDark);
+    expect(dark.colorScheme.secondary, AppThemeTokens.actionDark);
     expect(dark.colorScheme.tertiary, AppThemeTokens.recoveryDark);
     expect(dark.colorScheme.error, AppThemeTokens.riskDark);
+  });
+
+  test('theme applies Stitch typography roles', () {
+    final theme = AppTheme.light;
+
+    expect(theme.textTheme.bodyMedium?.fontFamily, 'StitchInter');
+    expect(theme.textTheme.titleLarge?.fontFamily, 'NotoSerifSC');
+    expect(theme.textTheme.headlineMedium?.fontFamily, 'NotoSerifSC');
   });
 
   test('themes use material 3 and keep readable body text sizing', () {
@@ -75,7 +85,7 @@ void main() {
   });
 
   testWidgets(
-    'window tones stay distinct while glass surfaces keep semantics',
+    'workspace windows share the Stitch canvas while glass keeps semantics',
     (tester) async {
       Color? focus;
       Color? schedule;
@@ -93,7 +103,7 @@ void main() {
       );
       expect(focus, isNotNull);
       expect(schedule, isNotNull);
-      expect(focus, isNot(schedule));
+      expect(focus, schedule);
       expect(find.byType(BackdropFilter), findsOneWidget);
       expect(find.text('surface'), findsOneWidget);
     },

@@ -2,35 +2,40 @@ import 'package:flutter/material.dart';
 
 /// Semantic tokens for the scheduling workbench.
 abstract final class AppThemeTokens {
-  static const canvasLight = Color(0xFFF5F5F7);
-  static const canvasDark = Color(0xFF111214);
+  static const canvasLight = Color(0xFFFAF8FE);
+  static const canvasDark = Color(0xFF101B1D);
   static const surfaceLight = Color(0xFFFFFFFF);
-  static const surfaceDark = Color(0xFF1C1C1E);
-  static const inkLight = Color(0xFF1D1D1F);
-  static const inkDark = Color(0xFFF5F5F7);
-  static const secondaryLight = Color(0xFF6E6E73);
-  static const secondaryDark = Color(0xFF98989D);
-  static const brandLight = Color(0xFF163D3D);
-  static const brandDark = Color(0xFFA7D4C6);
-  static const actionLight = Color(0xFF007AFF);
-  static const actionDark = Color(0xFF0A84FF);
-  static const recoveryLight = Color(0xFF34C759);
-  static const recoveryDark = Color(0xFF30D158);
-  static const successLight = Color(0xFF18794E);
-  static const successDark = Color(0xFF8BE3C4);
-  static const pressureLight = Color(0xFFFF9F0A);
-  static const pressureDark = Color(0xFFFF9F0A);
+  static const surfaceDark = Color(0xFF1C2B2E);
+  static const inkLight = Color(0xFF1A1B1F);
+  static const inkDark = Color(0xFFE7F0ED);
+  static const secondaryLight = Color(0xFF414848);
+  static const secondaryDark = Color(0xFF9CB0AE);
+  static const brandLight = Color(0xFF002727);
+  static const brandDark = Color(0xFFA7CECD);
+  static const actionLight = Color(0xFF005DB5);
+  static const actionDark = Color(0xFF62A1FE);
+  static const recoveryLight = Color(0xFF1DB84D);
+  static const recoveryDark = Color(0xFF53E16F);
+  static const successLight = Color(0xFF00531C);
+  static const successDark = Color(0xFF72FE88);
+  static const pressureLight = Color(0xFFE5A15B);
+  static const pressureDark = Color(0xFFF2B56E);
   static const warningLight = Color(0xFF9A4D00);
   static const warningDark = Color(0xFFFFB340);
-  static const actionButtonLight = Color(0xFF005FB8);
-  static const actionButtonDark = Color(0xFF0066CC);
+  static const actionButtonLight = Color(0xFF005DB5);
+  static const actionButtonDark = Color(0xFF005DB5);
   // Legacy aliases kept for existing page accent references.
   static const deadlineLight = pressureLight;
   static const deadlineDark = pressureDark;
-  static const riskLight = Color(0xFFFF3B30);
-  static const riskDark = Color(0xFFFF453A);
-  static const dividerLight = Color(0xFFE5E5EA);
-  static const dividerDark = Color(0xFF38383A);
+  static const riskLight = Color(0xFFBA1A1A);
+  static const riskDark = Color(0xFFF07A6A);
+  static const dividerLight = Color(0xFFC0C8C7);
+  static const dividerDark = Color(0xFF38494A);
+  static const sidebarLight = Color(0xFFF4F3F8);
+  static const sidebarDark = Color(0xFF172426);
+  static const selectedNavLight = Color(0xFF163D3D);
+  static const selectedNavDark = Color(0xFF274D4D);
+  static const selectedNavText = Colors.white;
 }
 
 /// Material hierarchy used by structural chrome and floating overlays.
@@ -91,26 +96,26 @@ abstract final class AppMotion {
 abstract final class AppWindowTones {
   static const neutralLight = AppThemeTokens.canvasLight;
   static const neutralDark = AppThemeTokens.canvasDark;
-  static const focusLight = Color(0xFFEFF4F3);
-  static const focusDark = Color(0xFF182525);
-  static const focusSurfaceLight = Color(0xFFE2ECEA);
-  static const focusSurfaceDark = Color(0xFF243634);
-  static const scheduleLight = Color(0xFFF0F2F5);
-  static const scheduleDark = Color(0xFF1A1D22);
-  static const scheduleSurfaceLight = Color(0xFFE4E9EF);
-  static const scheduleSurfaceDark = Color(0xFF252C35);
-  static const microLight = Color(0xFFF4F1ED);
-  static const microDark = Color(0xFF24211F);
-  static const microSurfaceLight = Color(0xFFE9E3DA);
-  static const microSurfaceDark = Color(0xFF332E29);
-  static const teamLight = Color(0xFFEEF2F7);
-  static const teamDark = Color(0xFF1B2027);
-  static const teamSurfaceLight = Color(0xFFE0E8F1);
-  static const teamSurfaceDark = Color(0xFF27323E);
-  static const profileLight = Color(0xFFF3F0F0);
-  static const profileDark = Color(0xFF241F20);
-  static const profileSurfaceLight = Color(0xFFEAE2E4);
-  static const profileSurfaceDark = Color(0xFF34292B);
+  static const focusLight = neutralLight;
+  static const focusDark = neutralDark;
+  static const focusSurfaceLight = AppThemeTokens.surfaceLight;
+  static const focusSurfaceDark = AppThemeTokens.surfaceDark;
+  static const scheduleLight = neutralLight;
+  static const scheduleDark = neutralDark;
+  static const scheduleSurfaceLight = AppThemeTokens.surfaceLight;
+  static const scheduleSurfaceDark = AppThemeTokens.surfaceDark;
+  static const microLight = neutralLight;
+  static const microDark = neutralDark;
+  static const microSurfaceLight = AppThemeTokens.surfaceLight;
+  static const microSurfaceDark = AppThemeTokens.surfaceDark;
+  static const teamLight = neutralLight;
+  static const teamDark = neutralDark;
+  static const teamSurfaceLight = AppThemeTokens.surfaceLight;
+  static const teamSurfaceDark = AppThemeTokens.surfaceDark;
+  static const profileLight = neutralLight;
+  static const profileDark = neutralDark;
+  static const profileSurfaceLight = AppThemeTokens.surfaceLight;
+  static const profileSurfaceDark = AppThemeTokens.surfaceDark;
 
   static Color canvas(BuildContext context, AppWindowTone tone) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -176,9 +181,6 @@ abstract final class AppTheme {
     final recovery =
         accentColor ??
         (isDark ? AppThemeTokens.recoveryDark : AppThemeTokens.recoveryLight);
-    final pressure = isDark
-        ? AppThemeTokens.pressureDark
-        : AppThemeTokens.pressureLight;
     final risk = isDark ? AppThemeTokens.riskDark : AppThemeTokens.riskLight;
     final divider = isDark
         ? AppThemeTokens.dividerDark
@@ -191,15 +193,30 @@ abstract final class AppTheme {
           surface: surface,
           onSurface: ink,
         ).copyWith(
-          primary: action,
+          primary: brand,
           onPrimary: Colors.white,
-          secondary: pressure,
-          onSecondary: AppThemeTokens.inkLight,
+          primaryContainer: isDark
+              ? AppThemeTokens.selectedNavDark
+              : AppThemeTokens.selectedNavLight,
+          onPrimaryContainer: AppThemeTokens.selectedNavText,
+          secondary: action,
+          onSecondary: Colors.white,
+          secondaryContainer: isDark
+              ? const Color(0xFF00376F)
+              : const Color(0xFFD6E3FF),
+          onSecondaryContainer: isDark ? Colors.white : const Color(0xFF001B3D),
+          tertiaryContainer: isDark
+              ? const Color(0xFF004114)
+              : const Color(0xFFC2EAE9),
           tertiary: recovery,
           onTertiary: AppThemeTokens.inkLight,
           error: risk,
           onError: Colors.white,
           outline: divider,
+          outlineVariant: isDark
+              ? AppThemeTokens.dividerDark
+              : const Color(0xFFC0C8C7),
+          onSurfaceVariant: secondary,
           surfaceTint: Colors.transparent,
         );
 
@@ -209,6 +226,7 @@ abstract final class AppTheme {
       scaffoldBackgroundColor: canvas,
       colorScheme: scheme,
       dividerColor: divider,
+      fontFamily: 'StitchInter',
       fontFamilyFallback: const ['PingFang SC', 'Noto Sans SC'],
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
@@ -220,6 +238,7 @@ abstract final class AppTheme {
     return base.copyWith(
       textTheme: text.copyWith(
         displaySmall: text.displaySmall?.copyWith(
+          fontFamily: 'NotoSerifSC',
           fontSize: 38,
           height: 1.1,
           fontWeight: FontWeight.w700,
@@ -228,11 +247,13 @@ abstract final class AppTheme {
           color: ink,
         ),
         headlineMedium: text.headlineMedium?.copyWith(
+          fontFamily: 'NotoSerifSC',
           fontWeight: FontWeight.w700,
           letterSpacing: 0,
           color: ink,
         ),
         titleLarge: text.titleLarge?.copyWith(
+          fontFamily: 'NotoSerifSC',
           fontWeight: FontWeight.w700,
           letterSpacing: 0,
           color: ink,
@@ -268,7 +289,7 @@ abstract final class AppTheme {
         toolbarHeight: 64,
         titleTextStyle: TextStyle(
           color: ink,
-          fontFamilyFallback: const ['PingFang SC', 'Noto Sans SC'],
+          fontFamily: 'NotoSerifSC',
           fontSize: 22,
           fontWeight: FontWeight.w700,
           letterSpacing: 0,
@@ -283,15 +304,13 @@ abstract final class AppTheme {
             : Colors.black.withValues(alpha: 0.06),
         surfaceTintColor: Colors.transparent,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(44, 44),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           backgroundColor: actionButton,
           foregroundColor: Colors.white,
           overlayColor: Colors.white.withValues(alpha: 0.14),
@@ -304,9 +323,7 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(44, 44),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           side: BorderSide(color: divider),
           foregroundColor: ink,
           overlayColor: action.withValues(alpha: 0.1),
@@ -321,39 +338,39 @@ abstract final class AppTheme {
           overlayColor: action.withValues(alpha: 0.1),
           animationDuration: const Duration(milliseconds: 120),
           iconAlignment: IconAlignment.start,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        height: 76,
+        height: 68,
         elevation: 0,
         backgroundColor: surface,
-        indicatorColor: action.withValues(alpha: 0.12),
+        indicatorColor: Colors.transparent,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith<TextStyle?>((states) {
           final selected = states.contains(WidgetState.selected);
           return TextStyle(
             fontSize: 11,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            color: selected ? ink : secondary,
+            color: selected ? brand : secondary,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith<IconThemeData?>((states) {
           final selected = states.contains(WidgetState.selected);
-          return IconThemeData(color: selected ? action : secondary, size: 22);
+          return IconThemeData(color: selected ? brand : secondary, size: 22);
         }),
       ),
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: surface,
         useIndicator: true,
-        indicatorColor: action.withValues(alpha: 0.12),
-        selectedIconTheme: IconThemeData(color: action),
+        indicatorColor: isDark
+            ? AppThemeTokens.selectedNavDark
+            : AppThemeTokens.selectedNavLight,
+        selectedIconTheme: const IconThemeData(color: Colors.white),
         unselectedIconTheme: IconThemeData(color: secondary),
         selectedLabelTextStyle: TextStyle(
           fontWeight: FontWeight.w700,
-          color: ink,
+          color: Colors.white,
           fontSize: 13,
         ),
         unselectedLabelTextStyle: TextStyle(
@@ -366,7 +383,7 @@ abstract final class AppTheme {
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
@@ -387,15 +404,15 @@ abstract final class AppTheme {
           vertical: 13,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: divider),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: divider),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: action, width: 2),
         ),
       ),

@@ -167,6 +167,12 @@ class AppStrings {
       'calendar_ics_import_title': '导入 iCal（ICS）',
       'calendar_ics_import_help': '请粘贴 ICS 文本。重复规则（RRULE）会被忽略，时间按本地时区处理。',
       'calendar_ics_import_hint': 'BEGIN:VCALENDAR...\nEND:VCALENDAR',
+      'calendar_ics_preview': '预览日程',
+      'calendar_ics_import_count': '导入 {count} 项',
+      'calendar_ics_preview_title': '导入预览 · {date}',
+      'calendar_ics_input_label': 'ICS 内容',
+      'calendar_ics_invalid': '未找到有效日程，请检查 ICS 内容。',
+      'calendar_ics_wrong_day': '所选日期没有可导入的日程。',
       'calendar_ics_import_success': '已导入 {added} 条日程。',
       'calendar_ics_import_updated': '已同步更新 {updated} 条日程。',
       'calendar_ics_import_failed': '导入失败：{error}',
@@ -562,6 +568,14 @@ class AppStrings {
       'calendar_ics_import_help':
           'Paste ICS text. Recurrence (RRULE) is ignored; times are treated as local.',
       'calendar_ics_import_hint': 'BEGIN:VCALENDAR...\nEND:VCALENDAR',
+      'calendar_ics_preview': 'Preview schedule',
+      'calendar_ics_import_count': 'Import {count} items',
+      'calendar_ics_preview_title': 'Import preview · {date}',
+      'calendar_ics_input_label': 'ICS content',
+      'calendar_ics_invalid':
+          'No valid schedule items were found. Check the ICS content.',
+      'calendar_ics_wrong_day':
+          'There are no schedule items for the selected date.',
       'calendar_ics_import_success': 'Imported {added} events.',
       'calendar_ics_import_updated': 'Synced {updated} updates.',
       'calendar_ics_import_failed': 'Import failed: {error}',
