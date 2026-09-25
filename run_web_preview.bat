@@ -23,6 +23,12 @@ if errorlevel 1 (
   exit /b 1
 )
 
+where node >nul 2>nul
+if errorlevel 1 (
+  echo ERROR: node was not found in PATH.
+  exit /b 1
+)
+
 echo [2/5] Checking backend: %HEALTH_URL%
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r = Invoke-RestMethod -Uri '%HEALTH_URL%' -TimeoutSec 2; if ($r.ok -eq $true) { exit 0 } } catch {}; exit 1"
 
@@ -46,7 +52,14 @@ if /I "%~1"=="--check" (
   exit /b 0
 )
 
-echo [4/5] Building the latest Flutter Web bundle...
+echo [4/6] Syncing Stitch mobile deployment from design/stitch-mobile...
+call node tools\sync_stitch_mobile.mjs
+if errorlevel 1 (
+  echo ERROR: Stitch mobile deployment sync failed.
+  exit /b 1
+)
+
+echo [5/6] Building the latest Flutter Web bundle...
 call flutter pub get
 if errorlevel 1 (
   echo ERROR: flutter pub get failed.
@@ -59,7 +72,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [5/5] Starting static Web preview: %WEB_URL%
+echo [6/6] Starting static Web preview: %WEB_URL%
 if not exist "%~dp0.appdata" mkdir "%~dp0.appdata"
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r = Invoke-WebRequest -UseBasicParsing -Uri '%WEB_URL%' -TimeoutSec 2; if ($r.StatusCode -eq 200 -and $r.Content -match 'flutter_bootstrap.js') { exit 0 } } catch {}; exit 1"

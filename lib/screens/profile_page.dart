@@ -313,165 +313,156 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
       body: SafeArea(
-        child: ResponsivePageFrame(
-          maxWidth: 1240,
-          child: FutureBuilder<_ProfileDashboardData>(
-            future: _dashboardFuture,
-            builder: (context, snapshot) {
-              final data = snapshot.data;
-              if (data == null &&
-                  snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (data == null) {
-                return _ProfileLoadFailure(onRetry: _refreshDashboard);
-              }
+        child: Stack(
+          children: [
+            ResponsivePageFrame(
+              maxWidth: 1240,
+              child: FutureBuilder<_ProfileDashboardData>(
+                future: _dashboardFuture,
+                builder: (context, snapshot) {
+                  final data = snapshot.data;
+                  if (data == null &&
+                      snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (data == null) {
+                    return _ProfileLoadFailure(onRetry: _refreshDashboard);
+                  }
 
-              return ListView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(
-                  0,
-                  12,
-                  0,
-                  MediaQuery.paddingOf(context).bottom + 100,
-                ),
-                children: [
-                  if (isMobile)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              AppStrings.of(context, 'profile_title'),
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(
-                                    fontFamily: 'NotoSerifSC',
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                  return ListView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      0,
+                      12,
+                      0,
+                      MediaQuery.paddingOf(context).bottom + 100,
+                    ),
+                    children: [
+                      _buildUserProfileCard(context, data),
+                      if (data.isPartial) ...[
+                        const SizedBox(height: 10),
+                        _buildPartialDataNotice(context),
+                      ],
+                      const SizedBox(height: 20),
+                      _buildSectionTitle(context, '工作节奏与完成情况'),
+                      const SizedBox(height: 10),
+                      _buildAnalytics(context, data),
+                      const SizedBox(height: 12),
+                      _buildPendingCapability(context),
+                      const SizedBox(height: 22),
+                      _buildSectionTitle(context, '核心操作'),
+                      const SizedBox(height: 10),
+                      _buildEntryGrid(context, [
+                        _ProfileEntry(
+                          key: const ValueKey('profile-device-entry'),
+                          icon: Icons.watch_outlined,
+                          title: AppStrings.of(context, 'profile_device'),
+                          detail: _deviceSubtitle() ?? '设备连接与能量同步',
+                          status: _supportsDeviceEntry() ? '可用' : 'Web 不支持',
+                          color: Theme.of(context).colorScheme.primary,
+                          onTap: () => _openDeviceEntry(context),
+                        ),
+                        _ProfileEntry(
+                          key: const ValueKey('profile-mcp-entry'),
+                          icon: Icons.sync_alt_rounded,
+                          title: AppStrings.of(context, 'profile_auth'),
+                          detail: '文本解析与日程导入',
+                          status: '解析可用',
+                          color: Theme.of(context).colorScheme.secondary,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const MainScreen(
+                                secondaryPage: IntegrationsPage(),
+                                secondaryTabIndex: 4,
+                              ),
                             ),
                           ),
-                          IconButton(
-                            key: const ValueKey('profile-settings-action'),
-                            tooltip: AppStrings.of(context, 'settings_title'),
-                            onPressed: () => _openSettingsPanel(context),
-                            icon: const Icon(Icons.settings_outlined),
-                          ),
-                        ],
-                      ),
-                    ),
-                  _buildUserProfileCard(context, data),
-                  if (data.isPartial) ...[
-                    const SizedBox(height: 10),
-                    _buildPartialDataNotice(context),
-                  ],
-                  const SizedBox(height: 20),
-                  _buildSectionTitle(context, '工作节奏与完成情况'),
-                  const SizedBox(height: 10),
-                  _buildAnalytics(context, data),
-                  const SizedBox(height: 12),
-                  _buildPendingCapability(context),
-                  const SizedBox(height: 22),
-                  _buildSectionTitle(context, '核心操作'),
-                  const SizedBox(height: 10),
-                  _buildEntryGrid(context, [
-                    _ProfileEntry(
-                      key: const ValueKey('profile-device-entry'),
-                      icon: Icons.watch_outlined,
-                      title: AppStrings.of(context, 'profile_device'),
-                      detail: _deviceSubtitle() ?? '设备连接与能量同步',
-                      status: _supportsDeviceEntry() ? '可用' : 'Web 不支持',
-                      color: Theme.of(context).colorScheme.primary,
-                      onTap: () => _openDeviceEntry(context),
-                    ),
-                    _ProfileEntry(
-                      key: const ValueKey('profile-mcp-entry'),
-                      icon: Icons.sync_alt_rounded,
-                      title: AppStrings.of(context, 'profile_auth'),
-                      detail: '文本解析与日程导入',
-                      status: '解析可用',
-                      color: Theme.of(context).colorScheme.secondary,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const MainScreen(
-                            secondaryPage: IntegrationsPage(),
-                            secondaryTabIndex: 4,
+                        ),
+                        _ProfileEntry(
+                          key: const ValueKey('profile-goals-entry'),
+                          icon: Icons.flag_outlined,
+                          title: AppStrings.of(context, 'goal_title'),
+                          detail: '拆解目标并安排下一步',
+                          color: Theme.of(context).colorScheme.tertiary,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const MainScreen(
+                                secondaryPage: GoalsPage(),
+                                secondaryTabIndex: 4,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    _ProfileEntry(
-                      key: const ValueKey('profile-goals-entry'),
-                      icon: Icons.flag_outlined,
-                      title: AppStrings.of(context, 'goal_title'),
-                      detail: '拆解目标并安排下一步',
-                      color: Theme.of(context).colorScheme.tertiary,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const MainScreen(
-                            secondaryPage: GoalsPage(),
-                            secondaryTabIndex: 4,
+                      ]),
+                      const SizedBox(height: 22),
+                      _buildSectionTitle(context, '洞察分析'),
+                      const SizedBox(height: 10),
+                      _buildEntryGrid(context, [
+                        _ProfileEntry(
+                          key: const ValueKey('profile-emotion-entry'),
+                          icon: Icons.monitor_heart_outlined,
+                          title: AppStrings.of(context, 'emo_title'),
+                          detail: '查看状态与今日打卡',
+                          color: Theme.of(context).colorScheme.secondary,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const MainScreen(
+                                secondaryPage: EmotionPage(),
+                                secondaryTabIndex: 4,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 22),
-                  _buildSectionTitle(context, '洞察分析'),
-                  const SizedBox(height: 10),
-                  _buildEntryGrid(context, [
-                    _ProfileEntry(
-                      key: const ValueKey('profile-emotion-entry'),
-                      icon: Icons.monitor_heart_outlined,
-                      title: AppStrings.of(context, 'emo_title'),
-                      detail: '查看状态与今日打卡',
-                      color: Theme.of(context).colorScheme.secondary,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const MainScreen(
-                            secondaryPage: EmotionPage(),
-                            secondaryTabIndex: 4,
+                        _ProfileEntry(
+                          key: const ValueKey('profile-review-entry'),
+                          icon: Icons.query_stats_rounded,
+                          title: AppStrings.of(context, 'review_nav_label'),
+                          detail: '复盘任务完成与调度历史',
+                          color: Theme.of(context).colorScheme.primary,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const MainScreen(
+                                secondaryPage: ReviewPage(),
+                                secondaryTabIndex: 4,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    _ProfileEntry(
-                      key: const ValueKey('profile-review-entry'),
-                      icon: Icons.query_stats_rounded,
-                      title: AppStrings.of(context, 'review_nav_label'),
-                      detail: '复盘任务完成与调度历史',
-                      color: Theme.of(context).colorScheme.primary,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const MainScreen(
-                            secondaryPage: ReviewPage(),
-                            secondaryTabIndex: 4,
+                        _ProfileEntry(
+                          key: const ValueKey('profile-diagnostics-entry'),
+                          icon: Icons.monitor_heart_outlined,
+                          title: AppStrings.of(context, 'diag_title'),
+                          detail: '数据源、存储与运行日志',
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const MainScreen(
+                                secondaryPage: DiagnosticsPage(),
+                                secondaryTabIndex: 4,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    _ProfileEntry(
-                      key: const ValueKey('profile-diagnostics-entry'),
-                      icon: Icons.monitor_heart_outlined,
-                      title: AppStrings.of(context, 'diag_title'),
-                      detail: '数据源、存储与运行日志',
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const MainScreen(
-                            secondaryPage: DiagnosticsPage(),
-                            secondaryTabIndex: 4,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: 18),
-                  _buildLocalFirstFooter(context),
-                ],
-              );
-            },
-          ),
+                      ]),
+                      const SizedBox(height: 18),
+                      _buildLocalFirstFooter(context),
+                    ],
+                  );
+                },
+              ),
+            ),
+            if (isMobile && StitchMobileShellScope.isHosted(context))
+              Positioned(
+                top: 4,
+                right: 8,
+                child: IconButton(
+                  key: const ValueKey('profile-settings-action'),
+                  tooltip: AppStrings.of(context, 'settings_title'),
+                  onPressed: () => _openSettingsPanel(context),
+                  icon: const Icon(Icons.settings_outlined),
+                ),
+              ),
+          ],
         ),
       ),
     );

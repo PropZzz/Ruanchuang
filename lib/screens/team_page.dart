@@ -935,6 +935,37 @@ class _TeamPageState extends State<TeamPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            if (mobile &&
+                                StitchMobileShellScope.isHosted(context))
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: PopupMenuButton<String>(
+                                  tooltip: '团队操作',
+                                  onSelected: (value) {
+                                    if (value == 'add') {
+                                      _showAddMemberDialog();
+                                    } else if (value == 'conflict') {
+                                      _showConflictCheck();
+                                    }
+                                  },
+                                  itemBuilder: (ctx) => [
+                                    PopupMenuItem(
+                                      value: 'add',
+                                      child: Text(isZh ? '添加成员' : 'Add Member'),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'conflict',
+                                      child: Text(
+                                        AppStrings.of(
+                                          ctx,
+                                          'team_conflict_check_title',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  child: const Icon(Icons.more_horiz_rounded),
+                                ),
+                              ),
                             _buildTeamHeader(mobile: mobile),
                             _buildTeamMetrics(),
                             if (desktop)

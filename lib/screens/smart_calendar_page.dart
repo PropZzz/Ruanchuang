@@ -892,6 +892,33 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                     actionKey: const ValueKey('calendar-load-retry'),
                     onAction: _loadSchedule,
                   ),
+                if (isCompactAppBar && StitchMobileShellScope.isHosted(context))
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: AppStrings.of(context, 'calendar_refresh'),
+                            onPressed: _isLoading ? null : _loadSchedule,
+                            icon: const Icon(Icons.refresh),
+                          ),
+                          IconButton(
+                            tooltip: AppStrings.of(
+                              context,
+                              'calendar_tooltip_insert_urgent',
+                            ),
+                            onPressed: _isLoading
+                                ? null
+                                : _showInsertUrgentDialog,
+                            icon: const Icon(Icons.add_alert),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 EmotionQuickCheckInCard(
                   onChanged: () async {
                     if (_mode == _CalendarMode.smart) {

@@ -1787,6 +1787,8 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (isMobile && StitchMobileShellScope.isHosted(context))
+                        _buildHostedMobileActions(),
                       _buildPageHeading(mobile: isMobile),
                       _buildMetrics(),
                       _buildQuickEntryCard(),
@@ -1828,6 +1830,34 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
               ),
             )
           : null,
+    );
+  }
+
+  Widget _buildHostedMobileActions() {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: AppStrings.of(context, 'common_refresh'),
+            onPressed: _loadMicroTasks,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+          IconButton(
+            tooltip: _batchMode ? '退出批量' : '批量模式',
+            onPressed: () => _setBatchMode(!_batchMode),
+            icon: Icon(
+              _batchMode ? Icons.close_rounded : Icons.checklist_rounded,
+            ),
+          ),
+          IconButton(
+            tooltip: '导入清单',
+            onPressed: _showImportMicroTasksDialog,
+            icon: const Icon(Icons.upload_file_rounded),
+          ),
+        ],
+      ),
     );
   }
 

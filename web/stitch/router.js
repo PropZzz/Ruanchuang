@@ -40,6 +40,72 @@
   const mobileQuery = window.matchMedia('(max-width: 780px)');
   let activeRoute = 'focus';
 
+  const apiBase = (window.__RUANCHUANG_API__ ||
+    (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
+      ? 'http://127.0.0.1:8000'
+      : '/api')).replace(/\/$/, '');
+
+  function authHeaders() {
+    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  async function backendRequest(path) {
+    const response = await fetch(`${apiBase}${path}`, {
+      headers: { Accept: 'application/json', ...authHeaders() },
+      credentials: 'omit',
+    });
+    if (!response.ok) {
+      const error = new Error(`Backend request failed: ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
+    return response.json();
+  }
+
+  function updateSyncLabel(document, label) {
+    const candidates = [...document.querySelectorAll('span')].filter((node) => {
+      const value = node.textContent.trim();
+      return value.startsWith('已同步');
+    });
+    for (const target of candidates) target.textContent = label;
+  }
+
+  async function hydrateBackend(document, route) {
+    document.documentElement.dataset.backendState = 'loading';
+    try {
+      await backendRequest('/health');
+      let label = '已连接 · FastAPI';
+      if (route === 'schedule') {
+        const entries = await backendRequest('/schedule');
+        label = `已连接 · 日程 ${Array.isArray(entries) ? entries.length : 0} 条`;
+      } else if (route === 'micro') {
+        const tasks = await backendRequest('/microtasks');
+        label = `已连接 · 微任务 ${Array.isArray(tasks) ? tasks.length : 0} 项`;
+      } else if (route === 'team') {
+        const members = await backendRequest('/team/members');
+        label = `已连接 · 团队 ${Array.isArray(members) ? members.length : 0} 人`;
+      } else if (route === 'focus') {
+        const energy = await backendRequest('/energy/current');
+        const score = energy?.batteryPercent ?? energy?.battery_percent;
+        if (Number.isFinite(Number(score))) label = `已连接 · 能量 ${score} 分`;
+      }
+      document.documentElement.dataset.backendState = 'online';
+      updateSyncLabel(document, label);
+      window.dispatchEvent(new CustomEvent('stitch:backend-state', {
+        detail: { state: 'online', route, label },
+      }));
+    } catch (error) {
+      const state = error.status === 401 ? 'auth-required' : 'offline';
+      const label = state === 'auth-required' ? '请登录后同步' : '本地模式 · 后端不可用';
+      document.documentElement.dataset.backendState = state;
+      updateSyncLabel(document, label);
+      window.dispatchEvent(new CustomEvent('stitch:backend-state', {
+        detail: { state, route, error: String(error) },
+      }));
+    }
+  }
+
   function applyCanvasSize() {
     if (mobileQuery.matches) {
       const scale = Math.min(1, window.innerWidth / 780);
@@ -155,6 +221,8 @@
         navigate(route);
       }
     });
+
+    hydrateBackend(childDocument, activeRoute);
   });
 
   window.addEventListener('hashchange', () => renderRoute(routeFromHash()));
