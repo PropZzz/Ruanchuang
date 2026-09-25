@@ -41,6 +41,23 @@ void main() {
     expect(find.text('fallback content'), findsOneWidget);
   });
 
+  testWidgets('enabled overlay glass renders a blur layer', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: const Scaffold(
+          body: GlassSurface(
+            level: AppMaterialLevel.overlay,
+            child: Text('overlay content'),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(BackdropFilter), findsOneWidget);
+    expect(find.text('overlay content'), findsOneWidget);
+  });
+
   testWidgets('content surfaces do not render a blur layer', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
