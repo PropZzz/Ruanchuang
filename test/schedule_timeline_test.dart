@@ -171,10 +171,8 @@ void main() {
         final tickFinder = tickFinders.at(index);
         final paragraph = tester.renderObject<RenderParagraph>(tickFinder);
         final glyphWidth = _measure(paragraph).width;
-        final center = tester.getCenter(tickFinder).dx;
-        glyphRects.add(
-          Rect.fromLTRB(center - glyphWidth / 2, 0, center + glyphWidth / 2, 1),
-        );
+        final glyphLeft = tester.getTopLeft(tickFinder).dx;
+        glyphRects.add(Rect.fromLTRB(glyphLeft, 0, glyphLeft + glyphWidth, 1));
       }
       glyphRects.sort((a, b) => a.left.compareTo(b.left));
       for (var index = 1; index < glyphRects.length; index++) {
