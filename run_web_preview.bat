@@ -17,12 +17,6 @@ if errorlevel 1 (
   exit /b 1
 )
 
-where flutter >nul 2>nul
-if errorlevel 1 (
-  echo ERROR: flutter was not found in PATH.
-  exit /b 1
-)
-
 where node >nul 2>nul
 if errorlevel 1 (
   echo ERROR: node was not found in PATH.
@@ -48,37 +42,24 @@ if errorlevel 1 (
 echo [3/5] Backend ready.
 
 if /I "%~1"=="--check" (
-  echo Check finished. The Web bundle was not rebuilt.
+  echo Check finished. The Stitch Web entry was not started.
   exit /b 0
 )
 
-echo [4/6] Syncing Stitch mobile deployment from design/stitch-mobile...
+echo [4/5] Syncing Stitch mobile deployment from design/stitch-mobile...
 call node tools\sync_stitch_mobile.mjs
 if errorlevel 1 (
   echo ERROR: Stitch mobile deployment sync failed.
   exit /b 1
 )
 
-echo [5/6] Building the latest Flutter Web bundle...
-call flutter pub get
-if errorlevel 1 (
-  echo ERROR: flutter pub get failed.
-  exit /b 1
-)
-
-call flutter build web --release --no-wasm-dry-run --dart-define=API_BASE_URL=%BACKEND_URL%
-if errorlevel 1 (
-  echo ERROR: Flutter Web build failed.
-  exit /b 1
-)
-
-echo [6/6] Starting static Web preview: %WEB_URL%
+echo [5/5] Starting Stitch Web preview: %WEB_URL%
 if not exist "%~dp0.appdata" mkdir "%~dp0.appdata"
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r = Invoke-WebRequest -UseBasicParsing -Uri '%WEB_URL%' -TimeoutSec 2; if ($r.StatusCode -eq 200 -and $r.Content -match 'flutter_bootstrap.js') { exit 0 } } catch {}; exit 1"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r = Invoke-WebRequest -UseBasicParsing -Uri '%WEB_URL%' -TimeoutSec 2; if ($r.StatusCode -eq 200 -and $r.Content -match 'stitch/router.js') { exit 0 } } catch {}; exit 1"
 if errorlevel 1 (
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath 'python' -ArgumentList @('-m','http.server','%WEB_PORT%','--bind','127.0.0.1','--directory','%~dp0build\web') -WorkingDirectory '%~dp0' -WindowStyle Minimized -RedirectStandardOutput '%~dp0.appdata\web-preview.out.log' -RedirectStandardError '%~dp0.appdata\web-preview.err.log'"
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ok=$false; for($i=0; $i -lt 15; $i++){ try { $r=Invoke-WebRequest -UseBasicParsing -Uri '%WEB_URL%' -TimeoutSec 2; if($r.StatusCode -eq 200 -and $r.Content -match 'flutter_bootstrap.js'){ $ok=$true; break } } catch {}; Start-Sleep -Milliseconds 300 }; if($ok){ exit 0 } else { exit 1 }"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath 'python' -ArgumentList @('-m','http.server','%WEB_PORT%','--bind','127.0.0.1','--directory','%~dp0web') -WorkingDirectory '%~dp0' -WindowStyle Minimized -RedirectStandardOutput '%~dp0.appdata\web-preview.out.log' -RedirectStandardError '%~dp0.appdata\web-preview.err.log'"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ok=$false; for($i=0; $i -lt 15; $i++){ try { $r=Invoke-WebRequest -UseBasicParsing -Uri '%WEB_URL%' -TimeoutSec 2; if($r.StatusCode -eq 200 -and $r.Content -match 'stitch/router.js'){ $ok=$true; break } } catch {}; Start-Sleep -Milliseconds 300 }; if($ok){ exit 0 } else { exit 1 }"
   if errorlevel 1 (
     echo ERROR: Web preview failed to start. Check .appdata\web-preview.err.log.
     exit /b 1
