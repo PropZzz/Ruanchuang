@@ -25,13 +25,14 @@ void main() {
 
   tearDown(AppServices.resetForTests);
 
-  Widget app(Widget home) => MaterialApp(
-    locale: const Locale('zh', 'CN'),
-    supportedLocales: const [Locale('zh', 'CN'), Locale('en')],
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    theme: AppTheme.light,
-    home: home,
-  );
+  Widget app(Widget home, {Locale locale = const Locale('zh', 'CN')}) =>
+      MaterialApp(
+        locale: locale,
+        supportedLocales: const [Locale('zh', 'CN'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        theme: AppTheme.light,
+        home: home,
+      );
 
   testWidgets('refresh actions expose localized tooltips', (tester) async {
     await tester.pumpWidget(app(const MicroTaskPage()));
@@ -41,6 +42,42 @@ void main() {
     await tester.pumpWidget(app(const TeamPage()));
     await tester.pumpAndSettle();
     expect(find.byTooltip('刷新'), findsOneWidget);
+  });
+
+  testWidgets('English action tooltips are localized', (tester) async {
+    const locale = Locale('en');
+
+    await tester.pumpWidget(app(const MicroTaskPage(), locale: locale));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Refresh'), findsOneWidget);
+
+    await tester.pumpWidget(app(const TeamPage(), locale: locale));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Refresh'), findsOneWidget);
+
+    final service = MockDataService();
+    final entry = ScheduleEntry(
+      id: 'audit-calendar-delete-en',
+      day: DateTime.now(),
+      title: 'Calendar delete task',
+      tag: 'Focus',
+      height: 80,
+      color: Colors.teal,
+      time: const TimeOfDay(hour: 9, minute: 0),
+    );
+    await tester.runAsync(() => service.addScheduleEntry(entry));
+    AppServices.installTestOverrides(
+      dataService: service,
+      reminderService: NoopReminderService(),
+    );
+
+    await tester.pumpWidget(app(const SmartCalendarPage(), locale: locale));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byTooltip('Previous period'), findsOneWidget);
+    expect(find.byTooltip('Next period'), findsOneWidget);
+    expect(find.byTooltip('Delete'), findsWidgets);
+    await tester.runAsync(() => service.removeScheduleEntry(entry));
   });
 
   testWidgets('calendar period actions expose localized tooltips', (
