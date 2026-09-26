@@ -409,14 +409,16 @@
 </div>
 <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
 <div class="sm:col-span-4">
-<select class="w-full text-xs font-mono rounded-lg bg-surface-container-low text-on-surface p-2 focus:ring-1 focus:ring-secondary">
+<label class="sr-only" for="gatt-characteristic-select">GATT 写入特征值</label>
+<select autocomplete="off" class="w-full text-xs font-mono rounded-lg bg-surface-container-low text-on-surface p-2 focus:ring-1 focus:ring-secondary" id="gatt-characteristic-select" name="gatt_characteristic">
 <option>0x2A37 (Heart Rate Control Point)</option>
 <option>0x2A38 (Custom Sensor Config)</option>
 <option>0x2A19 (Battery Notification Trigger)</option>
 </select>
 </div>
 <div class="sm:col-span-5">
-<input class="w-full text-xs font-mono rounded-lg bg-surface-container-low text-on-surface p-2 focus:ring-1 focus:ring-secondary placeholder:text-outline" id="hex-payload-input" placeholder="如 0x01 0x00..." type="text" value="0x01 0x00 0xFF"/>
+<label class="sr-only" for="hex-payload-input">十六进制写入载荷</label>
+<input autocomplete="off" class="w-full text-xs font-mono rounded-lg bg-surface-container-low text-on-surface p-2 focus:ring-1 focus:ring-secondary placeholder:text-outline" id="hex-payload-input" name="hex_payload" placeholder="如 0x01 0x00…" type="text" value="0x01 0x00 0xFF"/>
 </div>
 <div class="sm:col-span-3">
 <button class="w-full py-2 px-3 rounded-lg bg-primary hover:bg-primary-container text-on-primary text-xs font-label font-medium transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1" id="btn-dispatch-hex">

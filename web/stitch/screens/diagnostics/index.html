@@ -261,7 +261,8 @@
 <button class="log-filter-btn px-2.5 py-1 rounded-md font-medium text-on-surface-variant hover:text-on-surface" data-level="ERROR">ERROR</button>
 </div>
 <!-- Module Selector -->
-<select class="h-8 px-2.5 rounded-lg bg-surface text-xs font-label text-on-surface shadow-xs outline-none" id="module-filter">
+<label class="sr-only" for="module-filter">诊断模块筛选</label>
+<select autocomplete="off" class="h-8 px-2.5 rounded-lg bg-surface text-xs font-label text-on-surface shadow-xs outline-none" id="module-filter" name="module_filter">
 <option value="ALL">全量模块 (ALL)</option>
 <option value="SOLVER">调度求解器 (SOLVER)</option>
 <option value="SQLITE">本地存储 (SQLITE)</option>
@@ -271,7 +272,8 @@
 <!-- Search Input -->
 <div class="relative">
 <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[14px] text-outline">search</span>
-<input class="h-8 pl-8 pr-3 w-44 md:w-56 rounded-lg bg-surface text-xs font-label text-on-surface outline-none placeholder:text-outline shadow-xs" id="log-search-input" placeholder="过滤消息文本或键名..." type="text"/>
+<label class="sr-only" for="log-search-input">过滤诊断消息</label>
+<input autocomplete="off" class="h-8 pl-8 pr-3 w-44 md:w-56 rounded-lg bg-surface text-xs font-label text-on-surface outline-none placeholder:text-outline shadow-xs" id="log-search-input" name="log_search" placeholder="过滤消息文本或键名…" type="text"/>
 </div>
 </div>
 </div>

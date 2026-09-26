@@ -20,7 +20,8 @@
 <!-- NLP Input Card with Workbench Tint -->
 <div class="bg-surface-container-lowest rounded-xl p-3.5 shadow-sm space-y-3">
 <div class="relative">
-<textarea class="w-full bg-surface-container-low rounded-lg p-3 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest transition-all resize-none font-body leading-relaxed" id="task-input" placeholder="例如: 整理 API 响应异常捕获示例 #Ruanchuang ~15m !P1" rows="3">整理 API 响应异常捕获示例 #Ruanchuang ~15m !P1</textarea>
+<label class="sr-only" for="task-input">导入微任务清单</label>
+<textarea autocomplete="off" class="w-full bg-surface-container-low rounded-lg p-3 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest transition-all resize-none font-body leading-relaxed" id="task-input" name="microtask_text" placeholder="例如：整理 API 响应异常捕获示例 #Ruanchuang ~15m !P1" rows="3">整理 API 响应异常捕获示例 #Ruanchuang ~15m !P1</textarea>
 <!-- Quick Insertion Syntax Shortcuts -->
 <div class="flex items-center gap-1.5 mt-2 overflow-x-auto pb-0.5">
 <button class="px-2 py-1 rounded-md bg-surface-container text-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors font-mono" onclick="insertSyntax('#')" type="button">
