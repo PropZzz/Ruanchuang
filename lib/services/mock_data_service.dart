@@ -405,6 +405,7 @@ class MockDataService implements DataService {
   @override
   Future<bool> registerAccount({
     required String username,
+    required String displayName,
     required String password,
   }) async {
     await _delay(300); // 模拟网络校验
@@ -413,7 +414,10 @@ class MockDataService implements DataService {
     }
     _userDb[username] = password;
     // 注册成功后自动登录
-    _currentUser = UserAccount(contactAddress: username, displayName: '新注册用户');
+    _currentUser = UserAccount(
+      contactAddress: username,
+      displayName: displayName,
+    );
     return true;
   }
 

@@ -205,6 +205,79 @@ nav.fixed.bottom-0 {
   }
 }
 
+@media (max-width: 780px) {
+  html[data-route='profile'] body {
+    overflow-x: hidden;
+  }
+
+  html[data-route='profile'] body > aside.fixed {
+    width: 64px !important;
+  }
+
+  html[data-route='profile'] body > aside.fixed > div:first-child > div:first-child {
+    justify-content: center;
+    padding: 12px 0;
+  }
+
+  html[data-route='profile'] body > aside.fixed > div:first-child > div:first-child > img {
+    width: 32px;
+    height: 32px;
+  }
+
+  html[data-route='profile'] body > aside.fixed > div:first-child > div:first-child > div,
+  html[data-route='profile'] aside .overflow-y-auto .space-y-1 > div:first-child,
+  html[data-route='profile'] aside nav a > span:not(.material-symbols-outlined),
+  html[data-route='profile'] aside .p-3 button div span:not(.material-symbols-outlined),
+  html[data-route='profile'] aside .p-3 button > span:last-child,
+  html[data-route='profile'] aside .p-3 > div.flex > div:last-child {
+    display: none !important;
+  }
+
+  html[data-route='profile'] aside .overflow-y-auto {
+    padding-inline: 4px !important;
+  }
+
+  html[data-route='profile'] aside nav a {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  html[data-route='profile'] aside .p-3 {
+    padding: 8px 4px;
+  }
+
+  html[data-route='profile'] aside .p-3 button,
+  html[data-route='profile'] aside .p-3 > div.flex {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  html[data-route='profile'] body > div {
+    padding-left: 64px !important;
+  }
+
+  html[data-route='profile'] body > div > header.fixed {
+    left: 64px !important;
+    padding-inline: 12px;
+  }
+
+  html[data-route='profile'] body > div > header.fixed > div:first-child > img {
+    display: none !important;
+  }
+
+  html[data-route='profile'] body > div > main > div {
+    padding: 16px 12px !important;
+  }
+
+  html[data-route='profile'] body > div > main > div > div:first-child {
+    padding: 16px !important;
+  }
+
+  html[data-route='profile'] body > div > main > div > div:first-child button {
+    padding-inline: 8px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -48,11 +48,11 @@
 </div>
 <!-- 动作操作 -->
 <div class="flex items-center gap-2">
-<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container text-xs font-semibold text-primary shadow-sm transition-all active:scale-95" onclick="alert('已启动未来7天蒙特卡洛时序模拟')" type="button">
+<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container text-xs font-semibold text-primary shadow-sm transition-all active:scale-95" data-unavailable-notice="未来 7 天蒙特卡洛模拟尚未接入服务端。" type="button">
 <span class="material-symbols-outlined text-[16px] text-secondary">tune</span>
 <span>模拟一周调度</span>
 </button>
-<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary hover:bg-on-secondary-fixed-variant text-xs font-semibold text-on-secondary shadow-sm transition-all active:scale-95" onclick="alert('报告已生成至离线存档')" type="button">
+<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary hover:bg-on-secondary-fixed-variant text-xs font-semibold text-on-secondary shadow-sm transition-all active:scale-95" data-unavailable-notice="周期报告导出尚未接入服务端。" type="button">
 <span class="material-symbols-outlined text-[16px]">summarize</span>
 <span>生成周期报告</span>
 </button>
@@ -371,7 +371,7 @@
                 </span>
 </td>
 <td class="py-3.5 px-5 text-right">
-<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-error-container text-on-error-container hover:bg-error hover:text-on-error transition-all font-semibold active:scale-95" onclick="confirm('确认一键回滚调度？将恢复至 09-25 10:44:59 的时间轴快照。')" type="button">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-error-container text-on-error-container hover:bg-error hover:text-on-error transition-all font-semibold active:scale-95" data-unavailable-notice="该历史快照没有服务端撤销 ID，当前不会执行回滚。" type="button">
 <span class="material-symbols-outlined text-[14px]">undo</span>
 <span>一键撤销并回滚</span>
 </button>
@@ -408,7 +408,7 @@
                 </span>
 </td>
 <td class="py-3.5 px-5 text-right">
-<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-medium" onclick="alert('已调取 09-23 快照版本 #SNAP-4892')" type="button">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-medium" data-unavailable-notice="历史快照详情尚未提供服务端读取接口。" type="button">
 <span class="material-symbols-outlined text-[14px]">history</span>
 <span>查看快照</span>
 </button>
@@ -445,7 +445,7 @@
                 </span>
 </td>
 <td class="py-3.5 px-5 text-right">
-<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-medium" onclick="alert('已调取 09-21 快照版本 #SNAP-4811')" type="button">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-medium" data-unavailable-notice="历史快照详情尚未提供服务端读取接口。" type="button">
 <span class="material-symbols-outlined text-[14px]">history</span>
 <span>查看快照</span>
 </button>
@@ -475,7 +475,7 @@
 </div>
 <div class="flex items-center gap-2">
 <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed">引擎运行正常 · 自动学习中</span>
-<button class="text-xs text-secondary hover:underline font-semibold" onclick="alert('已重置为算法推荐的默认最佳实践参数')" type="button">重置默认值</button>
+<button class="text-xs text-secondary hover:underline font-semibold" data-unavailable-notice="复盘参数重置尚未接入服务端。" type="button">重置默认值</button>
 </div>
 </div>
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -542,7 +542,7 @@
 <!-- 底部保存提示与快捷保存 -->
 <div class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
 <span class="text-outline text-[11px]">微调参数在保存后将实时应用至本地求解器，下一次紧急任务插入将遵循新权重计算。</span>
-<button class="px-4 py-2 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-semibold transition-all active:scale-95 shadow-sm" onclick="alert('算法参数已持久化保存至本地引擎配置')" type="button">
+<button class="px-4 py-2 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-semibold transition-all active:scale-95 shadow-sm" data-unavailable-notice="复盘求解规则保存尚未接入服务端。" type="button">
           保存并更新求解规则
         </button>
 </div>

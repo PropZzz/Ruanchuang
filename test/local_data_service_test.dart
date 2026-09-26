@@ -125,6 +125,61 @@ List<String> _savedGoalIds(String raw) {
 }
 
 void main() {
+  test('LocalDataService quarantines legacy caches without an owner', () async {
+    final persistence = InMemoryLocalPersistence();
+    await persistence.write(
+      jsonEncode({
+        'version': 5,
+        'themeMode': 'dark',
+        'locale': 'en_US',
+        'currentUser': null,
+        'goals': [
+          {'id': 'private_goal', 'title': 'Previous account data'},
+        ],
+      }),
+    );
+    final service = LocalDataService.forPersistence(persistence);
+
+    await service.startGuestSession();
+
+    expect(await service.getThemeMode(), 'system');
+    expect(await service.getLocale(), 'zh_CN');
+    expect(await service.getGoals(), isEmpty);
+    final persisted = jsonDecode((await persistence.read())!) as Map;
+    final session = Map<String, dynamic>.from(
+      persisted['_sessionLocalData'] as Map,
+    );
+    expect(
+      (session['snapshots'] as Map).containsKey('legacy:unassigned'),
+      isTrue,
+    );
+  });
+
+  test(
+    'LocalDataService keeps guest and account snapshots across reloads',
+    () async {
+      final persistence = InMemoryLocalPersistence();
+      final guest = LocalDataService.forPersistence(persistence);
+      await guest.startGuestSession();
+      await guest.setThemeMode('light');
+
+      final alice = LocalDataService.forPersistence(persistence);
+      await alice.login('alice@example.com', 'secret123');
+      await alice.setThemeMode('dark');
+
+      final guestAfterRestart = LocalDataService.forPersistence(persistence);
+      await guestAfterRestart.startGuestSession();
+      expect(await guestAfterRestart.getThemeMode(), 'light');
+
+      final aliceAfterRestart = LocalDataService.forPersistence(persistence);
+      await aliceAfterRestart.login('alice@example.com', 'secret123');
+      expect(await aliceAfterRestart.getThemeMode(), 'dark');
+
+      await aliceAfterRestart.login('bob@example.com', 'secret123');
+      expect(await aliceAfterRestart.getThemeMode(), 'system');
+    },
+  );
+
   test('LocalDataService migrates legacy keys and persists ids', () async {
     final persistence = InMemoryLocalPersistence();
     final legacyEntry = <String, Object?>{

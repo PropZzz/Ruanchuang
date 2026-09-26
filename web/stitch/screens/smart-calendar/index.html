@@ -368,20 +368,20 @@
 <span class="text-[10px] text-outline font-label">算法智能监控实时在线</span>
 </div>
 </div>
-<span class="text-[10px] font-bold text-error bg-error-container px-2 py-0.5 rounded-full">高紧迫性</span>
+<span class="text-[10px] font-bold text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-full" id="calendar-conflict-severity">服务端状态待检查</span>
 </div>
 <!-- 冲突详情叙述 -->
 <div class="p-3 rounded-xl bg-surface-container-low flex flex-col gap-2">
 <div class="flex items-center gap-1.5 text-xs font-bold text-error">
 <span class="material-symbols-outlined text-[15px]">crisis_alert</span>
-<span>探测到 1 处紧急调度冲突</span>
+<span id="calendar-conflict-status">等待服务端检查日程冲突</span>
 </div>
-<p class="text-xs text-on-surface-variant leading-relaxed">
-            紧急任务【生产网关鉴权补丁】已强行插入当前时隙，导致原定 11:30 架构评审深度窗口被割裂，防疲劳认知恢复被挤压至 15m 临界线以下。
+<p class="text-xs text-on-surface-variant leading-relaxed" id="calendar-conflict-copy">
+            服务端返回后显示真实冲突与受影响日程，检查完成前不展示演示结论。
           </p>
 <div class="flex items-center justify-between text-[11px] text-outline pt-1">
-<span>违背硬约束风险：高</span>
-<span class="text-primary font-semibold tabular-nums">受影响日程: 2 项</span>
+<span id="calendar-conflict-risk">救援风险：待服务端分析</span>
+<span class="text-primary font-semibold tabular-nums" id="calendar-conflict-affected">受影响日程：待分析</span>
 </div>
 </div>
 <!-- 3 种救援策略快速对比矩阵 -->

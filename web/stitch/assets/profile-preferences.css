@@ -1,0 +1,60 @@
+html[data-profile-tone='gray'] .bg-primary {
+  background-color: #475569 !important;
+}
+
+html[data-profile-tone='gray'] .bg-primary-container {
+  background-color: #334155 !important;
+}
+
+html[data-profile-tone='gray'] .bg-primary-fixed {
+  background-color: #e2e8f0 !important;
+}
+
+html[data-profile-tone='gray'] .text-primary,
+html[data-profile-tone='gray'] .text-primary-container,
+html[data-profile-tone='gray'] .text-on-primary-container {
+  color: #334155 !important;
+}
+
+html[data-profile-tone='gray'] .text-on-primary {
+  color: #ffffff !important;
+}
+
+html[data-profile-tone='gray'] .ring-primary {
+  --tw-ring-color: #475569 !important;
+}
+
+html[data-profile-tone='jade'] .bg-primary {
+  background-color: #006b57 !important;
+}
+
+html[data-profile-tone='jade'] .bg-primary-container {
+  background-color: #005744 !important;
+}
+
+html[data-profile-tone='jade'] .bg-primary-fixed {
+  background-color: #d5f5ec !important;
+}
+
+html[data-profile-tone='jade'] .text-primary,
+html[data-profile-tone='jade'] .text-primary-container,
+html[data-profile-tone='jade'] .text-on-primary-container {
+  color: #005744 !important;
+}
+
+html[data-profile-tone='jade'] .text-on-primary {
+  color: #ffffff !important;
+}
+
+html[data-profile-tone='jade'] .ring-primary {
+  --tw-ring-color: #006b57 !important;
+}
+
+html[data-profile-compact='true'] main > div > .relative.rounded-xl,
+html[data-profile-compact='true'] main > div > .grid > .bg-surface-container-lowest {
+  padding: 16px !important;
+}
+
+html[data-profile-compact='true'] main > div.space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 12px !important;
+}

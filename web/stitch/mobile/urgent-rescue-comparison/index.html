@@ -11,7 +11,7 @@
 <div class="px-4 pt-3 pb-2 flex items-center justify-between">
 <div class="flex items-center gap-1.5">
 <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-<span class="text-xs font-semibold tracking-wide text-on-surface-variant font-label">算法空间推演已完成</span>
+<span class="text-xs font-semibold tracking-wide text-on-surface-variant font-label" data-rescue-status>等待服务端方案</span>
 </div>
 <div class="inline-flex items-center gap-1 bg-surface-container-high px-2.5 py-1 rounded-full text-secondary font-medium text-xs shadow-sm">
 <span class="material-symbols-outlined text-sm leading-none text-secondary" style="font-variation-settings: 'FILL' 1;">verified_user</span>
@@ -33,11 +33,11 @@
               #极高认知负荷 · 沉浸块
             </span>
 </div>
-<h2 class="text-lg font-bold text-on-surface font-headline leading-tight mt-1">生产网关鉴权补丁上线</h2>
+<h2 class="text-lg font-bold text-on-surface font-headline leading-tight mt-1" id="rescue-task-title">生产网关鉴权补丁上线</h2>
 </div>
 <div class="text-right shrink-0 bg-surface-container-low px-2.5 py-1.5 rounded-lg">
 <div class="text-[10px] text-on-surface-variant font-label">距离硬截止</div>
-<div class="text-sm font-bold text-error font-body tabular-nums">03:14:48</div>
+<div class="text-sm font-bold text-error font-body tabular-nums" id="rescue-task-countdown">--</div>
 </div>
 </div>
 <!-- 任务时间约束指标矩阵 -->
@@ -48,7 +48,7 @@
 </div>
 <div>
 <div class="text-[11px] text-on-surface-variant">预估净耗时</div>
-<div class="text-xs font-semibold text-on-surface font-body tabular-nums">75 分钟 (高专注)</div>
+<div class="text-xs font-semibold text-on-surface font-body tabular-nums" id="rescue-task-duration">--</div>
 </div>
 </div>
 <div class="flex items-center gap-2">
@@ -57,25 +57,25 @@
 </div>
 <div>
 <div class="text-[11px] text-on-surface-variant">绝对硬截止</div>
-<div class="text-xs font-semibold text-error font-body tabular-nums">今日 14:00</div>
+<div class="text-xs font-semibold text-error font-body tabular-nums" id="rescue-task-due">--</div>
 </div>
 </div>
 </div>
 <p class="mt-2.5 text-[12px] text-on-surface-variant leading-relaxed font-body">
-        调度引擎在不突破硬约束的前提下完成三次空间推演，请比对代价后滑动确认救援决策。
+        服务端已针对当前日程生成救援方案。请选择方案，写入后可从日历页撤销。
       </p>
 </section>
 <!-- 方案选择 Tab 控制器 -->
 <div class="bg-surface-container p-1 rounded-xl flex items-center gap-1 shadow-inner">
-<button class="plan-tab-btn flex-1 py-2 rounded-lg text-xs font-semibold text-center transition-all duration-200 bg-surface-container-lowest text-on-surface shadow-sm flex items-center justify-center gap-1" id="tab-btn-a" onclick="switchPlan('a')" type="button">
+<button class="plan-tab-btn flex-1 py-2 rounded-lg text-xs font-semibold text-center transition-all duration-200 bg-surface-container-lowest text-on-surface shadow-sm flex items-center justify-center gap-1" data-rescue-tab="0" id="tab-btn-a" onclick="switchPlan('a')" type="button">
 <span class="material-symbols-outlined text-[15px] text-secondary">star</span>
-<span>方案 A · 截期优先</span>
+<span data-rescue-tab-title>方案 A</span>
 </button>
-<button class="plan-tab-btn flex-1 py-2 rounded-lg text-xs font-medium text-center text-on-surface-variant transition-all duration-200 hover:text-on-surface flex items-center justify-center gap-1" id="tab-btn-b" onclick="switchPlan('b')" type="button">
-<span>方案 B · 缓冲优先</span>
+<button class="plan-tab-btn flex-1 py-2 rounded-lg text-xs font-medium text-center text-on-surface-variant transition-all duration-200 hover:text-on-surface flex items-center justify-center gap-1" data-rescue-tab="1" id="tab-btn-b" onclick="switchPlan('b')" type="button">
+<span data-rescue-tab-title>方案 B</span>
 </button>
-<button class="plan-tab-btn flex-1 py-2 rounded-lg text-xs font-medium text-center text-on-surface-variant transition-all duration-200 hover:text-on-surface flex items-center justify-center gap-1" id="tab-btn-c" onclick="switchPlan('c')" type="button">
-<span>方案 C · 最小变动</span>
+<button class="plan-tab-btn flex-1 py-2 rounded-lg text-xs font-medium text-center text-on-surface-variant transition-all duration-200 hover:text-on-surface flex items-center justify-center gap-1" data-rescue-tab="2" id="tab-btn-c" onclick="switchPlan('c')" type="button">
+<span data-rescue-tab-title>方案 C</span>
 </button>
 </div>
 <!-- 方案卡片展示区域 -->
@@ -84,35 +84,35 @@
 <article class="plan-card bg-surface-container-lowest rounded-xl p-4 shadow-sm transition-opacity duration-200 space-y-4" id="plan-card-a">
 <div class="flex items-start justify-between">
 <div class="space-y-0.5">
-<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-secondary-fixed text-on-secondary-fixed">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-secondary-fixed text-on-secondary-fixed" data-rescue-recommendation>
 <span class="material-symbols-outlined text-xs leading-none" style="font-variation-settings: 'FILL' 1;">recommend</span>
               算法最优解推荐
             </div>
-<h3 class="text-base font-bold text-on-surface font-headline pt-1">方案 A · 优先保住截止时间</h3>
-<p class="text-xs text-on-surface-variant">激进压缩非关键时隙，以最大余量确保 P0 安全交付</p>
+<h3 class="text-base font-bold text-on-surface font-headline pt-1">等待服务端策略</h3>
+<p class="text-xs text-on-surface-variant">提交后显示方案说明与取舍。</p>
 </div>
-<span class="text-xs px-2 py-1 rounded bg-tertiary-fixed text-on-tertiary-fixed font-bold tabular-nums shrink-0">风险 0%</span>
+<span class="text-xs px-2 py-1 rounded bg-surface-container-high text-on-surface-variant font-bold tabular-nums shrink-0" data-rescue-risk>风险待评估</span>
 </div>
 <!-- 核心量化指标 Bento 格 -->
 <div class="grid grid-cols-3 gap-2">
 <div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col justify-between">
-<span class="text-[11px] text-on-surface-variant">最早完工</span>
-<span class="text-sm font-bold text-on-surface font-body tabular-nums">12:15</span>
-<span class="text-[10px] text-secondary font-medium">提前 105m 交付</span>
+<span class="text-[11px] text-on-surface-variant">预计完工</span>
+<span class="text-sm font-bold text-on-surface font-body tabular-nums" data-rescue-completion>待排程</span>
+<span class="text-[10px] text-secondary font-medium" data-rescue-completion-status>服务端计算</span>
 </div>
 <div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col justify-between">
 <span class="text-[11px] text-on-surface-variant">恢复缓冲</span>
-<span class="text-sm font-bold text-tertiary-container font-body tabular-nums">15 分钟</span>
-<span class="text-[10px] text-on-surface-variant">标准认知补给</span>
+<span class="text-sm font-bold text-tertiary-container font-body tabular-nums" data-rescue-recovery>--</span>
+<span class="text-[10px] text-on-surface-variant">恢复缓冲</span>
 </div>
 <div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col justify-between">
 <span class="text-[11px] text-on-surface-variant">日程变动</span>
-<span class="text-sm font-bold text-on-surface font-body tabular-nums">移 3 / 留 8</span>
-<span class="text-[10px] text-tertiary-container font-medium">新增 1 项中断</span>
+<span class="text-sm font-bold text-on-surface font-body tabular-nums" data-rescue-moved>--</span>
+<span class="text-[10px] text-tertiary-container font-medium" data-rescue-retained>--</span>
 </div>
 </div>
 <!-- 4小时微观时隙图解 -->
-<div class="bg-surface-container-low/60 p-2.5 rounded-lg space-y-1.5">
+<div class="bg-surface-container-low/60 p-2.5 rounded-lg space-y-1.5" data-rescue-timeline>
 <div class="flex items-center justify-between text-[11px] text-on-surface-variant">
 <span>关键窗口推演 (11:00 - 15:00)</span>
 <span class="font-medium text-secondary">连续沉浸无打扰</span>
@@ -134,46 +134,46 @@
 <div class="text-xs text-on-surface-variant space-y-1">
 <div class="flex items-center gap-1.5 text-on-surface font-medium">
 <span class="material-symbols-outlined text-[15px] text-secondary">tune</span>
-<span>主要改动：平移 Q3 体验走查至明日、午餐推迟 15m</span>
+<span data-rescue-tradeoff>主要改动待服务端返回</span>
 </div>
 </div>
 <!-- 采用按钮 -->
-<button class="w-full bg-secondary text-on-secondary font-label font-semibold text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md" onclick="confirmAdoption('A', '优先保住截止时间')" type="button">
+<button class="w-full bg-secondary text-on-secondary font-label font-semibold text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md" data-rescue-apply type="button">
 <span class="material-symbols-outlined text-base">check_circle</span>
-<span>采用方案 A 并写入日程</span>
+<span>采用此方案并写入日程</span>
 </button>
 </article>
 <!-- 方案 B：恢复优先 -->
 <article class="plan-card hidden bg-surface-container-lowest rounded-xl p-4 shadow-sm transition-opacity duration-200 space-y-4" id="plan-card-b">
 <div class="flex items-start justify-between">
 <div class="space-y-0.5">
-<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-tertiary-fixed text-on-tertiary-fixed">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-tertiary-fixed text-on-tertiary-fixed" data-rescue-recommendation>
 <span class="material-symbols-outlined text-xs leading-none" style="font-variation-settings: 'FILL' 1;">spa</span>
               认知精力呵护
             </div>
-<h3 class="text-base font-bold text-on-surface font-headline pt-1">方案 B · 优先保留恢复时间</h3>
-<p class="text-xs text-on-surface-variant">强制锁定深呼吸与饱满重置，避免高负荷连续作战崩溃</p>
+<h3 class="text-base font-bold text-on-surface font-headline pt-1">等待服务端策略</h3>
+<p class="text-xs text-on-surface-variant">提交后显示方案说明与取舍。</p>
 </div>
-<span class="text-xs px-2 py-1 rounded bg-secondary-fixed text-on-secondary-fixed font-bold tabular-nums shrink-0">适中容限</span>
+<span class="text-xs px-2 py-1 rounded bg-surface-container-high text-on-surface-variant font-bold tabular-nums shrink-0" data-rescue-risk>风险待评估</span>
 </div>
 <div class="grid grid-cols-3 gap-2">
 <div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col justify-between">
-<span class="text-[11px] text-on-surface-variant">最早完工</span>
-<span class="text-sm font-bold text-on-surface font-body tabular-nums">13:30</span>
-<span class="text-[10px] text-on-surface-variant">提前 30m 交付</span>
+<span class="text-[11px] text-on-surface-variant">预计完工</span>
+<span class="text-sm font-bold text-on-surface font-body tabular-nums" data-rescue-completion>待排程</span>
+<span class="text-[10px] text-secondary font-medium" data-rescue-completion-status>服务端计算</span>
 </div>
 <div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col justify-between">
 <span class="text-[11px] text-on-surface-variant">恢复缓冲</span>
-<span class="text-sm font-bold text-tertiary-container font-body tabular-nums">30 分钟</span>
-<span class="text-[10px] text-tertiary-container font-medium">深度精力补充</span>
+<span class="text-sm font-bold text-tertiary-container font-body tabular-nums" data-rescue-recovery>--</span>
+<span class="text-[10px] text-on-surface-variant">恢复缓冲</span>
 </div>
 <div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col justify-between">
 <span class="text-[11px] text-on-surface-variant">日程变动</span>
-<span class="text-sm font-bold text-on-surface font-body tabular-nums">移 4 项</span>
-<span class="text-[10px] text-on-surface-variant">重构下午初段</span>
+<span class="text-sm font-bold text-on-surface font-body tabular-nums" data-rescue-moved>--</span>
+<span class="text-[10px] text-tertiary-container font-medium" data-rescue-retained>--</span>
 </div>
 </div>
-<div class="bg-surface-container-low/60 p-2.5 rounded-lg space-y-1.5">
+<div class="bg-surface-container-low/60 p-2.5 rounded-lg space-y-1.5" data-rescue-timeline>
 <div class="flex items-center justify-between text-[11px] text-on-surface-variant">
 <span>窗口推演 (11:00 - 15:00)</span>
 <span class="font-medium text-tertiary-container">高认知安全垫</span>
@@ -194,45 +194,45 @@
 <div class="text-xs text-on-surface-variant space-y-1">
 <div class="flex items-center gap-1.5 text-on-surface font-medium">
 <span class="material-symbols-outlined text-[15px] text-secondary">tune</span>
-<span>主要改动：前置微任务，留出整段 30m 重置期</span>
+<span data-rescue-tradeoff>主要改动待服务端返回</span>
 </div>
 </div>
-<button class="w-full bg-secondary text-on-secondary font-label font-semibold text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md" onclick="confirmAdoption('B', '优先保留恢复时间')" type="button">
+<button class="w-full bg-secondary text-on-secondary font-label font-semibold text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md" data-rescue-apply type="button">
 <span class="material-symbols-outlined text-base">check_circle</span>
-<span>采用方案 B 并写入日程</span>
+<span>采用此方案并写入日程</span>
 </button>
 </article>
 <!-- 方案 C：最小变动 -->
 <article class="plan-card hidden bg-surface-container-lowest rounded-xl p-4 shadow-sm transition-opacity duration-200 space-y-4" id="plan-card-c">
 <div class="flex items-start justify-between">
 <div class="space-y-0.5">
-<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface-container-highest text-on-surface-variant">
+<div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface-container-highest text-on-surface-variant" data-rescue-recommendation>
 <span class="material-symbols-outlined text-xs leading-none">swap_horiz</span>
               惯性保护
             </div>
-<h3 class="text-base font-bold text-on-surface font-headline pt-1">方案 C · 尽量少动原计划</h3>
-<p class="text-xs text-on-surface-variant">最大程度保持既有协同约定，压线交付，容错极窄</p>
+<h3 class="text-base font-bold text-on-surface font-headline pt-1">等待服务端策略</h3>
+<p class="text-xs text-on-surface-variant">提交后显示方案说明与取舍。</p>
 </div>
-<span class="text-xs px-2 py-1 rounded bg-error-container text-on-error-container font-bold tabular-nums shrink-0">压线 5m</span>
+<span class="text-xs px-2 py-1 rounded bg-surface-container-high text-on-surface-variant font-bold tabular-nums shrink-0" data-rescue-risk>风险待评估</span>
 </div>
 <div class="grid grid-cols-3 gap-2">
 <div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col justify-between">
-<span class="text-[11px] text-on-surface-variant">最早完工</span>
-<span class="text-sm font-bold text-error font-body tabular-nums">13:55</span>
-<span class="text-[10px] text-error font-medium">压线硬截止</span>
+<span class="text-[11px] text-on-surface-variant">预计完工</span>
+<span class="text-sm font-bold text-on-surface font-body tabular-nums" data-rescue-completion>待排程</span>
+<span class="text-[10px] text-secondary font-medium" data-rescue-completion-status>服务端计算</span>
 </div>
 <div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col justify-between">
 <span class="text-[11px] text-on-surface-variant">恢复缓冲</span>
-<span class="text-sm font-bold text-on-surface-variant font-body tabular-nums">5 分钟</span>
-<span class="text-[10px] text-outline font-medium">极紧凑接续</span>
+<span class="text-sm font-bold text-on-surface-variant font-body tabular-nums" data-rescue-recovery>--</span>
+<span class="text-[10px] text-outline font-medium">恢复缓冲</span>
 </div>
 <div class="bg-surface-container-low p-2.5 rounded-lg flex flex-col justify-between">
-<span class="text-[11px] text-on-surface-variant">原计划留存</span>
-<span class="text-sm font-bold text-on-surface font-body tabular-nums">90%</span>
-<span class="text-[10px] text-tertiary-container font-medium">扰动极小</span>
+<span class="text-[11px] text-on-surface-variant">日程调整</span>
+<span class="text-sm font-bold text-on-surface font-body tabular-nums" data-rescue-moved>--</span>
+<span class="text-[10px] text-tertiary-container font-medium" data-rescue-retained>--</span>
 </div>
 </div>
-<div class="bg-surface-container-low/60 p-2.5 rounded-lg space-y-1.5">
+<div class="bg-surface-container-low/60 p-2.5 rounded-lg space-y-1.5" data-rescue-timeline>
 <div class="flex items-center justify-between text-[11px] text-on-surface-variant">
 <span>窗口推演 (11:00 - 15:00)</span>
 <span class="font-medium text-error">边界紧绷</span>
@@ -252,25 +252,25 @@
 <div class="text-xs text-on-surface-variant space-y-1">
 <div class="flex items-center gap-1.5 text-on-surface font-medium">
 <span class="material-symbols-outlined text-[15px] text-secondary">tune</span>
-<span>主要改动：所有非紧急事务不推迟，午餐极度紧凑</span>
+<span data-rescue-tradeoff>主要改动待服务端返回</span>
 </div>
 </div>
-<button class="w-full bg-secondary text-on-secondary font-label font-semibold text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md" onclick="confirmAdoption('C', '尽量少动原计划')" type="button">
+<button class="w-full bg-secondary text-on-secondary font-label font-semibold text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md" data-rescue-apply type="button">
 <span class="material-symbols-outlined text-base">check_circle</span>
-<span>采用方案 C 并写入日程</span>
+<span>采用此方案并写入日程</span>
 </button>
 </article>
 </div>
 <!-- 方案细节：执行调度详情与受影响项目清单 (以方案 A 视角展开) -->
-<section class="bg-surface-container-lowest rounded-xl p-4 shadow-sm space-y-3">
+<section class="bg-surface-container-lowest rounded-xl p-4 shadow-sm space-y-3" data-rescue-details>
 <div class="flex items-center justify-between">
 <div class="flex items-center gap-2">
 <span class="material-symbols-outlined text-base text-primary-container">format_list_bulleted</span>
-<h4 class="text-sm font-bold text-on-surface font-headline">调度排期影响明细 (方案 A)</h4>
+<h4 class="text-sm font-bold text-on-surface font-headline" data-rescue-details-heading>调度排期影响明细</h4>
 </div>
-<span class="text-[11px] text-on-surface-variant font-label">3 项调整 / 1 项锁定</span>
+<span class="text-[11px] text-on-surface-variant font-label" data-rescue-details-summary>等待服务端方案</span>
 </div>
-<div class="space-y-2 pt-1">
+<div class="space-y-2 pt-1" data-rescue-details-list>
 <!-- 影响项 1 -->
 <div class="p-3 bg-surface-container-low rounded-lg flex items-start justify-between gap-3">
 <div class="space-y-0.5 min-w-0">
@@ -326,47 +326,11 @@
 <span class="material-symbols-outlined text-lg">history</span>
 </div>
 <div class="text-xs text-on-surface-variant leading-relaxed min-w-0 font-body">
-<span class="font-semibold text-on-surface">快照安全保障：</span>写入后将自动创建排期锚点，支持 24 小时内随时一键回撤，恢复至此次救援前的原日程。
+<span class="font-semibold text-on-surface">快照安全保障：</span>应用方案后，服务端会保存变更前的日程，可从日历页撤销此次救援。
       </div>
 </div>
 </div>
-<!-- 采用二次确认浮层 (可逆机制体验) -->
-<div class="fixed inset-0 z-50 bg-inverse-surface/40 backdrop-blur-sm hidden flex-col justify-end p-4" id="confirm-modal">
-<div class="bg-surface-container-lowest rounded-2xl p-5 shadow-2xl space-y-4 max-w-md mx-auto w-full">
-<div class="flex items-center gap-2 text-secondary">
-<span class="material-symbols-outlined text-2xl">verified</span>
-<h4 class="text-base font-bold text-on-surface font-headline">确认执行日程重排？</h4>
-</div>
-<p class="text-xs text-on-surface-variant leading-relaxed" id="modal-desc">
-        即将把所选方案应用至日历，并对 3 项受影响活动发送协作系统通知。您可随时通过“版本历史”恢复。
-      </p>
-<div class="grid grid-cols-2 gap-2 pt-1">
-<button class="py-2.5 rounded-xl bg-surface-container text-on-surface-variant font-semibold text-xs active:scale-95 transition-all" onclick="closeConfirmModal()" type="button">
-          返回比对
-        </button>
-<button class="py-2.5 rounded-xl bg-secondary text-on-secondary font-semibold text-xs shadow-md active:scale-95 transition-all flex items-center justify-center gap-1" onclick="executePlan()" type="button">
-<span class="material-symbols-outlined text-sm">done_all</span>
-          确认重排
-        </button>
-</div>
-</div>
-</div>
-<!-- 成功反馈 Toast -->
-<div class="fixed bottom-8 left-4 right-4 z-50 hidden transition-all duration-300" id="success-toast">
-<div class="bg-primary text-on-primary px-4 py-3 rounded-xl shadow-xl flex items-center justify-between gap-2 max-w-md mx-auto">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-tertiary-fixed text-lg">check_circle</span>
-<span class="text-xs font-medium">日程已更新！已生成快照备份 #SNAP-9284</span>
-</div>
-<button class="text-xs font-bold text-primary-fixed underline decoration-1 shrink-0" onclick="undoExecution()" type="button">
-        一键撤销
-      </button>
-</div>
-</div>
-</div>
 <script>
-  let currentSelectedPlan = 'A';
-
   function switchPlan(planId) {
     const plans = ['a', 'b', 'c'];
     plans.forEach(id => {
@@ -384,33 +348,4 @@
     });
   }
 
-  function confirmAdoption(planCode, planTitle) {
-    currentSelectedPlan = planCode;
-    const modal = document.getElementById('confirm-modal');
-    const desc = document.getElementById('modal-desc');
-    desc.textContent = `即将采用「方案 ${planCode}：${planTitle}」。系统将平移非关键排期，确保在 14:00 截期前闭环，并已准备好 24 小时随时快照回退。`;
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-  }
-
-  function closeConfirmModal() {
-    const modal = document.getElementById('confirm-modal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-  }
-
-  function executePlan() {
-    closeConfirmModal();
-    const toast = document.getElementById('success-toast');
-    toast.classList.remove('hidden');
-    setTimeout(() => {
-      toast.classList.add('hidden');
-    }, 4500);
-  }
-
-  function undoExecution() {
-    const toast = document.getElementById('success-toast');
-    toast.classList.add('hidden');
-    alert('已成功触发快照回滚，日程恢复至推演前状态。');
-  }
 </script></main></body></html>

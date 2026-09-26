@@ -14,10 +14,10 @@
 <span class="w-1.5 h-1.5 rounded-full bg-error animate-ping"></span>
         P0 / P1 紧急插入
       </span>
-<span class="text-xs text-on-surface-variant font-body">时空引擎实时就绪</span>
+<span class="text-xs text-on-surface-variant font-body">等待提交后校验</span>
 </div>
 <p class="text-xs text-on-surface-variant leading-relaxed">
-      算法正在校验硬截止约束，并实时推演三套无损救援方案以保护认知负载。
+      提交后由服务端按硬截止与现有日程生成真实救援方案，提交前不显示冲突结论。
     </p>
 </div>
 <!-- Form Content Area -->
@@ -113,54 +113,46 @@
 <span class="material-symbols-outlined text-[16px] text-error">alarm_on</span>
           绝对硬截止时间 (Critical Gate)
         </label>
-<span class="px-2 py-0.5 rounded-md bg-error-container text-on-error-container text-[11px] font-bold tabular-nums">
-          仅剩 3h 15m
+<span class="px-2 py-0.5 rounded-md bg-error-container text-on-error-container text-[11px] font-bold tabular-nums" id="urgent-task-deadline-countdown-chip">
+          --
         </span>
 </div>
 <div class="grid grid-cols-2 gap-2">
-<!-- Date Selector -->
-<div class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-surface-container-lowest shadow-xs">
-<div class="flex flex-col">
-<span class="text-[10px] text-outline uppercase font-medium">基准日期</span>
-<span class="text-xs font-bold text-on-surface font-body">今天 (09-25)</span>
-</div>
-<span class="material-symbols-outlined text-outline text-[18px]">calendar_today</span>
-</div>
-<!-- Precise Time Selector -->
-<div class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-surface-container-lowest shadow-xs border-l-2 border-l-error">
-<div class="flex flex-col">
-<span class="text-[10px] text-error uppercase font-semibold">截止节点</span>
-<span class="text-base font-headline font-bold text-on-surface tabular-nums leading-none mt-0.5">14:00</span>
-</div>
-<span class="material-symbols-outlined text-error text-[18px]">lock_clock</span>
+<label class="flex min-w-0 flex-col justify-center gap-1 px-3 py-2.5 rounded-lg bg-surface-container-lowest shadow-xs" for="urgent-task-deadline-input">
+<span class="text-[10px] text-error uppercase font-semibold">硬截止日期与时间</span>
+<input aria-label="硬截止日期与时间" class="w-full min-w-0 bg-transparent text-xs font-bold text-on-surface font-body focus:outline-none" id="urgent-task-deadline-input" name="urgent_task_due" required type="datetime-local" />
+</label>
+<div class="flex min-w-0 flex-col justify-center gap-1 px-3 py-2.5 rounded-lg bg-surface-container-lowest shadow-xs">
+<span class="text-[10px] text-outline uppercase font-medium">距离截止</span>
+<span class="text-sm font-headline font-bold text-error tabular-nums leading-none" id="urgent-task-deadline-countdown" role="status" aria-live="polite">4h 00m</span>
 </div>
 </div>
 </div>
 <!-- Field 5: Live Conflict Detector (Alert Panel) -->
-<div class="p-3.5 rounded-xl bg-error-container/40 flex flex-col gap-3 relative overflow-hidden">
+<div class="p-3.5 rounded-xl bg-surface-container-low flex flex-col gap-3 relative overflow-hidden">
 <!-- Ambient Glow decoration -->
-<div class="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-error-container/60 blur-xl pointer-events-none"></div>
+<div class="absolute -right-6 -bottom-6 w-24 h-24 rounded-full bg-surface-container-high/60 blur-xl pointer-events-none"></div>
 <div class="flex items-start gap-2.5">
-<div class="w-7 h-7 rounded-lg bg-error-container text-on-error-container flex items-center justify-center shrink-0 mt-0.5">
-<span class="material-symbols-outlined text-[18px]">warning</span>
+<div class="w-7 h-7 rounded-lg bg-surface-container-high text-on-surface-variant flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
 </div>
 <div class="flex flex-col flex-1 min-w-0">
 <div class="flex items-center justify-between gap-1">
-<h4 class="text-xs font-bold text-on-error-container">探测到 2 处时空硬性冲突</h4>
-<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-error text-on-error tabular-nums">高摩擦</span>
+<h4 class="text-xs font-bold text-on-surface">等待服务端分析当前日程</h4>
+<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant">尚未提交</span>
 </div>
 <p class="text-xs text-on-surface mt-1 leading-relaxed">
-            原定 <span class="font-semibold tabular-nums text-error">11:30</span>「架构终审」与 <span class="font-semibold tabular-nums text-error">12:00</span>「认知补能」将被割裂，午休恢复缓冲压缩至 <span class="font-bold underline text-error">15m</span> (临界危险下限)。
+            填写并提交任务后，服务端会返回真实冲突与可用时段。
           </p>
 </div>
 </div>
 <!-- Live Solver Mini-Banner -->
 <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-container-lowest shadow-xs">
 <div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-secondary text-[16px] animate-spin">autorenew</span>
-<span class="text-xs font-medium text-on-surface">时空平移推演方案已就绪</span>
+<span class="material-symbols-outlined text-secondary text-[16px]">schedule</span>
+<span class="text-xs font-medium text-on-surface">提交后生成服务端方案</span>
 </div>
-<span class="text-xs font-bold text-secondary tabular-nums">3 组解集</span>
+<span class="text-xs font-bold text-on-surface-variant">尚未生成</span>
 </div>
 </div>
 </div>
@@ -207,5 +199,42 @@
     if (label && descriptions[level - 1]) {
       label.textContent = descriptions[level - 1];
     }
+  }
+
+  const deadlineInput = document.getElementById('urgent-task-deadline-input');
+  const deadlineCountdown = document.getElementById('urgent-task-deadline-countdown');
+  const deadlineCountdownChip = document.getElementById('urgent-task-deadline-countdown-chip');
+
+  function localDateTimeValue(date) {
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return localDate.toISOString().slice(0, 16);
+  }
+
+  function updateUrgentTaskDeadline() {
+    if (!deadlineInput || !deadlineCountdown) return;
+    const due = new Date(deadlineInput.value);
+    if (!deadlineInput.value || Number.isNaN(due.getTime())) {
+      deadlineCountdown.textContent = '请选择截止时间';
+      if (deadlineCountdownChip) deadlineCountdownChip.textContent = '待选择';
+      deadlineInput.setCustomValidity('请选择截止日期和时间。');
+      return;
+    }
+    const minutes = Math.ceil((due.getTime() - Date.now()) / 60000);
+    deadlineInput.setCustomValidity(minutes <= 0 ? '截止时间必须晚于现在。' : '');
+    const countdownLabel = minutes <= 0
+      ? '时间已过'
+      : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+    deadlineCountdown.textContent = countdownLabel;
+    if (deadlineCountdownChip) deadlineCountdownChip.textContent = `仅剩 ${countdownLabel}`;
+  }
+
+  if (deadlineInput) {
+    const initialDue = new Date(Date.now() + 4 * 60 * 60 * 1000);
+    initialDue.setSeconds(0, 0);
+    deadlineInput.value = localDateTimeValue(initialDue);
+    deadlineInput.addEventListener('input', updateUrgentTaskDeadline);
+    deadlineInput.addEventListener('change', updateUrgentTaskDeadline);
+    window.updateUrgentTaskDeadline = updateUrgentTaskDeadline;
+    updateUrgentTaskDeadline();
   }
 </script></main></section></body></html>

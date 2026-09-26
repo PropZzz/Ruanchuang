@@ -340,11 +340,12 @@ class RemoteDataService implements DataService {
   @override
   Future<bool> registerAccount({
     required String username,
+    required String displayName,
     required String password,
   }) async {
     final raw = await _api.post('/auth/register', {
       'contactAddress': username,
-      'displayName': username,
+      'displayName': displayName,
       'password': password,
     });
     final data = _map(raw);
