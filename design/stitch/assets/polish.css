@@ -2,8 +2,8 @@
 :root {
   --rc-canvas: #f7f7fb;
   --rc-line: rgba(23, 35, 37, 0.1);
-  --rc-shadow: 0 8px 24px rgba(23, 35, 37, 0.06);
-  --rc-shadow-active: 0 10px 24px rgba(0, 93, 181, 0.2);
+  --rc-shadow: 0 1px 2px rgba(23, 35, 37, 0.04), 0 8px 24px rgba(23, 35, 37, 0.06);
+  --rc-shadow-active: 0 2px 4px rgba(0, 93, 181, 0.12), 0 10px 24px rgba(0, 93, 181, 0.16);
 }
 
 html,
@@ -11,6 +11,46 @@ body {
   background: var(--rc-canvas);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+:where(h1, h2, h3, h4) {
+  text-wrap: balance;
+}
+
+:where(p, li) {
+  text-wrap: pretty;
+}
+
+.material-symbols-outlined {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+
+.font-mono,
+[style*='tabular-nums'] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+.transition-all {
+  transition-property: background-color, border-color, color, opacity, box-shadow, transform;
+}
+
+button:not(:disabled),
+[role='button'] {
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+button:active:not(:disabled),
+[role='button']:active {
+  transform: scale(0.96) !important;
+}
+
+button > .material-symbols-outlined {
+  margin-top: -1px;
 }
 
 button,
@@ -50,6 +90,29 @@ main section.bg-surface-container-low {
   box-shadow: var(--rc-shadow) !important;
 }
 
+main section.bg-surface-container-lowest.rounded-xl,
+main section.bg-surface-container-low.rounded-xl {
+  border-radius: 16px !important;
+}
+
+main section.bg-surface-container-lowest.rounded-xl > .rounded-lg,
+main section.bg-surface-container-lowest.rounded-xl > .rounded-md,
+main section.bg-surface-container-low.rounded-xl > .rounded-lg,
+main section.bg-surface-container-low.rounded-xl > .rounded-md {
+  border-radius: 10px !important;
+}
+
+#timer-display {
+  display: inline-block;
+  min-width: 5ch;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+#timer-progress {
+  transition: stroke-dashoffset 800ms cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
 button.bg-secondary:not(:disabled) {
   box-shadow: var(--rc-shadow-active);
 }
@@ -57,6 +120,11 @@ button.bg-secondary:not(:disabled) {
 button:disabled {
   cursor: not-allowed;
   filter: saturate(0.7);
+}
+
+img[src*='a2aaefce0709'] {
+  outline: 1px solid rgba(0, 0, 0, 0.1);
+  outline-offset: 1px;
 }
 
 @media (prefers-reduced-motion: reduce) {

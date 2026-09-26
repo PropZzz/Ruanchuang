@@ -53,6 +53,7 @@
   const frame = document.getElementById('prototype-screen');
   const mobileQuery = window.matchMedia('(max-width: 780px)');
   let activeRoute = 'focus';
+  let hasRenderedRoute = false;
   let rescueState = null;
 
   const apiBase = (window.__RUANCHUANG_API__ ||
@@ -223,8 +224,10 @@
   function renderRoute(route) {
     activeRoute = pages[route] ? route : 'focus';
     applyCanvasSize();
+    if (hasRenderedRoute) frame.classList.add('route-switching');
     frame.src = screenFor(activeRoute);
     frame.title = `时序智配 ${activeRoute}`;
+    hasRenderedRoute = true;
   }
 
   function navigate(route, { replace = false } = {}) {
@@ -591,6 +594,8 @@
     } catch (_) {
       return;
     }
+
+    requestAnimationFrame(() => frame.classList.remove('route-switching'));
 
     injectPolishStyles(childDocument);
 

@@ -24,6 +24,22 @@
 
     #prototype-screen {
       display: block;
+      opacity: 1;
+      transform: translateY(0);
+      transition-property: opacity, transform;
+      transition-duration: 220ms;
+      transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    #prototype-screen.route-switching {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #prototype-screen {
+        transition: none;
+      }
     }
 
   </style>
