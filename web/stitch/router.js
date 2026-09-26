@@ -256,6 +256,9 @@
     document.getElementById('stitch-router-notice')?.remove();
     const notice = document.createElement('div');
     notice.id = 'stitch-router-notice';
+    notice.setAttribute('role', 'status');
+    notice.setAttribute('aria-live', 'polite');
+    notice.setAttribute('aria-atomic', 'true');
     notice.textContent = message;
     Object.assign(notice.style, {
       position: 'fixed',
@@ -646,7 +649,13 @@
       const anchor = event.target.closest('a');
       if (anchor) {
         const route = routeForLink(anchor);
-        if (route) {
+        const modifiedClick =
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey;
+        if (route && !modifiedClick) {
           event.preventDefault();
           navigate(route);
           return;
