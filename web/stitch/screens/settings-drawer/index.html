@@ -159,7 +159,7 @@
 </div>
 </div>
 <!-- 毛玻璃蒙层 (Backdrop Dim & Blur) -->
-<div class="fixed inset-0 top-16 left-[260px] bg-on-surface/30 backdrop-blur-md z-40 transition-opacity duration-300" id="settings-backdrop"></div>
+<div class="fixed inset-0 top-16 left-[260px] bg-on-surface/30 backdrop-blur-md z-40 transition-opacity duration-300" data-router-return id="settings-backdrop"></div>
 <!-- 右侧滑出式设置抽屉 (PRD 7.2 规范设置抽屉，桌面端宽度 420px，从右侧滑出) -->
 <aside class="fixed top-16 right-0 bottom-0 w-[420px] bg-surface-container-lowest z-50 flex flex-col shadow-2xl transition-transform duration-300 transform translate-x-0" id="settings-drawer">
 <!-- 抽屉顶部头部 -->
@@ -219,11 +219,11 @@
 <span class="material-symbols-outlined text-[16px] text-primary">translate</span> 语言与国际化
         </span>
 <div class="p-1 rounded-lg bg-surface-container-low flex items-center">
-<button class="flex-1 py-1.5 px-3 rounded-md bg-surface-container-lowest text-xs font-label font-semibold text-primary shadow-sm transition-all flex items-center justify-center gap-1.5" type="button">
+<button class="flex-1 py-1.5 px-3 rounded-md bg-surface-container-lowest text-xs font-label font-semibold text-primary shadow-sm transition-all flex items-center justify-center gap-1.5" data-lang="zh-CN" type="button">
 <span class="material-symbols-outlined text-[15px] text-primary">check</span>
             简体中文 (当前)
           </button>
-<button class="flex-1 py-1.5 px-3 rounded-md hover:bg-surface-container text-xs font-label font-medium text-on-surface-variant transition-all flex items-center justify-center" type="button">
+<button class="flex-1 py-1.5 px-3 rounded-md hover:bg-surface-container text-xs font-label font-medium text-on-surface-variant transition-all flex items-center justify-center" data-lang="en-US" type="button">
             English
           </button>
 </div>
@@ -275,13 +275,13 @@
         </span>
 <!-- 外观三段切换 -->
 <div class="p-1 rounded-lg bg-surface-container-low grid grid-cols-3 gap-1">
-<button class="py-1.5 rounded-md hover:bg-surface-container text-xs font-label font-medium text-on-surface-variant flex items-center justify-center gap-1 transition-all" type="button">
+<button class="py-1.5 rounded-md hover:bg-surface-container text-xs font-label font-medium text-on-surface-variant flex items-center justify-center gap-1 transition-all" data-theme="auto" type="button">
 <span class="material-symbols-outlined text-[14px]">desktop_windows</span> 跟随系统
           </button>
-<button class="py-1.5 rounded-md bg-surface-container-lowest text-xs font-label font-semibold text-primary shadow-sm flex items-center justify-center gap-1 transition-all" type="button">
+<button class="py-1.5 rounded-md bg-surface-container-lowest text-xs font-label font-semibold text-primary shadow-sm flex items-center justify-center gap-1 transition-all" data-theme="light" type="button">
 <span class="material-symbols-outlined text-[14px]">light_mode</span> 浅色模式
           </button>
-<button class="py-1.5 rounded-md hover:bg-surface-container text-xs font-label font-medium text-on-surface-variant flex items-center justify-center gap-1 transition-all" type="button">
+<button class="py-1.5 rounded-md hover:bg-surface-container text-xs font-label font-medium text-on-surface-variant flex items-center justify-center gap-1 transition-all" data-theme="dark" type="button">
 <span class="material-symbols-outlined text-[14px]">dark_mode</span> 深色模式
           </button>
 </div>

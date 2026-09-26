@@ -443,6 +443,11 @@
   document.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', function(e) {
       if (this.innerText.includes('采用此方案')) {
+        if (window.parent !== window && window.parent.__RUANCHUANG_API_ACTION__) {
+          e.stopPropagation();
+          window.parent.__RUANCHUANG_API_ACTION__('rescue-apply', document, this);
+          return;
+        }
         const planTitle = this.closest('.rounded-xl').querySelector('h4').innerText;
         const confirmMsg = `已确认选择【${planTitle}】！\n正在写入本地 SQLite 数据库并广播 ICS 变更...`;
         alert(confirmMsg);

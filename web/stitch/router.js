@@ -53,6 +53,7 @@
   const frame = document.getElementById('prototype-screen');
   const mobileQuery = window.matchMedia('(max-width: 780px)');
   let activeRoute = 'focus';
+  let rescueState = null;
 
   const apiBase = (window.__RUANCHUANG_API__ ||
     (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
@@ -64,17 +65,29 @@
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
-  async function backendRequest(path) {
+  async function backendRequest(path, { method = 'GET', body } = {}) {
     const response = await fetch(`${apiBase}${path}`, {
+      method,
       headers: { Accept: 'application/json', ...authHeaders() },
       credentials: 'omit',
+      ...(body === undefined ? {} : {
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          ...authHeaders(),
+        },
+        body: JSON.stringify(body),
+      }),
     });
     if (!response.ok) {
-      const error = new Error(`Backend request failed: ${response.status}`);
+      const detail = await response.text();
+      const error = new Error(detail || `Backend request failed: ${response.status}`);
       error.status = response.status;
       throw error;
     }
-    return response.json();
+    if (response.status === 204) return null;
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
   }
 
   function updateSyncLabel(document, label) {
@@ -85,6 +98,53 @@
     for (const target of candidates) target.textContent = label;
   }
 
+  function updateConflictCopy(document, count) {
+    const labels = [...document.querySelectorAll('span, p, h3, h4')];
+    const target = labels.find((node) => /探测到\s*\d+\s*处/.test(node.textContent));
+    if (target) target.textContent = `探测到 ${count} 处日程冲突`;
+    const severity = labels.find((node) => node.textContent.trim() === '高紧迫性');
+    if (severity) {
+      severity.textContent = count ? '需要处理' : '当前正常';
+      severity.classList.toggle('text-error', Boolean(count));
+    }
+    const priority = labels.find((node) => node.textContent.trim() === 'P0 核心中断');
+    if (priority) priority.textContent = count ? 'P0 核心中断' : '今日无硬冲突';
+  }
+
+  function enhanceAccessibility(document) {
+    const iconLabels = {
+      settings: '设置',
+      tune: '调整选项',
+      more_vert: '更多操作',
+      notifications: '通知',
+      person: '个人资料',
+      chevron_left: '上一项',
+      chevron_right: '下一项',
+    };
+    for (const button of document.querySelectorAll('button')) {
+      const icon = button.querySelector('.material-symbols-outlined');
+      const visibleText = [...button.childNodes]
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent.trim())
+        .join(' ')
+        .trim();
+      if (!button.getAttribute('aria-label') && !button.title && !visibleText && icon) {
+        const label = iconLabels[icon.textContent.trim()];
+        if (label) button.setAttribute('aria-label', label);
+      }
+      if (icon && !visibleText && !button.style.minWidth) {
+        button.style.minWidth = '44px';
+        button.style.minHeight = '44px';
+      }
+    }
+    for (const dialog of document.querySelectorAll('[id*="drawer"], [id*="Modal"], [id*="modal"]')) {
+      if (dialog.tagName === 'ASIDE' || dialog.tagName === 'SECTION' || dialog.getAttribute('role') === 'dialog') {
+        dialog.setAttribute('role', 'dialog');
+        dialog.setAttribute('aria-modal', 'true');
+      }
+    }
+  }
+
   async function hydrateBackend(document, route) {
     document.documentElement.dataset.backendState = 'loading';
     try {
@@ -92,7 +152,10 @@
       let label = '已连接 · FastAPI';
       if (route === 'schedule') {
         const entries = await backendRequest('/schedule');
-        label = `已连接 · 日程 ${Array.isArray(entries) ? entries.length : 0} 条`;
+        const conflicts = await backendRequest(`/schedule/conflicts?day=${todayIso()}`);
+        const conflictCount = Array.isArray(conflicts?.conflicts) ? conflicts.conflicts.length : 0;
+        updateConflictCopy(document, conflictCount);
+        label = `已连接 · 日程 ${Array.isArray(entries) ? entries.length : 0} 条 · 冲突 ${conflictCount}`;
       } else if (route === 'micro') {
         const tasks = await backendRequest('/microtasks');
         label = `已连接 · 微任务 ${Array.isArray(tasks) ? tasks.length : 0} 项`;
@@ -122,11 +185,9 @@
 
   function applyCanvasSize() {
     if (mobileQuery.matches) {
-      const scale = Math.min(1, window.innerWidth / 780);
-      frame.style.width = '780px';
-      frame.style.height = `${window.innerHeight / scale}px`;
-      frame.style.transform = `scale(${scale})`;
-      frame.style.transformOrigin = 'top left';
+      frame.style.width = '100%';
+      frame.style.height = '100%';
+      frame.style.transform = 'none';
       return;
     }
     frame.style.width = '100%';
@@ -169,6 +230,11 @@
     history.back();
   }
 
+  // Secondary surfaces live inside an iframe, so their local history is not
+  // the application's route state. Expose one parent-owned escape hatch for
+  // close buttons, backdrops, Escape, and injected navigation affordances.
+  window.__RUANCHUANG_RETURN__ = returnFromSecondary;
+
   function showNotice(document, message) {
     document.getElementById('stitch-router-notice')?.remove();
     const notice = document.createElement('div');
@@ -191,6 +257,230 @@
     document.body.appendChild(notice);
     window.setTimeout(() => notice.remove(), 2600);
   }
+
+  function setActionBusy(button, busy, label) {
+    if (!button) return;
+    if (busy) {
+      button.dataset.originalHtml = button.innerHTML;
+      button.disabled = true;
+      button.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span><span>${label}</span>`;
+      button.classList.add('opacity-70', 'pointer-events-none');
+      return;
+    }
+    if (button.dataset.originalHtml) button.innerHTML = button.dataset.originalHtml;
+    button.disabled = false;
+    button.classList.remove('opacity-70', 'pointer-events-none');
+  }
+
+  function todayIso() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function parseClock(value) {
+    const match = String(value || '').match(/(\d{1,2}):(\d{2})/);
+    return match ? { hour: Number(match[1]), minute: Number(match[2]) } : { hour: 9, minute: 0 };
+  }
+
+  async function runApiAction(action, document, button) {
+    try {
+      setActionBusy(button, true, '同步中...');
+      if (action === 'create-schedule') {
+        const title = document.querySelector('textarea')?.value.trim();
+        if (!title) throw new Error('日程主题不能为空');
+        const tag = document.querySelector('.tag-pill.active-tag span:last-child')?.textContent.trim() || '未分类';
+        const timeNode = [...document.querySelectorAll('span')].find((node) => /^\d{1,2}:\d{2}$/.test(node.textContent.trim()));
+        const durationNode = [...document.querySelectorAll('span')].find((node) => /分钟/.test(node.textContent));
+        const minutes = Number(durationNode?.textContent.match(/\d+/)?.[0] || 30);
+        await backendRequest('/schedule', {
+          method: 'POST',
+          body: {
+            day: todayIso(),
+            title,
+            tag,
+            height: minutes * 80 / 60,
+            color: 0,
+            time: parseClock(timeNode?.textContent),
+            reminderMinutesBefore: 30,
+            repeat: 'none',
+          },
+        });
+        showNotice(document, '日程已写入服务端排期。');
+        navigate('schedule');
+        return;
+      }
+
+      if (action === 'import-microtasks') {
+        const text = document.getElementById('task-input')?.value.trim();
+        if (!text) throw new Error('请先输入微任务内容');
+        await backendRequest('/microtasks/import', { method: 'POST', body: { text } });
+        showNotice(document, '微任务已导入服务端。');
+        navigate('micro');
+        return;
+      }
+
+      if (action === 'import-ics') {
+        const ics = document.getElementById('raw-input')?.value.trim();
+        if (!ics) throw new Error('请先粘贴 ICS 内容');
+        await backendRequest('/schedule/import-ics', { method: 'POST', body: { ics } });
+        showNotice(document, 'ICS 日程已导入服务端。');
+        navigate('schedule');
+        return;
+      }
+
+      if (action === 'import-microtask-text') {
+        const text = document.getElementById('raw-input')?.value.trim();
+        if (!text) throw new Error('请先粘贴任务清单');
+        await backendRequest('/microtasks/import', { method: 'POST', body: { text } });
+        showNotice(document, '任务清单已导入服务端。');
+        return;
+      }
+
+      if (action === 'diagnostics-summary') {
+        const summary = await backendRequest('/diagnostics/summary');
+        showNotice(document, `诊断完成：日程 ${summary?.counts?.schedules ?? 0} 条，事件 ${summary?.counts?.events ?? 0} 条。`);
+        return;
+      }
+
+      if (action === 'team-book' || action === 'team-conflicts') {
+        const members = await backendRequest('/team/members');
+        const memberIds = Array.isArray(members) ? members.map((member) => member.memberId).filter(Boolean) : [];
+        if (!memberIds.length) throw new Error('当前账号没有可用的团队成员');
+        const day = todayIso();
+        if (action === 'team-conflicts') {
+          const result = await backendRequest('/team/conflicts', {
+            method: 'POST',
+            body: { day, memberIds, start: { hour: 14, minute: 0 }, minutes: 60 },
+          });
+          showNotice(document, `冲突检查完成：${result?.conflicts?.length ?? 0} 个冲突。`);
+        } else {
+          await backendRequest('/team/book-meeting', {
+            method: 'POST',
+            body: {
+              day,
+              title: '协作窗口预约',
+              start: { hour: 14, minute: 0 },
+              minutes: 60,
+              participantIds: memberIds,
+            },
+          });
+          showNotice(document, '协作会议已写入日程并同步团队成员。');
+        }
+        return;
+      }
+
+      if (action === 'focus-event') {
+        const complete = button?.textContent.includes('结算');
+        await backendRequest('/events', {
+          method: 'POST',
+          body: {
+            id: `web_${complete ? 'complete' : 'skip'}_${Date.now()}`,
+            taskId: 'web-focus-task',
+            title: '当前专注任务',
+            tag: 'Focus',
+            at: new Date().toISOString(),
+            type: complete ? 'complete' : 'postpone',
+            plannedMinutes: 25,
+            reason: complete ? 'focus_completed' : 'focus_skipped',
+          },
+        });
+        showNotice(document, complete ? '专注任务已结算并写入事件。' : '专注任务已记录为跳过。');
+        return;
+      }
+
+      if (action === 'rescue-options') {
+        const day = todayIso();
+        const currentEntries = await backendRequest('/schedule');
+        const urgentTask = {
+          id: `web-urgent-${Date.now()}`,
+          title: '紧急调度任务',
+          durationMinutes: 30,
+          priority: 5,
+          due: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
+          load: 'high',
+          tag: 'Urgent',
+          hardDeadline: true,
+        };
+        const options = await backendRequest('/schedule/rescue/options', {
+          method: 'POST',
+          body: {
+            day,
+            urgentTask,
+            currentEntries,
+            energy: 'medium',
+            windows: [
+              { start: { hour: 9, minute: 0 }, end: { hour: 12, minute: 0 } },
+              { start: { hour: 13, minute: 30 }, end: { hour: 18, minute: 30 } },
+            ],
+            tuning: {
+              defaultDurationMultiplier: 1,
+              tagDurationMultiplier: {},
+              highLoadPenaltyWhenLowEnergy: 1,
+            },
+            fixed: [],
+            tasks: [],
+          },
+        });
+        rescueState = { ...options, day, urgentTask, currentEntries };
+        showNotice(document, `服务端已生成 ${options?.options?.length ?? 0} 个救援方案。`);
+        navigate('rescue-comparison');
+        return;
+      }
+
+      if (action === 'rescue-apply') {
+        if (!rescueState?.options?.length) throw new Error('请先生成服务端救援方案');
+        const option = rescueState.options.find((item) => item.recommended) || rescueState.options[0];
+        await backendRequest('/schedule/rescue/apply', {
+          method: 'POST',
+          body: {
+            day: rescueState.day,
+            baselineHash: rescueState.baselineHash,
+            strategy: option.strategy,
+            before: rescueState.currentEntries.filter((entry) => entry.day === rescueState.day),
+            after: option.plannedEntries,
+            urgentTask: rescueState.urgentTask,
+            eventId: `web_rescue_${Date.now()}`,
+            energy: 'medium',
+          },
+        });
+        showNotice(document, '救援方案已由服务端事务写入，可在复盘中查看。');
+        navigate('schedule');
+        return;
+      }
+
+      if (action === 'rescue-history') {
+        const history = await backendRequest('/schedule/rescue/history');
+        showNotice(document, `已读取 ${Array.isArray(history) ? history.length : 0} 条救援记录。`);
+        return;
+      }
+
+      if (action === 'settings-save') {
+        const activeTheme = document.querySelector('.theme-seg-btn.bg-surface-container-lowest')?.dataset.theme ||
+          document.querySelector('[data-theme].bg-surface-container-lowest')?.dataset.theme ||
+          'light';
+        const themeMode = activeTheme === 'auto' ? 'system' : activeTheme;
+        const activeLang = document.querySelector('.lang-btn[data-lang].bg-surface-container')?.dataset.lang || 'zh-CN';
+        await backendRequest('/settings', {
+          method: 'PUT',
+          body: {
+            themeMode,
+            locale: activeLang === 'en-US' ? 'en_US' : 'zh_CN',
+          },
+        });
+        showNotice(document, '设置已保存到服务端。');
+        returnFromSecondary();
+        return;
+      }
+
+      throw new Error(`Unknown API action: ${action}`);
+    } catch (error) {
+      const message = error.status === 401 ? '请先登录后再同步此操作。' : `操作失败：${error.message}`;
+      showNotice(document, message);
+    } finally {
+      setActionBusy(button, false);
+    }
+  }
+
+  window.__RUANCHUANG_API_ACTION__ = runApiAction;
 
   function routeForLink(anchor) {
     const path = anchor.dataset.path;
@@ -249,6 +539,19 @@
     return null;
   }
 
+  function apiActionForButton(button) {
+    if (button.id === 'btn-refresh' || button.id === 'btn-self-test') return 'diagnostics-summary';
+    if (button.id === 'save-settings-btn' || button.id === 'btn-save-settings') return 'settings-save';
+    if (button.id === 'btn-quick-reserve' || button.id === 'btn-silent-room') return 'team-book';
+    if (button.id === 'btn-conflict-check') return 'team-conflicts';
+    const label = `${button.textContent || ''} ${button.title || ''} ${button.getAttribute('aria-label') || ''}`;
+    if (activeRoute === 'focus' && (label.includes('跳过') || label.includes('结算'))) return 'focus-event';
+    if (activeRoute === 'schedule' && label.includes('立即对比并执行救援方案')) return 'rescue-options';
+    if (activeRoute === 'schedule' && label.includes('撤销上次自动调度')) return 'rescue-history';
+    if (activeRoute === 'rescue-comparison' && label.includes('采用此方案')) return 'rescue-apply';
+    return null;
+  }
+
   frame.addEventListener('load', () => {
     let childDocument;
     try {
@@ -258,7 +561,50 @@
       return;
     }
 
+    if (parentRoutes[activeRoute]) {
+      const hasNativeExit = childDocument.querySelector(
+        '[data-router-return], [aria-label*="返回"], [aria-label*="关闭"], [aria-label*="Back"], [aria-label*="Close"]',
+      );
+      if (!hasNativeExit) {
+        const back = childDocument.createElement('button');
+        back.type = 'button';
+        back.dataset.routerBack = 'true';
+        back.setAttribute('aria-label', '返回上一页');
+        back.title = '返回上一页';
+        back.textContent = '‹';
+        Object.assign(back.style, {
+          position: 'fixed',
+          top: '16px',
+          left: '16px',
+          zIndex: '9998',
+          width: '44px',
+          height: '44px',
+          border: '1px solid rgba(65,72,72,.18)',
+          borderRadius: '12px',
+          background: 'rgba(255,255,255,.92)',
+          color: '#163d3d',
+          font: '28px/1 system-ui, sans-serif',
+          cursor: 'pointer',
+          boxShadow: '0 2px 10px rgba(0,0,0,.08)',
+        });
+        back.addEventListener('click', () => returnFromSecondary());
+        childDocument.body.appendChild(back);
+      }
+    }
+
+    enhanceAccessibility(childDocument);
+
     childDocument.addEventListener('click', (event) => {
+      const exitSurface =
+        event.target.closest('[data-router-return], #settings-backdrop, #drawer-backdrop') ||
+        (event.target === childDocument.body.firstElementChild &&
+          event.target.matches('div.fixed.inset-0.-z-10'));
+      if (exitSurface && parentRoutes[activeRoute]) {
+        event.preventDefault();
+        returnFromSecondary();
+        return;
+      }
+
       const anchor = event.target.closest('a');
       if (anchor) {
         const route = routeForLink(anchor);
@@ -271,6 +617,12 @@
 
       const button = event.target.closest('button');
       if (!button) return;
+      const apiAction = apiActionForButton(button);
+      if (apiAction) {
+        event.preventDefault();
+        runApiAction(apiAction, childDocument, button);
+        return;
+      }
       const route = routeForButton(button);
       if (route === '__notice__') {
         event.preventDefault();

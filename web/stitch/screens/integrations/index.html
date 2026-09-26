@@ -432,11 +432,21 @@ END:VCALENDAR`,
     }
 
     function confirmImportSchedule() {
+      if (window.parent !== window && window.parent.__RUANCHUANG_API_ACTION__) {
+        event.stopPropagation();
+        window.parent.__RUANCHUANG_API_ACTION__('import-ics', document, event.currentTarget);
+        return;
+      }
       const toast = document.getElementById('success-toast');
       toast.classList.remove('hidden');
     }
 
     function confirmImportTask() {
+      if (window.parent !== window && window.parent.__RUANCHUANG_API_ACTION__) {
+        event.stopPropagation();
+        window.parent.__RUANCHUANG_API_ACTION__('import-microtask-text', document, event.currentTarget);
+        return;
+      }
       alert('已作为待办微任务存入待办池，并标注 P0 阻塞级。');
     }
 
