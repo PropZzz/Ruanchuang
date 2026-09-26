@@ -149,7 +149,8 @@
 <div class="mt-3 pt-3 flex items-center gap-2">
 <div class="relative flex-1">
 <span class="material-symbols-outlined absolute left-2.5 top-2.5 text-outline text-[18px]">lightbulb</span>
-<input class="w-full h-9 pl-8 pr-3 bg-surface-container text-xs rounded-lg text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest" placeholder="闪念备忘 / 补充新步骤 (Enter 快速留存)" type="text"/>
+<label class="sr-only" for="focus-note-input">快速记录闪念备忘</label>
+<input autocomplete="off" class="w-full h-9 pl-8 pr-3 bg-surface-container text-xs rounded-lg text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest" id="focus-note-input" name="focus_note" placeholder="闪念备忘 / 补充新步骤 (Enter 快速留存)" type="text"/>
 </div>
 <button aria-label="添加步骤" class="w-9 h-9 rounded-lg bg-primary text-on-primary flex items-center justify-center shrink-0 active:scale-95 transition-transform" type="button">
 <span class="material-symbols-outlined text-[18px]">add</span>
