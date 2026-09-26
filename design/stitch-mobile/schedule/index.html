@@ -305,21 +305,21 @@
 </section>
 <!-- 7. 底部固定微缩救援预览胶囊 (常驻吸附提示) -->
 <aside class="sticky bottom-20 px-4 w-full z-40">
-<div class="w-full p-3 rounded-2xl bg-primary text-on-primary shadow-xl flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform" onclick="document.getElementById('rescue-sheet').classList.remove('translate-y-full')">
-<div class="flex items-center gap-2.5">
-<div class="w-8 h-8 rounded-xl bg-error flex items-center justify-center text-on-error">
+<button aria-controls="rescue-sheet" aria-expanded="false" class="w-full p-3 rounded-2xl bg-primary text-on-primary shadow-xl flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform" onclick="document.getElementById('rescue-sheet').classList.remove('translate-y-full'); this.setAttribute('aria-expanded', 'true')" type="button">
+<span class="flex items-center gap-2.5">
+<span class="w-8 h-8 rounded-xl bg-error flex items-center justify-center text-on-error">
 <span class="material-symbols-outlined text-[20px]">auto_fix_high</span>
-</div>
-<div class="flex flex-col">
+</span>
+<span class="flex flex-col">
 <span class="text-xs font-bold font-headline">智能救援方案已就绪 (3 种策略)</span>
 <span class="text-[11px] font-label text-on-primary-container">点击上滑展开：保截止 / 留恢复 / 最小扰动</span>
-</div>
-</div>
-<div class="flex items-center gap-1 text-xs font-semibold text-secondary-fixed">
+</span>
+</span>
+<span class="flex items-center gap-1 text-xs font-semibold text-secondary-fixed">
 <span>展开</span>
 <span class="material-symbols-outlined text-[18px]">keyboard_arrow_up</span>
-</div>
-</div>
+</span>
+</button>
 </aside>
 <!-- 8. 智能救援决策抽屉 (滑动弹出层 Bottom Sheet) -->
 <div class="fixed inset-0 z-50 transform translate-y-full transition-transform duration-300 ease-out flex flex-col justify-end" id="rescue-sheet">
