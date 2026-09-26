@@ -66,6 +66,7 @@ if (checkOnly) {
   }
 } else {
   await cp(sourceAssets, targetAssets, { recursive: true, force: true });
+  await cp(join(sourceRoot, 'assets', 'polish.css'), join(root, 'web/stitch/mobile/assets/polish.css'), { force: true });
 }
 
 if (checkOnly) {

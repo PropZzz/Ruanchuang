@@ -1,0 +1,71 @@
+/* Shared polish layer for the desktop Stitch surfaces. */
+:root {
+  --rc-canvas: #f7f7fb;
+  --rc-line: rgba(23, 35, 37, 0.1);
+  --rc-shadow: 0 8px 24px rgba(23, 35, 37, 0.06);
+  --rc-shadow-active: 0 10px 24px rgba(0, 93, 181, 0.2);
+}
+
+html,
+body {
+  background: var(--rc-canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(0, 93, 181, 0.42);
+  outline-offset: 3px;
+}
+
+aside.fixed {
+  border-right: 1px solid var(--rc-line);
+  box-shadow: 4px 0 24px rgba(23, 35, 37, 0.04) !important;
+}
+
+header.fixed {
+  border-bottom: 1px solid rgba(23, 35, 37, 0.07);
+  box-shadow: 0 4px 18px rgba(23, 35, 37, 0.04) !important;
+}
+
+main {
+  background: var(--rc-canvas) !important;
+}
+
+main section.bg-surface-container-lowest,
+main section.bg-surface-container-low {
+  border: 1px solid var(--rc-line);
+  box-shadow: var(--rc-shadow) !important;
+}
+
+button.bg-secondary:not(:disabled) {
+  box-shadow: var(--rc-shadow-active);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

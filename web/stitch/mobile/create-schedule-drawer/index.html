@@ -255,11 +255,6 @@
   }
 
   function handleSubmit() {
-    if (window.parent !== window && window.parent.__RUANCHUANG_API_ACTION__) {
-      event.stopPropagation();
-      window.parent.__RUANCHUANG_API_ACTION__('create-schedule', document, event.currentTarget);
-      return;
-    }
     const mainBtn = event.currentTarget;
     mainBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span><span>写入排期池...</span>';
     setTimeout(() => {

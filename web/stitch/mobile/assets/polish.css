@@ -1,0 +1,113 @@
+/* Shared polish layer for the responsive Stitch surfaces. */
+:root {
+  color-scheme: light;
+  --rc-canvas: #f7f7fb;
+  --rc-surface: #ffffff;
+  --rc-ink: #172325;
+  --rc-muted: #5c696b;
+  --rc-line: rgba(23, 35, 37, 0.1);
+  --rc-shadow: 0 8px 24px rgba(23, 35, 37, 0.06);
+  --rc-shadow-active: 0 10px 24px rgba(0, 93, 181, 0.2);
+}
+
+html,
+body {
+  background: var(--rc-canvas);
+  color: var(--rc-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(0, 93, 181, 0.42);
+  outline-offset: 3px;
+}
+
+header.fixed {
+  border-bottom: 1px solid rgba(23, 35, 37, 0.07);
+  box-shadow: 0 4px 18px rgba(23, 35, 37, 0.04) !important;
+}
+
+header.fixed > div.h-20 {
+  height: 4.5rem;
+}
+
+header.fixed + main.pt-20 {
+  padding-top: 4.5rem;
+}
+
+main {
+  background: var(--rc-canvas) !important;
+}
+
+main > div > section {
+  scroll-margin-top: 5rem;
+}
+
+.bg-surface-container-lowest.rounded-xl.shadow-sm,
+.bg-surface-container-lowest.rounded-xl.shadow-md {
+  border: 1px solid var(--rc-line);
+  box-shadow: var(--rc-shadow) !important;
+}
+
+.bg-secondary:not(:disabled),
+button.bg-secondary:not(:disabled) {
+  box-shadow: var(--rc-shadow-active);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  filter: saturate(0.7);
+}
+
+nav.fixed.bottom-0 {
+  border-top: 1px solid rgba(23, 35, 37, 0.09);
+  box-shadow: 0 -6px 20px rgba(23, 35, 37, 0.05) !important;
+}
+
+@media (max-width: 520px) {
+  header.fixed > div.h-20 {
+    height: 4.25rem;
+    padding-inline: 0.875rem;
+  }
+
+  header.fixed + main.pt-20 {
+    padding-top: 4.25rem;
+  }
+
+  main > div {
+    gap: 0.875rem;
+  }
+
+  .font-headline.font-bold.text-base,
+  .font-headline.font-bold.text-lg {
+    letter-spacing: -0.01em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

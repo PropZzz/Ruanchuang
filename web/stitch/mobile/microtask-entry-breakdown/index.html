@@ -237,11 +237,6 @@
   });
 
   function handleTaskConfirm() {
-    if (window.parent !== window && window.parent.__RUANCHUANG_API_ACTION__) {
-      event.stopPropagation();
-      window.parent.__RUANCHUANG_API_ACTION__('import-microtasks', document, document.getElementById('submit-btn'));
-      return;
-    }
     const btn = document.getElementById('submit-btn');
     const originalText = btn.innerHTML;
     btn.innerHTML = `<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span><span>正在对齐时隙...</span>`;

@@ -145,6 +145,20 @@
     }
   }
 
+  function injectPolishStyles(document) {
+    const existing = document.getElementById('ruanchuang-polish-styles');
+    if (existing) return;
+    const link = document.createElement('link');
+    link.id = 'ruanchuang-polish-styles';
+    link.rel = 'stylesheet';
+    link.href = new URL(
+      mobileQuery.matches ? 'stitch/mobile/assets/polish.css' : 'stitch/assets/polish.css',
+      window.location.href,
+    ).toString();
+    document.head.appendChild(link);
+    document.documentElement.dataset.route = activeRoute;
+  }
+
   async function hydrateBackend(document, route) {
     document.documentElement.dataset.backendState = 'loading';
     try {
@@ -577,6 +591,8 @@
     } catch (_) {
       return;
     }
+
+    injectPolishStyles(childDocument);
 
     if (parentRoutes[activeRoute]) {
       const hasNativeExit = childDocument.querySelector(
