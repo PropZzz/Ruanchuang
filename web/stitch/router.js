@@ -387,6 +387,23 @@
         return;
       }
 
+      if (action === 'focus-start') {
+        await backendRequest('/events', {
+          method: 'POST',
+          body: {
+            id: `web_start_${Date.now()}`,
+            taskId: 'web-focus-task',
+            title: '当前专注任务',
+            tag: 'Focus',
+            at: new Date().toISOString(),
+            type: 'start',
+            plannedMinutes: 25,
+          },
+        });
+        showNotice(document, '专注已开始，启动事件已同步。');
+        return;
+      }
+
       if (action === 'rescue-options') {
         const day = todayIso();
         const currentEntries = await backendRequest('/schedule');

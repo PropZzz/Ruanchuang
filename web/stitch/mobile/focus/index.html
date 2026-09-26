@@ -90,9 +90,9 @@
 </div>
 <!-- 快捷触控按键组合 -->
 <div class="flex items-center gap-2 mt-3 pt-2">
-<button class="flex-1 h-12 rounded-lg bg-secondary text-on-secondary font-label text-sm font-semibold flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-transform" id="toggle-focus-btn" type="button">
-<span class="material-symbols-outlined text-[20px]">pause_circle</span>
-<span>暂停专注</span>
+<button class="flex-1 h-12 rounded-lg bg-primary text-on-primary font-label text-sm font-semibold flex items-center justify-center gap-2 shadow-md ring-2 ring-primary/15 active:scale-[0.98] transition-transform" id="toggle-focus-btn" type="button">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+<span>开始专注</span>
 </button>
 <button class="h-12 px-3.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label text-xs font-medium flex items-center justify-center gap-1 active:scale-95 transition-transform" title="跳过当前小节" type="button">
 <span class="material-symbols-outlined text-[18px]">skip_next</span>
@@ -268,7 +268,7 @@
 </section>
 </div>
 <script>
-  let isPaused = false;
+  let isPaused = true;
   let remainingSeconds = 23 * 60 + 39;
   const timerDisplay = document.getElementById('timer-display');
   const toggleBtn = document.getElementById('toggle-focus-btn');
@@ -301,6 +301,9 @@
       } else {
         toggleBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">pause_circle</span><span>暂停专注</span>';
         toggleBtn.classList.replace('bg-primary', 'bg-secondary');
+        if (window.parent !== window && window.parent.__RUANCHUANG_API_ACTION__) {
+          window.parent.__RUANCHUANG_API_ACTION__('focus-start', document, toggleBtn);
+        }
       }
     });
   }

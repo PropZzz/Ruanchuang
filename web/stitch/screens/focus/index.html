@@ -116,9 +116,9 @@
 </div>
 <!-- Controller Action Buttons -->
 <div class="flex items-center gap-3 mt-6 w-full max-w-md justify-center">
-<button class="flex-1 inline-flex items-center justify-center gap-2 h-11 px-5 rounded-lg bg-secondary hover:bg-on-secondary-fixed-variant text-on-secondary font-label font-semibold text-sm transition-all shadow-sm active:scale-95" id="toggle-timer-btn" type="button">
-<span class="material-symbols-outlined text-[18px]">pause</span>
-<span>暂停专注</span>
+<button class="flex-1 inline-flex items-center justify-center gap-2 h-11 px-5 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label font-semibold text-sm transition-all shadow-md ring-2 ring-primary/15 active:scale-95" id="toggle-timer-btn" type="button">
+<span class="material-symbols-outlined text-[18px]">play_arrow</span>
+<span>开始专注</span>
 </button>
 <button class="inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant font-label font-medium text-sm transition-all shadow-sm" type="button">
 <span class="material-symbols-outlined text-[18px]">skip_next</span>
@@ -398,7 +398,7 @@
     const timerDisplay = document.getElementById('focus-timer-display');
     if (!timerBtn || !timerDisplay) return;
 
-    let isRunning = true;
+    let isRunning = false;
     let seconds = 23 * 60 + 42;
 
     const interval = setInterval(function () {
@@ -419,6 +419,9 @@
         text.textContent = '暂停专注';
         timerBtn.classList.remove('bg-primary');
         timerBtn.classList.add('bg-secondary');
+        if (window.parent !== window && window.parent.__RUANCHUANG_API_ACTION__) {
+          window.parent.__RUANCHUANG_API_ACTION__('focus-start', document, timerBtn);
+        }
       } else {
         icon.textContent = 'play_arrow';
         text.textContent = '继续专注';
