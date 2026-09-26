@@ -324,7 +324,7 @@
 <!-- 8. 智能救援决策抽屉 (滑动弹出层 Bottom Sheet) -->
 <div class="fixed inset-0 z-50 transform translate-y-full transition-transform duration-300 ease-out flex flex-col justify-end" id="rescue-sheet">
 <!-- 遮罩背景 -->
-<div class="absolute inset-0 bg-primary/40 backdrop-blur-sm" onclick="document.getElementById('rescue-sheet').classList.add('translate-y-full')"></div>
+<button aria-label="关闭救援方案" class="absolute inset-0 bg-primary/40 backdrop-blur-sm" onclick="document.getElementById('rescue-sheet').classList.add('translate-y-full')" type="button"></button>
 <!-- 抽屉主体 -->
 <div class="relative w-full max-h-[777px] overflow-y-auto bg-surface-container-lowest rounded-t-3xl p-5 shadow-2xl flex flex-col gap-4">
 <!-- 拖拽手柄 -->
