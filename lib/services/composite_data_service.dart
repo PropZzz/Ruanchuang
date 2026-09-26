@@ -22,6 +22,7 @@ class CompositeDataService implements DataService {
   /// If true, reads attempt remote first, then local fallback.
   bool preferRemoteReads;
   bool _guestOnly = false;
+  bool _localCacheReady = true;
 
   CompositeDataService({
     required this.local,
@@ -32,12 +33,9 @@ class CompositeDataService implements DataService {
   /// Keep unauthenticated sessions on their isolated local cache.
   @override
   Future<void> startGuestSession() async {
+    await local.startGuestSession();
     _guestOnly = true;
-    try {
-      await local.startGuestSession();
-    } catch (_) {
-      // Cache implementations may not need session reset support.
-    }
+    _localCacheReady = true;
     try {
       await remote.startGuestSession();
     } catch (_) {
@@ -60,6 +58,7 @@ class CompositeDataService implements DataService {
 
   Future<T> _read<T>(Future<T> Function(DataService s) fn) async {
     if (_guestOnly) return fn(local);
+    if (!_localCacheReady) return fn(remote);
     if (preferRemoteReads) {
       try {
         return await fn(remote);
@@ -91,12 +90,14 @@ class CompositeDataService implements DataService {
       remoteSucceeded = true;
     } catch (error) {
       if (!_isRemoteFallbackError(error)) rethrow;
+      if (!_localCacheReady) rethrow;
     }
 
     try {
       await fn(local);
     } catch (_) {
       if (!remoteSucceeded) rethrow;
+      _localCacheReady = false;
     }
   }
 
@@ -241,16 +242,13 @@ class CompositeDataService implements DataService {
 
   @override
   Future<bool> login(String account, String password) async {
-    bool result;
-    try {
-      result = await remote.login(account, password);
-    } catch (error) {
-      if (!_isRemoteFallbackError(error)) rethrow;
-      return local.login(account, password);
-    }
+    final result = await remote.login(account, password);
+    if (!result) return false;
+
     _guestOnly = false;
+    _localCacheReady = false;
     try {
-      await local.login(account, password);
+      _localCacheReady = await local.login(account, password);
     } catch (_) {
       // Local cache synchronization is best effort after remote auth.
     }
@@ -260,21 +258,24 @@ class CompositeDataService implements DataService {
   @override
   Future<bool> registerAccount({
     required String username,
+    required String displayName,
     required String password,
   }) async {
-    bool result;
+    final result = await remote.registerAccount(
+      username: username,
+      displayName: displayName,
+      password: password,
+    );
+    if (!result) return false;
+
+    _guestOnly = false;
+    _localCacheReady = false;
     try {
-      result = await remote.registerAccount(
+      _localCacheReady = await local.registerAccount(
         username: username,
+        displayName: displayName,
         password: password,
       );
-    } catch (error) {
-      if (!_isRemoteFallbackError(error)) rethrow;
-      return local.registerAccount(username: username, password: password);
-    }
-    _guestOnly = false;
-    try {
-      await local.registerAccount(username: username, password: password);
     } catch (_) {
       // Local cache synchronization is best effort after remote auth.
     }
@@ -290,10 +291,9 @@ class CompositeDataService implements DataService {
         if (!_isRemoteFallbackError(error)) rethrow;
       }
     }
-    try {
-      await local.logout();
-    } finally {
-      _guestOnly = true;
-    }
+    _localCacheReady = false;
+    await local.logout();
+    _guestOnly = true;
+    _localCacheReady = true;
   }
 }

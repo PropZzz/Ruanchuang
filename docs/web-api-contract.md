@@ -11,7 +11,12 @@
 | `team-book` | `POST /team/book-meeting` | Current team member IDs and default collaboration window | Show server-confirmed booking |
 | `team-conflicts` | `POST /team/conflicts` | Current team member IDs and selected probe window | Show conflict count |
 | `diagnostics-summary` | `GET /diagnostics/summary` | Authenticated session | Show server counts |
-| `settings-save` | `PUT /settings` | Theme and locale controls | Return to profile after server commit |
+| `settings-load` | `GET /settings` | Authenticated session | Populate saved theme and locale; disable saving if the current values cannot be read |
+| `settings-save` | `PUT /settings` | Theme and locale controls | Close the settings overlay and retain the originating screen after server commit |
+| `auth-login` | `POST /auth/login` | Login form account and password | Store the bearer token and return to the originating screen |
+| `auth-register` | `POST /auth/register` | Registration contact, nickname and password | Create the account, store the bearer token and return to the originating screen |
+| `auth-logout` | `POST /auth/logout` | Current bearer token | Revoke the session and clear local credentials |
+| `auth-profile-save` | `PUT /auth/profile` | Nickname editor | Save the account display name |
 | `focus-event` | `POST /events` | Current focus action | Record complete or postpone event |
 | `rescue-options` | `POST /schedule/rescue/options` | Current schedule plus urgent-task contract | Open rescue comparison with server options |
 | `rescue-apply` | `POST /schedule/rescue/apply` | Selected server option and baseline hash | Commit one transaction and return to schedule |

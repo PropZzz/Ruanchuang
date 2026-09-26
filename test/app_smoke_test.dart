@@ -196,8 +196,13 @@ class _FatigueDataService implements DataService {
   @override
   Future<bool> registerAccount({
     required String username,
+    required String displayName,
     required String password,
-  }) => _inner.registerAccount(username: username, password: password);
+  }) => _inner.registerAccount(
+    username: username,
+    displayName: displayName,
+    password: password,
+  );
 
   @override
   Future<void> logout() => _inner.logout();

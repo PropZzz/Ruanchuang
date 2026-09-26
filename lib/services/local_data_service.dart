@@ -40,7 +40,9 @@ class _LocalDataSnapshot {
 
 class LocalDataService implements DataService {
   LocalDataService._({LocalPersistence? persistence})
-    : _persistence = persistence ?? createLocalPersistence();
+    : _persistence = SessionScopedLocalPersistence(
+        persistence ?? createLocalPersistence(),
+      );
 
   static final LocalDataService instance = LocalDataService._();
 
@@ -51,7 +53,7 @@ class LocalDataService implements DataService {
 
   static const int _schemaVersion = 5;
 
-  final LocalPersistence _persistence;
+  final SessionScopedLocalPersistence _persistence;
 
   bool _loaded = false;
 
@@ -73,10 +75,11 @@ class LocalDataService implements DataService {
   SchedulingTuning _tuning = const SchedulingTuning();
 
   @override
-  Future<void> startGuestSession() async {
-    await _ensureLoaded();
+  Future<void> startGuestSession() => _enqueueMutation(() async {
+    await _selectSessionScope(SessionScopedLocalPersistence.guestScope);
     _currentUser = null;
-  }
+    await _save();
+  });
 
   String _newId(String prefix) {
     final ts = DateTime.now().microsecondsSinceEpoch;
@@ -412,6 +415,26 @@ class LocalDataService implements DataService {
       _loaded = true;
     } catch (_) {
       _restoreState(beforeLoad);
+      rethrow;
+    }
+  }
+
+  Future<void> _selectSessionScope(String scope) async {
+    await _ensureLoaded();
+    if (_persistence.activeScope == scope) return;
+
+    final previousScope = _persistence.activeScope;
+    await _save();
+    try {
+      await _persistence.selectScope(scope);
+      _loaded = false;
+      _loadFuture = null;
+      await _ensureLoaded();
+    } catch (_) {
+      await _persistence.selectScope(previousScope);
+      _loaded = false;
+      _loadFuture = null;
+      await _ensureLoaded();
       rethrow;
     }
   }
@@ -1213,6 +1236,9 @@ class LocalDataService implements DataService {
       await _ensureLoaded();
       // 本地存储简单校验，只要账号密码有效就准入（因为没有服务器）
       if (account.isNotEmpty && password.length >= 6) {
+        await _selectSessionScope(
+          SessionScopedLocalPersistence.accountScope(account),
+        );
         _currentUser = UserAccount(
           contactAddress: account,
           displayName:
@@ -1228,15 +1254,19 @@ class LocalDataService implements DataService {
   @override
   Future<bool> registerAccount({
     required String username,
+    required String displayName,
     required String password,
   }) {
     return _enqueueMutation(() async {
       await _ensureLoaded();
       if (username.isNotEmpty && password.length >= 6) {
+        await _selectSessionScope(
+          SessionScopedLocalPersistence.accountScope(username),
+        );
         // 注册完毕直接成为当前用户
         _currentUser = UserAccount(
           contactAddress: username,
-          displayName: '新用户_$username',
+          displayName: displayName,
         );
         await _save();
         return true;
@@ -1249,6 +1279,7 @@ class LocalDataService implements DataService {
   Future<void> logout() {
     return _enqueueMutation(() async {
       await _ensureLoaded();
+      await _selectSessionScope(SessionScopedLocalPersistence.guestScope);
       _currentUser = null;
       await _save();
     });

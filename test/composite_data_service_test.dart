@@ -8,6 +8,8 @@ import 'package:shixuzhipei/models/models.dart';
 import 'package:shixuzhipei/services/api_client.dart';
 import 'package:shixuzhipei/services/composite_data_service.dart';
 import 'package:shixuzhipei/services/data_service.dart';
+import 'package:shixuzhipei/services/local_data_service.dart';
+import 'package:shixuzhipei/services/local_persistence/local_persistence.dart';
 import 'package:shixuzhipei/services/remote_data_service.dart';
 
 void main() {
@@ -75,6 +77,48 @@ void main() {
     expect(remote.setThemeModeCalls, 0);
   });
 
+  test(
+    'guest and account caches stay isolated across session changes',
+    () async {
+      final local = LocalDataService.forPersistence(InMemoryLocalPersistence());
+      final remote = _ThemeModeDataService(
+        getThemeModeError: RemoteUnavailableException('Offline.'),
+        loginResult: true,
+      );
+      final service = composite(local: local, remote: remote);
+
+      await service.startGuestSession();
+      await service.setThemeMode('light');
+      expect(await service.login('alice@example.com', 'secret123'), isTrue);
+      await service.setThemeMode('dark');
+      await service.startGuestSession();
+
+      expect(await service.getThemeMode(), 'light');
+      expect(await service.login('alice@example.com', 'secret123'), isTrue);
+      expect(await service.getThemeMode(), 'dark');
+      expect(await service.login('bob@example.com', 'secret123'), isTrue);
+      expect(await service.getThemeMode(), 'system');
+    },
+  );
+
+  test(
+    'account caches preserve the backend contact address casing',
+    () async {
+      final local = LocalDataService.forPersistence(InMemoryLocalPersistence());
+      final remote = _ThemeModeDataService(
+        getThemeModeError: RemoteUnavailableException('Offline.'),
+        loginResult: true,
+      );
+      final service = composite(local: local, remote: remote);
+
+      expect(await service.login('Alice@example.com', 'secret123'), isTrue);
+      await service.setThemeMode('dark');
+      expect(await service.login('alice@example.com', 'secret123'), isTrue);
+
+      expect(await service.getThemeMode(), 'system');
+    },
+  );
+
   test('successful login exits guest-only storage mode', () async {
     final local = _ThemeModeDataService(themeMode: 'dark');
     final remote = _ThemeModeDataService(themeMode: 'light', loginResult: true);
@@ -86,6 +130,76 @@ void main() {
     expect(await service.getThemeMode(), 'light');
     expect(remote.getThemeModeCalls, 1);
   });
+
+  test(
+    'login does not use local password-length checks when remote is offline',
+    () async {
+      final unavailable = RemoteUnavailableException(
+        'Authentication is offline.',
+      );
+      final local = _ThemeModeDataService(loginResult: true);
+      final remote = _ThemeModeDataService(
+        loginError: unavailable,
+        loginResult: true,
+      );
+      final service = composite(local: local, remote: remote);
+
+      await expectLater(
+        service.login('alice@example.com', 'arbitrary-password'),
+        throwsA(same(unavailable)),
+      );
+
+      expect(local.loginCalls, 0);
+    },
+  );
+
+  test(
+    'registration does not create a local account when remote is offline',
+    () async {
+      final unavailable = RemoteUnavailableException(
+        'Registration is offline.',
+      );
+      final local = _ThemeModeDataService(loginResult: true);
+      final remote = _ThemeModeDataService(
+        registerError: unavailable,
+        loginResult: true,
+      );
+      final service = composite(local: local, remote: remote);
+
+      await expectLater(
+        service.registerAccount(
+          username: 'alice@example.com',
+          displayName: 'Alice',
+          password: 'secret123',
+        ),
+        throwsA(same(unavailable)),
+      );
+
+      expect(local.registeredDisplayName, isNull);
+      expect(remote.registerCalls, 1);
+    },
+  );
+
+  test(
+    'registration forwards the chosen display name to both services',
+    () async {
+      final local = _ThemeModeDataService();
+      final remote = _ThemeModeDataService(loginResult: true);
+      final service = composite(local: local, remote: remote);
+
+      expect(
+        await service.registerAccount(
+          username: 'alice@example.com',
+          displayName: 'Alice Chen',
+          password: 'secret123',
+        ),
+        isTrue,
+      );
+
+      expect(remote.registeredDisplayName, 'Alice Chen');
+      expect(local.registeredDisplayName, 'Alice Chen');
+    },
+  );
 
   test('getThemeMode rethrows a remote 401 without calling local', () async {
     final error = ApiException('Unauthorized', statusCode: 401);
@@ -178,16 +292,20 @@ void main() {
       final local = _ThemeModeDataService(
         loginError: StateError('Local cache write failed.'),
       );
-      final remote = _ThemeModeDataService(loginResult: true);
+      final offline = RemoteUnavailableException('The remote is offline.');
+      final remote = _ThemeModeDataService(
+        getThemeModeError: offline,
+        loginResult: true,
+      );
+      final service = composite(local: local, remote: remote);
 
-      final result = await composite(
-        local: local,
-        remote: remote,
-      ).login('alice@example.com', 'secret');
+      final result = await service.login('alice@example.com', 'secret');
 
       expect(result, isTrue);
       expect(remote.loginCalls, 1);
       expect(local.loginCalls, 1);
+      await expectLater(service.getThemeMode(), throwsA(same(offline)));
+      expect(local.getThemeModeCalls, 0);
     },
   );
 
@@ -341,6 +459,7 @@ class _ThemeModeDataService implements DataService {
     this.setThemeModeError,
     this.loginResult = false,
     this.loginError,
+    this.registerError,
   });
 
   final String themeMode;
@@ -348,9 +467,15 @@ class _ThemeModeDataService implements DataService {
   final Object? setThemeModeError;
   final bool loginResult;
   final Object? loginError;
+  final Object? registerError;
   int getThemeModeCalls = 0;
   int setThemeModeCalls = 0;
   int loginCalls = 0;
+  int registerCalls = 0;
+  String? registeredDisplayName;
+
+  @override
+  Future<void> startGuestSession() async {}
 
   @override
   Future<String> getThemeMode() async {
@@ -372,6 +497,19 @@ class _ThemeModeDataService implements DataService {
     loginCalls++;
     final error = loginError;
     if (error != null) throw error;
+    return loginResult;
+  }
+
+  @override
+  Future<bool> registerAccount({
+    required String username,
+    required String displayName,
+    required String password,
+  }) async {
+    registerCalls++;
+    final error = registerError;
+    if (error != null) throw error;
+    registeredDisplayName = displayName;
     return loginResult;
   }
 

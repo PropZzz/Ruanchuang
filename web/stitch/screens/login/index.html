@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="shell-type" content="authentication" />
+    <title>登录 · 时序智配</title>
+    <link href="../../assets/fonts/14040b85083a.css" rel="stylesheet" />
+    <link href="../../assets/fonts/12238e2340c3.css" rel="stylesheet" />
+    <link href="../../assets/fonts/de9b7b5eb580.css" rel="stylesheet" />
+    <style>
+      :root {
+        color-scheme: light;
+        --canvas: #faf8fe;
+        --surface: #ffffff;
+        --surface-low: #f4f3f8;
+        --ink: #1a1b1f;
+        --muted: #414848;
+        --brand: #163d3d;
+        --action: #005db5;
+        --line: #c0c8c7;
+        --error-surface: #ffdad6;
+        --error-ink: #93000a;
+      }
+
+      html.dark {
+        color-scheme: dark;
+        --canvas: #101b1d;
+        --surface: #172426;
+        --surface-low: #1d2b2d;
+        --ink: #eef2f1;
+        --muted: #b7c5c4;
+        --brand: #a7cecd;
+        --action: #62a1fe;
+        --line: #38494a;
+        --error-surface: #3d1e1b;
+        --error-ink: #ffb4ab;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { min-height: 100%; margin: 0; }
+      body {
+        min-height: 100vh;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: Inter, "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      }
+      button, input { font: inherit; }
+      button { cursor: pointer; }
+      button:disabled { cursor: not-allowed; }
+      :focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+
+      .auth-layout {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+      }
+      .auth-panel {
+        width: min(100%, 440px);
+        padding: 24px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: 0 12px 34px rgba(16, 27, 29, 0.10);
+      }
+      .auth-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 22px;
+      }
+      .brand-lockup { display: flex; align-items: center; gap: 12px; min-width: 0; }
+      .brand-logo { width: 40px; height: 40px; object-fit: contain; flex: none; }
+      .brand-copy { min-width: 0; }
+      .brand-copy strong { display: block; color: var(--brand); font-size: 15px; line-height: 1.25; }
+      .brand-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+      .back-button {
+        width: 44px;
+        height: 44px;
+        flex: none;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--muted);
+      }
+      .back-button:hover { background: var(--surface-low); color: var(--ink); }
+      .page-title { margin: 0; color: var(--ink); font-size: 23px; line-height: 1.3; font-weight: 700; }
+      .page-copy { margin: 6px 0 20px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+      .auth-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        padding: 4px;
+        margin-bottom: 20px;
+        border-radius: 10px;
+        background: var(--surface-low);
+      }
+      .auth-tab {
+        min-height: 42px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .auth-tab[aria-selected="true"] {
+        background: var(--surface);
+        color: var(--ink);
+        font-weight: 600;
+        box-shadow: 0 1px 5px rgba(16, 27, 29, 0.08);
+      }
+      .field { margin-bottom: 14px; }
+      .field label { display: block; margin-bottom: 6px; color: var(--ink); font-size: 13px; font-weight: 600; }
+      .field-control { position: relative; }
+      .field input {
+        width: 100%;
+        height: 48px;
+        padding: 0 44px 0 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--canvas);
+        color: var(--ink);
+      }
+      .field input::placeholder { color: var(--muted); opacity: 0.78; }
+      .field input:focus { border-color: var(--action); outline: 2px solid color-mix(in srgb, var(--action) 18%, transparent); }
+      .reveal-button {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 44px;
+        height: 44px;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--muted);
+      }
+      .reveal-button:hover { color: var(--ink); background: var(--surface-low); }
+      .auth-error {
+        margin: 4px 0 12px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: var(--error-surface);
+        color: var(--error-ink);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .auth-error[hidden] { display: none; }
+      .submit-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        min-height: 48px;
+        margin-top: 4px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--action);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .submit-button:hover { filter: brightness(0.94); }
+      .submit-button:disabled { opacity: 0.6; }
+      .auth-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0 10px; color: var(--muted); font-size: 11px; }
+      .auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+      .guest-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .guest-button:hover { color: var(--ink); background: var(--surface-low); }
+
+      @media (max-width: 480px) {
+        .auth-layout { align-items: start; padding-top: max(20px, env(safe-area-inset-top)); }
+        .auth-panel { padding: 20px; }
+        .page-title { font-size: 21px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="auth-layout">
+      <section class="auth-panel" aria-labelledby="auth-title">
+        <header class="auth-header">
+          <div class="brand-lockup">
+            <img class="brand-logo" src="../../assets/images/a2aaefce0709.png" alt="时序智配" />
+            <div class="brand-copy">
+              <strong>时序智配</strong>
+              <span>时间地图工作台</span>
+            </div>
+          </div>
+          <button id="login-back-action" class="back-button" type="button" title="返回上一页" aria-label="返回上一页">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          </button>
+        </header>
+
+        <h1 id="auth-title" class="page-title">账户通行证</h1>
+        <p class="page-copy">登录后同步日程与个人偏好。</p>
+
+        <div class="auth-tabs" role="tablist" aria-label="账户操作">
+          <button id="auth-tab-login" class="auth-tab" type="button" role="tab" aria-controls="auth-form" aria-selected="true" data-auth-tab="login">登录</button>
+          <button id="auth-tab-register" class="auth-tab" type="button" role="tab" aria-controls="auth-form" aria-selected="false" data-auth-tab="register">注册</button>
+        </div>
+
+        <form id="auth-form" novalidate>
+          <div class="field">
+            <label for="auth-account-input">手机号或邮箱</label>
+            <input id="auth-account-input" name="contactAddress" type="text" inputmode="email" autocomplete="username" placeholder="name@example.com 或 13800000000" required />
+          </div>
+
+          <div id="auth-nickname-field" class="field" hidden>
+            <label for="auth-nickname-input">昵称</label>
+            <input id="auth-nickname-input" name="displayName" type="text" autocomplete="nickname" maxlength="40" placeholder="工作台中显示的名称" />
+          </div>
+
+          <div class="field">
+            <label for="auth-password-input">密码</label>
+            <div class="field-control">
+              <input id="auth-password-input" name="password" type="password" autocomplete="current-password" minlength="6" required />
+              <button class="reveal-button" type="button" data-reveal="auth-password-input" aria-label="显示密码" aria-pressed="false">
+                <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="auth-confirm-field" class="field" hidden>
+            <label for="auth-confirm-input">确认密码</label>
+            <div class="field-control">
+              <input id="auth-confirm-input" name="confirmPassword" type="password" autocomplete="new-password" minlength="6" />
+              <button class="reveal-button" type="button" data-reveal="auth-confirm-input" aria-label="显示确认密码" aria-pressed="false">
+                <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="auth-error" class="auth-error" role="alert" aria-live="assertive" hidden></div>
+          <button id="auth-submit" class="submit-button" type="submit" data-auth-mode="login">
+            <span class="material-symbols-outlined" aria-hidden="true">login</span>
+            <span id="auth-submit-label">登录</span>
+          </button>
+        </form>
+
+        <div class="auth-divider">或</div>
+        <button id="auth-guest" class="guest-button" type="button">
+          <span class="material-symbols-outlined" aria-hidden="true">person_outline</span>
+          以游客身份继续
+        </button>
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        const loginTab = document.getElementById('auth-tab-login');
+        const registerTab = document.getElementById('auth-tab-register');
+        const nicknameField = document.getElementById('auth-nickname-field');
+        const confirmField = document.getElementById('auth-confirm-field');
+        const password = document.getElementById('auth-password-input');
+        const submit = document.getElementById('auth-submit');
+        const error = document.getElementById('auth-error');
+
+        function setMode(mode) {
+          const registering = mode === 'register';
+          loginTab.setAttribute('aria-selected', String(!registering));
+          registerTab.setAttribute('aria-selected', String(registering));
+          nicknameField.hidden = !registering;
+          confirmField.hidden = !registering;
+          password.autocomplete = registering ? 'new-password' : 'current-password';
+          submit.dataset.authMode = mode;
+          document.getElementById('auth-submit-label').textContent = registering ? '创建账户' : '登录';
+          submit.querySelector('.material-symbols-outlined').textContent = registering ? 'person_add_alt_1' : 'login';
+          error.hidden = true;
+          error.textContent = '';
+        }
+
+        loginTab.addEventListener('click', () => setMode('login'));
+        registerTab.addEventListener('click', () => setMode('register'));
+        document.querySelectorAll('[data-reveal]').forEach((button) => {
+          button.addEventListener('click', () => {
+            const input = document.getElementById(button.dataset.reveal);
+            const visible = input.type === 'password';
+            input.type = visible ? 'text' : 'password';
+            button.setAttribute('aria-pressed', String(visible));
+            button.setAttribute('aria-label', visible ? '隐藏密码' : '显示密码');
+            button.querySelector('.material-symbols-outlined').textContent = visible ? 'visibility_off' : 'visibility';
+          });
+        });
+        document.getElementById('auth-form').addEventListener('submit', (event) => {
+          event.preventDefault();
+          submit.click();
+        });
+      })();
+    </script>
+  </body>
+</html>

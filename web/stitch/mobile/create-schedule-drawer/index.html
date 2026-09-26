@@ -6,7 +6,7 @@
       min-height: max(884px, 100dvh);
     }
   </style>
-  </head><body class="bg-[rgba(24,50,56,0.45)] backdrop-blur-md font-body text-on-surface min-h-screen flex flex-col justify-end"><button aria-label="关闭抽屉" class="fixed inset-0 z-0 cursor-default" onclick="if(window.history.length &gt; 1){history.back();}" type="button"></button><section class="w-full max-w-[420px] mx-auto bg-surface rounded-t-3xl shadow-[0_-8px_32px_rgba(22,61,61,0.18)] flex flex-col max-h-[813px] overflow-hidden"><div class="w-full pt-3 pb-1 flex justify-center items-center cursor-grab active:cursor-grabbing"><div class="w-12 h-1.5 rounded-full bg-outline-variant/60"></div></div><div class="h-14 px-5 flex items-center justify-between shrink-0"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-on-tertiary-container"></span><h2 class="text-base font-headline font-bold text-on-surface tracking-tight leading-none">Quick Reschedule Drawer</h2></div><button aria-label="关闭抽屉" class="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container active:scale-95 transition-all" onclick="history.back()"><span class="material-symbols-outlined text-[20px]">close</span></button></div><main class="flex-1 overflow-y-auto px-5 pt-1 pb-safe bg-surface"><div class="flex flex-col w-full pb-8">
+  </head><body class="bg-[rgba(24,50,56,0.45)] backdrop-blur-md font-body text-on-surface min-h-screen flex flex-col justify-end"><button aria-label="关闭抽屉" class="fixed inset-0 z-0 cursor-default" type="button"></button><section class="w-full max-w-[420px] mx-auto bg-surface rounded-t-3xl shadow-[0_-8px_32px_rgba(22,61,61,0.18)] flex flex-col max-h-[813px] overflow-hidden"><div class="w-full pt-3 pb-1 flex justify-center items-center cursor-grab active:cursor-grabbing"><div class="w-12 h-1.5 rounded-full bg-outline-variant/60"></div></div><div class="h-14 px-5 flex items-center justify-between shrink-0"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-on-tertiary-container"></span><h2 class="text-base font-headline font-bold text-on-surface tracking-tight leading-none">Quick Reschedule Drawer</h2></div><button aria-label="关闭抽屉" class="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container active:scale-95 transition-all"><span class="material-symbols-outlined text-[20px]">close</span></button></div><main class="flex-1 overflow-y-auto px-5 pt-1 pb-safe bg-surface"><div class="flex flex-col w-full pb-8">
 <div class="flex flex-col gap-4">
 <!-- Schedule Title Input -->
 <div class="flex flex-col gap-1.5">
@@ -52,7 +52,7 @@
 <div class="flex items-center justify-between">
 <div class="flex items-center gap-2">
 <span class="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
-<span class="text-sm font-semibold text-on-surface tracking-tight">2026年9月25日 周五</span>
+<span class="text-sm font-semibold text-on-surface tracking-tight" id="schedule-date-label">当前日期</span>
 </div>
 <span class="text-[11px] font-semibold text-primary bg-primary-fixed px-2.5 py-0.5 rounded-full">第39周</span>
 </div>
@@ -177,25 +177,25 @@
 <!-- Algorithmic Spatiotemporal Alignment Card -->
 <div class="bg-primary-fixed/40 rounded-2xl p-3.5 flex items-start gap-3 shadow-sm">
 <div class="w-8 h-8 rounded-full bg-on-tertiary-container/15 flex items-center justify-center shrink-0 mt-0.5">
-<span class="material-symbols-outlined text-[18px] text-on-tertiary-container">verified</span>
+<span class="material-symbols-outlined text-[18px] text-secondary">schedule</span>
 </div>
 <div class="flex flex-col gap-1 min-w-0">
 <div class="flex items-center gap-2">
-<span class="text-xs font-bold text-primary">算法时空适配检查通过</span>
-<span class="text-[10px] font-semibold text-on-tertiary-container bg-surface-container-lowest px-1.5 py-0.5 rounded-full">零冲突</span>
+<span class="text-xs font-bold text-secondary">待服务端校验</span>
+<span class="text-[10px] font-semibold text-on-surface-variant bg-surface-container-lowest px-1.5 py-0.5 rounded-full">提交后检查</span>
 </div>
 <p class="text-[12px] text-on-primary-fixed-variant leading-relaxed">
-          当前时段处于午后轻度低谷，与当前任务认知负荷相符，未与团队黄金协作窗口冲突。
+          保存后由服务端校验时段与日程约束，保存前暂无冲突结果。
         </p>
 </div>
 </div>
 <!-- Bottom Actions -->
 <div class="flex flex-col gap-2 pt-2">
-<button class="w-full h-12 bg-primary text-on-primary font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform" onclick="handleSubmit()" type="button">
+<button class="w-full h-12 bg-primary text-on-primary font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform" type="button">
 <span class="material-symbols-outlined text-[18px]">event_available</span>
 <span>保存并写入日程</span>
 </button>
-<button class="w-full h-10 text-on-surface-variant text-xs font-semibold rounded-xl flex items-center justify-center hover:bg-surface-container transition-colors" onclick="if(window.history.length &gt; 1){history.back();}" type="button">
+<button class="w-full h-10 text-on-surface-variant text-xs font-semibold rounded-xl flex items-center justify-center hover:bg-surface-container transition-colors" type="button">
         取消
       </button>
 </div>
@@ -254,18 +254,4 @@
     selectedBtn.classList.add('bg-primary', 'text-on-primary', 'shadow-sm', 'font-semibold');
   }
 
-  function handleSubmit() {
-    const mainBtn = event.currentTarget;
-    mainBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span><span>写入排期池...</span>';
-    setTimeout(() => {
-      mainBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">check_circle</span><span>已排入 9月25日 13:30</span>';
-      mainBtn.classList.remove('bg-primary');
-      mainBtn.classList.add('bg-primary-container');
-      setTimeout(() => {
-        if(window.history.length > 1) {
-          history.back();
-        }
-      }, 700);
-    }, 600);
-  }
 </script></main></section></body></html>

@@ -81,7 +81,7 @@
 </div>
 <!-- 快速新建按钮群 -->
 <div class="flex items-center gap-2">
-<button class="h-9 px-3 rounded-xl bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1 active:scale-95 transition-transform" type="button">
+<button aria-label="新增日程" class="h-9 px-3 rounded-xl bg-surface-container-high text-on-surface text-xs font-semibold flex items-center gap-1 active:scale-95 transition-transform" type="button">
 <span class="material-symbols-outlined text-[16px]">add</span>
 <span>日程</span>
 </button>
@@ -94,23 +94,23 @@
 </section>
 <!-- 3. 调度健康与紧急冲突警示卡片 (Alert Banner) -->
 <section class="w-full px-4 mb-3">
-<div class="rounded-xl p-3.5 bg-error-container text-on-error-container shadow-sm flex flex-col gap-2.5 relative overflow-hidden">
+<div class="rounded-xl p-3.5 bg-error-container text-on-error-container shadow-sm flex flex-col gap-2.5 relative overflow-hidden" id="schedule-conflict-panel">
 <div class="flex items-start gap-2.5">
 <span class="material-symbols-outlined text-error text-[20px] shrink-0 mt-0.5">warning</span>
 <div class="flex flex-col min-w-0 pr-1">
 <div class="flex items-center gap-1.5 flex-wrap">
-<span class="text-xs font-bold font-headline text-error">探测到 1 处紧急调度冲突</span>
-<span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container-lowest/80 text-error font-mono font-medium">恢复承载临界</span>
+<span class="text-xs font-bold font-headline text-on-surface" id="schedule-conflict-status">正在读取服务端日程状态</span>
+<span class="text-[10px] px-1.5 py-0.2 rounded bg-surface-container-lowest/80 text-on-surface-variant font-mono font-medium" id="schedule-conflict-severity">等待服务端检查</span>
 </div>
-<p class="text-xs font-body text-on-error-container mt-1 leading-relaxed">
-            紧急任务<span class="font-semibold text-error">【生产网关鉴权补丁】</span>割裂 11:30 架构评审，防疲劳认知恢复被挤压至 <span class="font-bold underline decoration-error">15m</span> 临界线以下。
+<p class="text-xs font-body text-on-error-container mt-1 leading-relaxed" id="schedule-conflict-copy">
+            读取完成后会显示服务端检测到的日程冲突。需要插入紧急任务时，请先填写任务目标与截止时间。
           </p>
 </div>
 </div>
 <div class="flex items-center justify-between pt-1">
-<span class="text-[11px] font-label text-error/80 flex items-center gap-1">
+<span class="text-[11px] font-label text-error/80 flex items-center gap-1" id="schedule-conflict-risk">
 <span class="material-symbols-outlined text-[14px]">psychology</span>
-<span>认知过载风险指数 88%</span>
+<span>紧急任务风险：待分析</span>
 </span>
 <button class="px-3 py-1.5 rounded-lg bg-error text-on-error text-xs font-semibold flex items-center gap-1 active:scale-95 transition-transform shadow-sm" onclick="document.getElementById('rescue-sheet').classList.remove('translate-y-full')" type="button">
 <span>查看救援方案</span>
@@ -311,8 +311,8 @@
 <span class="material-symbols-outlined text-[20px]">auto_fix_high</span>
 </span>
 <span class="flex flex-col">
-<span class="text-xs font-bold font-headline">智能救援方案已就绪 (3 种策略)</span>
-<span class="text-[11px] font-label text-on-primary-container">点击上滑展开：保截止 / 留恢复 / 最小扰动</span>
+<span class="text-xs font-bold font-headline">生成服务端救援方案</span>
+<span class="text-[11px] font-label text-on-primary-container">填写任务与硬截止时间后查看真实策略</span>
 </span>
 </span>
 <span class="flex items-center gap-1 text-xs font-semibold text-secondary-fixed">
@@ -401,13 +401,13 @@
 </div>
 <!-- 确认执行操作与安全快照还原 -->
 <div class="flex flex-col gap-2 pt-2">
-<button class="w-full h-11 rounded-xl bg-secondary text-on-secondary font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-transform" onclick="document.getElementById('rescue-sheet').classList.add('translate-y-full')" type="button">
+<button class="w-full h-11 rounded-xl bg-secondary text-on-secondary font-semibold text-xs flex items-center justify-center gap-1.5 shadow-md" id="mobile-rescue-generate" type="button">
 <span class="material-symbols-outlined text-[16px]">check_circle</span>
-<span>立即应用方案 A · 重构今日时间地图</span>
+<span>填写任务并生成服务端方案</span>
 </button>
 <div class="flex items-center justify-center gap-1 text-[11px] font-label text-on-surface-variant">
 <span class="material-symbols-outlined text-[14px]">history</span>
-<span>已自动生成时间线还原快照，支持 30 秒内一键撤销</span>
+<span>应用后会创建服务端快照，可从日历页撤销</span>
 </div>
 </div>
 </div>

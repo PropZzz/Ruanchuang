@@ -321,17 +321,22 @@
 </div>
 <script>
   // 简易交互支持：NLP 快捷建单动效
-  document.getElementById('btn-quick-add')?.addEventListener('click', function() {
+  document.getElementById('btn-quick-add')?.addEventListener('click', function(event) {
+    event.stopPropagation();
     const input = document.getElementById('nlp-task-input');
     if (!input || !input.value.trim()) return;
     const taskName = input.value.split('#')[0].trim();
-    alert('已成功将「' + taskName + '」接入心流沙盒！');
-    input.value = '';
+    if (window.parent !== window && window.parent.__RUANCHUANG_API_ACTION__) {
+      window.parent.__RUANCHUANG_API_ACTION__('microtask-quick-add', document, this);
+    }
   });
 
   // 15分钟闪电冲刺按钮
-  document.getElementById('btn-sweep-start')?.addEventListener('click', function() {
-    alert('闪电防线启动：已为您智能编排 4 项低耗时微任务至 15 分钟临时心流舱！');
+  document.getElementById('btn-sweep-start')?.addEventListener('click', function(event) {
+    event.stopPropagation();
+    if (window.parent !== window && window.parent.__RUANCHUANG_API_ACTION__) {
+      window.parent.__RUANCHUANG_API_ACTION__('microtask-sweep', document, this);
+    }
   });
 
   // 批量模式入口

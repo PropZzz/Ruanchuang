@@ -93,6 +93,7 @@ abstract class DataService {
   /// 注册并自动登录
   Future<bool> registerAccount({
     required String username,
+    required String displayName,
     required String password,
   });
 
