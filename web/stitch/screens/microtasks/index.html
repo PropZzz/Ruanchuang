@@ -53,13 +53,13 @@
 </div>
 <!-- Quick Natural Language Entry Input -->
 <div class="pt-5">
-<label class="block text-xs font-label font-medium text-on-surface-variant mb-2">自然语言极速捕获（自动提取标签、时长与优先级）：</label>
+<label class="block text-xs font-label font-medium text-on-surface-variant mb-2" for="microtask-input">自然语言极速捕获（自动提取标签、时长与优先级）：</label>
 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
 <div class="relative flex-1">
 <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-outline">
 <span class="material-symbols-outlined text-[20px]">bolt</span>
 </div>
-<input class="w-full pl-10 pr-20 py-2.5 bg-surface-container-low text-sm font-body text-on-surface placeholder:text-outline rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_rgba(0,93,181,0.2)] transition-all" id="microtask-input" placeholder="例如：整理 API 响应异常捕获示例 #Ruanchuang ~15m !P1" type="text" value="整理 API 响应异常捕获示例 #Ruanchuang ~15m !P1"/>
+<input autocomplete="off" class="w-full pl-10 pr-20 py-2.5 bg-surface-container-low text-sm font-body text-on-surface placeholder:text-outline rounded-lg focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_rgba(0,93,181,0.2)] transition-all" id="microtask-input" name="microtask_input" placeholder="例如：整理 API 响应异常捕获示例 #Ruanchuang ~15m !P1" type="text" value="整理 API 响应异常捕获示例 #Ruanchuang ~15m !P1"/>
 <span class="hidden sm:inline-block absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-label font-medium text-outline px-1.5 py-0.5 rounded bg-surface-container-high">Enter ↵</span>
 </div>
 <button class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary-container text-on-primary text-xs font-label font-semibold shadow-sm transition-all active:scale-[0.98]" onclick="quickAddMicrotask()" type="button">
@@ -118,7 +118,8 @@
 </div>
 <!-- Search Bar -->
 <div class="relative w-full sm:w-56 shrink-0">
-<input class="w-full pl-8 pr-3 py-1.5 bg-surface-container-low text-xs font-body text-on-surface placeholder:text-outline rounded-md focus:outline-none focus:bg-surface-container-lowest" placeholder="搜索任务或 #标签..." type="text"/>
+<label class="sr-only" for="microtask-search">搜索微任务</label>
+<input autocomplete="off" class="w-full pl-8 pr-3 py-1.5 bg-surface-container-low text-xs font-body text-on-surface placeholder:text-outline rounded-md focus:outline-none focus:bg-surface-container-lowest" id="microtask-search" name="microtask_search" placeholder="搜索任务或 #标签…" type="text"/>
 <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[15px] text-outline">search</span>
 </div>
 </div>

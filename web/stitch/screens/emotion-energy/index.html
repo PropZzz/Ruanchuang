@@ -135,7 +135,8 @@
 <!-- Quick Log Input Strip -->
 <div class="flex items-center gap-2 pt-2">
 <div class="relative flex-1">
-<input class="w-full h-10 px-3.5 pr-8 rounded-lg bg-surface-container-low text-xs font-body text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container transition-all" id="note-input" placeholder="添加简短状态笔记（例如：刚完成主流程架构重构，注意力收敛）..." type="text"/>
+<label class="sr-only" for="note-input">添加状态笔记</label>
+<input autocomplete="off" class="w-full h-10 px-3.5 pr-8 rounded-lg bg-surface-container-low text-xs font-body text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container transition-all" id="note-input" name="emotion_note" placeholder="添加简短状态笔记（例如：刚完成主流程架构重构，注意力收敛）…" type="text"/>
 <span class="material-symbols-outlined absolute right-2.5 top-2.5 text-base text-outline pointer-events-none">edit_note</span>
 </div>
 <button class="h-10 px-4 rounded-lg bg-secondary text-on-secondary text-xs font-semibold hover:bg-on-secondary-fixed-variant transition-all shrink-0 flex items-center gap-1.5 shadow-sm" id="commit-checkin">

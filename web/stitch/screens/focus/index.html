@@ -188,7 +188,8 @@
 <div class="pt-2">
 <div class="flex items-center gap-2 p-2.5 rounded-lg bg-surface-container-low">
 <span class="material-symbols-outlined text-[18px] text-outline ml-1">lightbulb</span>
-<input class="flex-1 bg-transparent text-xs font-body text-on-surface placeholder:text-outline focus:outline-none" placeholder="闪念备忘：捕获瞬时灵感或外部打扰（按回车快速暂存，不中断心流）..." type="text"/>
+<label class="sr-only" for="focus-note-input-desktop">快速记录闪念备忘</label>
+<input autocomplete="off" class="flex-1 bg-transparent text-xs font-body text-on-surface placeholder:text-outline focus:outline-none" id="focus-note-input-desktop" name="focus_note" placeholder="闪念备忘：捕获瞬时灵感或外部打扰（按回车快速暂存，不中断心流）…" type="text"/>
 <button class="px-3 py-1 rounded-md bg-surface-container text-xs font-label font-medium text-on-surface-variant hover:bg-surface-container-highest transition-colors" type="button">
                 暂存
               </button>
@@ -204,7 +205,7 @@
 </div>
 <div class="flex items-center gap-2">
 <span class="material-symbols-outlined text-[16px] text-outline">volume_up</span>
-<input class="w-20 accent-primary h-1 bg-surface-container-high rounded-full cursor-pointer" type="range" value="65"/>
+<input aria-label="白噪音音量" class="w-20 accent-primary h-1 bg-surface-container-high rounded-full cursor-pointer" max="100" min="0" type="range" value="65"/>
 </div>
 </div>
 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">

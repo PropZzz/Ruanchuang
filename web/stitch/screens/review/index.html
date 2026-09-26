@@ -315,7 +315,8 @@
 </div>
 <div class="flex items-center gap-2">
 <div class="relative">
-<input class="px-3 py-1.5 pl-8 text-xs rounded-lg bg-surface-container text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-secondary w-48 sm:w-56" placeholder="过滤紧急任务名称..." type="text"/>
+<label class="sr-only" for="rescue-history-filter">过滤紧急任务名称</label>
+<input autocomplete="off" class="px-3 py-1.5 pl-8 text-xs rounded-lg bg-surface-container text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-secondary w-48 sm:w-56" id="rescue-history-filter" name="rescue_history_filter" placeholder="过滤紧急任务名称…" type="text"/>
 <span class="material-symbols-outlined text-[16px] text-outline absolute left-2.5 top-2">search</span>
 </div>
 <button class="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-medium text-on-surface flex items-center gap-1 transition-colors" type="button">

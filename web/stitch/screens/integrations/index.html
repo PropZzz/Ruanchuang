@@ -95,7 +95,8 @@
 </div>
 </div>
 <div class="relative rounded-lg bg-surface-container-low p-3.5 focus-within:bg-surface-container-lowest focus-within:shadow-md transition-all">
-<textarea class="w-full bg-transparent resize-none outline-none font-mono text-xs sm:text-sm text-on-surface leading-relaxed placeholder:text-outline" id="raw-input" placeholder="在此粘贴任意邮件通知、日历 ICS 字符串或协同软件消息..." rows="11">发件人：张弛 &lt;zhangchi@arch.internal&gt;
+<label class="sr-only" for="raw-input">导入日历或协同消息</label>
+<textarea autocomplete="off" class="w-full bg-transparent resize-none outline-none font-mono text-xs sm:text-sm text-on-surface leading-relaxed placeholder:text-outline" id="raw-input" name="integration_payload" placeholder="在此粘贴任意邮件通知、日历 ICS 字符串或协同软件消息…" rows="11">发件人：张弛 &lt;zhangchi@arch.internal&gt;
 主题：[紧急评审] 时序引擎 v2.5 架构跨部门联调评审
 时间：2026-09-26 14:00 - 15:00 (GMT+8)
 参会人：@知行, @李牧 (调度核心), @周薇 (前端平台)
