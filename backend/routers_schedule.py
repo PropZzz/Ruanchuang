@@ -8,7 +8,6 @@ from fastapi.responses import PlainTextResponse
 from .auth import current_user_id
 from .repositories import (
     RepositoryConflictError,
-    RepositoryNotFoundError,
     delete_schedule,
     list_schedules,
     schedule_baseline_hash,
@@ -39,6 +38,11 @@ def _date_filter(value: object | None) -> str | None:
     if isinstance(value, str) and value.strip():
         return value.strip()
     return None
+
+
+def _conflict(exc: RepositoryConflictError) -> HTTPException:
+    """把仓库层的跨用户/重复 ID 冲突映射为 409，避免冒泡成 500。"""
+    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
 
 @router.get("", response_model=list[ScheduleEntryOut])
@@ -75,7 +79,10 @@ def create_schedule(
     request: Request,
     user_id: str = Depends(current_user_id),
 ) -> dict[str, object]:
-    return upsert_schedule(_db_path(request), user_id, payload.model_dump(mode="json", by_alias=True))
+    try:
+        return upsert_schedule(_db_path(request), user_id, payload.model_dump(mode="json", by_alias=True))
+    except RepositoryConflictError as exc:
+        raise _conflict(exc) from exc
 
 
 @router.put("/{entry_id}", response_model=ScheduleEntryOut)
@@ -87,7 +94,10 @@ def update_schedule(
 ) -> dict[str, object]:
     data = payload.model_dump(mode="json", by_alias=True)
     data["id"] = entry_id
-    return upsert_schedule(_db_path(request), user_id, data)
+    try:
+        return upsert_schedule(_db_path(request), user_id, data)
+    except RepositoryConflictError as exc:
+        raise _conflict(exc) from exc
 
 
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -111,7 +121,14 @@ def batch_schedule(
     request: Request,
     user_id: str = Depends(current_user_id),
 ) -> list[dict[str, object]]:
-    return upsert_schedules_batch(_db_path(request), user_id, [item.model_dump(mode="json", by_alias=True) for item in payload])
+    try:
+        return upsert_schedules_batch(
+            _db_path(request),
+            user_id,
+            [item.model_dump(mode="json", by_alias=True) for item in payload],
+        )
+    except RepositoryConflictError as exc:
+        raise _conflict(exc) from exc
 
 
 @router.get("/conflicts", response_model=ScheduleConflictsOut)
@@ -145,7 +162,10 @@ def import_ics(
         entries = parse_ics(payload.ics)
     except IcsValidationError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-    return upsert_schedules_batch(_db_path(request), user_id, entries)
+    try:
+        return upsert_schedules_batch(_db_path(request), user_id, entries)
+    except RepositoryConflictError as exc:
+        raise _conflict(exc) from exc
 
 
 @router.get("/export-ics", response_class=PlainTextResponse)

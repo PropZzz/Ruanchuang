@@ -60,6 +60,14 @@ python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 
 AI、设备、第三方集成、文件、推送和密码重置仍返回结构化 HTTP 501 `RESERVED_ENDPOINT`，直到对应外部服务或硬件完成接入。
 
+## 错误语义与并发设置
+
+- `401`：缺少/无效/已退出的 Bearer token；`404`：资源不存在；`409`：跨用户复用同一资源 ID、基线哈希过期或重复写入冲突；`422`：请求体字段校验失败；`501`：预留接口。
+- 资源 ID 冲突统一在仓库层用 `_check_global_owner` 判定并返回 409，不会因 SQLite `UNIQUE` 约束冒泡成 500；`main.py` 还为 `RepositoryNotFoundError` / `RepositoryConflictError` / `RepositoryValidationError` 注册了兜底处理器。
+- 注册接口会拒绝空白账号、空白昵称和少于 6 位的密码，并去除账号/昵称首尾空格；登录同样会去除账号首尾空格。
+- `database.py` 为每个连接设置 `busy_timeout=5000` 并启用 `journal_mode=WAL`、`synchronous=NORMAL`，并发写入时等待锁而不是立刻报 `database is locked`；仍按单实例写入部署。
+- 进程内 Bearer token 在退出登录时会直接从内存移除，不再保留只增不减的撤销集合。
+
 ## Flutter 连接后端
 
 桌面或浏览器运行：

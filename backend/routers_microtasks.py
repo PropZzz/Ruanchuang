@@ -44,7 +44,10 @@ def create_microtask(
     request: Request,
     user_id: str = Depends(current_user_id),
 ) -> dict[str, object]:
-    return upsert_microtask(_db_path(request), user_id, payload.model_dump(mode="json", by_alias=True))
+    try:
+        return upsert_microtask(_db_path(request), user_id, payload.model_dump(mode="json", by_alias=True))
+    except RepositoryConflictError as exc:
+        raise _map_error(exc) from exc
 
 
 @router.put("/{task_id}", response_model=MicroTaskOut)
@@ -56,7 +59,10 @@ def update_microtask(
 ) -> dict[str, object]:
     data = payload.model_dump(mode="json", by_alias=True)
     data["id"] = task_id
-    return upsert_microtask(_db_path(request), user_id, data)
+    try:
+        return upsert_microtask(_db_path(request), user_id, data)
+    except RepositoryConflictError as exc:
+        raise _map_error(exc) from exc
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
