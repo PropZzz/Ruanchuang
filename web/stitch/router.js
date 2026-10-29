@@ -77,18 +77,23 @@
   let rescueState = null;
   let settingsOverlayHost = null;
   let settingsOverlayFrame = null;
+  let settingsMotion = null;
+  let retainedSettings = null;
+  let settingsMotionGeneration = 0;
   let settingsReturnRoute = 'focus';
   let settingsHistoryPending = false;
   let settingsOpener = null;
   let previousBodyOverflow = '';
   let previousFrameInert = false;
   let previousFrameAriaHidden = null;
+  let previousShellInert = false;
   let activeThemeMode = 'system';
   let settingsDraft = null;
   let settingsPreferencesLoaded = false;
   let settingsOverlayMobile = false;
   let settingsTokenHydrated = '';
   const rescueSnapshotMemory = new Map();
+  let calendarState = {};
 
   const apiBase = (window.__RUANCHUANG_API__ ||
     (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
@@ -129,9 +134,9 @@
   function updateSyncLabel(document, label) {
     const candidates = [...document.querySelectorAll('span')].filter((node) => {
       const value = node.textContent.trim();
-      return value.startsWith('已同步');
+      return !node.closest('#live-calendar-root') && (node.dataset.syncLabel === 'true' || value.startsWith('已同步'));
     });
-    for (const target of candidates) target.textContent = label;
+    for (const target of candidates) { target.dataset.syncLabel = 'true'; target.textContent = label; }
   }
 
   function updateConflictCopy(document, count) {
@@ -255,7 +260,7 @@
     ).toString();
     document.head.appendChild(link);
     document.documentElement.dataset.route = route;
-    if (route === 'create-schedule' || route === 'urgent-task') {
+    if (route === 'create-schedule' || route === 'urgent-task' || route === 'microtask-entry') {
       const backdrop = document.querySelector('body > button.fixed.inset-0.z-0');
       const drawer = document.querySelector('body > section');
       if (backdrop) {
@@ -274,6 +279,7 @@
   }
 
   async function hydrateBackend(document, route) {
+    if (route === 'schedule' && document.stitchCalendar) return document.stitchCalendar.refresh();
     const identity = accountIdentity();
     const refresh = Symbol('backend-refresh');
     document.backendRefresh = refresh;
@@ -282,21 +288,7 @@
     try {
       await backendRequest('/health');
       let label = '已连接 · FastAPI';
-      if (route === 'schedule') {
-        const entries = await backendRequest('/schedule');
-        const conflicts = await backendRequest(`/schedule/conflicts?day=${todayIso()}`);
-        if (!isCurrent()) return;
-        const conflictCount = Array.isArray(conflicts?.conflicts) ? conflicts.conflicts.length : 0;
-        updateConflictCopy(document, conflictCount);
-        const dateLabel = Array.from(document.querySelectorAll('span, div'))
-          .find((node) => /^\d{4}年\d+月\d+日 星期[一二三四五六日]$/.test(node.textContent.trim()));
-        if (dateLabel) {
-          const now = new Date();
-          const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-          dateLabel.textContent = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${weekdays[now.getDay()]}`;
-        }
-        label = `已连接 · 日程 ${Array.isArray(entries) ? entries.length : 0} 条 · 冲突 ${conflictCount}`;
-      } else if (route === 'micro') {
+      if (route === 'micro') {
         const tasks = await backendRequest('/microtasks');
         label = `已连接 · 微任务 ${Array.isArray(tasks) ? tasks.length : 0} 项`;
       } else if (route === 'team') {
@@ -418,7 +410,7 @@
   }
 
   function routeFromHash() {
-    const value = window.location.hash.replace(/^#\/?/, '').trim();
+    const value = window.location.hash.replace(/^#\/?/, '').split('?')[0].trim();
     return pages[value] ? value : 'focus';
   }
 
@@ -427,6 +419,15 @@
     const path = mobileQuery.matches ? options[1] || options[0] : options[0];
     const url = new URL(`stitch/${path}`, document.baseURI);
     url.searchParams.set('v', routeAssetVersion);
+    if (route === routeFromHash()) {
+      const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+      const id = params.get('id');
+      if (id) url.searchParams.set('id', id);
+      if (route === 'create-schedule') {
+        if (window.StitchCalendar.parseDay(params.get('day'))) url.searchParams.set('day', params.get('day'));
+        if (/^([01]\d|2[0-3]):[0-5]\d$/.test(params.get('time') || '')) url.searchParams.set('time', params.get('time'));
+      }
+    }
     return url.toString();
   }
 
@@ -437,7 +438,7 @@
     document.documentElement.classList.toggle('dark', dark);
     document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
     document.body.style.backgroundColor = canvas;
-    frame.style.backgroundColor = canvas;
+    frame.style.backgroundColor = frame.hasAttribute('data-drawer-surface') ? 'transparent' : canvas;
 
     for (const target of [...pageHost.documents(), settingsOverlayFrame?.contentDocument]) {
       if (!target?.documentElement) continue;
@@ -598,16 +599,21 @@
 
   function openSettingsOverlay({ addHistoryEntry = true } = {}) {
     if (settingsOverlayHost) return;
+    pageHost.settleMotion();
+    settingsMotionGeneration++;
 
     if (frame.isConnected) pageHost.cancelPending();
     settingsReturnRoute = activeRoute;
     settingsOpener = document.activeElement === frame ? frame.contentDocument?.activeElement : document.activeElement;
+    const reversing = retainedSettings?.host.id === 'ruanchuang-settings-overlay' && retainedSettings.background === frame;
+    previousShellInert = reversing ? retainedSettings.backgroundState.shellInert : pageHost.shell.inert;
     pageHost.shell.inert = true;
     settingsDraft = null;
     settingsPreferencesLoaded = false;
     settingsOverlayMobile = mobileQuery.matches;
-    previousFrameInert = frame.inert;
-    previousFrameAriaHidden = frame.getAttribute('aria-hidden');
+    previousFrameInert = reversing ? retainedSettings.backgroundState.inert : frame.inert;
+    previousFrameAriaHidden = reversing ? retainedSettings.backgroundState.aria : frame.getAttribute('aria-hidden');
+    previousBodyOverflow = reversing ? retainedSettings.backgroundState.overflow : document.body.style.overflow;
     frame.inert = true;
     frame.setAttribute('aria-hidden', 'true');
     if (addHistoryEntry && window.location.hash !== '#/settings-drawer') {
@@ -618,6 +624,27 @@
       );
     }
     settingsHistoryPending = window.location.hash === '#/settings-drawer';
+
+    if (retainedSettings && retainedSettings.mobile === settingsOverlayMobile && retainedSettings.account === accountIdentity()) {
+      settingsOverlayHost = retainedSettings.host;
+      settingsOverlayFrame = retainedSettings.frame;
+      settingsMotion = retainedSettings.motion;
+      settingsOverlayHost.id = 'ruanchuang-settings-overlay';
+      settingsOverlayHost.hidden = false;
+      settingsOverlayHost.inert = false;
+      retainedSettings.background = frame;
+      retainedSettings.backgroundState = { inert: previousFrameInert, aria: previousFrameAriaHidden, overflow: previousBodyOverflow, shellInert: previousShellInert };
+      document.body.style.overflow = 'hidden';
+      retainedSettings.activate();
+      settingsMotion.setOpen(true);
+      retainedSettings.focus();
+      return;
+    }
+    if (retainedSettings) {
+      retainedSettings.motion.destroy();
+      retainedSettings.host.remove();
+      retainedSettings = null;
+    }
 
     const host = document.createElement('div');
     host.id = 'ruanchuang-settings-overlay';
@@ -633,7 +660,7 @@
       position: 'absolute',
       inset: '0',
       background: 'rgba(26, 27, 31, 0.32)',
-      backdropFilter: 'blur(8px)',
+      opacity: '0',
     });
     backdrop.addEventListener('click', () => closeSettingsOverlay());
 
@@ -650,10 +677,10 @@
       height: '100%',
       border: '0',
       background: 'transparent',
+      visibility: 'hidden',
     });
     settingsFrame.src = screenFor('settings-drawer');
     host.append(backdrop, settingsFrame);
-    previousBodyOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     document.body.appendChild(host);
     settingsOverlayHost = host;
@@ -710,51 +737,56 @@
         #settings-drawer, #settings-drawer * { visibility: visible !important; }
         #stitch-router-notice, #stitch-router-notice * { visibility: visible !important; }
         #settings-backdrop, #drawer-backdrop { display: none !important; }
-        #settings-drawer { z-index: 10001 !important; }
-        ${settingsOverlayMobile
-          ? '#settings-drawer { position: fixed !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100% !important; max-width: none !important; }'
-          : '#settings-drawer { position: fixed !important; inset: 0 !important; width: 100% !important; max-width: none !important; border-radius: 0 !important; }'}
+        #settings-drawer { z-index: 10001 !important; transition: none !important; width: 100% !important; max-width: none !important; }
+        html[data-drawer-mobile="true"] #settings-drawer { position: fixed !important; inset: auto 0 0 !important; height: min(92dvh, 777px) !important; max-height: 92dvh !important; border-radius: 24px 24px 0 0 !important; }
+        html[data-drawer-mobile="false"] #settings-drawer { position: fixed !important; inset: 0 !important; height: 100% !important; max-height: none !important; border-radius: 0 !important; }
       `;
+      settingsDocument.documentElement.dataset.drawerMobile = String(settingsOverlayMobile);
+      drawer.dataset.drawerPanel = 'true';
       settingsDocument.head.appendChild(overlayStyles);
 
-      try {
-        if (settingsDraft == null) {
-          const settings = await backendRequest('/settings');
+      const hydratePreferences = async () => {
+        setSettingsControlsDisabled(settingsDocument, true);
+        try {
+          if (settingsDraft == null) {
+            const settings = await backendRequest('/settings');
+            if (
+              settingsOverlayFrame !== settingsFrame ||
+              settingsFrame.contentDocument !== settingsDocument
+            ) return;
+            activeThemeMode = ['system', 'light', 'dark'].includes(settings?.themeMode)
+              ? settings.themeMode
+              : 'system';
+            settingsDraft = {
+              themeMode: activeThemeMode,
+              locale: settings?.locale === 'en_US' ? 'en_US' : 'zh_CN',
+            };
+            settingsTokenHydrated = authHeaders().Authorization || '';
+          }
+          setThemeButtons(settingsDocument, settingsDraft.themeMode);
+          setLocaleButtons(settingsDocument, settingsDraft.locale);
+          settingsPreferencesLoaded = true;
+          setSettingsControlsDisabled(settingsDocument, false);
+          applyThemeMode(settingsDraft.themeMode);
+        } catch (error) {
           if (
             settingsOverlayFrame !== settingsFrame ||
             settingsFrame.contentDocument !== settingsDocument
           ) return;
-          activeThemeMode = ['system', 'light', 'dark'].includes(settings?.themeMode)
-            ? settings.themeMode
-            : 'system';
-          settingsDraft = {
-            themeMode: activeThemeMode,
-            locale: settings?.locale === 'en_US' ? 'en_US' : 'zh_CN',
-          };
-          settingsTokenHydrated = authHeaders().Authorization || '';
+          if (saveButton) {
+            saveButton.title = error.status === 401
+              ? '登录后才能保存个人偏好'
+              : '无法读取服务端偏好，保存已停用以避免覆盖已有设置';
+          }
+          showNotice(
+            settingsDocument,
+            error.status === 401
+              ? '请先登录，才能读取和保存个人偏好。'
+              : '无法读取服务端偏好；为避免覆盖已有设置，保存已停用。',
+          );
         }
-        setThemeButtons(settingsDocument, settingsDraft.themeMode);
-        setLocaleButtons(settingsDocument, settingsDraft.locale);
-        settingsPreferencesLoaded = true;
-        setSettingsControlsDisabled(settingsDocument, false);
-        applyThemeMode(settingsDraft.themeMode);
-      } catch (error) {
-        if (
-          settingsOverlayFrame !== settingsFrame ||
-          settingsFrame.contentDocument !== settingsDocument
-        ) return;
-        if (saveButton) {
-          saveButton.title = error.status === 401
-            ? '登录后才能保存个人偏好'
-            : '无法读取服务端偏好，保存已停用以避免覆盖已有设置';
-        }
-        showNotice(
-          settingsDocument,
-          error.status === 401
-            ? '请先登录，才能读取和保存个人偏好。'
-            : '无法读取服务端偏好；为避免覆盖已有设置，保存已停用。',
-        );
-      }
+      };
+      hydratePreferences();
 
       settingsDocument.addEventListener('click', (event) => {
         const target = event.target;
@@ -832,6 +864,7 @@
       settingsDocument.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
           event.preventDefault();
+          event.stopPropagation();
           closeSettingsOverlay();
           return;
         }
@@ -853,27 +886,59 @@
         }
       });
 
-      settingsFrame.focus();
-      settingsDocument.querySelector('#close-drawer-btn, #btn-close-drawer')?.focus({
-        preventScroll: true,
-      });
+      await settingsDocument.fonts.ready;
+      if (settingsOverlayFrame !== settingsFrame) return;
+      settingsMotion?.destroy();
+      settingsMotion = window.createStitchDrawerMotion({ panel: drawer, scrim: backdrop, axis: settingsOverlayMobile ? 'y' : 'x' });
+      const focusSettings = () => {
+        settingsFrame.focus();
+        settingsDocument.querySelector('#close-drawer-btn, #btn-close-drawer')?.focus({ preventScroll: true });
+      };
+      retainedSettings = { host, frame: settingsFrame, motion: settingsMotion, activate: hydratePreferences, focus: focusSettings, mobile: settingsOverlayMobile, account: accountIdentity(), background: frame,
+        backgroundState: { inert: previousFrameInert, aria: previousFrameAriaHidden, overflow: previousBodyOverflow, shellInert: previousShellInert } };
+      settingsFrame.style.visibility = 'visible';
+      settingsMotion.setOpen(true);
+      focusSettings();
     });
   }
 
-  function closeSettingsOverlay({ fromHistory = false } = {}) {
+  function closeSettingsOverlay({ fromHistory = false, immediate = false } = {}) {
     const host = settingsOverlayHost;
-    if (host) host.remove();
+    if (!host) return;
+    const motion = settingsMotion;
+    const background = frame;
+    const opener = settingsOpener;
+    const oldOverflow = previousBodyOverflow;
+    const oldInert = previousFrameInert;
+    const oldAria = previousFrameAriaHidden;
+    const oldShellInert = previousShellInert;
+    const turn = ++settingsMotionGeneration;
     settingsOverlayHost = null;
     settingsOverlayFrame = null;
-    pageHost.shell.inert = false;
-    document.body.style.overflow = previousBodyOverflow;
-    frame.inert = previousFrameInert;
-    if (previousFrameAriaHidden == null) frame.removeAttribute('aria-hidden');
-    else frame.setAttribute('aria-hidden', previousFrameAriaHidden);
+    settingsMotion = null;
+    const finish = () => {
+      if (turn !== settingsMotionGeneration || settingsOverlayHost === host) return;
+      host.hidden = true;
+      host.inert = true;
+      host.removeAttribute('id');
+      if (immediate || !retainedSettings) {
+        motion?.destroy();
+        host.remove();
+        retainedSettings = null;
+      }
+      pageHost.shell.inert = oldShellInert;
+      document.body.style.overflow = oldOverflow;
+      background.inert = oldInert;
+      if (oldAria == null) background.removeAttribute('aria-hidden');
+      else background.setAttribute('aria-hidden', oldAria);
+      if (frame !== background) { frame.inert = false; frame.setAttribute('aria-hidden', 'false'); }
+      if (opener?.isConnected && frame === background) opener.focus?.({ preventScroll: true });
+    };
+    if (motion && !immediate) motion.setOpen(false).then(done => { if (done) finish(); });
+    else finish();
     if (settingsDraft != null) applyThemeMode(activeThemeMode);
     settingsDraft = null;
     settingsPreferencesLoaded = false;
-    settingsOpener?.focus?.({ preventScroll: true });
     settingsOpener = null;
 
     if (fromHistory) {
@@ -898,7 +963,7 @@
       const returnRoute = history.state?.login ? history.state.returnRoute : null;
       if (pages[returnRoute] && returnRoute !== 'login') loginReturnRoute = returnRoute;
     }
-    if (route !== activeRoute || pageHost.pending) renderRoute(route);
+    if (route !== activeRoute || pageHost.pending || frame.src !== screenFor(route)) renderRoute(route);
   }
 
   function resizeSettingsOverlay() {
@@ -906,7 +971,13 @@
     settingsOverlayFrame.style.width = mobileQuery.matches ? '100vw' : 'min(420px, 100vw)';
     if (settingsOverlayMobile !== mobileQuery.matches) {
       settingsOverlayMobile = mobileQuery.matches;
-      settingsOverlayFrame.src = screenFor('settings-drawer');
+      const doc = settingsOverlayFrame.contentDocument;
+      const drawer = doc?.getElementById('settings-drawer');
+      if (!drawer || !settingsMotion) return;
+      settingsMotion.destroy();
+      doc.documentElement.dataset.drawerMobile = String(settingsOverlayMobile);
+      settingsMotion = window.createStitchDrawerMotion({ panel: drawer, scrim: settingsOverlayHost.firstElementChild, axis: settingsOverlayMobile ? 'y' : 'x', open: true });
+      if (retainedSettings) Object.assign(retainedSettings, { motion: settingsMotion, mobile: settingsOverlayMobile });
     }
   }
 
@@ -917,6 +988,14 @@
   const pageHost = window.createStitchPageHost({
     prepare: prepareFrame,
     beforeActivate(nextFrame, route) {
+      const doc = nextFrame.contentDocument;
+      if (route === 'create-schedule' && doc.documentElement.dataset.resetScheduleOnNextOpen) {
+        const params = new URL(doc.URL).searchParams;
+        doc.getElementById('schedule-date-input').value = params.get('day') || calendarState.day || todayIso();
+        doc.getElementById('schedule-time-input').value = params.get('time') || '09:00';
+        doc.getElementById('schedule-duration-input').value = '60';
+        delete doc.documentElement.dataset.resetScheduleOnNextOpen;
+      }
       return route !== 'rescue-comparison' || hydrateRescueComparisonView(nextFrame.contentDocument);
     },
     activate(nextFrame, route) {
@@ -935,7 +1014,9 @@
   frame.remove();
 
   function renderRoute(route) {
-    pageHost.show(pages[route] ? route : 'focus', screenFor(route), mobileQuery.matches);
+    const parent = parentRoutes[route];
+    pageHost.show(pages[route] ? route : 'focus', screenFor(route), mobileQuery.matches,
+      pageHost.drawers.has(route) && parent ? { route: parent, url: screenFor(parent) } : null);
   }
 
   function parentRouteFor(route) {
@@ -945,6 +1026,8 @@
   }
 
   function navigate(route, { replace = false, returnRoute = null } = {}) {
+    const query = route.includes('?') ? '?' + route.split('?').slice(1).join('?') : '';
+    route = route.split('?')[0];
     if (!pages[route]) route = aliases[route] || 'focus';
     if (route === 'settings-drawer') {
       openSettingsOverlay({ addHistoryEntry: !replace });
@@ -965,7 +1048,7 @@
       renderRoute('login');
       return;
     }
-    const hash = `#/${route}`;
+    const hash = `#/${route}${query}`;
     const requestedReturnRoute = pages[returnRoute] && returnRoute !== route
       ? returnRoute
       : activeRoute !== route
@@ -1266,78 +1349,36 @@
   }
 
   function prepareRouteControls(document, route) {
+    if (route === 'schedule-detail') {
+      const identity = accountIdentity();
+      const id = new URL(document.URL).searchParams.get('id');
+      if (!id) {
+        document.defaultView.dispatchEvent(new document.defaultView.CustomEvent('stitch:open-schedule-detail', { detail: { entry: {}, mode: 'edit' } }));
+      } else {
+        backendRequest('/schedule').then(entries => {
+          if (identity !== accountIdentity() || !document.defaultView?.frameElement?.isConnected) return;
+          const entry = Array.isArray(entries) && entries.find(entry => entry.id === id);
+          if (!entry) throw new Error('日程不存在或已被删除');
+          document.documentElement.dataset.scheduleAnchorDay = entry.day || '';
+          document.defaultView.dispatchEvent(new document.defaultView.CustomEvent('stitch:open-schedule-detail', { detail: { entry, mode: 'view' } }));
+        }).catch(error => {
+          document.getElementById('loadingState').hidden = true;
+          document.getElementById('errorState').hidden = false;
+          const copy = document.querySelector('#errorState p');
+          if (copy) copy.textContent = error.message;
+        });
+      }
+    }
     if (route === 'schedule') {
-      const dateLabel = Array.from(document.querySelectorAll('span, div'))
-        .find((node) => /^(?:当前日期|\d{4}年\d+月\d+日 星期[一二三四五六日])$/.test(node.textContent.trim()));
-      if (dateLabel) {
-        const now = new Date();
-        const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-        dateLabel.textContent = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${weekdays[now.getDay()]}`;
-      }
-      const rescueSheet = document.getElementById('rescue-sheet');
-      if (rescueSheet && mobileQuery.matches) {
-        rescueSheet.hidden = true;
-        rescueSheet.setAttribute('aria-hidden', 'true');
-      }
-
-      const rescuePreviewLabel = Array.from(document.querySelectorAll('span'))
-        .find((node) => node.textContent.trim() === '推荐救援方案预览');
-      const rescuePreview = rescuePreviewLabel?.closest('.flex.flex-col.gap-2');
-      if (rescuePreview) {
-        const summary = document.createElement('p');
-        summary.className = 'text-xs text-on-surface-variant leading-relaxed';
-        summary.textContent = '救援方案必须根据实际任务、硬截止时间和服务端日程生成。';
-        const action = document.createElement('button');
-        action.id = 'schedule-create-urgent-task';
-        action.type = 'button';
-        action.className = 'w-full min-h-11 rounded-lg bg-error text-on-error text-sm font-semibold';
-        action.textContent = '填写紧急任务并生成救援方案';
-        rescuePreview.replaceChildren(summary, action);
-      }
-
-      let undoButton = document.getElementById('mobile-rescue-undo') ||
-        Array.from(document.querySelectorAll('button'))
-          .find((button) => button.textContent.includes('撤销上次自动调度'));
-      if (!undoButton && mobileQuery.matches) {
-        const rescueEntry = Array.from(document.querySelectorAll('button'))
-          .find((button) => button.textContent.includes('查看救援方案'));
-        if (rescueEntry) {
-          undoButton = document.createElement('button');
-          undoButton.id = 'mobile-rescue-undo';
-          undoButton.type = 'button';
-          undoButton.className = 'mt-2 min-h-10 w-full rounded-lg bg-surface-container text-on-surface-variant text-xs font-semibold';
-          undoButton.textContent = '撤销上次救援';
-          rescueEntry.insertAdjacentElement('afterend', undoButton);
-        }
-      }
-      if (undoButton) {
-        undoButton.id = 'schedule-rescue-undo';
-        const hasSnapshot = readRescueSnapshots().length > 0;
-        undoButton.disabled = !hasSnapshot;
-        undoButton.title = hasSnapshot
-          ? '撤销本账号在此浏览器最近应用的救援方案'
-          : '此浏览器没有可撤销的服务端快照';
-        if (!hasSnapshot && mobileQuery.matches) {
-          const note = document.createElement('span');
-          note.id = 'mobile-rescue-undo-note';
-          note.className = 'mt-1 block text-[11px] text-on-surface-variant';
-          note.textContent = '暂无可撤销的救援快照';
-          undoButton.insertAdjacentElement('afterend', note);
-        }
-      }
-
-      if (mobileQuery.matches) {
-        const dayButtons = Array.from(document.querySelectorAll('button'))
-          .filter((button) => /^[一二三四五六日]\s*\d+$/.test(button.textContent.trim()));
-        for (const button of dayButtons) {
-          button.dataset.scheduleDay = button.textContent.trim();
-        }
-        const viewButtons = Array.from(document.querySelectorAll('button'))
-          .filter((button) => ['日', '周', '列表'].includes(button.textContent.trim()));
-        for (const button of viewButtons) {
-          button.dataset.scheduleView = button.textContent.trim();
-        }
-      }
+      document.stitchCalendar = window.StitchCalendar.mount(document, {
+        request: backendRequest, navigate, identity: accountIdentity, state: calendarState,
+        onState(state, label, error) {
+          document.documentElement.dataset.backendState = state;
+          updateSyncLabel(document, label);
+          if (document.documentElement.dataset.pageVisible !== 'false') window.dispatchEvent(new CustomEvent('stitch:backend-state', { detail: { state, route, label, ...(error ? { error: String(error) } : {}) } }));
+        },
+      });
+      (document.stitchDrawerCleanup ||= []).push(() => document.stitchCalendar.dispose());
     }
 
     if (route === 'urgent-task') {
@@ -1418,6 +1459,11 @@
     }
 
     if (route === 'create-schedule') {
+      const params = new URL(document.URL).searchParams;
+      const dateInput = document.getElementById('schedule-date-input');
+      if (dateInput) dateInput.value = window.StitchCalendar.parseDay(params.get('day')) ? params.get('day') : calendarState.day || todayIso();
+      const clockInput = document.getElementById('schedule-time-input');
+      if (clockInput) clockInput.value = /^\d{2}:\d{2}$/.test(params.get('time') || '') ? params.get('time') : '09:00';
       const dateLabel = document.getElementById('schedule-date-label');
       if (dateLabel) {
         const date = new Date();
@@ -2051,9 +2097,12 @@
         const title = document.querySelector('textarea')?.value.trim();
         if (!title) throw new Error('日程主题不能为空');
         const tag = document.querySelector('.tag-pill.active-tag span:last-child')?.textContent.trim() || '未分类';
-        const timeNode = [...document.querySelectorAll('span')].find((node) => /^\d{1,2}:\d{2}$/.test(node.textContent.trim()));
-        const durationNode = [...document.querySelectorAll('span')].find((node) => /分钟/.test(node.textContent));
-        const minutes = Number(durationNode?.textContent.match(/\d+/)?.[0] || 30);
+        const day = document.getElementById('schedule-date-input')?.value;
+        const time = document.getElementById('schedule-time-input')?.value;
+        const minutes = Number(document.getElementById('schedule-duration-input')?.value);
+        if (!window.StitchCalendar.parseDay(day)) throw new Error('请选择有效的日程日期');
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time || '')) throw new Error('请选择有效的开始时间');
+        if (!Number.isFinite(minutes) || minutes < 5 || minutes > 1440) throw new Error('日程时长应为 5 至 1440 分钟');
         const repeatText = document.querySelector('#repeatGroup button.bg-primary')?.textContent.trim();
         const reminderText = document.querySelector('#reminderGroup button.bg-primary')?.textContent.trim();
         const repeat = ({ 不重复: 'none', 每天: 'daily', 每周: 'weekly', 每月: 'monthly' })[repeatText] || 'none';
@@ -2063,16 +2112,20 @@
         await backendRequest('/schedule', {
           method: 'POST',
           body: {
-            day: todayIso(),
+            day,
             title,
             tag,
             height: minutes * 80 / 60,
             color: 0,
-            time: parseClock(timeNode?.textContent),
+            time: parseClock(time),
             reminderMinutesBefore,
             repeat,
           },
         });
+        calendarState.day = day;
+        for (const page of pageHost.documents()) page.stitchCalendar?.selectDay(day);
+        document.querySelector('textarea').value = '';
+        document.documentElement.dataset.resetScheduleOnNextOpen = 'true';
         showNotice(document, '日程已写入服务端排期。');
         navigate('schedule');
         return;
@@ -2459,8 +2512,6 @@
     if (button.id === 'login-back-action') return '__login_back__';
     if (button.id === 'schedule-create-urgent-task') return 'urgent-task';
     if (button.id === 'mobile-rescue-generate') return 'urgent-task';
-    if (button.dataset.scheduleView) return '__schedule-view__';
-    if (button.dataset.scheduleDay) return '__schedule-day__';
     if (activeRoute === 'schedule' && mobileQuery.matches && label.includes('救援')) return 'urgent-task';
     if (label.includes('通知') || label.includes('notification')) {
       return '__notice__';
@@ -2545,6 +2596,59 @@
 
     injectPolishStyles(childDocument, pageRoute);
     syncSidebarNavigation(childDocument, pageRoute);
+    if (pageRoute === 'goals') {
+      const goal = childDocument.getElementById('goalDrawer');
+      const scrim = childDocument.getElementById('drawerOverlay');
+      const style = childDocument.createElement('style');
+      style.textContent = '#drawerOverlay, #dissectModal { backdrop-filter: none !important; } @media (max-width: 780px) { #goalDrawer { inset: auto 0 0 !important; width: 100% !important; max-width: none !important; height: 90dvh !important; border-radius: 24px 24px 0 0; } }';
+      childDocument.head.append(style);
+      const originalOpen = childDocument.defaultView.openDrawer;
+      const controller = window.bindStitchInlineDrawer({ panel: goal, scrim, shell: pageHost.shell, beforeOpen: pageHost.settleMotion, axis: mobileQuery.matches ? 'y' : 'x' });
+      childDocument.defaultView.openDrawer = title => { originalOpen(title); controller.open(); };
+      childDocument.defaultView.closeDrawer = () => controller.close();
+      const modal = childDocument.getElementById('dissectModal');
+      const modalPanel = modal.firstElementChild;
+      const modalMotion = window.bindStitchInlineDrawer({ panel: modalPanel, scrim: modal, shell: pageHost.shell, beforeOpen: pageHost.settleMotion, axis: 'y', travel: 16 });
+      childDocument.defaultView.openDissectModal = () => modalMotion.open();
+      childDocument.defaultView.closeDissectModal = () => modalMotion.close();
+    }
+    childDocument.defaultView.addEventListener('stitch:close-drawer', () => {
+      if (frame.id === 'prototype-screen' && childDocument.documentElement.dataset.pageVisible !== 'false') returnFromSecondary();
+    });
+    for (const name of ['stitch:schedule-saved', 'stitch:schedule-deleted']) {
+      childDocument.defaultView.addEventListener(name, event => {
+        if (!frame.isConnected) return;
+        const previousDay = childDocument.documentElement.dataset.scheduleAnchorDay;
+        for (const page of pageHost.documents()) {
+          if (name === 'stitch:schedule-saved' && event.detail?.day !== previousDay && window.StitchCalendar.parseDay(event.detail?.day)) page.stitchCalendar?.selectDay(event.detail.day);
+          else page.stitchCalendar?.refresh();
+        }
+        if (name === 'stitch:schedule-saved') childDocument.documentElement.dataset.scheduleAnchorDay = event.detail?.day || '';
+      });
+    }
+    childDocument.addEventListener('click', event => {
+      if (pageRoute === 'goals') {
+        const close = event.target.closest('[onclick^="closeDrawer"], [onclick^="closeDissectModal"]');
+        if (close) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          if (close.getAttribute('onclick').startsWith('closeDissectModal')) childDocument.defaultView.closeDissectModal();
+          else childDocument.defaultView.closeDrawer();
+          return;
+        }
+      }
+      if (pageHost.drawers.has(pageRoute)) {
+        const close = event.target.closest('[data-router-return], [aria-label*="关闭"], #closeBtn, #cancelBtn, button[onclick="closeDrawer()"]');
+        if (close) { event.preventDefault(); event.stopImmediatePropagation(); returnFromSecondary(); return; }
+      }
+      const card = event.target.closest('[data-schedule-id], [data-microtask-id]');
+      if (!card || event.target.closest('button, a, input, textarea, select')) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      navigate(card.hasAttribute('data-schedule-id')
+        ? `schedule-detail?id=${encodeURIComponent(card.dataset.scheduleId)}`
+        : `microtask-detail?id=${encodeURIComponent(card.dataset.microtaskId)}`);
+    }, true);
 
     if (parentRoutes[pageRoute] && !pageHost.primary.has(pageRoute)) {
       const hasNativeExit = childDocument.querySelector(
@@ -2656,23 +2760,6 @@
         returnFromSecondary();
         return;
       }
-      if (route === '__schedule-view__' || route === '__schedule-day__') {
-        event.preventDefault();
-        const selector = route === '__schedule-view__' ? '[data-schedule-view]' : '[data-schedule-day]';
-        const attribute = route === '__schedule-view__' ? 'scheduleView' : 'scheduleDay';
-        const selected = button.dataset[attribute];
-        for (const sibling of childDocument.querySelectorAll(selector)) {
-          const active = sibling.dataset[attribute] === selected;
-          sibling.classList.toggle('bg-surface-container-lowest', active);
-          sibling.classList.toggle('text-primary', active);
-          sibling.classList.toggle('font-semibold', active);
-          sibling.setAttribute('aria-pressed', String(active));
-        }
-        showNotice(childDocument, route === '__schedule-view__'
-          ? `已切换到${selected}视图；列表数据仍以服务端日程为准。`
-          : `已选择${selected}；刷新后将按服务端日程重新加载。`);
-        return;
-      }
       if (route) {
         event.preventDefault();
         if (route === 'urgent-task' && pageRoute !== 'rescue-comparison') {
@@ -2697,10 +2784,16 @@
   window.addEventListener('storage', event => {
     if (!['access_token', 'token', 'ruanchuang_user', null].includes(event.key)) return;
     if (settingsOverlayHost) {
-      closeSettingsOverlay({ fromHistory: true });
+      closeSettingsOverlay({ fromHistory: true, immediate: true });
       history.replaceState(null, '', `#/${settingsReturnRoute}`);
     }
+    if (retainedSettings) {
+      retainedSettings.motion.destroy();
+      retainedSettings.host.remove();
+      retainedSettings = null;
+    }
     settingsTokenHydrated = '';
+    calendarState = {};
     rescueState = null;
     renderRoute(routeFromHash());
   });

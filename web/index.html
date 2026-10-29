@@ -16,6 +16,9 @@
     .workspace-page[hidden] { display: block !important; visibility: hidden; pointer-events: none; }
     .workspace-page:not([hidden]) { z-index: 1; }
     .workspace-page[hidden][data-transition-layer] { visibility: visible; }
+    .workspace-page[hidden][data-drawer-background], .workspace-page[hidden][data-drawer-layer] { visibility: visible; }
+    .workspace-page[data-drawer-surface] { z-index: 200; background: transparent; }
+    .workspace-page[data-inline-drawer] { z-index: 200 !important; background: transparent !important; }
     #workspace-shell { position: relative; z-index: 100; }
     #workspace-shell * { box-sizing: border-box; }
     #workspace-shell aside { position: fixed; inset: 0 auto 0 0; width: 260px; background: #f4f3f8; display: flex; flex-direction: column; box-shadow: 0 1px 8px #0000000a; }
@@ -38,7 +41,6 @@
     .shell-breadcrumb strong { font-weight: 500; }
     #shell-sync { font-size: 11px; color: #414848; background: #e9e7ed; padding: 5px 10px; border-radius: 20px; white-space: nowrap; }
     .shell-actions { display: flex; gap: 8px; margin-left: auto; }
-    #workspace-shell .shell-add { color: white; background: #005db5; }
     .shell-footer { padding: 12px; display: grid; gap: 8px; }
     #workspace-shell .shell-footer button { width: 100%; justify-content: flex-start; background: #faf8fe; }
     .shell-footer small { margin-left: auto; color: #717978; }
@@ -57,6 +59,8 @@
   </style>
   <link rel="stylesheet" href="stitch/assets/fonts/9aec7130879b.css">
   <link rel="stylesheet" href="stitch/assets/fonts/de9b7b5eb580.css">
+  <script src="stitch/drawer-motion.js" defer></script>
+  <script src="stitch/calendar.js" defer></script>
   <script src="stitch/page-host.js" defer></script>
   <script src="stitch/router.js" defer></script>
 </head>

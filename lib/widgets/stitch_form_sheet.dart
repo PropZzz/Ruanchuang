@@ -10,6 +10,7 @@ class StitchFormSheet extends StatelessWidget {
     required this.onCancel,
     required this.onConfirm,
     required this.confirmLabel,
+    this.confirmEnabled = true,
   });
 
   final String title;
@@ -17,6 +18,7 @@ class StitchFormSheet extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onConfirm;
   final String confirmLabel;
+  final bool confirmEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +87,7 @@ class StitchFormSheet extends StatelessWidget {
                       child: Text(AppStrings.of(context, 'btn_cancel')),
                     );
                     final confirmButton = FilledButton(
-                      onPressed: onConfirm,
+                      onPressed: confirmEnabled ? onConfirm : null,
                       child: Text(confirmLabel),
                     );
                     if (constraints.maxWidth < 420) {

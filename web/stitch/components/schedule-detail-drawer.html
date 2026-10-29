@@ -145,6 +145,7 @@
         <div class="flex flex-col gap-1.5">
           <label class="text-xs font-medium text-on-surface-variant tracking-wider" for="dateInput">日期</label>
           <input type="date" id="dateInput" class="w-full bg-surface-container-low rounded-xl p-3 text-sm font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"/>
+          <p id="floatingDateNote" class="text-xs text-on-surface-variant" hidden>尚未固定日期，每天显示；选择日期后将固定到该日。</p>
         </div>
 
         <!-- 时间与时长 -->
@@ -286,7 +287,7 @@
         document.getElementById('detailTitle').textContent = entry.title || '未命名日程';
         document.getElementById('detailTag').textContent = entry.tag || '未分类';
         document.getElementById('detailLoad').textContent = entry.load === 'high' ? '高负荷' : entry.load === 'low' ? '低负荷' : '中等负荷';
-        document.getElementById('detailDate').textContent = entry.day || '';
+        document.getElementById('detailDate').textContent = entry.day || '未固定日期 · 每天显示';
         document.getElementById('detailStartTime').textContent = formatTime(entry.time?.hour || 0, entry.time?.minute || 0);
         document.getElementById('detailDuration').textContent = Math.round((entry.height || 60) / 80 * 60);
         document.getElementById('detailReminder').textContent = formatReminder(entry.reminderMinutesBefore || 0);
@@ -308,8 +309,12 @@
         isNewEntry = !entry || !entry.id;
 
         document.getElementById('titleInput').value = entry?.title || '';
-        document.getElementById('dateInput').value = entry?.day || new Date().toISOString().split('T')[0];
-        document.getElementById('timeInput').value = formatTime(entry?.time?.hour || 9, entry?.time?.minute || 0);
+        const floating = Boolean(entry?.id && entry.day == null);
+        const now = new Date();
+        const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        document.getElementById('dateInput').value = floating ? '' : entry?.day || localToday;
+        document.getElementById('floatingDateNote').hidden = !floating;
+        document.getElementById('timeInput').value = formatTime(entry?.time?.hour ?? 9, entry?.time?.minute ?? 0);
         document.getElementById('durationInput').value = entry ? Math.round((entry.height || 60) / 80 * 60) : 60;
 
         selectedTag = entry?.tag || '跨部门协同';
@@ -451,11 +456,19 @@
         }
         document.getElementById('titleError').classList.add('hidden');
 
-        const day = document.getElementById('dateInput').value;
+        const day = document.getElementById('dateInput').value || (currentEntry?.id && currentEntry.day == null ? null : '');
         const [hour, minute] = document.getElementById('timeInput').value.split(':').map(Number);
         const duration = Number(document.getElementById('durationInput').value);
+        if (day === '' || !Number.isFinite(hour) || !Number.isFinite(minute) || !Number.isFinite(duration) || duration < 5 || duration > 1440) {
+          alert('请选择有效日期、开始时间，以及 5 至 1440 分钟的时长');
+          return;
+        }
 
         const payload = {
+          color: currentEntry?.color ?? 0,
+          goalId: currentEntry?.goalId ?? null,
+          goalTaskId: currentEntry?.goalTaskId ?? null,
+          repeatUntil: currentEntry?.repeatUntil ?? null,
           title,
           tag: selectedTag,
           load: selectedLoad,
@@ -491,11 +504,15 @@
           }
 
           const savedEntry = await response.json();
+          currentEntry = savedEntry;
+          isNewEntry = false;
+          renderView(savedEntry);
 
           window.dispatchEvent(new CustomEvent('stitch:schedule-saved', { detail: savedEntry }));
           window.dispatchEvent(new CustomEvent('stitch:close-drawer', { detail: { saved: true } }));
         } catch (error) {
           alert('保存失败: ' + error.message);
+        } finally {
           saveBtn.disabled = false;
           document.getElementById('saveBtnText').textContent = '保存并写入日程';
           document.getElementById('saveBtnIcon').textContent = 'event_available';

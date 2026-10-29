@@ -1,5 +1,6 @@
 (() => {
   const primary = new Set(['focus', 'schedule', 'micro', 'goals', 'team', 'review', 'diagnostics', 'profile']);
+  const drawers = new Set(['create-schedule', 'urgent-task', 'microtask-entry', 'schedule-detail', 'microtask-detail']);
   const labels = { focus: '专注', schedule: '智能日历', micro: '微任务', goals: '目标', team: '团队', review: '智能复盘', diagnostics: '接入与诊断', profile: '我的' };
   const icons = { focus: 'timer', schedule: 'calendar_today', micro: 'checklist', goals: 'flag', team: 'group', review: 'insights', diagnostics: 'hub', profile: 'person' };
 
@@ -9,14 +10,17 @@
     let generation = 0;
     let account = identity();
     let pendingKey = null;
+    let drawerBackground = null;
+    let drawerOpener = null;
+    let drawerGeneration = 0;
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
     let motionLayers = [];
     const motionAnimations = new Map();
     let motionGeneration = 0;
 
     function pruneCache() {
-      const retained = [...entries.values()].filter(e => e !== current && !motionLayers.includes(e)).sort((a, b) => a.lastUsed - b.lastUsed);
-      while (entries.size > (primary.has(current?.route) ? 8 : 9) && retained.length) dispose(retained.shift());
+      const retained = [...entries.values()].filter(e => e !== current && e !== drawerBackground && !e.frame.hasAttribute('data-drawer-layer') && !motionLayers.includes(e)).sort((a, b) => Number(primary.has(a.route)) - Number(primary.has(b.route)) || a.lastUsed - b.lastUsed);
+      while (entries.size > 10 && retained.length) dispose(retained.shift());
     }
 
     function settleMotion() {
@@ -29,7 +33,7 @@
         delete layer.frame.dataset.transitionLayer;
         layer.frame.style.removeProperty('opacity');
         layer.frame.style.removeProperty('z-index');
-        if (layer !== current && !primary.has(layer.route)) dispose(layer);
+        if (layer !== current && !primary.has(layer.route) && !drawers.has(layer.route)) dispose(layer);
       }
       pruneCache();
     }
@@ -78,7 +82,7 @@
     shell.hidden = true;
     shell.innerHTML = `<aside aria-label="主导航"><div class="shell-brand"><img src="stitch/assets/images/a2aaefce0709.png" alt=""><div><strong>时序智配</strong><small>时间地图工作台</small></div></div><nav>${[
       ['今天', ['focus', 'schedule']], ['规划', ['micro', 'goals']], ['协作', ['team']], ['系统', ['review', 'diagnostics', 'profile']],
-    ].map(([group, routes]) => `<section><small>${group}</small>${routes.map(route => `<a href="#/${route}" data-route="${route}"><span class="material-symbols-outlined">${icons[route]}</span><span>${labels[route]}</span></a>`).join('')}</section>`).join('')}</nav><div class="shell-footer"><button data-notice><span class="material-symbols-outlined">notifications</span>系统通知 <small>预留</small></button></div></aside><header><div class="shell-breadcrumb">时序智配 <span>/</span> <strong id="shell-title">时间工作台</strong></div><span id="shell-sync" role="status">正在连接</span><div class="shell-actions"><button data-route="urgent-task"><span class="material-symbols-outlined">bolt</span><span>插入紧急任务</span></button><button data-route="create-schedule" class="shell-add"><span class="material-symbols-outlined">add</span><span>新增日程</span></button><button data-route="settings-drawer" aria-label="设置"><span class="material-symbols-outlined">settings</span></button></div></header>`;
+    ].map(([group, routes]) => `<section><small>${group}</small>${routes.map(route => `<a href="#/${route}" data-route="${route}"><span class="material-symbols-outlined">${icons[route]}</span><span>${labels[route]}</span></a>`).join('')}</section>`).join('')}</nav><div class="shell-footer"><button data-notice><span class="material-symbols-outlined">notifications</span>系统通知 <small>预留</small></button></div></aside><header><div class="shell-breadcrumb">时序智配 <span>/</span> <strong id="shell-title">时间工作台</strong></div><span id="shell-sync" role="status">正在连接</span><div class="shell-actions"><button data-route="settings-drawer" aria-label="设置"><span class="material-symbols-outlined">settings</span></button></div></header>`;
     document.body.append(shell);
     const status = document.createElement('div');
     status.id = 'page-load-status';
@@ -107,6 +111,8 @@
       if (document.hidden) settleMotion();
     });
     function dispose(entry) {
+      entry.drawerMotion?.destroy();
+      entry.frame.contentDocument?.stitchDrawerCleanup?.forEach(cleanup => cleanup());
       motionAnimations.get(entry)?.cancel();
       motionAnimations.delete(entry);
       motionLayers = motionLayers.filter(layer => layer !== entry);
@@ -115,14 +121,19 @@
       entries.delete(entry.key);
     }
     function clear() {
+      drawerGeneration++;
+      drawerBackground = null;
+      drawerOpener = null;
       settleMotion();
       generation++;
       pendingKey = null;
       for (const entry of [...entries.values()]) dispose(entry);
       current = null;
       shell.hidden = true;
+      shell.inert = false;
     }
     function updateShell(entry) {
+      if (entry.drawerMotion) return;
       shell.hidden = !entry.desktopShell;
       document.body.classList.toggle('has-workspace-shell', entry.desktopShell);
       shell.querySelector('#shell-title').textContent = labels[entry.route] || '时间工作台';
@@ -131,6 +142,49 @@
         if (link.dataset.route === entry.route) link.setAttribute('aria-current', 'page');
         else link.removeAttribute('aria-current');
       }
+    }
+    function prepareDrawer(entry) {
+      const doc = entry.frame.contentDocument;
+      const panel = doc.querySelector('body > section, #root > div');
+      if (!panel) throw new Error('抽屉内容暂时无法打开');
+      let scrim = doc.querySelector('body > button.fixed.inset-0');
+      if (!scrim) {
+        scrim = doc.createElement('button');
+        scrim.type = 'button';
+        scrim.setAttribute('aria-label', '关闭抽屉');
+        doc.body.prepend(scrim);
+      }
+      scrim.dataset.routerReturn = 'true';
+      scrim.dataset.drawerScrim = 'true';
+      scrim.removeAttribute('onclick');
+      panel.dataset.drawerPanel = 'true';
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-modal', 'true');
+      panel.setAttribute('aria-label', panel.querySelector('h2')?.textContent || '详情');
+      entry.frame.dataset.drawerSurface = entry.route;
+      entry.frame.style.background = 'transparent';
+      const style = doc.createElement('style');
+      style.textContent = `
+        [hidden] { display: none !important; }
+        html, body { position: fixed !important; inset: 0 !important; width: 100% !important; height: 100% !important; min-height: 0 !important; margin: 0 !important; overflow: hidden !important; background: transparent !important; backdrop-filter: none !important; }
+        #root { display: contents !important; background: transparent !important; backdrop-filter: none !important; }
+        [data-drawer-scrim] { position: fixed !important; inset: 0 !important; width: 100% !important; height: 100% !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: rgba(26,27,31,.32) !important; transform: none !important; cursor: default; z-index: 0 !important; }
+        [data-drawer-panel] { position: absolute !important; z-index: 1 !important; margin: 0 !important; animation: none !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
+        ${entry.mobile
+          ? '[data-drawer-panel] { left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important; width: 100% !important; max-width: 520px !important; margin-inline: auto !important; max-height: 92dvh !important; border-radius: 24px 24px 0 0 !important; }'
+          : '[data-drawer-panel] { inset: 0 0 0 auto !important; width: min(480px, 100vw) !important; max-width: none !important; height: 100% !important; max-height: none !important; border-radius: 0 !important; }'}
+      `;
+      doc.head.append(style);
+      entry.drawerMotion = window.createStitchDrawerMotion({ panel, scrim, axis: entry.mobile ? 'y' : 'x' });
+      doc.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); window.__RUANCHUANG_RETURN__(); }
+        if (event.key !== 'Tab') return;
+        const controls = [...panel.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex="0"]')].filter(el => el.getClientRects().length && !el.closest('[hidden], .hidden'));
+        const first = controls[0], last = controls.at(-1);
+        if (!first) { event.preventDefault(); return; }
+        if (event.shiftKey && doc.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && doc.activeElement === last) { event.preventDefault(); first.focus(); }
+      });
     }
     function createEntry(route, url, mobile, key) {
       const frame = document.createElement('iframe');
@@ -158,12 +212,16 @@
             } else entry.desktopShell = false;
             prepare(frame, route);
             visibility(entry, false);
-            const polish = doc.getElementById('ruanchuang-polish-styles');
-            if (polish && !polish.sheet) await new Promise((resolve, reject) => {
-              polish.addEventListener('load', resolve, { once: true });
-              polish.addEventListener('error', () => reject(new Error('页面样式加载失败')), { once: true });
-            });
+            await Promise.all(['ruanchuang-polish-styles', 'ruanchuang-calendar-styles'].map(id => {
+              const link = doc.getElementById(id);
+              if (!link || link.sheet) return;
+              return new Promise((resolve, reject) => {
+                link.addEventListener('load', resolve, { once: true });
+                link.addEventListener('error', () => reject(new Error('页面样式加载失败')), { once: true });
+              });
+            }));
             await doc.fonts.ready;
+            if (drawers.has(route)) prepareDrawer(entry);
             entry.ready = true;
             resolve(entry);
           } catch (error) { reject(error); }
@@ -176,8 +234,13 @@
       document.body.append(frame);
       return entry;
     }
-    async function show(route, url, mobile) {
+    async function show(route, url, mobile, background = null) {
       if (identity() !== account) { clear(); account = identity(); }
+      if (drawers.has(route) && !current && background) {
+        const expectedGeneration = generation + 1;
+        await show(background.route, background.url, mobile);
+        if (generation !== expectedGeneration || !current) return;
+      }
       const key = `${mobile ? 'mobile' : 'desktop'}:${url}`;
       if (pendingKey === key) return;
       pendingKey = key;
@@ -194,6 +257,12 @@
         if (beforeActivate(entry.frame, route) === false) return;
         const previous = current;
         const changed = previous !== entry;
+        if (entry.drawerMotion && changed) settleMotion();
+        if (entry.drawerMotion && !drawerBackground && previous && !previous.drawerMotion) {
+          drawerBackground = previous;
+          drawerOpener = document.activeElement === previous.frame ? previous.frame.contentDocument.activeElement : document.activeElement;
+          previous.frame.dataset.drawerBackground = 'true';
+        }
         if (changed && previous) {
           previous.frame.removeAttribute('id');
           previous.frame.hidden = true;
@@ -205,12 +274,49 @@
         entry.lastUsed = Date.now();
         entry.frame.id = 'prototype-screen';
         entry.frame.hidden = false;
-        entry.frame.inert = shell.inert;
-        entry.frame.setAttribute('aria-hidden', String(shell.inert));
+        entry.frame.inert = Boolean(!entry.drawerMotion && document.getElementById('ruanchuang-settings-overlay'));
+        entry.frame.setAttribute('aria-hidden', String(entry.frame.inert));
         updateShell(entry);
         activate(entry.frame, route);
         visibility(entry, true);
-        if (changed) blendPages(entry, previous);
+        if (entry.drawerMotion) {
+          drawerGeneration++;
+          shell.inert = true;
+          if (changed && previous?.drawerMotion) {
+            previous.frame.dataset.drawerLayer = 'true';
+            previous.drawerMotion.setOpen(false).then(done => { if (done && previous !== current) delete previous.frame.dataset.drawerLayer; });
+          }
+          entry.drawerMotion.setOpen(true);
+          entry.frame.contentDocument.querySelector('[data-drawer-panel] button')?.focus({ preventScroll: true });
+        } else if (changed && previous?.drawerMotion) {
+          const drawerTurn = ++drawerGeneration;
+          previous.frame.dataset.drawerLayer = 'true';
+          shell.inert = true;
+          entry.frame.inert = true;
+          previous.drawerMotion.setOpen(false).then(done => {
+            if (!done) return;
+            delete previous.frame.dataset.drawerLayer;
+            if (drawerTurn !== drawerGeneration) return;
+            if (drawerBackground) delete drawerBackground.frame.dataset.drawerBackground;
+            drawerBackground = null;
+            shell.inert = false;
+            entry.frame.inert = false;
+            if (drawerOpener?.isConnected && (drawerOpener.ownerDocument === entry.frame.contentDocument || drawerOpener.ownerDocument === document)) drawerOpener.focus({ preventScroll: true });
+            else entry.frame.contentDocument.querySelector('[data-cal-date], main button, main input')?.focus({ preventScroll: true });
+            drawerOpener = null;
+            pruneCache();
+          });
+        } else {
+          drawerGeneration++;
+          if (drawerBackground) delete drawerBackground.frame.dataset.drawerBackground;
+          drawerBackground = null;
+          const externalSettings = Boolean(document.getElementById('ruanchuang-settings-overlay'));
+          const inlineDialog = entry.frame.contentDocument.querySelector('[data-drawer-panel]:not([data-drawer-state="closed"])');
+          shell.inert = externalSettings || Boolean(inlineDialog);
+          entry.frame.inert = externalSettings;
+          entry.frame.setAttribute('aria-hidden', String(externalSettings));
+          if (changed) blendPages(entry, previous);
+        }
         // In-flight layers are released once the current page fully covers them.
         pruneCache();
         status.hidden = true;
@@ -225,7 +331,7 @@
       } finally { if (turn === generation) pendingKey = null; }
     }
     return {
-      show, clear, shell, primary,
+      show, clear, shell, primary, drawers, settleMotion,
       get pending() { return pendingKey !== null; },
       cancelPending() { generation++; pendingKey = null; status.hidden = true; },
       documents: () => [...entries.values()].map(entry => entry.frame.contentDocument),

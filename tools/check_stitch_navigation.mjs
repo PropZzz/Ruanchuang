@@ -56,6 +56,7 @@ try {
     await ready(route);
     assert.equal(await page.evaluate(() => window.__shell === document.getElementById('workspace-shell')), true);
     assert.equal(await page.locator('#workspace-shell a[aria-current="page"]').getAttribute('data-route'), route);
+    assert.deepEqual(await page.locator('#workspace-shell header button').evaluateAll(buttons => buttons.map(button => button.dataset.route)), ['settings-drawer']);
   }
   const beforeWarm = documents.length;
   for (const route of ['focus', 'schedule', 'micro', 'review', 'diagnostics', 'profile', 'goals', 'team']) await go(route);
@@ -146,7 +147,7 @@ try {
   await page.waitForFunction(() => document.getElementById('prototype-screen').contentDocument.documentElement.dataset.backendState !== 'loading');
   const beforeReads = reads;
   const beforeSchedule = documents.filter(u => u.includes('/screens/smart-calendar/')).length;
-  await page.locator('#workspace-shell button[data-route="create-schedule"]').click(); await ready('create-schedule');
+  await go('create-schedule');
   await page.frameLocator('#prototype-screen').locator('textarea').fill('导航测试日程');
   await page.frameLocator('#prototype-screen').getByRole('button', { name: /保存并写入日程/ }).click();
   await ready('schedule');

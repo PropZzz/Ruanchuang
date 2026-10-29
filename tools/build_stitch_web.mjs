@@ -47,7 +47,21 @@ export async function buildStitchWeb({
       'src="stitch/page-host.js"', `src="${hostPath}"`,
     )));
   }
+  if (index.includes('src="stitch/drawer-motion.js"')) {
+    const motionPath = `stitch/drawer-motion.${release}.js`;
+    contents.set(motionPath, contents.get('stitch/drawer-motion.js'));
+    contents.set('index.html', Buffer.from(contents.get('index.html').toString('utf8').replace(
+      'src="stitch/drawer-motion.js"', `src="${motionPath}"`,
+    )));
+  }
   const files = {};
+  if (index.includes('src="stitch/calendar.js"')) {
+    const calendarPath = `stitch/calendar.${release}.js`;
+    contents.set(calendarPath, contents.get('stitch/calendar.js'));
+    contents.set('index.html', Buffer.from(contents.get('index.html').toString('utf8').replace(
+      'src="stitch/calendar.js"', `src="${calendarPath}"`,
+    )));
+  }
   for (const [file, bytes] of contents) {
     await mkdir(dirname(join(output, file)), { recursive: true });
     await writeFile(join(output, file), bytes);

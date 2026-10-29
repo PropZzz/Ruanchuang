@@ -31,6 +31,8 @@ export async function checkWebSources(root = projectRoot) {
   const index = await readFile(join(web, 'index.html'), 'utf8');
   assert.ok(index.includes('src="stitch/router.js"'), 'web/index.html must load the canonical router');
   assert.ok(index.includes('src="stitch/page-host.js"'), 'web/index.html must load the persistent page host');
+  assert.ok(index.includes('src="stitch/drawer-motion.js"'), 'web/index.html must load the shared drawer motion controller');
+  assert.ok(index.includes('src="stitch/calendar.js"'), 'web/index.html must load the real calendar');
   const router = await readFile(join(web, 'stitch/router.js'), 'utf8');
   const routes = router.match(/const pages = \{([\s\S]*?)\n  \};/)?.[1];
   assert.ok(routes, 'Cannot find the router page map');

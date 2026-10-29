@@ -4,11 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>微任务详情</title>
+  <link href="../assets/fonts/9aec7130879b.css" rel="stylesheet"/>
+  <link href="../assets/fonts/de9b7b5eb580.css" rel="stylesheet"/>
+  <link href="../assets/fonts/dd526d0c2702.css" rel="stylesheet"/>
+  <script src="../assets/vendor/6f06d28f9027.js"></script>
+  <script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"outline":"#717978","error-container":"#ffdad6","on-primary-container":"#81a8a7","secondary-fixed":"#d6e3ff","surface-variant":"#e3e2e7","on-secondary":"#ffffff","tertiary-fixed-dim":"#53e16f","on-error":"#ffffff","surface-bright":"#faf8fe","primary-fixed-dim":"#a7cecd","on-tertiary-fixed":"#002107","inverse-on-surface":"#f1f0f6","surface":"#faf8fe","on-surface-variant":"#414848","primary-container":"#163d3d","inverse-surface":"#2f3034","on-tertiary-fixed-variant":"#00531c","secondary":"#005db5","on-secondary-fixed-variant":"#00468b","primary-fixed":"#c2eae9","surface-container-highest":"#e3e2e7","outline-variant":"#c0c8c7","surface-container-low":"#f4f3f8","on-surface":"#1a1b1f","surface-tint":"#3f6564","on-secondary-container":"#00376f","tertiary-container":"#004114","surface-dim":"#dbd9df","on-error-container":"#93000a","secondary-fixed-dim":"#a8c8ff","surface-container-high":"#e9e7ed","error":"#ba1a1a","on-secondary-fixed":"#001b3d","tertiary":"#00290a","surface-container":"#efedf3","primary":"#002727","secondary-container":"#62a1fe","tertiary-fixed":"#72fe88","background":"#faf8fe","on-tertiary-container":"#1db84d","inverse-primary":"#a7cecd","on-background":"#1a1b1f","on-tertiary":"#ffffff","surface-container-lowest":"#ffffff","on-primary":"#ffffff","on-primary-fixed-variant":"#274d4d","on-primary-fixed":"#002020"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{},"fontFamily":{"headline":["Noto Serif"],"display":["Noto Serif"],"body":["Inter"],"label":["Inter"]},"fontSize":{}}}}
+  </script>
+
 </head>
 <body>
 <div id="root" class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-primary/20 backdrop-blur-sm">
   <!-- Drawer Container -->
-  <div class="w-full max-w-2xl bg-surface-container-lowest rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col max-h-[90vh] md:max-h-[85vh] animate-slide-up">
+  <div class="w-full max-w-2xl bg-surface-container-lowest rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col max-h-[90vh] md:max-h-[85vh]">
 
     <!-- Header -->
     <div class="px-6 py-4 bg-surface-container-low flex items-center justify-between border-b border-outline-variant">
@@ -21,7 +28,7 @@
           <p class="text-xs text-on-surface-variant font-label">Microtask Detail</p>
         </div>
       </div>
-      <button onclick="closeDrawer()" class="w-10 h-10 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center text-on-surface-variant">
+      <button onclick="closeDrawer()" aria-label="关闭抽屉" class="w-10 h-10 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center text-on-surface-variant">
         <span class="material-symbols-outlined text-[24px]">close</span>
       </button>
     </div>
@@ -220,9 +227,18 @@
 </div>
 
 <script>
+  const apiBase = (window.parent.__RUANCHUANG_API__ || window.__RUANCHUANG_API__ || (['127.0.0.1', 'localhost'].includes(location.hostname) ? 'http://127.0.0.1:8000' : '/api')).replace(/\/$/, '');
+  const authHeaders = () => { const token = localStorage.getItem('access_token') || localStorage.getItem('token'); return token ? { Authorization: `Bearer ${token}` } : {}; };
   let currentTask = null;
   let currentMode = 'loading'; // loading | view | edit | error
   let selectedPriority = 'P1';
+  let completionCloseTimer = null;
+  document.addEventListener('stitch:visibility', event => {
+    if (!event.detail.visible) {
+      clearTimeout(completionCloseTimer);
+      completionCloseTimer = null;
+    }
+  });
 
   // Initialize
   async function init() {
@@ -239,10 +255,12 @@
 
     // Load existing task
     try {
-      const response = await fetch(`/microtasks/${taskId}`);
+      const response = await fetch(`${apiBase}/microtasks`, { headers: authHeaders() });
       if (!response.ok) throw new Error('任务不存在或已被删除');
 
-      currentTask = await response.json();
+      const tasks = await response.json();
+      currentTask = Array.isArray(tasks) && tasks.find(task => task.id === taskId);
+      if (!currentTask) throw new Error('任务不存在或已被删除');
       renderViewMode();
       switchMode('view');
     } catch (error) {
@@ -367,12 +385,12 @@
     }
 
     try {
-      const url = currentTask ? `/microtasks/${currentTask.id}` : '/microtasks';
+      const url = currentTask ? `${apiBase}/microtasks/${currentTask.id}` : `${apiBase}/microtasks`;
       const method = currentTask ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(data)
       });
 
@@ -399,9 +417,9 @@
     if (!confirm(`确认完成「${currentTask.title}」？`)) return;
 
     try {
-      const response = await fetch(`/microtasks/${currentTask.id}`, {
+      const response = await fetch(`${apiBase}/microtasks/${currentTask.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ status: 'completed' })
       });
 
@@ -412,7 +430,10 @@
 
       window.dispatchEvent(new CustomEvent('stitch:microtask-completed', { detail: currentTask }));
 
-      setTimeout(() => closeDrawer(), 1500);
+      clearTimeout(completionCloseTimer);
+      if (document.documentElement.dataset.pageVisible !== 'false') {
+        completionCloseTimer = setTimeout(() => closeDrawer(), 1500);
+      }
     } catch (error) {
       alert(error.message || '操作失败');
     }
@@ -423,7 +444,7 @@
     if (!confirm(`确认删除「${currentTask.title}」？此操作不可撤销。`)) return;
 
     try {
-      const response = await fetch(`/microtasks/${currentTask.id}`, { method: 'DELETE' });
+      const response = await fetch(`${apiBase}/microtasks/${currentTask.id}`, { method: 'DELETE', headers: authHeaders() });
       if (!response.ok) throw new Error('删除失败');
 
       window.dispatchEvent(new CustomEvent('stitch:microtask-deleted', { detail: currentTask }));
@@ -434,7 +455,9 @@
   }
 
   function closeDrawer() {
-    window.history.back();
+    if (window.parent !== window && window.parent.__RUANCHUANG_RETURN__ &&
+      window.parent.document.getElementById('prototype-screen') === window.frameElement &&
+      document.documentElement.dataset.pageVisible !== 'false') window.parent.__RUANCHUANG_RETURN__();
   }
 
   function formatDateTime(isoString) {
@@ -447,30 +470,11 @@
     });
   }
 
-  // Handle back button
-  window.addEventListener('popstate', () => {
-    closeDrawer();
-  });
 
   // Start
   init();
 </script>
 
-<style>
-  @keyframes slide-up {
-    from {
-      transform: translateY(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-  .animate-slide-up {
-    animation: slide-up 0.3s ease-out;
-  }
-</style>
 
 </body>
 </html>

@@ -15,13 +15,13 @@
 <span class="text-[11px] text-outline font-normal">必填项</span>
 </label>
 <div class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-1 shadow-sm">
-<textarea autocomplete="off" class="w-full bg-transparent text-sm font-semibold text-on-surface placeholder:text-outline focus:outline-none resize-none leading-relaxed" id="schedule-title-input" name="schedule_title" placeholder="输入日程名称…" rows="2">前端组件系统无障碍交互走查与键盘焦点陷阱防护</textarea>
+<textarea autocomplete="off" class="w-full bg-transparent text-sm font-semibold text-on-surface placeholder:text-outline focus:outline-none resize-none leading-relaxed" id="schedule-title-input" name="schedule_title" placeholder="输入日程名称…" rows="2"></textarea>
 <div class="flex items-center justify-between pt-1">
 <span class="inline-flex items-center gap-1 text-[11px] text-primary font-medium bg-primary-fixed/50 px-2 py-0.5 rounded-full">
 <span class="material-symbols-outlined text-[13px]">auto_awesome</span>
-<span>已由智能语义提炼</span>
+<span>填写具体主题，便于回顾</span>
 </span>
-<span class="text-[11px] font-mono text-outline">24/60</span>
+<span class="text-[11px] font-mono text-outline"></span>
 </div>
 </div>
 </div>
@@ -47,41 +47,12 @@
 </button>
 </div>
 </div>
-<!-- Temporal Slot & Duration -->
-<div class="bg-surface-container-low rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
-<div class="flex items-center justify-between">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
-<span class="text-sm font-semibold text-on-surface tracking-tight" id="schedule-date-label">当前日期</span>
-</div>
-<span class="text-[11px] font-semibold text-primary bg-primary-fixed px-2.5 py-0.5 rounded-full">第39周</span>
-</div>
-<div class="grid grid-cols-2 gap-2.5 pt-1">
-<div class="bg-surface-container-lowest rounded-xl p-3 flex flex-col gap-1 shadow-sm">
-<span class="text-[11px] font-medium text-outline">开始时刻</span>
-<div class="flex items-baseline gap-1">
-<span class="text-xl font-headline font-bold text-on-surface tracking-tight tabular-nums">13:30</span>
-<span class="text-[11px] font-medium text-on-surface-variant">下午</span>
-</div>
-</div>
-<div class="bg-surface-container-lowest rounded-xl p-3 flex flex-col gap-1 shadow-sm">
-<span class="text-[11px] font-medium text-outline">结束时刻</span>
-<div class="flex items-baseline gap-1">
-<span class="text-xl font-headline font-bold text-on-surface tracking-tight tabular-nums">15:00</span>
-<span class="text-[11px] font-medium text-on-surface-variant">下午</span>
-</div>
-</div>
-</div>
-<!-- Duration Micro Strip -->
-<div class="bg-surface-container rounded-xl p-2.5 flex items-center justify-between text-xs">
-<div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-[16px] text-on-surface-variant">timelapse</span>
-<span class="text-on-surface-variant font-medium">总预估时长</span>
-</div>
-<div class="flex items-center gap-1.5 font-mono">
-<span class="font-bold text-primary tabular-nums">90</span>
-<span class="text-[11px] text-outline">分钟 (1.5h)</span>
-</div>
+<!-- Editable schedule date, time and duration -->
+<div class="bg-surface-container-low rounded-2xl p-4 flex flex-col gap-3">
+<label class="flex flex-col gap-1.5 text-xs text-on-surface-variant">日程日期<input id="schedule-date-input" aria-label="日程日期" type="date" required class="min-h-11 px-3 rounded-xl bg-surface-container-lowest text-on-surface text-sm"/></label>
+<div class="grid grid-cols-2 gap-3">
+<label class="flex flex-col gap-1.5 text-xs text-on-surface-variant">开始时间<input id="schedule-time-input" aria-label="开始时间" type="time" required value="09:00" class="min-h-11 px-3 rounded-xl bg-surface-container-lowest text-on-surface text-sm"/></label>
+<label class="flex flex-col gap-1.5 text-xs text-on-surface-variant">时长（分钟）<input id="schedule-duration-input" aria-label="时长（分钟）" type="number" min="5" max="1440" step="5" value="60" required class="min-h-11 px-3 rounded-xl bg-surface-container-lowest text-on-surface text-sm"/></label>
 </div>
 </div>
 <!-- Cognitive Load & Scheduling Constraints -->

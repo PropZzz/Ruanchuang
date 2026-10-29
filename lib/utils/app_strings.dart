@@ -46,6 +46,7 @@ class AppStrings {
 
       'label_title': '标题',
       'label_tag': '标签',
+      'label_color': '颜色',
       'label_desc': '描述（可选）',
       'label_date': '日期',
       'label_duration': '时长（分钟）',
@@ -441,6 +442,7 @@ class AppStrings {
 
       'label_title': 'Title',
       'label_tag': 'Tag',
+      'label_color': 'Color',
       'label_desc': 'Description (Optional)',
       'label_date': 'Date',
       'label_duration': 'Duration (mins)',
