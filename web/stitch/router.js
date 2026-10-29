@@ -17,6 +17,8 @@
     'create-schedule': ['mobile/create-schedule-drawer/index.html'],
     'urgent-task': ['mobile/insert-urgent-task-drawer/index.html'],
     'microtask-entry': ['mobile/microtask-entry-breakdown/index.html'],
+    'schedule-detail': ['components/schedule-detail-drawer.html'],
+    'microtask-detail': ['components/microtask-detail-drawer.html'],
   };
 
   const aliases = {
@@ -39,23 +41,39 @@
 
   const parentRoutes = {
     goals: 'profile',
-    review: 'profile',
     integrations: 'profile',
     bluetooth: 'profile',
     'emotion-energy': 'profile',
-    diagnostics: 'profile',
     'rescue-comparison': 'schedule',
     'create-schedule': 'schedule',
     'urgent-task': 'schedule',
+    'schedule-detail': 'schedule',
+    'microtask-detail': 'micro',
     'microtask-entry': 'micro',
   };
 
-  const frame = document.getElementById('prototype-screen');
+  let frame = document.getElementById('prototype-screen');
   const mobileQuery = window.matchMedia('(max-width: 780px)');
-  const routeAssetVersion = '2026-09-26';
+  const routeAssetVersion = document.currentScript?.dataset.release || 'development';
+  document.documentElement.dataset.release = routeAssetVersion;
+
+  // Existing installations may still be controlled by Flutter's cache-first
+  // worker. Update only that worker to the retirement script shipped with this
+  // release. The content-addressed router also bypasses an old cached router.
+  if ('serviceWorker' in navigator) {
+    const appRoot = new URL('.', window.location.href);
+    navigator.serviceWorker.getRegistrations().then(async (registrations) => {
+      for (const registration of registrations) {
+        const worker = registration.active || registration.waiting || registration.installing;
+        if (registration.scope === appRoot.href &&
+            worker && new URL(worker.scriptURL).pathname === `${appRoot.pathname}flutter_service_worker.js`) {
+          await registration.update();
+        }
+      }
+    }).catch((error) => console.warn('Legacy web cache migration deferred:', error));
+  }
   let activeRoute = 'focus';
   let loginReturnRoute = 'focus';
-  let hasRenderedRoute = false;
   let rescueState = null;
   let settingsOverlayHost = null;
   let settingsOverlayFrame = null;
@@ -83,6 +101,7 @@
   }
 
   async function backendRequest(path, { method = 'GET', body } = {}) {
+    const requestIdentity = accountIdentity();
     const response = await fetch(`${apiBase}${path}`, {
       method,
       headers: { Accept: 'application/json', ...authHeaders() },
@@ -102,8 +121,8 @@
       error.status = response.status;
       throw error;
     }
-    if (response.status === 204) return null;
-    const text = await response.text();
+    const text = response.status === 204 ? '' : await response.text();
+    if (requestIdentity !== accountIdentity()) throw new Error('账号已切换，已忽略旧请求结果');
     return text ? JSON.parse(text) : null;
   }
 
@@ -224,7 +243,7 @@
     }
   }
 
-  function injectPolishStyles(document) {
+  function injectPolishStyles(document, route = activeRoute) {
     const existing = document.getElementById('ruanchuang-polish-styles');
     if (existing) return;
     const link = document.createElement('link');
@@ -235,8 +254,8 @@
       window.location.href,
     ).toString();
     document.head.appendChild(link);
-    document.documentElement.dataset.route = activeRoute;
-    if (activeRoute === 'create-schedule' || activeRoute === 'urgent-task') {
+    document.documentElement.dataset.route = route;
+    if (route === 'create-schedule' || route === 'urgent-task') {
       const backdrop = document.querySelector('body > button.fixed.inset-0.z-0');
       const drawer = document.querySelector('body > section');
       if (backdrop) {
@@ -255,6 +274,10 @@
   }
 
   async function hydrateBackend(document, route) {
+    const identity = accountIdentity();
+    const refresh = Symbol('backend-refresh');
+    document.backendRefresh = refresh;
+    const isCurrent = () => document.backendRefresh === refresh && identity === accountIdentity() && pageHost.documents().includes(document);
     document.documentElement.dataset.backendState = 'loading';
     try {
       await backendRequest('/health');
@@ -262,6 +285,7 @@
       if (route === 'schedule') {
         const entries = await backendRequest('/schedule');
         const conflicts = await backendRequest(`/schedule/conflicts?day=${todayIso()}`);
+        if (!isCurrent()) return;
         const conflictCount = Array.isArray(conflicts?.conflicts) ? conflicts.conflicts.length : 0;
         updateConflictCopy(document, conflictCount);
         const dateLabel = Array.from(document.querySelectorAll('span, div'))
@@ -283,12 +307,14 @@
         const score = energy?.batteryPercent ?? energy?.battery_percent;
         if (Number.isFinite(Number(score))) label = `已连接 · 能量 ${score} 分`;
       }
+      if (!isCurrent()) return;
       document.documentElement.dataset.backendState = 'online';
       updateSyncLabel(document, label);
       window.dispatchEvent(new CustomEvent('stitch:backend-state', {
         detail: { state: 'online', route, label },
       }));
     } catch (error) {
+      if (!isCurrent()) return;
       const state = error.status === 401 ? 'auth-required' : 'offline';
       const label = state === 'auth-required' ? '请登录后同步' : '本地模式 · 后端不可用';
       document.documentElement.dataset.backendState = state;
@@ -361,18 +387,20 @@
     if (!token || token === settingsTokenHydrated) return;
     try {
       const settings = await backendRequest('/settings');
+      if (token !== accountIdentity()) return;
       activeThemeMode = ['system', 'light', 'dark'].includes(settings?.themeMode)
         ? settings.themeMode
         : 'system';
       settingsTokenHydrated = token;
       applyThemeMode(activeThemeMode);
     } catch (error) {
-      if (error.status === 401) {
+      if (error.status === 401 && token === accountIdentity()) {
         localStorage.removeItem('access_token');
         localStorage.removeItem('token');
         localStorage.removeItem('ruanchuang_user');
         settingsTokenHydrated = '';
-        showNotice(document, '登录状态已失效，请重新登录。');
+        renderRoute(activeRoute);
+        showNotice(window.document, '登录状态已失效，请重新登录。');
       }
     }
   }
@@ -411,7 +439,7 @@
     document.body.style.backgroundColor = canvas;
     frame.style.backgroundColor = canvas;
 
-    for (const target of [frame.contentDocument, settingsOverlayFrame?.contentDocument]) {
+    for (const target of [...pageHost.documents(), settingsOverlayFrame?.contentDocument]) {
       if (!target?.documentElement) continue;
       target.documentElement.classList.toggle('dark', dark);
       target.documentElement.style.colorScheme = dark ? 'dark' : 'light';
@@ -571,8 +599,10 @@
   function openSettingsOverlay({ addHistoryEntry = true } = {}) {
     if (settingsOverlayHost) return;
 
+    if (frame.isConnected) pageHost.cancelPending();
     settingsReturnRoute = activeRoute;
-    settingsOpener = frame.contentDocument?.activeElement ?? null;
+    settingsOpener = document.activeElement === frame ? frame.contentDocument?.activeElement : document.activeElement;
+    pageHost.shell.inert = true;
     settingsDraft = null;
     settingsPreferencesLoaded = false;
     settingsOverlayMobile = mobileQuery.matches;
@@ -835,6 +865,7 @@
     if (host) host.remove();
     settingsOverlayHost = null;
     settingsOverlayFrame = null;
+    pageHost.shell.inert = false;
     document.body.style.overflow = previousBodyOverflow;
     frame.inert = previousFrameInert;
     if (previousFrameAriaHidden == null) frame.removeAttribute('aria-hidden');
@@ -867,7 +898,7 @@
       const returnRoute = history.state?.login ? history.state.returnRoute : null;
       if (pages[returnRoute] && returnRoute !== 'login') loginReturnRoute = returnRoute;
     }
-    if (route !== activeRoute) renderRoute(route);
+    if (route !== activeRoute || pageHost.pending) renderRoute(route);
   }
 
   function resizeSettingsOverlay() {
@@ -879,13 +910,32 @@
     }
   }
 
+  function accountIdentity() {
+    return localStorage.getItem('access_token') || localStorage.getItem('token') || '';
+  }
+
+  const pageHost = window.createStitchPageHost({
+    prepare: prepareFrame,
+    beforeActivate(nextFrame, route) {
+      return route !== 'rescue-comparison' || hydrateRescueComparisonView(nextFrame.contentDocument);
+    },
+    activate(nextFrame, route) {
+      frame = nextFrame;
+      activeRoute = route;
+      applyCanvasSize();
+      applyThemeMode(settingsDraft?.themeMode ?? activeThemeMode);
+      hydrateProfileView(frame.contentDocument, route);
+      hydrateBackend(frame.contentDocument, route);
+      hydrateStoredTheme(frame.contentDocument);
+    },
+    navigate,
+    notice: () => showNotice(frame.contentDocument, '通知与提醒暂未接入，当前不会发送提醒。'),
+    identity: accountIdentity,
+  });
+  frame.remove();
+
   function renderRoute(route) {
-    activeRoute = pages[route] ? route : 'focus';
-    applyCanvasSize();
-    if (hasRenderedRoute) frame.classList.add('route-switching');
-    frame.src = screenFor(activeRoute);
-    frame.title = `时序智配 ${activeRoute}`;
-    hasRenderedRoute = true;
+    pageHost.show(pages[route] ? route : 'focus', screenFor(route), mobileQuery.matches);
   }
 
   function parentRouteFor(route) {
@@ -1880,6 +1930,7 @@
   }
 
   async function runApiAction(action, document, button) {
+    const actionRoute = document.documentElement.dataset.route || activeRoute;
     try {
       setActionBusy(button, true, action.startsWith('auth-') ? '请稍候...' : '同步中...');
       if (action === 'auth-login' || action === 'auth-register') {
@@ -2184,7 +2235,7 @@
         const title = titleInput?.value.trim() ||
           document.querySelector('textarea')?.value.trim() ||
           '紧急调度任务';
-        if (activeRoute === 'urgent-task' && !titleInput?.value.trim()) {
+        if (actionRoute === 'urgent-task' && !titleInput?.value.trim()) {
           throw new Error('请先填写紧急任务名称');
         }
         const durationMinutes = Number(
@@ -2196,7 +2247,7 @@
         const hardLock = Array.from(document.querySelectorAll('[role="switch"]'))
           .find((switchButton) => switchButton.parentElement?.textContent.includes('硬约束防挤压锁定'))
           ?.getAttribute('aria-checked') === 'true';
-        const deadlineInput = activeRoute === 'urgent-task'
+        const deadlineInput = actionRoute === 'urgent-task'
           ? document.getElementById('urgent-task-deadline-input')
           : null;
         const dueDate = deadlineInput
@@ -2238,12 +2289,12 @@
             tasks: [],
           },
         });
-        const originRoute = activeRoute === 'urgent-task'
-          ? parentRouteFor(activeRoute) || 'schedule'
-          : activeRoute;
+        const originRoute = actionRoute === 'urgent-task'
+          ? parentRouteFor(actionRoute) || 'schedule'
+          : actionRoute;
         rescueState = { ...options, day, urgentTask, currentEntries, originRoute };
         showNotice(document, `服务端已生成 ${options?.options?.length ?? 0} 个救援方案。`);
-        const returnRoute = activeRoute === 'urgent-task' ? 'urgent-task' : activeRoute;
+        const returnRoute = actionRoute === 'urgent-task' ? 'urgent-task' : actionRoute;
         navigate('rescue-comparison', { returnRoute });
         return;
       }
@@ -2378,6 +2429,31 @@
     return null;
   }
 
+  function syncSidebarNavigation(document, route) {
+    for (const link of document.querySelectorAll('aside nav a[data-path]')) {
+      // The exported screens use different selected colors, weights and shadows.
+      // Remove their whole active preset before applying the shared shell style.
+      const exportedActiveClasses = link.closest('nav')?.dataset.activeClasses || '';
+      for (const className of exportedActiveClasses.split(/\s+/).filter(Boolean)) {
+        link.classList.remove(className);
+      }
+      link.classList.remove('hover:bg-surface-container-high');
+      link.classList.add('text-sm', 'rounded-lg');
+      const selected = routeForLink(link) === route;
+      if (selected) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+
+      // Exported screens can contain missing or stale active classes. Route
+      // state owns selection, using the same palette as the existing sidebar.
+      for (const className of ['bg-primary-container', 'text-on-primary', 'font-medium']) {
+        link.classList.toggle(className, selected);
+      }
+      for (const className of ['text-on-surface-variant', 'hover:bg-surface-container', 'hover:text-on-surface']) {
+        link.classList.toggle(className, !selected);
+      }
+    }
+  }
+
   function routeForButton(button) {
     const label = `${button.innerText || ''} ${button.title || ''} ${button.getAttribute('aria-label') || ''}`.toLowerCase();
     if (button.id === 'login-back-action') return '__login_back__';
@@ -2458,7 +2534,7 @@
     return null;
   }
 
-  frame.addEventListener('load', () => {
+  function prepareFrame(frame, pageRoute) {
     let childDocument;
     try {
       childDocument = frame.contentDocument;
@@ -2467,16 +2543,10 @@
       return;
     }
 
-    if (activeRoute === 'rescue-comparison' && !hydrateRescueComparisonView(childDocument)) {
-      return;
-    }
+    injectPolishStyles(childDocument, pageRoute);
+    syncSidebarNavigation(childDocument, pageRoute);
 
-    requestAnimationFrame(() => frame.classList.remove('route-switching'));
-
-    injectPolishStyles(childDocument);
-    applyThemeMode(settingsDraft?.themeMode ?? activeThemeMode);
-
-    if (parentRoutes[activeRoute]) {
+    if (parentRoutes[pageRoute] && !pageHost.primary.has(pageRoute)) {
       const hasNativeExit = childDocument.querySelector(
         '[data-router-return], [aria-label*="返回"], [aria-label*="关闭"], [aria-label*="Back"], [aria-label*="Close"]',
       );
@@ -2508,15 +2578,15 @@
     }
 
     enhanceAccessibility(childDocument);
-    hydrateProfileView(childDocument, activeRoute);
-    prepareRouteControls(childDocument, activeRoute);
+    hydrateProfileView(childDocument, pageRoute);
+    prepareRouteControls(childDocument, pageRoute);
 
     childDocument.addEventListener('click', (event) => {
       const exitSurface =
         event.target.closest('[data-router-return], #settings-backdrop, #drawer-backdrop') ||
         (event.target === childDocument.body.firstElementChild &&
           event.target.matches('div.fixed.inset-0.-z-10'));
-      if (exitSurface && parentRoutes[activeRoute]) {
+      if (exitSurface && parentRoutes[pageRoute]) {
         event.preventDefault();
         returnFromSecondary();
         return;
@@ -2605,7 +2675,7 @@
       }
       if (route) {
         event.preventDefault();
-        if (route === 'urgent-task' && activeRoute !== 'rescue-comparison') {
+        if (route === 'urgent-task' && pageRoute !== 'rescue-comparison') {
           rescueState = null;
         }
         navigate(route);
@@ -2622,14 +2692,22 @@
       showNotice(childDocument, '紧凑布局已保存在此浏览器，不会同步到账户。');
     });
 
-    hydrateBackend(childDocument, activeRoute);
-    hydrateStoredTheme(childDocument);
-  });
+  }
 
+  window.addEventListener('storage', event => {
+    if (!['access_token', 'token', 'ruanchuang_user', null].includes(event.key)) return;
+    if (settingsOverlayHost) {
+      closeSettingsOverlay({ fromHistory: true });
+      history.replaceState(null, '', `#/${settingsReturnRoute}`);
+    }
+    settingsTokenHydrated = '';
+    rescueState = null;
+    renderRoute(routeFromHash());
+  });
   window.addEventListener('hashchange', syncRouteFromHistory);
   window.addEventListener('popstate', syncRouteFromHistory);
   mobileQuery.addEventListener('change', () => {
-    renderRoute(activeRoute);
+    renderRoute(routeFromHash() === 'settings-drawer' ? activeRoute : routeFromHash());
     resizeSettingsOverlay();
   });
   window.addEventListener('resize', () => {

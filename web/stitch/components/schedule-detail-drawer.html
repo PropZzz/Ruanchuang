@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+  <meta content="mobile_blank" name="shell-type"/>
+  <link href="../assets/fonts/9aec7130879b.css" rel="stylesheet"/>
+  <link href="../assets/fonts/de9b7b5eb580.css" rel="stylesheet"/>
+  <link href="../assets/fonts/dd526d0c2702.css" rel="stylesheet"/>
+  <script src="../assets/vendor/6f06d28f9027.js"></script>
+  <script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"outline":"#717978","error-container":"#ffdad6","on-primary-container":"#81a8a7","secondary-fixed":"#d6e3ff","surface-variant":"#e3e2e7","on-secondary":"#ffffff","tertiary-fixed-dim":"#53e16f","on-error":"#ffffff","surface-bright":"#faf8fe","primary-fixed-dim":"#a7cecd","on-tertiary-fixed":"#002107","inverse-on-surface":"#f1f0f6","surface":"#faf8fe","on-surface-variant":"#414848","primary-container":"#163d3d","inverse-surface":"#2f3034","on-tertiary-fixed-variant":"#00531c","secondary":"#005db5","on-secondary-fixed-variant":"#00468b","primary-fixed":"#c2eae9","surface-container-highest":"#e3e2e7","outline-variant":"#c0c8c7","surface-container-low":"#f4f3f8","on-surface":"#1a1b1f","surface-tint":"#3f6564","on-secondary-container":"#00376f","tertiary-container":"#004114","surface-dim":"#dbd9df","on-error-container":"#93000a","secondary-fixed-dim":"#a8c8ff","surface-container-high":"#e9e7ed","error":"#ba1a1a","on-secondary-fixed":"#001b3d","tertiary":"#00290a","surface-container":"#efedf3","primary":"#002727","secondary-container":"#62a1fe","tertiary-fixed":"#72fe88","background":"#faf8fe","on-tertiary-container":"#1db84d","inverse-primary":"#a7cecd","on-background":"#1a1b1f","on-tertiary":"#ffffff","surface-container-lowest":"#ffffff","on-primary":"#ffffff","on-primary-fixed-variant":"#274d4d","on-primary-fixed":"#002020"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{},"fontFamily":{"headline":["Noto Serif"],"display":["Noto Serif"],"body":["Inter"],"label":["Inter"]},"fontSize":{}}}}
+  </script>
+  <style>
+    @layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}
+    ::-webkit-scrollbar{display:none;}
+    body { min-height: max(884px, 100dvh); }
+  </style>
+</head>
+<body class="bg-[rgba(24,50,56,0.45)] backdrop-blur-md font-body text-on-surface min-h-screen flex flex-col justify-end">
+
+  <button aria-label="关闭抽屉" class="fixed inset-0 z-0 cursor-default" type="button" id="drawerBackdrop"></button>
+
+  <section class="w-full max-w-[420px] mx-auto bg-surface rounded-t-3xl shadow-[0_-8px_32px_rgba(22,61,61,0.18)] flex flex-col max-h-[85vh] overflow-hidden">
+
+    <!-- 拖动把手 -->
+    <div class="w-full pt-3 pb-1 flex justify-center items-center cursor-grab active:cursor-grabbing">
+      <div class="w-12 h-1.5 rounded-full bg-outline-variant/60"></div>
+    </div>
+
+    <!-- 标题栏 -->
+    <div class="h-14 px-5 flex items-center justify-between shrink-0 border-b border-outline-variant/20">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-on-tertiary-container" id="statusIndicator"></span>
+        <h2 class="text-base font-headline font-bold text-on-surface tracking-tight leading-none" id="drawerTitle">日程详情</h2>
+      </div>
+      <button aria-label="关闭抽屉" class="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container active:scale-95 transition-all" id="closeBtn">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+    </div>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 overflow-y-auto px-5 pt-4 pb-safe bg-surface" id="drawerContent">
+
+      <!-- 加载状态 -->
+      <div class="flex flex-col items-center justify-center py-16 gap-4" id="loadingState">
+        <div class="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <span class="text-sm text-on-surface-variant">加载中...</span>
+      </div>
+
+      <!-- 详情查看模式 -->
+      <div class="flex flex-col gap-5 pb-8" id="viewMode" hidden>
+
+        <!-- 标题与标签 -->
+        <div class="flex flex-col gap-3">
+          <h3 class="text-xl font-headline font-bold text-primary leading-tight" id="detailTitle"></h3>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="px-3 py-1 rounded-full text-xs font-medium bg-secondary-container text-on-secondary-container" id="detailTag"></span>
+            <span class="px-3 py-1 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant" id="detailLoad"></span>
+          </div>
+        </div>
+
+        <!-- 时间信息卡片 -->
+        <div class="bg-surface-container-low rounded-xl p-4 flex flex-col gap-3">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-[20px]">calendar_today</span>
+            <span class="text-sm font-semibold text-on-surface" id="detailDate"></span>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="bg-surface-container-lowest rounded-xl p-3 flex flex-col gap-1">
+              <span class="text-[11px] font-medium text-outline">开始时刻</span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-xl font-headline font-bold text-on-surface tracking-tight tabular-nums" id="detailStartTime"></span>
+              </div>
+            </div>
+            <div class="bg-surface-container-lowest rounded-xl p-3 flex flex-col gap-1">
+              <span class="text-[11px] font-medium text-outline">预估时长</span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-xl font-headline font-bold text-on-surface tracking-tight tabular-nums" id="detailDuration"></span>
+                <span class="text-[11px] font-medium text-on-surface-variant">分钟</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 提醒与重复 -->
+        <div class="bg-surface-container-low rounded-xl p-4 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-outline">notifications_active</span>
+              <span class="text-sm font-semibold text-on-surface">提前提醒</span>
+            </div>
+            <span class="text-sm font-medium text-on-surface-variant" id="detailReminder"></span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-outline">autorenew</span>
+              <span class="text-sm font-semibold text-on-surface">重复周期</span>
+            </div>
+            <span class="text-sm font-medium text-on-surface-variant" id="detailRepeat"></span>
+          </div>
+        </div>
+
+        <!-- 关联目标 -->
+        <div class="bg-primary-fixed/30 rounded-xl p-4 gap-3" id="goalLinkCard" hidden>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-primary">flag</span>
+            <span class="text-xs font-semibold text-on-surface">关联战略目标</span>
+          </div>
+          <p class="text-sm text-on-surface-variant mt-2" id="goalLinkText"></p>
+        </div>
+
+        <!-- 操作按钮组 -->
+        <div class="flex flex-col gap-2 pt-2">
+          <button class="w-full h-12 bg-secondary text-on-secondary font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-transform" id="editBtn">
+            <span class="material-symbols-outlined text-[18px]">edit</span>
+            <span>编辑日程</span>
+          </button>
+          <button class="w-full h-10 text-error text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 hover:bg-error-container transition-colors" id="deleteBtn">
+            <span class="material-symbols-outlined text-[16px]">delete</span>
+            <span>删除日程</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- 编辑模式 -->
+      <div class="flex flex-col gap-4 pb-8" id="editMode" hidden>
+
+        <!-- 日程主题 -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-medium text-on-surface-variant tracking-wider flex items-center justify-between" for="titleInput">
+            <span>日程主题</span>
+            <span class="text-[11px] text-outline font-normal">必填项</span>
+          </label>
+          <div class="bg-surface-container-low rounded-xl p-3.5 flex flex-col gap-1">
+            <textarea autocomplete="off" class="w-full bg-transparent text-sm font-semibold text-on-surface placeholder:text-outline focus:outline-none resize-none leading-relaxed" id="titleInput" name="title" placeholder="输入日程名称…" rows="2"></textarea>
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-[11px] text-error hidden" id="titleError">标题不能为空</span>
+              <span class="text-[11px] font-mono text-outline ml-auto" id="titleCounter">0/60</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 日期选择 -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-medium text-on-surface-variant tracking-wider" for="dateInput">日期</label>
+          <input type="date" id="dateInput" class="w-full bg-surface-container-low rounded-xl p-3 text-sm font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"/>
+        </div>
+
+        <!-- 时间与时长 -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-medium text-on-surface-variant tracking-wider" for="timeInput">开始时间</label>
+            <input type="time" id="timeInput" class="w-full bg-surface-container-low rounded-xl p-3 text-sm font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"/>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-medium text-on-surface-variant tracking-wider" for="durationInput">时长(分钟)</label>
+            <input type="number" id="durationInput" min="5" max="480" step="5" class="w-full bg-surface-container-low rounded-xl p-3 text-sm font-semibold text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary" placeholder="60"/>
+          </div>
+        </div>
+
+        <!-- 标签选择 -->
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-medium text-on-surface-variant tracking-wider">日程属性标签</label>
+          <div class="flex flex-wrap gap-2" id="tagGroup">
+            <button class="tag-btn px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all" data-tag="方案评审" type="button">方案评审</button>
+            <button class="tag-btn px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all" data-tag="跨部门协同" type="button">跨部门协同</button>
+            <button class="tag-btn px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all" data-tag="架构编码" type="button">架构编码</button>
+            <button class="tag-btn px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all" data-tag="随笔调研" type="button">随笔调研</button>
+            <button class="tag-btn px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all" data-tag="会议" type="button">会议</button>
+          </div>
+        </div>
+
+        <!-- 认知负荷 -->
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-medium text-on-surface-variant tracking-wider">认知负荷</label>
+          <div class="flex flex-wrap gap-2" id="loadGroup">
+            <button class="load-btn px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all" data-load="low" type="button">低</button>
+            <button class="load-btn px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all" data-load="medium" type="button">中等</button>
+            <button class="load-btn px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all" data-load="high" type="button">高</button>
+          </div>
+        </div>
+
+        <!-- 提醒设置 -->
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-medium text-on-surface-variant tracking-wider">提前提醒</label>
+          <div class="grid grid-cols-4 gap-2" id="reminderGroup">
+            <button class="reminder-btn py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" data-minutes="0" type="button">不提醒</button>
+            <button class="reminder-btn py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" data-minutes="10" type="button">10分钟</button>
+            <button class="reminder-btn py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" data-minutes="30" type="button">30分钟</button>
+            <button class="reminder-btn py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" data-minutes="60" type="button">1小时</button>
+          </div>
+        </div>
+
+        <!-- 重复规则 -->
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-medium text-on-surface-variant tracking-wider">重复周期</label>
+          <div class="grid grid-cols-4 gap-2" id="repeatGroup">
+            <button class="repeat-btn py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" data-repeat="none" type="button">不重复</button>
+            <button class="repeat-btn py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" data-repeat="daily" type="button">每天</button>
+            <button class="repeat-btn py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" data-repeat="weekly" type="button">每周</button>
+            <button class="repeat-btn py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" data-repeat="monthly" type="button">每月</button>
+          </div>
+        </div>
+
+        <!-- 保存按钮 -->
+        <div class="flex flex-col gap-2 pt-2">
+          <button class="w-full h-12 bg-primary text-on-primary font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed" id="saveBtn" type="button">
+            <span class="material-symbols-outlined text-[18px]" id="saveBtnIcon">event_available</span>
+            <span id="saveBtnText">保存并写入日程</span>
+          </button>
+          <button class="w-full h-10 text-on-surface-variant text-xs font-semibold rounded-xl flex items-center justify-center hover:bg-surface-container transition-colors" id="cancelBtn" type="button">取消</button>
+        </div>
+
+      </div>
+
+      <!-- 错误状态 -->
+      <div class="flex flex-col items-center justify-center py-16 gap-4 text-center" id="errorState" hidden>
+        <span class="material-symbols-outlined text-[48px] text-error">error</span>
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-semibold text-on-surface">加载失败</span>
+          <span class="text-xs text-on-surface-variant" id="errorMessage"></span>
+        </div>
+        <button class="px-4 py-2 rounded-lg bg-secondary text-on-secondary text-xs font-semibold" id="retryBtn">重试</button>
+      </div>
+
+    </main>
+
+  </section>
+
+  <script>
+    (() => {
+      // 状态管理
+      let currentMode = 'loading'; // 'loading' | 'view' | 'edit'
+      let currentEntry = null;
+      let isNewEntry = false;
+      let selectedTag = '跨部门协同';
+      let selectedLoad = 'medium';
+      let selectedReminder = 30;
+      let selectedRepeat = 'none';
+
+      // API基础URL
+      const apiBase = (window.__RUANCHUANG_API__ ||
+        (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
+          ? 'http://127.0.0.1:8000'
+          : '/api')).replace(/\/$/, '');
+
+      function authHeaders() {
+        const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      }
+
+      // 模式切换
+      function switchMode(mode) {
+        currentMode = mode;
+        document.getElementById('loadingState').hidden = mode !== 'loading';
+        document.getElementById('viewMode').hidden = mode !== 'view';
+        document.getElementById('editMode').hidden = mode !== 'edit';
+        document.getElementById('errorState').hidden = mode !== 'error';
+
+        if (mode === 'view') {
+          document.getElementById('drawerTitle').textContent = '日程详情';
+        } else if (mode === 'edit') {
+          document.getElementById('drawerTitle').textContent = isNewEntry ? '新建日程' : '编辑日程';
+        }
+      }
+
+      // 格式化时间
+      function formatTime(hour, minute) {
+        return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+      }
+
+      function formatReminder(minutes) {
+        if (minutes === 0) return '不提醒';
+        if (minutes < 60) return `提前${minutes}分钟`;
+        return `提前${Math.floor(minutes / 60)}小时`;
+      }
+
+      function formatRepeat(repeat) {
+        const map = { none: '不重复', daily: '每天', weekly: '每周', monthly: '每月' };
+        return map[repeat] || '不重复';
+      }
+
+      // 渲染详情模式
+      function renderView(entry) {
+        document.getElementById('detailTitle').textContent = entry.title || '未命名日程';
+        document.getElementById('detailTag').textContent = entry.tag || '未分类';
+        document.getElementById('detailLoad').textContent = entry.load === 'high' ? '高负荷' : entry.load === 'low' ? '低负荷' : '中等负荷';
+        document.getElementById('detailDate').textContent = entry.day || '';
+        document.getElementById('detailStartTime').textContent = formatTime(entry.time?.hour || 0, entry.time?.minute || 0);
+        document.getElementById('detailDuration').textContent = Math.round((entry.height || 60) / 80 * 60);
+        document.getElementById('detailReminder').textContent = formatReminder(entry.reminderMinutesBefore || 0);
+        document.getElementById('detailRepeat').textContent = formatRepeat(entry.repeat || 'none');
+
+        const goalCard = document.getElementById('goalLinkCard');
+        if (entry.goalId) {
+          goalCard.hidden = false;
+          document.getElementById('goalLinkText').textContent = `已关联目标 ID: ${entry.goalId}`;
+        } else {
+          goalCard.hidden = true;
+        }
+
+        switchMode('view');
+      }
+
+      // 渲染编辑模式
+      function renderEdit(entry) {
+        isNewEntry = !entry || !entry.id;
+
+        document.getElementById('titleInput').value = entry?.title || '';
+        document.getElementById('dateInput').value = entry?.day || new Date().toISOString().split('T')[0];
+        document.getElementById('timeInput').value = formatTime(entry?.time?.hour || 9, entry?.time?.minute || 0);
+        document.getElementById('durationInput').value = entry ? Math.round((entry.height || 60) / 80 * 60) : 60;
+
+        selectedTag = entry?.tag || '跨部门协同';
+        selectedLoad = entry?.load || 'medium';
+        selectedReminder = entry?.reminderMinutesBefore ?? 30;
+        selectedRepeat = entry?.repeat || 'none';
+
+        updateTagSelection();
+        updateLoadSelection();
+        updateReminderSelection();
+        updateRepeatSelection();
+        updateTitleCounter();
+
+        switchMode('edit');
+      }
+
+      // 按钮组选择更新
+      function updateTagSelection() {
+        document.querySelectorAll('.tag-btn').forEach(btn => {
+          const isSelected = btn.dataset.tag === selectedTag;
+          btn.classList.toggle('bg-secondary-container', isSelected);
+          btn.classList.toggle('text-on-secondary-container', isSelected);
+          btn.classList.toggle('font-semibold', isSelected);
+          btn.classList.toggle('bg-surface-container', !isSelected);
+          btn.classList.toggle('text-on-surface-variant', !isSelected);
+        });
+      }
+
+      function updateLoadSelection() {
+        document.querySelectorAll('.load-btn').forEach(btn => {
+          const isSelected = btn.dataset.load === selectedLoad;
+          btn.classList.toggle('bg-primary', isSelected);
+          btn.classList.toggle('text-on-primary', isSelected);
+          btn.classList.toggle('font-semibold', isSelected);
+          btn.classList.toggle('bg-surface-container', !isSelected);
+          btn.classList.toggle('text-on-surface-variant', !isSelected);
+        });
+      }
+
+      function updateReminderSelection() {
+        document.querySelectorAll('.reminder-btn').forEach(btn => {
+          const isSelected = Number(btn.dataset.minutes) === selectedReminder;
+          btn.classList.toggle('bg-primary', isSelected);
+          btn.classList.toggle('text-on-primary', isSelected);
+          btn.classList.toggle('font-semibold', isSelected);
+          btn.classList.toggle('bg-surface-container', !isSelected);
+          btn.classList.toggle('text-on-surface-variant', !isSelected);
+        });
+      }
+
+      function updateRepeatSelection() {
+        document.querySelectorAll('.repeat-btn').forEach(btn => {
+          const isSelected = btn.dataset.repeat === selectedRepeat;
+          btn.classList.toggle('bg-primary', isSelected);
+          btn.classList.toggle('text-on-primary', isSelected);
+          btn.classList.toggle('font-semibold', isSelected);
+          btn.classList.toggle('bg-surface-container', !isSelected);
+          btn.classList.toggle('text-on-surface-variant', !isSelected);
+        });
+      }
+
+      function updateTitleCounter() {
+        const title = document.getElementById('titleInput').value;
+        document.getElementById('titleCounter').textContent = `${title.length}/60`;
+      }
+
+      // 事件监听
+      document.getElementById('titleInput').addEventListener('input', updateTitleCounter);
+
+      document.querySelectorAll('.tag-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedTag = btn.dataset.tag;
+          updateTagSelection();
+        });
+      });
+
+      document.querySelectorAll('.load-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedLoad = btn.dataset.load;
+          updateLoadSelection();
+        });
+      });
+
+      document.querySelectorAll('.reminder-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedReminder = Number(btn.dataset.minutes);
+          updateReminderSelection();
+        });
+      });
+
+      document.querySelectorAll('.repeat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectedRepeat = btn.dataset.repeat;
+          updateRepeatSelection();
+        });
+      });
+
+      // 关闭抽屉
+      function closeDrawer() {
+        window.dispatchEvent(new CustomEvent('stitch:close-drawer', { detail: { saved: false } }));
+      }
+
+      document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
+      document.getElementById('closeBtn').addEventListener('click', closeDrawer);
+      document.getElementById('cancelBtn').addEventListener('click', closeDrawer);
+
+      // 切换到编辑模式
+      document.getElementById('editBtn').addEventListener('click', () => {
+        renderEdit(currentEntry);
+      });
+
+      // 删除日程
+      document.getElementById('deleteBtn').addEventListener('click', async () => {
+        if (!currentEntry?.id) return;
+
+        if (!confirm(`确认删除日程"${currentEntry.title}"?\n\n此操作不可撤销。`)) return;
+
+        try {
+          const response = await fetch(`${apiBase}/schedule/${currentEntry.id}`, {
+            method: 'DELETE',
+            headers: { ...authHeaders() },
+          });
+
+          if (!response.ok) throw new Error('删除失败');
+
+          window.dispatchEvent(new CustomEvent('stitch:schedule-deleted', { detail: { id: currentEntry.id } }));
+          window.dispatchEvent(new CustomEvent('stitch:close-drawer', { detail: { saved: true } }));
+        } catch (error) {
+          alert('删除失败: ' + error.message);
+        }
+      });
+
+      // 保存日程
+      document.getElementById('saveBtn').addEventListener('click', async () => {
+        const title = document.getElementById('titleInput').value.trim();
+        if (!title) {
+          document.getElementById('titleError').classList.remove('hidden');
+          return;
+        }
+        document.getElementById('titleError').classList.add('hidden');
+
+        const day = document.getElementById('dateInput').value;
+        const [hour, minute] = document.getElementById('timeInput').value.split(':').map(Number);
+        const duration = Number(document.getElementById('durationInput').value);
+
+        const payload = {
+          title,
+          tag: selectedTag,
+          load: selectedLoad,
+          day,
+          time: { hour, minute },
+          height: duration * 80 / 60,
+          reminderMinutesBefore: selectedReminder,
+          repeat: selectedRepeat,
+        };
+
+        if (!isNewEntry && currentEntry?.id) {
+          payload.id = currentEntry.id;
+        }
+
+        const saveBtn = document.getElementById('saveBtn');
+        saveBtn.disabled = true;
+        document.getElementById('saveBtnText').textContent = '保存中...';
+        document.getElementById('saveBtnIcon').textContent = 'schedule';
+
+        try {
+          const url = isNewEntry ? `${apiBase}/schedule` : `${apiBase}/schedule/${currentEntry.id}`;
+          const method = isNewEntry ? 'POST' : 'PUT';
+
+          const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || '保存失败');
+          }
+
+          const savedEntry = await response.json();
+
+          window.dispatchEvent(new CustomEvent('stitch:schedule-saved', { detail: savedEntry }));
+          window.dispatchEvent(new CustomEvent('stitch:close-drawer', { detail: { saved: true } }));
+        } catch (error) {
+          alert('保存失败: ' + error.message);
+          saveBtn.disabled = false;
+          document.getElementById('saveBtnText').textContent = '保存并写入日程';
+          document.getElementById('saveBtnIcon').textContent = 'event_available';
+        }
+      });
+
+      // 监听外部打开事件
+      window.addEventListener('stitch:open-schedule-detail', (event) => {
+        const { entry, mode } = event.detail;
+        currentEntry = entry;
+
+        if (mode === 'edit' || !entry?.id) {
+          renderEdit(entry);
+        } else {
+          renderView(entry);
+        }
+      });
+
+      // 错误状态重试
+      document.getElementById('retryBtn').addEventListener('click', () => {
+        if (currentEntry?.id) {
+          // 重新加载详情
+          switchMode('loading');
+          setTimeout(() => renderView(currentEntry), 500);
+        }
+      });
+
+      // 初始模式
+      switchMode('loading');
+    })();
+  </script>
+
+</body>
+</html>

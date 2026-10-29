@@ -9,40 +9,55 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="manifest" href="manifest.json">
   <style>
-    html, body, #prototype-screen {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      border: 0;
-      overflow: hidden;
-      background: #faf8fe;
-    }
-
-    body {
-      overscroll-behavior: none;
-    }
-
-    #prototype-screen {
-      display: block;
-      opacity: 1;
-      transform: translateY(0);
-      transition-property: opacity, transform;
-      transition-duration: 220ms;
-      transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
-    }
-
-    #prototype-screen.route-switching {
-      opacity: 0;
-      transform: translateY(6px);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      #prototype-screen {
-        transition: none;
-      }
-    }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #faf8fe; }
+    body { overscroll-behavior: none; font-family: Inter, system-ui, sans-serif; color: #1a1b1f; }
+    [hidden] { display: none !important; }
+    .workspace-page { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #faf8fe; }
+    .workspace-page[hidden] { display: block !important; visibility: hidden; pointer-events: none; }
+    .workspace-page:not([hidden]) { z-index: 1; }
+    .workspace-page[hidden][data-transition-layer] { visibility: visible; }
+    #workspace-shell { position: relative; z-index: 100; }
+    #workspace-shell * { box-sizing: border-box; }
+    #workspace-shell aside { position: fixed; inset: 0 auto 0 0; width: 260px; background: #f4f3f8; display: flex; flex-direction: column; box-shadow: 0 1px 8px #0000000a; }
+    .shell-brand { display: flex; gap: 12px; align-items: center; padding: 20px 20px 16px; }
+    .shell-brand img { width: auto; height: 32px; }
+    .shell-brand strong { display: block; font-size: 16px; color: #163d3d; }
+    .shell-brand small { font-size: 11px; color: #414848; }
+    #workspace-shell nav { flex: 1; padding: 8px 12px; overflow: auto; }
+    #workspace-shell section { margin-bottom: 20px; }
+    #workspace-shell section > small { display: block; padding: 0 10px 4px; font-size: 11px; color: #717978; font-weight: 600; }
+    #workspace-shell a { display: flex; align-items: center; gap: 12px; padding: 8px 10px; margin: 2px 0; border-radius: 8px; font-size: 14px; font-weight: 500; line-height: 20px; text-decoration: none; color: #414848; transition: background-color 100ms, color 100ms; }
+    #workspace-shell a:hover, #workspace-shell button:hover { background: #efedf3; }
+    #workspace-shell a[aria-current=page] { background: #163d3d; color: white; }
+    #workspace-shell .material-symbols-outlined { font-size: 19px; }
+    #workspace-shell button { display: inline-flex; gap: 7px; align-items: center; border: 0; border-radius: 8px; padding: 8px 12px; font: 500 12px/18px Inter, system-ui, sans-serif; background: #e9e7ed; color: inherit; cursor: pointer; }
+    #workspace-shell a:focus-visible, #workspace-shell button:focus-visible { outline: 2px solid #005db5; outline-offset: 2px; }
+    #workspace-shell header { position: fixed; top: 0; left: 260px; right: 0; height: 64px; padding: 0 28px; display: flex; gap: 16px; align-items: center; background: #faf8fe; box-shadow: 0 1px 8px #0000000a; }
+    .shell-breadcrumb { font-size: 12px; white-space: nowrap; }
+    .shell-breadcrumb span { color: #717978; margin: 0 8px; }
+    .shell-breadcrumb strong { font-weight: 500; }
+    #shell-sync { font-size: 11px; color: #414848; background: #e9e7ed; padding: 5px 10px; border-radius: 20px; white-space: nowrap; }
+    .shell-actions { display: flex; gap: 8px; margin-left: auto; }
+    #workspace-shell .shell-add { color: white; background: #005db5; }
+    .shell-footer { padding: 12px; display: grid; gap: 8px; }
+    #workspace-shell .shell-footer button { width: 100%; justify-content: flex-start; background: #faf8fe; }
+    .shell-footer small { margin-left: auto; color: #717978; }
+    #page-load-status { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 9999; padding: 10px 18px; border-radius: 10px; background: #163d3d; color: white; font-size: 13px; box-shadow: 0 4px 18px #0002; }
+    #page-load-status button { margin-left: 12px; cursor: pointer; }
+    .dark #workspace-shell aside { background: #152426; }
+    .dark #workspace-shell header, .dark #workspace-shell .shell-footer button { background: #101b1d; }
+    .dark #workspace-shell { color: #e4eeee; }
+    .dark #workspace-shell a, .dark .shell-brand strong, .dark .shell-brand small { color: #c4d5d5; }
+    .dark #workspace-shell button, .dark #shell-sync { background: #263a3c; color: #e4eeee; }
+    .dark #workspace-shell a:hover { background: #263a3c; }
+    .dark #workspace-shell a[aria-current=page] { background: #163d3d; color: white; }
+    @media (max-width: 1100px) { #shell-sync { display: none; } #workspace-shell header { padding: 0 16px; } }
+    @media (prefers-reduced-motion: reduce) { #workspace-shell a { transition: none; } }
 
   </style>
+  <link rel="stylesheet" href="stitch/assets/fonts/9aec7130879b.css">
+  <link rel="stylesheet" href="stitch/assets/fonts/de9b7b5eb580.css">
+  <script src="stitch/page-host.js" defer></script>
   <script src="stitch/router.js" defer></script>
 </head>
 <body>

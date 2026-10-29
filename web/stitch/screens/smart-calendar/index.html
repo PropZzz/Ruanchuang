@@ -246,7 +246,7 @@
 <span class="bg-error text-on-error text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm -mr-2 tabular-nums">10:45 当前</span>
 </div>
 <!-- 09:00 - 10:30 已完成日常深度任务 -->
-<div class="absolute left-1 right-1 top-[60px] h-[90px] p-2 rounded-xl bg-primary-container text-on-primary-container shadow-sm flex flex-col justify-between group cursor-pointer transition-all hover:translate-y-[-1px]">
+<div data-schedule-id="schedule-001" class="absolute left-1 right-1 top-[60px] h-[90px] p-2 rounded-xl bg-primary-container text-on-primary-container shadow-sm flex flex-col justify-between group cursor-pointer transition-all hover:translate-y-[-1px]">
 <div>
 <div class="flex items-center justify-between">
 <span class="text-[10px] font-bold uppercase tracking-wider text-tertiary-fixed flex items-center gap-1">
@@ -263,7 +263,7 @@
 </div>
 </div>
 <!-- 10:45 - 11:45 临时紧急需求插入点 (🚨 冲突高亮态) -->
-<div class="absolute left-1 right-1 top-[165px] h-[60px] p-2 rounded-xl bg-error-container text-on-error-container shadow-md flex flex-col justify-between z-20 animate-pulse hover:animate-none cursor-pointer">
+<div data-schedule-id="schedule-002" class="absolute left-1 right-1 top-[165px] h-[60px] p-2 rounded-xl bg-error-container text-on-error-container shadow-md flex flex-col justify-between z-20 animate-pulse hover:animate-none cursor-pointer">
 <div>
 <div class="flex items-center justify-between">
 <span class="text-[10px] font-extrabold uppercase text-error flex items-center gap-1">
@@ -290,7 +290,7 @@
 <span class="tabular-nums whitespace-nowrap">15min 保护</span>
 </div>
 <!-- 13:30 - 15:00 前端组件系统与无障碍验收 -->
-<div class="absolute left-1 right-1 top-[330px] h-[90px] p-2.5 rounded-xl bg-surface-container-high text-on-surface shadow-sm flex flex-col justify-between hover:bg-surface-variant transition-colors cursor-pointer">
+<div data-schedule-id="schedule-003" class="absolute left-1 right-1 top-[330px] h-[90px] p-2.5 rounded-xl bg-surface-container-high text-on-surface shadow-sm flex flex-col justify-between hover:bg-surface-variant transition-colors cursor-pointer">
 <div>
 <div class="flex items-center justify-between text-[10px] text-outline">
 <span class="font-bold text-secondary flex items-center gap-1">
@@ -307,7 +307,7 @@
 </div>
 </div>
 <!-- 15:30 - 17:00 团队协同：黄金专注窗口 -->
-<div class="absolute left-1 right-1 top-[450px] h-[90px] p-2.5 rounded-xl bg-secondary-container/40 text-on-secondary-container shadow-sm flex flex-col justify-between hover:bg-secondary-container/60 transition-colors cursor-pointer">
+<div data-schedule-id="schedule-004" class="absolute left-1 right-1 top-[450px] h-[90px] p-2.5 rounded-xl bg-secondary-container/40 text-on-secondary-container shadow-sm flex flex-col justify-between hover:bg-secondary-container/60 transition-colors cursor-pointer">
 <div>
 <div class="flex items-center justify-between text-[10px]">
 <span class="font-bold text-secondary flex items-center gap-1">
@@ -328,7 +328,7 @@
 </div>
 </div>
 <!-- 17:30 - 18:30 时序智配 Web 端设计走查与复盘 -->
-<div class="absolute left-1 right-1 top-[570px] h-[60px] p-2 rounded-xl bg-surface-container text-on-surface flex flex-col justify-between shadow-xs hover:bg-surface-container-high transition-colors cursor-pointer">
+<div data-schedule-id="schedule-005" class="absolute left-1 right-1 top-[570px] h-[60px] p-2 rounded-xl bg-surface-container text-on-surface flex flex-col justify-between shadow-xs hover:bg-surface-container-high transition-colors cursor-pointer">
 <div>
 <div class="flex items-center justify-between text-[10px] text-outline">
 <span class="font-semibold text-primary">设计走查</span>
@@ -485,4 +485,15 @@
 </div>
 </div>
 </div>
-</div></main></div></body></html>
+</div></main></div>
+<script>
+// 日程卡片点击事件委托
+document.addEventListener('click', (e) => {
+  const card = e.target.closest('[data-schedule-id]');
+  if (card) {
+    const scheduleId = card.dataset.scheduleId;
+    window.location.hash = `#/schedule-detail?id=${scheduleId}`;
+  }
+});
+</script>
+</body></html>

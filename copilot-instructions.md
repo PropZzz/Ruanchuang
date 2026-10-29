@@ -1,136 +1,34 @@
-# BattleMan - AI Coding Assistant Guidelines
+# 时序智配开发指引
 
-## Project Overview
+目录和启动边界以 `docs/current-architecture.md` 为准；旧设计计划只提供历史背景。
 
-**BattleMan** (时序智配) is a Flutter productivity app that intelligently schedules tasks based on user energy levels and cognitive state. It bridges the gap between calendar management and energy awareness through Material 3 design.
+## 当前实现
 
-- **Platform**: Flutter (cross-platform: iOS, Android, web, Linux, macOS, Windows)
-- **Architecture**: Screen-based navigation with service abstraction layer
-- **Core Model**: Task scheduling aligned with energy/flow states
+- 线上 Web：`web/` 中的 HTML/JS，入口 `web/index.html`，路由 `web/stitch/router.js`，持久页面宿主 `web/stitch/page-host.js`。
+- 原生客户端：`lib/` 中的 Flutter/Dart，保留 Android、iOS、Windows、macOS、Linux 平台工程。
+- 后端：`backend.main:app`，唯一的 FastAPI + SQLite 服务，同时服务两个客户端。
+- `backend/services_scheduling.py` 是当前调度兼容入口；`backend/scheduling/` 是模块化实现，不是两套后端。
 
-## Architecture Patterns
+## 修改约束
 
-### Service Layer (Dependency Abstraction)
-- **Location**: [lib/services/](lib/services/)
-- **Pattern**: Interface-based (`DataService` abstract class) + Mock implementation (`MockDataService`)
-  - `DataService`: Defines all app data needs (abstract contract)
-  - `MockDataService`: Singleton in-memory implementation with simulated network delays
-- **Usage**: Screens call `MockDataService.instance` to fetch data
-- **Key**: Services return `Future<T>` to simulate async operations; always check `mounted` after awaits in StatefulWidgets to prevent setState on unmounted widgets
+- Web 桌面、移动和二级页面分别在 `web/stitch/screens/`、`web/stitch/mobile/`、`web/stitch/components/` 直接维护。
+- 保持统一导航选中态、持久页面状态、可打断的切换动画与减少动态效果支持。
+- `web/flutter_service_worker.js` 是旧缓存退役脚本，必须保留。
+- `stitch/assets/` 只保留 Flutter 声明的图片和字体；删除资源前检查 `pubspec.yaml` 和 Dart 引用。
+- 原生异步 UI 需检查 `mounted`；计时器与订阅须释放。沿用当前服务抽象，不把测试 mock 当作运行后端。
+- 保护 SQLite、`.appdata/`、原生平台文件与 `.worktrees/` 内的未提交工作。
+- 不从旧导出复制页面，不在 `build/` 中维护部署脚本，不把密码写入文件。
 
-### Data Models
-- **Location**: [lib/models/models.dart](lib/models/models.dart)
-- **Core models**: `ScheduleEntry`, `EnergyStatus`, `Task`, `MicroTask`, `TeamMember`, `UserProfile`
-- **Pattern**: Immutable `const` constructors for most models; `MicroTask` is mutable (local state tracking)
-- **Time representation**: Uses `TimeOfDay` for hours/minutes; height units represent duration (80.0 ≈ 60 minutes)
+## 常用命令
 
-### State Management
-- **Approach**: Plain `StatefulWidget` with `setState()` — no external state management libraries
-- **Critical pattern in MainScreen**: Uses `IndexedStack` to preserve page state (scroll position, form input) when switching tabs
-- **Page loading**: Each page independently calls its data service in `initState()` and checks `mounted` after async operations
-- **Important cleanup**: Always cancel timers/streams in `dispose()` to prevent memory leaks
-
-## Navigation & UI Structure
-
-### Tab Navigation
-- **File**: [lib/screens/main_screen.dart](lib/screens/main_screen.dart)
-- **5 tabs**: Focus → Calendar → MicroTasks → Team → Profile
-- **State preservation**: `IndexedStack` with `NavigationBar` (Material 3)
-- **Adding new tabs**: Update `_pages` list and `NavigationDestination` entries together
-
-### Key Pages & Responsibilities
-
-| Page | Purpose | Key Logic |
-|------|---------|-----------|
-| **FocusPage** | Current task + countdown + next tasks preview | Calculates current/upcoming based on `TimeOfDay` comparison |
-| **SmartCalendarPage** | Time-blocking calendar view (8 AM-8 PM) | `_calculateTopOffset()` converts time → pixel position |
-| **MicroTaskPage** | 5-15 min "crystal pool" fragment management | Local state; "快速添加" button triggers quick fill |
-| **TeamPage** | Collaborator energy/progress display | Streams team member updates |
-| **ProfilePage** | User settings & onboarding | (Minimal current implementation) |
-
-## Design System
-
-**Material 3 Theme** (Seed color based):
-- **Primary Green** (#00BFA5): Flow state / high efficiency
-- **Secondary Blue** (#2979FF): Collaboration / stable periods
-- **Tertiary Orange** (#FF9100): Fatigue / fragmentation alerts
-
-**Color coding in data**:
-- Tasks use semantic colors mapped in `ScheduleEntry.color`
-- Icons selected dynamically via [lib/utils/helpers.dart](lib/utils/helpers.dart) `iconForTag()` based on keyword matching
-
-## Development Workflows
-
-### Running the App
-```bash
-# Get dependencies
-flutter pub get
-
-# Run on device/emulator
-flutter run
-
-# Run with hot reload during development
-flutter run --verbose
+```powershell
+.\run_web_preview.bat
+node tools/check_web_sources.mjs
+node --test tools/tests/stitch_release.test.mjs
+node tools/build_stitch_web.mjs
+flutter analyze
+flutter test
+python -m pytest backend/tests -q
 ```
 
-### Mock Data Flow
-- `MockDataService` simulates network delays (50-120ms per call)
-- Data mutations in one screen (e.g., adding schedule entry) currently don't sync across tabs
-  - Future: integrate shared state management or service callbacks
-- To modify mock data: edit `_scheduleData` list or override methods in `MockDataService`
-
-### Common Patterns for New Features
-
-**Adding a new data type**:
-1. Define model in [lib/models/models.dart](lib/models/models.dart)
-2. Add abstract method to `DataService` interface
-3. Implement mock in `MockDataService` with delay simulation
-4. Use in page via `_dataService.getInstance()`
-
-**Adding a new page**:
-1. Create `NewPage extends StatefulWidget` in [lib/screens/](lib/screens/)
-2. Load data in `initState()`, check `mounted` after async
-3. Add to `_pages` list in `MainScreen`
-4. Add `NavigationDestination` entry
-
-## Critical Developer Notes
-
-### State Management Gotchas
-- **Timer cleanup**: Always cancel timers in `dispose()` (see FocusPage line 29)
-- **mounted check**: Essential after `await` in `initState()` / async callbacks to prevent "setState on unmounted widget" errors
-- **IndexedStack preservation**: Switching tabs does NOT rebuild pages, so state persists — useful for avoiding expensive rebuilds, but remember to reset data when needed
-
-### Time Calculations
-- Convert `TimeOfDay` to minutes: `hour * 60 + minute`
-- Duration from height: `(height / 80.0) * 60.0` minutes
-- Time offset in calendar: minute delta from start hour × (hourHeight / 60)
-
-### Async Data Loading Pattern
-```dart
-Future<void> _loadData() async {
-  setState(() { _isLoading = true; });
-  final data = await _dataService.getData();
-  if (!mounted) return;  // ← Critical safety check
-  setState(() {
-    _data = data;
-    _isLoading = false;
-  });
-}
-```
-
-## Testing & Debugging
-
-- **No test framework currently integrated** — consider adding `flutter_test` if expanding features
-- **Hot reload limitations**: Const values and global state won't reload; use hot restart instead
-- **Dart Analysis**: Run `flutter analyze` to check code quality
-
-## Dependency Summary
-
-- `flutter` (Material 3 design)
-- `flutter_lints` (code style)
-- **No external state management libraries** (Riverpod, Provider, GetX, etc.)
-- **No persistence layer** — all data in-memory mock only
-
----
-
-**Last Updated**: 2026-01-26 | **App Version**: 0.1.0
+部署使用 `python deploy/deploy_web_release.py`；浏览器回归使用 `tools/check_stitch_navigation.mjs` 与 `tools/check_stitch_release.mjs`。具体环境要求见 `deploy/README.md`。

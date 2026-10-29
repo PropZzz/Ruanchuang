@@ -1,6 +1,6 @@
 # Ruanchuang Backend
 
-独立 FastAPI + SQLite 后端，用于承接 Flutter 客户端的账号、日程、微任务和算法推荐接口。
+唯一的 FastAPI + SQLite 后端，同时承接当前 HTML/JS Web 与 Flutter 原生客户端的账号、日程、微任务和算法推荐接口。目录边界见 `docs/current-architecture.md`。
 
 ## 安装依赖
 

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>微任务详情</title>
+</head>
+<body>
+<div id="root" class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-primary/20 backdrop-blur-sm">
+  <!-- Drawer Container -->
+  <div class="w-full max-w-2xl bg-surface-container-lowest rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col max-h-[90vh] md:max-h-[85vh] animate-slide-up">
+
+    <!-- Header -->
+    <div class="px-6 py-4 bg-surface-container-low flex items-center justify-between border-b border-outline-variant">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-secondary-container flex items-center justify-center">
+          <span class="material-symbols-outlined text-[22px] text-on-secondary-container">task_alt</span>
+        </div>
+        <div>
+          <h2 id="drawerTitle" class="text-lg font-bold text-on-surface">微任务详情</h2>
+          <p class="text-xs text-on-surface-variant font-label">Microtask Detail</p>
+        </div>
+      </div>
+      <button onclick="closeDrawer()" class="w-10 h-10 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center text-on-surface-variant">
+        <span class="material-symbols-outlined text-[24px]">close</span>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div id="drawerContent" class="flex-1 overflow-y-auto p-6 space-y-6">
+      <!-- Loading State -->
+      <div id="loadingState" class="flex items-center justify-center py-12">
+        <div class="flex flex-col items-center gap-3">
+          <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p class="text-sm text-on-surface-variant">加载中...</p>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div id="errorState" class="hidden flex flex-col items-center gap-4 py-12">
+        <div class="w-16 h-16 rounded-full bg-error-container flex items-center justify-center">
+          <span class="material-symbols-outlined text-[32px] text-error">error</span>
+        </div>
+        <p id="errorMessage" class="text-sm text-error text-center"></p>
+        <button onclick="closeDrawer()" class="px-4 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container text-sm font-semibold transition-colors">
+          关闭
+        </button>
+      </div>
+
+      <!-- View Mode -->
+      <div id="viewMode" class="hidden space-y-6">
+        <!-- Title & Status -->
+        <div class="space-y-3">
+          <div class="flex items-start justify-between gap-4">
+            <h3 id="taskTitle" class="text-xl font-bold text-on-surface flex-1"></h3>
+            <span id="statusBadge" class="px-3 py-1 rounded-full text-xs font-bold"></span>
+          </div>
+          <p id="taskDescription" class="text-sm text-on-surface-variant leading-relaxed"></p>
+        </div>
+
+        <!-- Meta Info Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Duration -->
+          <div class="flex items-center gap-3 p-4 rounded-xl bg-surface-container-low">
+            <span class="material-symbols-outlined text-[24px] text-primary">schedule</span>
+            <div>
+              <p class="text-xs text-on-surface-variant font-label">预估时长</p>
+              <p id="taskDuration" class="text-sm font-bold text-on-surface tabular-nums"></p>
+            </div>
+          </div>
+
+          <!-- Cognitive Load -->
+          <div class="flex items-center gap-3 p-4 rounded-xl bg-surface-container-low">
+            <span class="material-symbols-outlined text-[24px] text-secondary">bolt</span>
+            <div>
+              <p class="text-xs text-on-surface-variant font-label">认知负荷</p>
+              <p id="taskLoad" class="text-sm font-bold text-on-surface"></p>
+            </div>
+          </div>
+
+          <!-- Priority -->
+          <div class="flex items-center gap-3 p-4 rounded-xl bg-surface-container-low">
+            <span class="material-symbols-outlined text-[24px] text-tertiary">flag</span>
+            <div>
+              <p class="text-xs text-on-surface-variant font-label">优先级</p>
+              <p id="taskPriority" class="text-sm font-bold text-on-surface"></p>
+            </div>
+          </div>
+
+          <!-- Source Goal -->
+          <div class="flex items-center gap-3 p-4 rounded-xl bg-surface-container-low">
+            <span class="material-symbols-outlined text-[24px] text-on-surface-variant">hub</span>
+            <div>
+              <p class="text-xs text-on-surface-variant font-label">来源目标</p>
+              <p id="taskGoal" class="text-sm font-bold text-on-surface"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tags -->
+        <div id="tagsContainer" class="hidden space-y-2">
+          <p class="text-xs font-semibold text-on-surface-variant">标签</p>
+          <div id="tagsList" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- Scheduled Time -->
+        <div id="scheduleContainer" class="hidden p-4 rounded-xl bg-tertiary-container">
+          <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-[24px] text-on-tertiary-container">event</span>
+            <div>
+              <p class="text-xs text-on-tertiary-container/80 font-label">已排期</p>
+              <p id="scheduledTime" class="text-sm font-bold text-on-tertiary-container"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-3 pt-4">
+          <button id="completeBtn" onclick="completeTask()" class="flex-1 px-4 py-3 rounded-xl bg-primary text-on-primary hover:bg-primary-container hover:text-on-primary-container font-semibold transition-colors flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-[20px]">check_circle</span>
+            <span>标记完成</span>
+          </button>
+          <button onclick="editTask()" class="px-4 py-3 rounded-xl bg-surface-container-high hover:bg-surface-container text-on-surface font-semibold transition-colors flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-[20px]">edit</span>
+            <span>编辑</span>
+          </button>
+          <button onclick="deleteTask()" class="px-4 py-3 rounded-xl bg-error-container text-on-error-container hover:bg-error hover:text-on-error font-semibold transition-colors">
+            <span class="material-symbols-outlined text-[20px]">delete</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Edit Mode -->
+      <div id="editMode" class="hidden space-y-5">
+        <form id="taskForm" class="space-y-5">
+          <!-- Title -->
+          <div class="space-y-2">
+            <label for="editTitle" class="text-sm font-semibold text-on-surface">任务标题 *</label>
+            <input
+              type="text"
+              id="editTitle"
+              required
+              class="w-full px-4 py-3 rounded-xl bg-surface-container-high border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface placeholder-on-surface-variant transition-colors"
+              placeholder="输入任务标题"
+            />
+          </div>
+
+          <!-- Description -->
+          <div class="space-y-2">
+            <label for="editDescription" class="text-sm font-semibold text-on-surface">任务描述</label>
+            <textarea
+              id="editDescription"
+              rows="3"
+              class="w-full px-4 py-3 rounded-xl bg-surface-container-high border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface placeholder-on-surface-variant transition-colors resize-none"
+              placeholder="详细描述任务内容和预期结果"
+            ></textarea>
+          </div>
+
+          <!-- Duration & Load -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <label for="editDuration" class="text-sm font-semibold text-on-surface">预估时长(分钟)</label>
+              <input
+                type="number"
+                id="editDuration"
+                min="5"
+                step="5"
+                class="w-full px-4 py-3 rounded-xl bg-surface-container-high border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface tabular-nums"
+                placeholder="45"
+              />
+            </div>
+
+            <div class="space-y-2">
+              <label for="editLoad" class="text-sm font-semibold text-on-surface">认知负荷</label>
+              <select
+                id="editLoad"
+                class="w-full px-4 py-3 rounded-xl bg-surface-container-high border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface"
+              >
+                <option value="low">低</option>
+                <option value="medium">中</option>
+                <option value="high">高</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Priority -->
+          <div class="space-y-2">
+            <label class="text-sm font-semibold text-on-surface">优先级</label>
+            <div class="flex gap-2">
+              <button type="button" data-priority="P0" onclick="selectPriority('P0')" class="flex-1 px-4 py-2.5 rounded-xl border-2 border-outline-variant hover:border-primary text-on-surface font-semibold transition-colors">P0</button>
+              <button type="button" data-priority="P1" onclick="selectPriority('P1')" class="flex-1 px-4 py-2.5 rounded-xl border-2 border-outline-variant hover:border-primary text-on-surface font-semibold transition-colors">P1</button>
+              <button type="button" data-priority="P2" onclick="selectPriority('P2')" class="flex-1 px-4 py-2.5 rounded-xl border-2 border-outline-variant hover:border-primary text-on-surface font-semibold transition-colors">P2</button>
+            </div>
+          </div>
+
+          <!-- Tags -->
+          <div class="space-y-2">
+            <label for="editTags" class="text-sm font-semibold text-on-surface">标签 (逗号分隔)</label>
+            <input
+              type="text"
+              id="editTags"
+              class="w-full px-4 py-3 rounded-xl bg-surface-container-high border border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 text-on-surface placeholder-on-surface-variant"
+              placeholder="前端, 重构, 紧急"
+            />
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-3 pt-4">
+            <button type="submit" class="flex-1 px-4 py-3 rounded-xl bg-primary text-on-primary hover:bg-primary-container hover:text-on-primary-container font-semibold transition-colors">
+              保存修改
+            </button>
+            <button type="button" onclick="cancelEdit()" class="px-4 py-3 rounded-xl bg-surface-container-high hover:bg-surface-container text-on-surface font-semibold transition-colors">
+              取消
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentTask = null;
+  let currentMode = 'loading'; // loading | view | edit | error
+  let selectedPriority = 'P1';
+
+  // Initialize
+  async function init() {
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get('id');
+    const entry = params.get('entry');
+
+    if (!taskId && !entry) {
+      // New task mode
+      switchMode('edit');
+      document.getElementById('drawerTitle').textContent = '新建微任务';
+      return;
+    }
+
+    // Load existing task
+    try {
+      const response = await fetch(`/microtasks/${taskId}`);
+      if (!response.ok) throw new Error('任务不存在或已被删除');
+
+      currentTask = await response.json();
+      renderViewMode();
+      switchMode('view');
+    } catch (error) {
+      showError(error.message || '加载失败');
+    }
+  }
+
+  function switchMode(mode) {
+    currentMode = mode;
+    document.getElementById('loadingState').classList.toggle('hidden', mode !== 'loading');
+    document.getElementById('errorState').classList.toggle('hidden', mode !== 'error');
+    document.getElementById('viewMode').classList.toggle('hidden', mode !== 'view');
+    document.getElementById('editMode').classList.toggle('hidden', mode !== 'edit');
+  }
+
+  function showError(message) {
+    document.getElementById('errorMessage').textContent = message;
+    switchMode('error');
+  }
+
+  function renderViewMode() {
+    if (!currentTask) return;
+
+    document.getElementById('taskTitle').textContent = currentTask.title;
+    document.getElementById('taskDescription').textContent = currentTask.description || '无描述';
+
+    // Status
+    const statusBadge = document.getElementById('statusBadge');
+    const statusMap = {
+      'pending': { text: '待开始', class: 'bg-surface-container-high text-on-surface-variant' },
+      'in_progress': { text: '进行中', class: 'bg-secondary-container text-on-secondary-container' },
+      'completed': { text: '已完成', class: 'bg-tertiary-container text-on-tertiary-container' }
+    };
+    const status = statusMap[currentTask.status] || statusMap['pending'];
+    statusBadge.textContent = status.text;
+    statusBadge.className = `px-3 py-1 rounded-full text-xs font-bold ${status.class}`;
+
+    document.getElementById('taskDuration').textContent = `${currentTask.duration || 45} 分钟`;
+
+    const loadMap = { low: '低', medium: '中', high: '高' };
+    document.getElementById('taskLoad').textContent = loadMap[currentTask.cognitive_load] || '中';
+
+    document.getElementById('taskPriority').textContent = currentTask.priority || 'P1';
+    document.getElementById('taskGoal').textContent = currentTask.goal_title || '暂无关联';
+
+    // Tags
+    if (currentTask.tags && currentTask.tags.length > 0) {
+      document.getElementById('tagsContainer').classList.remove('hidden');
+      const tagsList = document.getElementById('tagsList');
+      tagsList.innerHTML = currentTask.tags.map(tag =>
+        `<span class="px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface text-xs font-medium">${tag}</span>`
+      ).join('');
+    }
+
+    // Schedule
+    if (currentTask.scheduled_at) {
+      document.getElementById('scheduleContainer').classList.remove('hidden');
+      document.getElementById('scheduledTime').textContent = formatDateTime(currentTask.scheduled_at);
+    }
+
+    // Hide complete button if already completed
+    document.getElementById('completeBtn').classList.toggle('hidden', currentTask.status === 'completed');
+  }
+
+  function editTask() {
+    if (!currentTask) return;
+
+    document.getElementById('editTitle').value = currentTask.title;
+    document.getElementById('editDescription').value = currentTask.description || '';
+    document.getElementById('editDuration').value = currentTask.duration || 45;
+    document.getElementById('editLoad').value = currentTask.cognitive_load || 'medium';
+    document.getElementById('editTags').value = (currentTask.tags || []).join(', ');
+
+    selectedPriority = currentTask.priority || 'P1';
+    updatePriorityButtons();
+
+    document.getElementById('drawerTitle').textContent = '编辑微任务';
+    switchMode('edit');
+  }
+
+  function cancelEdit() {
+    if (currentTask) {
+      document.getElementById('drawerTitle').textContent = '微任务详情';
+      switchMode('view');
+    } else {
+      closeDrawer();
+    }
+  }
+
+  function selectPriority(priority) {
+    selectedPriority = priority;
+    updatePriorityButtons();
+  }
+
+  function updatePriorityButtons() {
+    document.querySelectorAll('[data-priority]').forEach(btn => {
+      if (btn.dataset.priority === selectedPriority) {
+        btn.classList.add('border-primary', 'bg-primary-container', 'text-on-primary-container');
+        btn.classList.remove('border-outline-variant');
+      } else {
+        btn.classList.remove('border-primary', 'bg-primary-container', 'text-on-primary-container');
+        btn.classList.add('border-outline-variant');
+      }
+    });
+  }
+
+  document.getElementById('taskForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const data = {
+      title: document.getElementById('editTitle').value.trim(),
+      description: document.getElementById('editDescription').value.trim(),
+      duration: parseInt(document.getElementById('editDuration').value) || 45,
+      cognitive_load: document.getElementById('editLoad').value,
+      priority: selectedPriority,
+      tags: document.getElementById('editTags').value.split(',').map(t => t.trim()).filter(Boolean)
+    };
+
+    if (!data.title) {
+      alert('请输入任务标题');
+      return;
+    }
+
+    try {
+      const url = currentTask ? `/microtasks/${currentTask.id}` : '/microtasks';
+      const method = currentTask ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) throw new Error('保存失败');
+
+      const saved = await response.json();
+      currentTask = saved;
+
+      // Notify parent
+      window.dispatchEvent(new CustomEvent('stitch:microtask-saved', { detail: saved }));
+
+      // Switch to view
+      renderViewMode();
+      document.getElementById('drawerTitle').textContent = '微任务详情';
+      switchMode('view');
+
+    } catch (error) {
+      alert(error.message || '保存失败，请重试');
+    }
+  });
+
+  async function completeTask() {
+    if (!currentTask) return;
+    if (!confirm(`确认完成「${currentTask.title}」？`)) return;
+
+    try {
+      const response = await fetch(`/microtasks/${currentTask.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'completed' })
+      });
+
+      if (!response.ok) throw new Error('操作失败');
+
+      currentTask.status = 'completed';
+      renderViewMode();
+
+      window.dispatchEvent(new CustomEvent('stitch:microtask-completed', { detail: currentTask }));
+
+      setTimeout(() => closeDrawer(), 1500);
+    } catch (error) {
+      alert(error.message || '操作失败');
+    }
+  }
+
+  async function deleteTask() {
+    if (!currentTask) return;
+    if (!confirm(`确认删除「${currentTask.title}」？此操作不可撤销。`)) return;
+
+    try {
+      const response = await fetch(`/microtasks/${currentTask.id}`, { method: 'DELETE' });
+      if (!response.ok) throw new Error('删除失败');
+
+      window.dispatchEvent(new CustomEvent('stitch:microtask-deleted', { detail: currentTask }));
+      closeDrawer();
+    } catch (error) {
+      alert(error.message || '删除失败');
+    }
+  }
+
+  function closeDrawer() {
+    window.history.back();
+  }
+
+  function formatDateTime(isoString) {
+    const d = new Date(isoString);
+    return d.toLocaleString('zh-CN', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  // Handle back button
+  window.addEventListener('popstate', () => {
+    closeDrawer();
+  });
+
+  // Start
+  init();
+</script>
+
+<style>
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+</style>
+
+</body>
+</html>

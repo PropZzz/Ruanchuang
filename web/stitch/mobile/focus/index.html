@@ -277,9 +277,10 @@
   const totalSeconds = 25 * 60;
   const circumference = 2 * Math.PI * 42; // ~263.89
 
+  let timerDeadline = Date.now() + remainingSeconds * 1000;
   function updateTimer() {
     if (!isPaused && remainingSeconds > 0) {
-      remainingSeconds--;
+      remainingSeconds = Math.max(0, Math.ceil((timerDeadline - Date.now()) / 1000));
       const mins = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
       const secs = String(remainingSeconds % 60).padStart(2, '0');
       if (timerDisplay) timerDisplay.textContent = `${mins}:${secs}`;
@@ -291,11 +292,24 @@
     }
   }
 
-  const timerInterval = setInterval(updateTimer, 1000);
+  let timerInterval = null;
+  function resumeTimerRendering() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    if (document.documentElement.dataset.pageVisible === 'false' || document.hidden) return;
+    updateTimer();
+    if (!isPaused) timerInterval = setInterval(updateTimer, 1000);
+  }
+  document.addEventListener('stitch:visibility', resumeTimerRendering);
+  document.addEventListener('visibilitychange', resumeTimerRendering);
+  resumeTimerRendering();
 
   if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {
+      updateTimer();
       isPaused = !isPaused;
+      if (!isPaused) timerDeadline = Date.now() + remainingSeconds * 1000;
+      resumeTimerRendering();
       if (isPaused) {
         toggleBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">play_circle</span><span>继续专注</span>';
         toggleBtn.classList.replace('bg-secondary', 'bg-primary');
@@ -323,5 +337,7 @@
       remainingSeconds = 90 * 60;
       if (timerDisplay) timerDisplay.textContent = '90:00';
     }
+    timerDeadline = Date.now() + remainingSeconds * 1000;
+    resumeTimerRendering();
   }
 </script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-2xl shadow-[0_-2px_12px_rgba(0,0,0,0.04)]" data-active-classes="text-primary font-bold"><div class="flex items-center justify-around h-16 px-2"><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] transition-all select-none text-primary font-bold" data-path="focus" href="#"><span class="material-symbols-outlined text-[24px]">hourglass_top</span><span class="text-[11px] font-label mt-0.5">专注</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] text-on-surface-variant hover:text-on-surface transition-all select-none" data-path="schedule" href="#"><span class="material-symbols-outlined text-[24px]">calendar_today</span><span class="text-[11px] font-label mt-0.5">日程</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] text-on-surface-variant hover:text-on-surface transition-all select-none" data-path="micro" href="#"><span class="material-symbols-outlined text-[24px]">auto_awesome</span><span class="text-[11px] font-label mt-0.5">微任务</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] text-on-surface-variant hover:text-on-surface transition-all select-none" data-path="team" href="#"><span class="material-symbols-outlined text-[24px]">groups</span><span class="text-[11px] font-label mt-0.5">团队</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] text-on-surface-variant hover:text-on-surface transition-all select-none" data-path="profile" href="#"><span class="material-symbols-outlined text-[24px]">account_circle</span><span class="text-[11px] font-label mt-0.5">我的</span></a></div></nav></body></html>

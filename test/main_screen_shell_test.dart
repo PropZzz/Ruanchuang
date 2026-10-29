@@ -8,6 +8,7 @@ import 'package:shixuzhipei/services/app_services.dart';
 import 'package:shixuzhipei/services/mock_data_service.dart';
 import 'package:shixuzhipei/theme/app_theme.dart';
 import 'package:shixuzhipei/main.dart';
+import 'package:shixuzhipei/widgets/lazy_tab_stack.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -338,11 +339,18 @@ void main() {
     );
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
 
-    final switcher = tester.widget<AnimatedSwitcher>(
-      find.byType(AnimatedSwitcher).first,
+    await tester.tap(find.byKey(const ValueKey('shell-rail-micro-icon')));
+    await tester.pump();
+    final transition = tester.widget<FadeTransition>(
+      find
+          .descendant(
+            of: find.byType(LazyTabStack),
+            matching: find.byType(FadeTransition),
+          )
+          .first,
     );
-    expect(switcher.duration, Duration.zero);
-    expect(switcher.reverseDuration, Duration.zero);
+    expect(transition.opacity.value, 1);
+    await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('shell-rail-expanded')), findsOneWidget);
     expect(tester.takeException(), isNull);
     tester.view.reset();

@@ -27,9 +27,9 @@ echo [2/5] Checking backend: %HEALTH_URL%
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r = Invoke-RestMethod -Uri '%HEALTH_URL%' -TimeoutSec 2; if ($r.ok -eq $true) { exit 0 } } catch {}; exit 1"
 
 if errorlevel 1 (
-  echo Backend is not running. Starting FastAPI backend in a new window...
+  echo Backend is not running. Starting FastAPI backend in the background...
   if not exist "%~dp0.appdata" mkdir "%~dp0.appdata"
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath 'python' -ArgumentList @('-m','uvicorn','backend.main:app','--host','127.0.0.1','--port','%BACKEND_PORT%') -WorkingDirectory '%~dp0' -WindowStyle Minimized -RedirectStandardOutput '%~dp0.appdata\backend-uvicorn.out.log' -RedirectStandardError '%~dp0.appdata\backend-uvicorn.err.log'"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath 'python' -ArgumentList @('-m','uvicorn','backend.main:app','--host','127.0.0.1','--port','%BACKEND_PORT%') -WorkingDirectory '%~dp0' -WindowStyle Hidden -RedirectStandardOutput '%~dp0.appdata\backend-uvicorn.out.log' -RedirectStandardError '%~dp0.appdata\backend-uvicorn.err.log'"
 
   echo Waiting for backend health check...
   powershell -NoProfile -ExecutionPolicy Bypass -Command "$ok=$false; for($i=0; $i -lt 30; $i++){ try { $r=Invoke-RestMethod -Uri '%HEALTH_URL%' -TimeoutSec 2; if($r.ok -eq $true){ $ok=$true; break } } catch {}; Start-Sleep -Seconds 1 }; if($ok){ exit 0 } else { exit 1 }"
@@ -46,10 +46,10 @@ if /I "%~1"=="--check" (
   exit /b 0
 )
 
-echo [4/5] Syncing Stitch mobile deployment from design/stitch-mobile...
-call node tools\sync_stitch_mobile.mjs
+echo [4/5] Checking canonical Web sources and native asset references...
+call node tools\check_web_sources.mjs
 if errorlevel 1 (
-  echo ERROR: Stitch mobile deployment sync failed.
+  echo ERROR: Web source validation failed.
   exit /b 1
 )
 
@@ -58,7 +58,7 @@ if not exist "%~dp0.appdata" mkdir "%~dp0.appdata"
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $r = Invoke-WebRequest -UseBasicParsing -Uri '%WEB_URL%' -TimeoutSec 2; if ($r.StatusCode -eq 200 -and $r.Content -match 'stitch/router.js') { exit 0 } } catch {}; exit 1"
 if errorlevel 1 (
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath 'python' -ArgumentList @('-m','http.server','%WEB_PORT%','--bind','127.0.0.1','--directory','%~dp0web') -WorkingDirectory '%~dp0' -WindowStyle Minimized -RedirectStandardOutput '%~dp0.appdata\web-preview.out.log' -RedirectStandardError '%~dp0.appdata\web-preview.err.log'"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath 'python' -ArgumentList @('-m','http.server','%WEB_PORT%','--bind','127.0.0.1','--directory','%~dp0web') -WorkingDirectory '%~dp0' -WindowStyle Hidden -RedirectStandardOutput '%~dp0.appdata\web-preview.out.log' -RedirectStandardError '%~dp0.appdata\web-preview.err.log'"
   powershell -NoProfile -ExecutionPolicy Bypass -Command "$ok=$false; for($i=0; $i -lt 15; $i++){ try { $r=Invoke-WebRequest -UseBasicParsing -Uri '%WEB_URL%' -TimeoutSec 2; if($r.StatusCode -eq 200 -and $r.Content -match 'stitch/router.js'){ $ok=$true; break } } catch {}; Start-Sleep -Milliseconds 300 }; if($ok){ exit 0 } else { exit 1 }"
   if errorlevel 1 (
     echo ERROR: Web preview failed to start. Check .appdata\web-preview.err.log.

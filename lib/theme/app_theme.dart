@@ -83,6 +83,7 @@ abstract final class AppMotion {
   static const enter = Duration(milliseconds: 260);
   static const exit = Duration(milliseconds: 170);
   static const press = Duration(milliseconds: 100);
+  static const tabSwitch = Duration(milliseconds: 180);
 
   static Duration resolve(BuildContext context, Duration duration) {
     return MediaQuery.maybeOf(context)?.disableAnimations == true

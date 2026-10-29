@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 class StitchMobileBottomBar extends StatelessWidget {
   const StitchMobileBottomBar({
     super.key,
@@ -68,6 +70,7 @@ class StitchMobileBottomBar extends StatelessWidget {
             ],
           )
         : NavigationBar(
+            animationDuration: AppMotion.resolve(context, AppMotion.tabSwitch),
             selectedIndex: selectedIndex,
             onDestinationSelected: onSelect,
             height: 68,

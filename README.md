@@ -2,6 +2,15 @@
 
 > 面向高压知识工作者的日程崩溃救援与精力保护系统
 
+## 当前源码与启动入口
+
+- 线上 Web：`web/` 中的 HTML/JS；桌面、移动页面均在此维护。`web/index.html` 加载统一路由与持久页面宿主。
+- 原生客户端：`lib/` 中的 Flutter/Dart；保留 Android、iOS、Windows、macOS、Linux 工程及其资源、测试。
+- 后端：`backend/` 中唯一的 FastAPI + SQLite 服务，入口 `backend.main:app`，由 Web 和 Flutter 共用。
+- 本地 Web：运行 `run_web_preview.bat`；它检查当前源码，不再从旧设计导出复制页面。
+- Web 构建：`node tools/build_stitch_web.mjs`；发布：`python deploy/deploy_web_release.py`，通过交互提示输入 SSH 密码。
+- 目录边界与验证命令见 [当前架构](docs/current-architecture.md)；旧导出清理记录见 [2026-10-29 清理记录](docs/cleanup-2026-10-29.md)。
+
 ---
 
 ## 比赛主线：可落实的日程救援闭环

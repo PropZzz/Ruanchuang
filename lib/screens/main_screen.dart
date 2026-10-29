@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../services/app_services.dart';
 import '../ui/app_theme.dart';
 import '../utils/app_strings.dart';
+import '../widgets/lazy_tab_stack.dart';
 import 'auth_dialog.dart';
 import 'focus_page.dart';
 import 'micro_task_page.dart';
@@ -27,6 +28,7 @@ class _MainScreenState extends State<MainScreen> {
   bool _showSecondaryPage = false;
   bool _railExpanded = true;
   bool _startupAuthPromptShown = false;
+  final _pageStackKey = GlobalKey();
 
   final List<Widget> _pages = const [
     FocusPage(),
@@ -140,7 +142,11 @@ class _MainScreenState extends State<MainScreen> {
     final destinations = _destinations(context);
     final pageStack = _showSecondaryPage
         ? widget.secondaryPage!
-        : IndexedStack(index: _selectedIndex, children: _pages);
+        : LazyTabStack(
+            key: _pageStackKey,
+            index: _selectedIndex,
+            children: _pages,
+          );
 
     final canPopRoute = Navigator.of(context).canPop();
     return PopScope<void>(
@@ -155,42 +161,38 @@ class _MainScreenState extends State<MainScreen> {
         body: SafeArea(
           top: false,
           bottom: false,
-          child: AnimatedSwitcher(
-            duration: AppMotion.resolve(context, AppMotion.enter),
-            reverseDuration: AppMotion.resolve(context, AppMotion.exit),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            child: isWide
-                ? _WideShell(
-                    key: const ValueKey('wide-shell'),
-                    title: AppStrings.of(context, 'app_title'),
-                    selectedIndex: _selectedIndex,
-                    destinations: destinations,
-                    onSelect: _onSelect,
-                    onBack: _exitSecondary,
-                    showBack: _showSecondaryPage,
-                    onNotify: _showNotifications,
-                    compact: !isDesktop,
-                    railExpanded: isDesktop && _railExpanded,
-                    onToggleRail: () {
-                      setState(() {
-                        _railExpanded = !_railExpanded;
-                      });
-                    },
-                    child: pageStack,
-                  )
-                : _NarrowShell(
-                    key: const ValueKey('narrow-shell'),
-                    title: AppStrings.of(context, 'app_title'),
-                    selectedIndex: _selectedIndex,
-                    destinations: destinations,
-                    onSelect: _onSelect,
-                    onBack: _exitSecondary,
-                    showBack: _showSecondaryPage,
-                    onNotify: _showNotifications,
-                    child: pageStack,
-                  ),
-          ),
+          // Reparent the retained pages when crossing a breakpoint. Animating
+          // both shells would initialize and render a second copy of each page.
+          child: isWide
+              ? _WideShell(
+                  key: const ValueKey('wide-shell'),
+                  title: AppStrings.of(context, 'app_title'),
+                  selectedIndex: _selectedIndex,
+                  destinations: destinations,
+                  onSelect: _onSelect,
+                  onBack: _exitSecondary,
+                  showBack: _showSecondaryPage,
+                  onNotify: _showNotifications,
+                  compact: !isDesktop,
+                  railExpanded: isDesktop && _railExpanded,
+                  onToggleRail: () {
+                    setState(() {
+                      _railExpanded = !_railExpanded;
+                    });
+                  },
+                  child: pageStack,
+                )
+              : _NarrowShell(
+                  key: const ValueKey('narrow-shell'),
+                  title: AppStrings.of(context, 'app_title'),
+                  selectedIndex: _selectedIndex,
+                  destinations: destinations,
+                  onSelect: _onSelect,
+                  onBack: _exitSecondary,
+                  showBack: _showSecondaryPage,
+                  onNotify: _showNotifications,
+                  child: pageStack,
+                ),
         ),
       ),
     );

@@ -402,17 +402,27 @@
     let isRunning = false;
     let seconds = 23 * 60 + 42;
 
-    const interval = setInterval(function () {
-      if (isRunning && seconds > 0) {
-        seconds--;
-        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-        const s = (seconds % 60).toString().padStart(2, '0');
-        timerDisplay.textContent = m + ':' + s;
-      }
-    }, 1000);
+    let deadline = 0;
+    let interval = null;
+    function paintTimer() {
+      if (isRunning) seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      timerDisplay.textContent = Math.floor(seconds / 60).toString().padStart(2, '0') + ':' + (seconds % 60).toString().padStart(2, '0');
+    }
+    function resumeRendering() {
+      clearInterval(interval);
+      interval = null;
+      if (document.documentElement.dataset.pageVisible === 'false' || document.hidden) return;
+      paintTimer();
+      if (isRunning) interval = setInterval(paintTimer, 1000);
+    }
+    document.addEventListener('stitch:visibility', resumeRendering);
+    document.addEventListener('visibilitychange', resumeRendering);
 
     timerBtn.addEventListener('click', function () {
+      paintTimer();
       isRunning = !isRunning;
+      if (isRunning) deadline = Date.now() + seconds * 1000;
+      resumeRendering();
       const icon = timerBtn.querySelector('.material-symbols-outlined');
       const text = timerBtn.querySelector('span:not(.material-symbols-outlined)');
       if (isRunning) {
