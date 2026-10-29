@@ -39,10 +39,34 @@ class UserCreate(APIModel):
     display_name: str = Field(alias="displayName")
     password: str
 
+    @field_validator("contact_address", "display_name")
+    @classmethod
+    def _require_visible_text(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("must not be blank")
+        return text
+
+    @field_validator("password")
+    @classmethod
+    def _require_minimum_password(cls, value: str) -> str:
+        # 与 Flutter 登录页的本地校验保持一致：至少 6 位，避免客户端绕过时创建空口令账号。
+        if len(value) < 6:
+            raise ValueError("password must contain at least 6 characters")
+        return value
+
 
 class UserLogin(APIModel):
     contact_address: str = Field(alias="contactAddress")
     password: str
+
+    @field_validator("contact_address")
+    @classmethod
+    def _normalize_contact(cls, value: str) -> str:
+        text = value.strip()
+        if not text:
+            raise ValueError("must not be blank")
+        return text
 
 
 class ProfileUpdate(APIModel):

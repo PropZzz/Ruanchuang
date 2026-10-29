@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -32,7 +32,9 @@ class RepositoryValidationError(ValueError):
 
 
 def _now() -> str:
-    return datetime.utcnow().isoformat(timespec="seconds")
+    # 保持既有的“无时区 UTC 字符串”格式（YYYY-MM-DDTHH:MM:SS），
+    # 但不再使用 Python 3.12+ 已弃用的 datetime.utcnow()。
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def _parse_date(value: object) -> str | None:
@@ -583,39 +585,42 @@ def upsert_schedule(db_path: str | Path | None, user_id: str, payload: dict[str,
     now = _now()
 
     with _connect(db_path) as connection:
-        existing = connection.execute(
-            "SELECT id FROM schedules WHERE id = ? AND user_id = ?",
-            (schedule_id, user_id),
-        ).fetchone()
+        # 同一 ID 属于其他用户时必须报冲突，不能退回 500（UNIQUE 约束异常）。
+        existing = _check_global_owner(connection, "schedules", schedule_id, user_id, "Schedule")
         if existing is None:
-            connection.execute(
-                """
-                INSERT INTO schedules (
-                    id, user_id, day, title, tag, load, goal_id, goal_task_id, height, color,
-                    time_hour, time_minute, reminder_minutes_before, repeat, repeat_until,
-                    created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    schedule_id,
-                    user_id,
-                    day,
-                    title,
-                    tag,
-                    load,
-                    goal_id,
-                    goal_task_id,
-                    height,
-                    color,
-                    hour,
-                    minute,
-                    reminder_minutes_before,
-                    repeat,
-                    repeat_until,
-                    now,
-                    now,
-                ),
-            )
+            try:
+                connection.execute(
+                    """
+                    INSERT INTO schedules (
+                        id, user_id, day, title, tag, load, goal_id, goal_task_id, height, color,
+                        time_hour, time_minute, reminder_minutes_before, repeat, repeat_until,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        schedule_id,
+                        user_id,
+                        day,
+                        title,
+                        tag,
+                        load,
+                        goal_id,
+                        goal_task_id,
+                        height,
+                        color,
+                        hour,
+                        minute,
+                        reminder_minutes_before,
+                        repeat,
+                        repeat_until,
+                        now,
+                        now,
+                    ),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise RepositoryConflictError(
+                    f"Schedule id already exists: {schedule_id}"
+                ) from exc
         else:
             connection.execute(
                 """
@@ -675,9 +680,7 @@ def upsert_schedules_batch(
             reminder = _parse_int(_first_non_none(payload, "reminderMinutesBefore", "reminder_minutes_before", default=10), 10)
             repeat = str(_first_non_none(payload, "repeat", default="none"))
             repeat_until = _parse_date(_first_non_none(payload, "repeatUntil", "repeat_until"))
-            existing = connection.execute("SELECT user_id FROM schedules WHERE id = ?", (schedule_id,)).fetchone()
-            if existing is not None and existing["user_id"] != user_id:
-                raise RepositoryConflictError(f"Schedule belongs to another user: {schedule_id}")
+            _check_global_owner(connection, "schedules", schedule_id, user_id, "Schedule")
             connection.execute(
                 """
                 INSERT INTO schedules (
@@ -923,19 +926,22 @@ def upsert_microtask(db_path: str | Path | None, user_id: str, payload: dict[str
     now = _now()
 
     with _connect(db_path) as connection:
-        existing = connection.execute(
-            "SELECT id FROM microtasks WHERE id = ? AND user_id = ?",
-            (microtask_id, user_id),
-        ).fetchone()
+        # 与日程一致：跨用户复用同一微任务 ID 必须得到 409，而不是 UNIQUE 约束 500。
+        existing = _check_global_owner(connection, "microtasks", microtask_id, user_id, "Microtask")
         if existing is None:
-            connection.execute(
-                """
-                INSERT INTO microtasks (
-                    id, user_id, title, tag, minutes, priority, requirement, done, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (microtask_id, user_id, title, tag, minutes, priority, requirement, done, now, now),
-            )
+            try:
+                connection.execute(
+                    """
+                    INSERT INTO microtasks (
+                        id, user_id, title, tag, minutes, priority, requirement, done, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (microtask_id, user_id, title, tag, minutes, priority, requirement, done, now, now),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise RepositoryConflictError(
+                    f"Microtask id already exists: {microtask_id}"
+                ) from exc
         else:
             connection.execute(
                 """
