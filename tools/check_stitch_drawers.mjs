@@ -25,7 +25,7 @@ const results = [];
 await mkdir('build/drawer-qa', { recursive: true });
 const cases = [
   ['create-schedule', 'schedule'], ['urgent-task', 'schedule'], ['microtask-entry', 'micro'],
-  ['schedule-detail', 'schedule'], ['microtask-detail', 'micro'],
+  ['schedule-detail', 'schedule'], ['microtask-detail', 'micro'], ['integrations', 'schedule'],
 ];
 try {
   for (const mobile of [false, true]) {
@@ -50,6 +50,62 @@ try {
       return f?.title === `时序智配 ${route}` && f.contentDocument?.getElementById('ruanchuang-polish-styles');
     }, route);
     const go = async route => { await page.evaluate(route => { location.hash = '#/' + route; }, route); await ready(route); };
+    let referenceClose;
+    const checkClose = async (button, label) => {
+      await page.mouse.move(0, 0);
+      const initialBackground = await button.evaluate(el => {
+        getComputedStyle(el).backgroundColor;
+        for (const animation of el.getAnimations()) animation.finish();
+        return getComputedStyle(el).backgroundColor;
+      });
+      assert.equal(initialBackground, 'rgba(0, 0, 0, 0)', `${label}: opening autofocus must not light up the background`);
+      await button.evaluate(el => {
+        el.blur();
+        getComputedStyle(el).backgroundColor;
+        for (const animation of el.getAnimations()) animation.finish();
+      });
+      const style = await button.evaluate(el => {
+        const s = getComputedStyle(el), icon = getComputedStyle(el.querySelector('.material-symbols-outlined'));
+        return { width: s.width, height: s.height, radius: s.borderRadius, color: s.color,
+          background: s.backgroundColor, border: s.borderWidth, iconSize: icon.fontSize };
+      });
+      assert.equal(style.width, '44px', `${label}: accessible close hit area`);
+      assert.equal(style.height, '44px', `${label}: close height`);
+      assert.equal(style.iconSize, '20px', `${label}: close icon size`);
+      if (!referenceClose) referenceClose = style;
+      assert.deepEqual(style, referenceClose, `${label}: match the new-schedule close control`);
+      await page.keyboard.press('Tab');
+      await button.focus();
+      const focusStyle = await button.evaluate(el => {
+        getComputedStyle(el).color;
+        for (const animation of el.getAnimations()) animation.finish();
+        const s = getComputedStyle(el);
+        return { outline: s.outlineStyle, background: s.backgroundColor, shadow: s.boxShadow, color: s.color };
+      });
+      assert.equal(focusStyle.outline, 'none', `${label}: no outer focus ring`);
+      assert.equal(focusStyle.background, 'rgba(0, 0, 0, 0)', `${label}: focus alone must not reveal the background`);
+      assert.equal(focusStyle.shadow, 'none', `${label}: no outer shadow ring`);
+      assert.equal(focusStyle.color, 'rgb(0, 93, 181)', `${label}: keyboard focus highlights the icon`);
+      await button.hover();
+      const hoverStyle = await button.evaluate(el => {
+        getComputedStyle(el).backgroundColor;
+        for (const animation of el.getAnimations()) animation.finish();
+        const s = getComputedStyle(el);
+        return { background: s.backgroundColor, outline: s.outlineStyle, shadow: s.boxShadow };
+      });
+      assert.equal(hoverStyle.background, 'rgb(239, 237, 243)', `${label}: preserve hover background`);
+      assert.equal(hoverStyle.outline, 'none', `${label}: no hover ring`);
+      assert.equal(hoverStyle.shadow, 'none', `${label}: no hover shadow ring`);
+      await page.mouse.move(0, 0);
+      const afterLeave = await button.evaluate(el => {
+        getComputedStyle(el).backgroundColor;
+        for (const animation of el.getAnimations()) animation.finish();
+        return { focused: el.ownerDocument.activeElement === el, background: getComputedStyle(el).backgroundColor };
+      });
+      assert.equal(afterLeave.focused, true, `${label}: retain keyboard focus after pointer leaves`);
+      assert.equal(afterLeave.background, 'rgba(0, 0, 0, 0)', `${label}: pointer leave clears background even while focused`);
+      await button.evaluate(el => el.blur());
+    };
     const finishMotion = async () => {
       await page.evaluate(() => {
         for (const doc of [document, ...[...document.querySelectorAll('iframe')].map(f => f.contentDocument).filter(Boolean)]) {
@@ -82,6 +138,7 @@ try {
       assert.ok(state.panel && state.transformAnimations, `${route}: animate the drawer panel, not the full page`);
       const firstDocument = await page.locator('#prototype-screen').getAttribute('src');
       const opening = await freeze(route, 0.45);
+      if (route === 'integrations') assert.ok(opening[0] > 0 && Math.abs(opening[1]) < 1, 'ICS slides from the right on desktop and phone');
       await page.evaluate(() => window.__RUANCHUANG_RETURN__());
       await ready(parent);
       continuous(opening, await freeze(route, 0), `${route}: reversing an opening must preserve its rendered position`);
@@ -90,6 +147,27 @@ try {
       continuous(closing, await freeze(route, 0), `${route}: reopening during dismissal must preserve its rendered position`);
       await finishMotion();
       await page.waitForFunction(() => document.getElementById('prototype-screen').contentDocument.querySelector('[data-drawer-panel]').dataset.drawerState === 'open');
+      await checkClose(page.frameLocator('#prototype-screen').locator('[data-drawer-close]').first(), route);
+      if (route === 'integrations') {
+        const geometry = await page.locator('#prototype-screen').evaluate(f => {
+          const doc = f.contentDocument, panel = doc.querySelector('[data-drawer-panel]');
+          const p = panel.getBoundingClientRect(), close = panel.querySelector('[data-drawer-close]').getBoundingClientRect();
+          const grid = doc.querySelector('.ics-workspace');
+          return { width: p.width, right: p.right, viewport: f.contentWindow.innerWidth,
+            closeLeft: close.left - p.left, closeTop: close.top - p.top,
+            oldShell: !!doc.querySelector('body > aside, [data-router-back]'),
+            overflow: doc.querySelector('main').scrollWidth > doc.querySelector('main').clientWidth,
+            columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length };
+        });
+        assert.equal(geometry.right, geometry.viewport, 'ICS drawer aligns with right edge');
+        assert.equal(geometry.width, mobile ? 390 : 1040, 'ICS drawer uses the enlarged desktop width and fits the phone');
+        assert.ok(geometry.closeLeft >= 0 && geometry.closeLeft < 24 && geometry.closeTop < 24, 'ICS close control stays in the panel upper-left corner');
+        assert.equal(geometry.oldShell, false, 'ICS has no duplicate sidebar or injected page back button');
+        assert.equal(geometry.overflow, false, 'ICS content fits the drawer without horizontal overflow');
+        assert.equal(geometry.columns, mobile ? 1 : 2, 'ICS columns follow drawer width');
+      } else if (!mobile) {
+        assert.equal(await page.frameLocator('#prototype-screen').locator('[data-drawer-panel]').evaluate(el => el.getBoundingClientRect().width), 480, `${route}: keep the existing drawer width`);
+      }
       await page.screenshot({ path: `build/drawer-qa/${mobile ? 'mobile' : 'desktop'}-${route}.png` });
       await page.locator('#prototype-screen').evaluate(f => {
         const panel = f.contentDocument.querySelector('[data-drawer-panel]');
@@ -100,7 +178,7 @@ try {
       assert.equal(await page.evaluate(() => window.__drawerFocusable[0].ownerDocument.activeElement === window.__drawerFocusable[0]), true, `${route}: trap keyboard focus inside the drawer`);
       if (route === 'urgent-task') await page.locator('#prototype-screen').evaluate(f => f.contentDocument.querySelector('[data-drawer-scrim]').click());
       else if (route === 'microtask-entry') await page.frameLocator('#prototype-screen').locator('[data-drawer-panel] button').first().press('Escape');
-      else if (route === 'microtask-detail') await page.goBack();
+      else if (route === 'microtask-detail') await page.frameLocator('#prototype-screen').locator('[data-drawer-close]').click();
       else await page.frameLocator('#prototype-screen').locator('[data-drawer-panel] button[aria-label*="关闭"]').first().click();
       await ready(parent);
       await finishMotion();
@@ -110,6 +188,34 @@ try {
       assert.equal(documents.filter(url => url === new URL(firstDocument, base).href).length, 1, `${route}: warm reopen must reuse its document`);
       results.push({ viewport: mobile ? 'mobile' : 'desktop', route, passed: true, reversal: true, warmDocumentReuse: true });
     }
+    await go('schedule');
+    if (!mobile) {
+      await page.frameLocator('#prototype-screen').locator('button').filter({ hasText: 'ICS 交换' }).click();
+      await ready('integrations');
+    } else await go('integrations');
+    await finishMotion();
+    const integrationsFrame = page.frameLocator('#prototype-screen');
+    await integrationsFrame.locator('[onclick="loadTemplate(\'ics\')"]').click();
+    assert.ok((await integrationsFrame.locator('#raw-input').inputValue()).startsWith('BEGIN:VCALENDAR'), 'ICS template remains editable inside the drawer');
+    const importPayloads = [];
+    await page.route('**/api/schedule/import-ics', route => {
+      importPayloads.push(route.request().postDataJSON());
+      return route.fulfill({ json: { imported: 1 } });
+    });
+    const icsFixture = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:drawer-fixture\r\nDTSTART:20261030T090000\r\nDTEND:20261030T100000\r\nSUMMARY:ICS drawer fixture\r\nEND:VEVENT\r\nEND:VCALENDAR';
+    await integrationsFrame.locator('#raw-input').fill(icsFixture);
+    const editedIcs = await integrationsFrame.locator('#raw-input').inputValue();
+    await integrationsFrame.locator('[onclick="confirmImportSchedule()"]').click();
+    await ready('schedule'); await finishMotion();
+    assert.deepEqual(importPayloads, [{ ics: editedIcs }], 'ICS import submits the edited payload once and returns to the calendar');
+    await page.unroute('**/api/schedule/import-ics');
+    await go('integrations'); await finishMotion();
+    await page.frameLocator('#prototype-screen').locator('[data-drawer-close]').press('Escape');
+    await ready('schedule'); await finishMotion();
+    await go('integrations'); await finishMotion();
+    await page.locator('#prototype-screen').evaluate(f => f.contentDocument.querySelector('[data-drawer-scrim]').click());
+    await ready('schedule'); await finishMotion();
+    results.push({ viewport: mobile ? 'mobile' : 'desktop', route: 'ics-entry-import-and-dismissal', passed: true });
     await go('schedule');
     // Settings use the same panel motion while keeping the primary document active.
     await page.evaluate(() => { window.__settingsParent = document.getElementById('prototype-screen'); });
@@ -134,6 +240,7 @@ try {
     continuous(settingsClosing, await settingsPosition(0), 'Settings reopen must reverse the in-flight dismissal');
     assert.equal(await page.evaluate(() => document.querySelector('#ruanchuang-settings-overlay iframe') === window.__settingsFrame), true);
     await finishMotion();
+    await checkClose(settingsFrame.locator('[data-drawer-close]'), 'settings-drawer');
     await page.screenshot({ path: `build/drawer-qa/${mobile ? 'mobile' : 'desktop'}-settings-drawer.png` });
     await settingsFrame.locator('#close-drawer-btn, #btn-close-drawer').press('Escape');
     await finishMotion();
@@ -174,6 +281,7 @@ try {
     await page.waitForFunction(() => document.getElementById('prototype-screen').contentDocument.getElementById('goalDrawer').dataset.drawerState === 'opening');
     await freeze('goals', 0.45);
     await finishMotion();
+    await checkClose(page.frameLocator('#prototype-screen').locator('#goalDrawer [data-drawer-close]'), 'goal-drawer');
     await page.screenshot({ path: `build/drawer-qa/${mobile ? 'mobile' : 'desktop'}-goal-drawer.png` });
     const goalPanel = page.frameLocator('#prototype-screen').locator('#goalDrawer');
     await goalPanel.locator('button').first().click();
@@ -187,11 +295,20 @@ try {
     await page.frameLocator('#prototype-screen').locator('main [onclick="openDissectModal()"]').first().click();
     await page.waitForFunction(() => document.getElementById('prototype-screen').contentDocument.querySelector('#dissectModal [data-drawer-panel]').dataset.drawerState === 'opening');
     await finishMotion();
+    await checkClose(page.frameLocator('#prototype-screen').locator('#dissectModal [data-drawer-close]'), 'goal-decomposition');
     await page.screenshot({ path: `build/drawer-qa/${mobile ? 'mobile' : 'desktop'}-goal-decomposition.png` });
-    await page.frameLocator('#prototype-screen').locator('#dissectModal button').first().press('Escape');
+    await page.frameLocator('#prototype-screen').locator('#dissectModal [data-drawer-close]').click();
     await finishMotion();
     await page.waitForFunction(() => !document.getElementById('workspace-shell').inert);
     results.push({ viewport: mobile ? 'mobile' : 'desktop', route: 'goal-drawer-and-decomposition', passed: true, reversal: true });
+
+    await go('emotion-energy');
+    await page.frameLocator('#prototype-screen').locator('#quick-care-trigger').click();
+    await checkClose(page.frameLocator('#prototype-screen').locator('#close-care-modal'), 'care-dialog');
+    await page.frameLocator('#prototype-screen').locator('#close-care-modal').click();
+    await page.frameLocator('#prototype-screen').locator('#care-dialog').waitFor({ state: 'hidden' });
+    assert.equal(await page.evaluate(() => location.hash), '#/emotion-energy', 'Closing a local care panel keeps its parent page');
+    results.push({ viewport: mobile ? 'mobile' : 'desktop', route: 'consistent-close-controls', passed: true });
 
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await go('schedule');
@@ -233,14 +350,18 @@ try {
         await finishMotion();
         if (route === 'schedule-detail') {
           await page.frameLocator('#prototype-screen').locator('#editBtn').click();
-          await page.frameLocator('#prototype-screen').locator('#titleInput').fill('Saved drawer fixture');
-          await page.frameLocator('#prototype-screen').locator('#saveBtn').click();
+          await ready('create-schedule');
+          await page.waitForFunction(() => document.getElementById('prototype-screen')?.contentDocument?.documentElement.dataset.scheduleReady === 'true');
+          await page.frameLocator('#prototype-screen').locator('#schedule-title-input').fill('Saved drawer fixture');
+          await page.frameLocator('#prototype-screen').locator('#schedule-save-action').click();
           await ready(parent); await finishMotion();
           await page.frameLocator('#prototype-screen').locator(selector).first().evaluate(card => card.click());
           await ready(route); await finishMotion();
           assert.equal(await page.frameLocator('#prototype-screen').locator('#detailTitle').textContent(), 'Saved drawer fixture', 'Retained detail must show its saved content when reopened');
           await page.frameLocator('#prototype-screen').locator('#editBtn').click();
-          assert.equal(await page.frameLocator('#prototype-screen').locator('#saveBtn').isEnabled(), true, 'Retained detail must allow another save');
+          await ready('create-schedule');
+          await page.waitForFunction(() => document.getElementById('prototype-screen')?.contentDocument?.documentElement.dataset.scheduleReady === 'true');
+          assert.equal(await page.frameLocator('#prototype-screen').locator('#schedule-save-action').isEnabled(), true, 'Retained detail must allow another save');
         } else {
           page.once('dialog', dialog => dialog.accept());
           await page.frameLocator('#prototype-screen').locator('#completeBtn').click();

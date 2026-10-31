@@ -71,9 +71,10 @@ def compute_baseline_hash(entries: list[dict[str, Any]], day_iso: str) -> str:
     Rules (keep stable, documented in docs/接口预留与服务器接口文档.md):
     - Only entries whose normalized `day` equals `day_iso` are hashed (inbox
       entries with `day=None` and entries of other days are excluded).
-    - Each entry is reduced to the same 13 fields emitted by
-      `_schedule_row_to_dict` / `ScheduleEntryIn.model_dump`; `height` is
+    - Each entry is reduced to the persisted schedule fields; `height` is
       rounded to 2 decimals to absorb float noise; entries are sorted by `id`.
+    - Non-default constraint flags participate in the hash. Omitting the
+      default flags keeps legacy payloads compatible while detecting edits.
     - The result is independent of key order, so client-echoed payloads and
       database rows hash identically.
     """
@@ -118,6 +119,12 @@ def compute_baseline_hash(entries: list[dict[str, Any]], day_iso: str) -> str:
                 "repeatUntil": _iso_day(entry.get("repeatUntil")),
             }
         )
+        if entry.get("rescheduleFlexible", True) is False:
+            canonical[-1]["rescheduleFlexible"] = False
+        if entry.get("hardLocked", False) is True:
+            canonical[-1]["hardLocked"] = True
+        if entry.get("description") is not None:
+            canonical[-1]["description"] = str(entry["description"])
     canonical.sort(key=lambda item: item["id"])
     payload = json.dumps(canonical, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -257,6 +264,9 @@ def _annotate_kept_baseline(
         entry = dict(raw)
         original = baseline_by_id.get(str(entry.get("id")))
         if original is not None:
+            for field in ("rescheduleFlexible", "hardLocked", "description"):
+                if field in original:
+                    entry[field] = original[field]
             unchanged = entry.get("time") == original.get("time")
             try:
                 unchanged = unchanged and abs(

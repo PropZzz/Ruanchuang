@@ -59,8 +59,9 @@ void main() {
 
     expect(find.byType(StitchFormSheet), findsOneWidget);
     expect(find.byKey(const ValueKey('calendar-add-preview')), findsOneWidget);
-    // The tag label shows in both the preview strip and the tag chip.
-    expect(find.text('深度工作'), findsNWidgets(2));
+    // The default tag label (General) shows in both the preview strip and the
+    // matching tag chip.
+    expect(find.text('通用'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
 
     // Confirm stays disabled until a title is entered.

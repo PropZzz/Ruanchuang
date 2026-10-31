@@ -51,6 +51,7 @@ class _FocusPageState extends State<FocusPage> {
   bool _isRecsLoading = false;
 
   Timer? _timer;
+  Timer? _autoStartTimer;
   int _remainingSeconds = 0;
   bool _isTimerRunning = false;
   bool _isLoading = true;
@@ -71,6 +72,7 @@ class _FocusPageState extends State<FocusPage> {
   @override
   void dispose() {
     _timer?.cancel();
+    _autoStartTimer?.cancel();
     super.dispose();
   }
 
@@ -100,6 +102,11 @@ class _FocusPageState extends State<FocusPage> {
     final id = e.id;
     if (id != null && id.isNotEmpty) return id;
     return 'focus_${e.title}_${e.time.hour}_${e.time.minute}';
+  }
+
+  int _plannedSeconds(ScheduleEntry entry) {
+    final minutes = ((entry.height / 80.0) * 60.0).round().clamp(1, 24 * 60);
+    return minutes * 60;
   }
 
   void _logStart(ScheduleEntry e) {
@@ -247,11 +254,14 @@ class _FocusPageState extends State<FocusPage> {
           final duration = (current.height / 80.0) * 60.0;
           final end = (start + duration).toInt();
           _remainingSeconds = (end - nowMinutes) * 60;
-          _nextTasks = upcoming;
+        } else if (upcoming.isNotEmpty) {
+          // No task is inside its window yet: show the next task's planned
+          // length as the standing countdown until its start time arrives.
+          _remainingSeconds = _plannedSeconds(upcoming.first);
         } else {
           _remainingSeconds = 0;
-          _nextTasks = upcoming;
         }
+        _nextTasks = upcoming;
         _isLoading = false;
         _hasLoadedOnce = true;
       });
@@ -261,6 +271,7 @@ class _FocusPageState extends State<FocusPage> {
       }
 
       unawaited(_loadCrystalRecommendations(entries, energy));
+      _armAutoStart();
     } catch (e, st) {
       if (!mounted) return;
       setState(() {
@@ -276,49 +287,65 @@ class _FocusPageState extends State<FocusPage> {
     }
   }
 
-  void _startTimer() {
-    if (_isTimerRunning) return;
+  void _cancelAutoStart() {
+    _autoStartTimer?.cancel();
+    _autoStartTimer = null;
+  }
 
-    if (_currentTask == null && _nextTasks.isNotEmpty) {
-      final next = _nextTasks.first;
-      final now = DateTime.now();
-      final taskStart = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        next.time.hour,
-        next.time.minute,
-      );
-      final wait = taskStart.isAfter(now)
-          ? taskStart.difference(now)
-          : Duration.zero;
-
-      final msg = AppStrings.of(
-        context,
-        'focus_snack_start',
-        params: {'min': wait.inMinutes.toString(), 'task': next.title},
-      );
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-
-      Future.delayed(wait, () {
-        if (!mounted) return;
-        setState(() {
-          _currentTask = next;
-          _nextTasks = _nextTasks.skip(1).toList();
-          final durationInMinutes = (_currentTask!.height / 80.0) * 60.0;
-          _remainingSeconds = durationInMinutes.toInt() * 60;
-        });
-        _startTimer();
-      });
+  /// Watches for the next task's scheduled start: when the time arrives, the
+  /// task is promoted and its countdown begins without user action.
+  void _armAutoStart() {
+    _cancelAutoStart();
+    if (_currentTask != null || _isTimerRunning) return;
+    if (_nextTasks.isEmpty) return;
+    final next = _nextTasks.first;
+    final now = DateTime.now();
+    final scheduled = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      next.time.hour,
+      next.time.minute,
+    );
+    final wait = scheduled.difference(now);
+    if (wait <= Duration.zero) {
+      _autoPromoteNextTask();
       return;
     }
+    _autoStartTimer = Timer(wait, _autoPromoteNextTask);
+  }
 
-    if (_remainingSeconds == 0) return;
+  void _autoPromoteNextTask() {
+    _autoStartTimer = null;
+    if (!mounted || _currentTask != null || _isTimerRunning) return;
+    if (_nextTasks.isEmpty) return;
+    final next = _nextTasks.first;
+    setState(() {
+      _currentTask = next;
+      _nextTasks = _nextTasks.skip(1).toList();
+      _remainingSeconds = _plannedSeconds(next);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppStrings.of(
+            context,
+            'focus_snack_auto_start',
+            params: {'task': next.title},
+          ),
+        ),
+      ),
+    );
+    _beginTicking();
+  }
 
-    if (_currentTask != null) {
-      _logStart(_currentTask!);
+  void _beginTicking() {
+    final current = _currentTask;
+    if (current != null) {
+      _logStart(current);
     }
-
+    if (_remainingSeconds <= 0) return;
+    _timer?.cancel();
     _isTimerRunning = true;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
@@ -329,12 +356,97 @@ class _FocusPageState extends State<FocusPage> {
         if (_remainingSeconds > 0) {
           _remainingSeconds--;
         } else {
-          _timer?.cancel();
+          timer.cancel();
           _isTimerRunning = false;
           _startNextTask();
         }
       });
     });
+  }
+
+  void _startTimer() {
+    if (_isTimerRunning) return;
+
+    if (_currentTask == null) {
+      if (_nextTasks.isEmpty) return;
+      // Manual start before the scheduled time: begin now and pull the
+      // calendar slot up to the actual start time.
+      unawaited(_startNextTaskNow());
+      return;
+    }
+
+    if (_remainingSeconds <= 0) return;
+    _beginTicking();
+  }
+
+  /// Moves a non-repeating scheduled entry's start up to the current time so
+  /// the smart calendar reflects when the user actually began. Entries that
+  /// repeat, lack an id, or have already reached their scheduled start are
+  /// left untouched.
+  Future<ScheduleEntry> _moveEntryStartEarlier(ScheduleEntry entry) async {
+    final id = entry.id;
+    final movable =
+        id != null &&
+        id.isNotEmpty &&
+        entry.day != null &&
+        entry.repeat == RepeatFrequency.none;
+    if (!movable) return entry;
+
+    final now = DateTime.now();
+    final scheduledStart = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      entry.time.hour,
+      entry.time.minute,
+    );
+    if (!now.isBefore(scheduledStart)) return entry;
+
+    final moved = entry.copyWith(
+      time: TimeOfDay(hour: now.hour, minute: now.minute),
+      day: dateOnly(now),
+    );
+    try {
+      await _dataService.addScheduleEntry(moved);
+    } catch (e, st) {
+      AppServices.logStore.error(
+        'focus',
+        'move schedule entry earlier failed',
+        error: e,
+        stackTrace: st,
+      );
+      return entry;
+    }
+    return moved;
+  }
+
+  Future<void> _startNextTaskNow() async {
+    if (_currentTask != null || _isTimerRunning || _nextTasks.isEmpty) return;
+    _cancelAutoStart();
+    final next = _nextTasks.first;
+    final moved = await _moveEntryStartEarlier(next);
+    if (!mounted) return;
+    if (_currentTask != null || _isTimerRunning) return;
+    setState(() {
+      _currentTask = moved;
+      _nextTasks = _nextTasks.skip(1).toList();
+      _remainingSeconds = _plannedSeconds(next);
+    });
+    final startedEarlier = moved.time != next.time;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppStrings.of(
+            context,
+            startedEarlier
+                ? 'focus_snack_early_start'
+                : 'focus_snack_manual_start',
+            params: {'task': moved.title},
+          ),
+        ),
+      ),
+    );
+    _beginTicking();
   }
 
   void _pauseTimer() {
@@ -345,20 +457,10 @@ class _FocusPageState extends State<FocusPage> {
     });
   }
 
-  void _resetTimer() {
-    _timer?.cancel();
-    setState(() {
-      _isTimerRunning = false;
-      if (_currentTask != null) {
-        final durationInMinutes = (_currentTask!.height / 80.0) * 60.0;
-        _remainingSeconds = durationInMinutes.toInt() * 60;
-      } else {
-        _remainingSeconds = 0;
-      }
-    });
-  }
-
   void _startNextTask() {
+    _timer?.cancel();
+    _timer = null;
+    _isTimerRunning = false;
     final current = _currentTask;
     if (current != null) {
       final planned = ((current.height / 80.0) * 60.0).round().clamp(
@@ -380,39 +482,14 @@ class _FocusPageState extends State<FocusPage> {
       return;
     }
 
-    final nextTask = _nextTasks.first;
-    final now = DateTime.now();
-    final taskStartTime = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      nextTask.time.hour,
-      nextTask.time.minute,
-    );
-
-    final waitDuration = taskStartTime.isAfter(now)
-        ? taskStartTime.difference(now)
-        : Duration.zero;
-
-    final msg = AppStrings.of(
-      context,
-      'focus_snack_upcoming',
-      params: {
-        'min': waitDuration.inMinutes.toString(),
-        'task': nextTask.title,
-      },
-    );
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-
-    Future.delayed(waitDuration, () {
-      if (!mounted) return;
-      setState(() {
-        _currentTask = nextTask;
-        _nextTasks = _nextTasks.skip(1).toList();
-        _resetTimer();
-        _startTimer();
-      });
+    final next = _nextTasks.first;
+    // Surface the next task on the pomodoro card right away; its countdown
+    // starts on its own when the scheduled time arrives.
+    setState(() {
+      _currentTask = null;
+      _remainingSeconds = _plannedSeconds(next);
     });
+    _armAutoStart();
   }
 
   @override
@@ -533,6 +610,8 @@ class _FocusPageState extends State<FocusPage> {
   }
 
   Widget _buildMetricStrip(ThemeData theme) {
+    final displayTask =
+        _currentTask ?? (_nextTasks.isEmpty ? null : _nextTasks.first);
     final remainingMinutes = (_remainingSeconds ~/ 60).toString().padLeft(
       2,
       '0',
@@ -544,8 +623,8 @@ class _FocusPageState extends State<FocusPage> {
     final metrics = [
       (
         AppStrings.of(context, 'focus_title'),
-        _currentTask == null ? '--:--' : '$remainingMinutes:$remainingSeconds',
-        _currentTask?.title ?? AppStrings.of(context, 'focus_empty_task'),
+        displayTask == null ? '--:--' : '$remainingMinutes:$remainingSeconds',
+        displayTask?.title ?? AppStrings.of(context, 'focus_empty_task'),
       ),
       (
         AppStrings.of(context, 'focus_energy_label'),
@@ -555,7 +634,7 @@ class _FocusPageState extends State<FocusPage> {
             : AppStrings.of(
                 context,
                 'focus_emotion_label',
-                params: {'emotion': _currentEmotion?.name ?? '--'},
+                params: {'emotion': _currentEmotion?.label ?? '--'},
               ),
       ),
       (
@@ -867,10 +946,15 @@ class _FocusPageState extends State<FocusPage> {
   }
 
   Widget _buildCurrentTaskCard(BuildContext context) {
+    // Without an in-window task the pomodoro card previews the next one so
+    // the countdown and start actions are always about a real entry.
+    final displayTask =
+        _currentTask ?? (_nextTasks.isEmpty ? null : _nextTasks.first);
     return FocusTaskCard(
-      task: _currentTask,
+      task: displayTask,
       remainingSeconds: _remainingSeconds,
       isRunning: _isTimerRunning,
+      isNextTask: _currentTask == null && _nextTasks.isNotEmpty,
       onStart: _startTimer,
       onPause: _pauseTimer,
       onFinish: () {

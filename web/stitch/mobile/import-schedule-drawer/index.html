@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="shell-type" content="mobile_blank"/>
+<link rel="stylesheet" href="../../assets/fonts/9aec7130879b.css"/>
+<link rel="stylesheet" href="../../assets/fonts/de9b7b5eb580.css"/>
+<link rel="stylesheet" href="../../assets/fonts/dd526d0c2702.css"/>
+<link rel="stylesheet" href="../../assets/drawer-controls.css"/>
+<link rel="stylesheet" href="../../assets/calendar-import.css"/>
+<link rel="stylesheet" href="../../assets/time-picker.css"/>
+<script src="../../assets/vendor/6f06d28f9027.js"></script>
+<script id="tailwind-config">tailwind.config={theme:{extend:{colors:{surface:'#faf8fe','surface-container-low':'#f4f3f8','surface-container':'#efedf3','surface-container-high':'#e9e7ed','surface-container-lowest':'#ffffff','on-surface':'#1a1b1f','on-surface-variant':'#414848',primary:'#002727',secondary:'#005db5','on-primary':'#ffffff','on-secondary':'#ffffff',outline:'#717978','outline-variant':'#c0c8c7',error:'#ba1a1a','on-tertiary-container':'#1db84d'},fontFamily:{headline:['Noto Serif'],body:['Inter']}}}};</script>
+<style>
+html,body{margin:0;width:100%;min-height:100%;}body{font-family:Inter,sans-serif;color:#1a1b1f;background:#faf8fe;}[hidden]{display:none!important;}
+input,select{min-height:44px;border:0;border-radius:12px;padding:8px 12px;background:#fff;color:#1a1b1f;font:inherit;max-width:100%;box-sizing:border-box;}
+input[type=checkbox]{min-height:18px;width:18px;padding:0;accent-color:#005db5;flex-shrink:0;}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid #005db5;outline-offset:2px;}button:disabled{opacity:.45;cursor:not-allowed;}
+.stitch-drawer-close:focus-visible{outline:none;}
+.import-preview-row{display:flex;gap:12px;padding:12px;border-radius:12px;background:#f4f3f8;align-items:flex-start;margin-bottom:8px;}.import-preview-row small{display:block;color:#717978;margin-top:4px;line-height:1.5;}.import-preview-row strong{font-size:13px;overflow-wrap:anywhere;}
+.import-mapping{display:grid;grid-template-columns:1fr 1fr;gap:10px;}.import-mapping label{display:flex;flex-direction:column;gap:6px;font-size:12px;}.import-time-row{display:grid;grid-template-columns:72px 1fr 1fr;gap:8px;align-items:center;font-size:12px;}.import-time-row input{width:100%;min-width:0;}
+@media(max-width:420px){.import-mapping{grid-template-columns:1fr;}}.import-actions{padding-bottom:max(16px,env(safe-area-inset-bottom));}
+</style>
+<script src="../../assets/vendor/xlsx.full.min.js" defer></script>
+<script src="../../calendar-import.js" defer></script>
+<script src="../../time-picker.js" defer></script>
+<script src="../../calendar-import-ui.js" defer></script>
+</head>
+<body class="font-body text-on-surface">
+<button type="button" aria-label="关闭抽屉" class="fixed inset-0" data-router-return></button>
+<section data-drawer-edge="right" class="w-full bg-surface flex flex-col overflow-hidden" style="height:100dvh">
+  <div data-drawer-header class="h-14 px-5 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-on-tertiary-container"></span><h2 class="text-base font-headline font-bold text-on-surface">导入日程</h2></div>
+    <button type="button" class="stitch-drawer-close" aria-label="关闭抽屉" data-drawer-close data-router-return><span class="material-symbols-outlined" aria-hidden="true">close</span></button>
+  </div>
+  <main class="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5" style="min-height:0">
+    <p class="text-xs text-on-surface-variant leading-relaxed">选择课表或日程文件，检查预览后再写入日历。</p>
+    <div class="flex flex-col gap-2 text-xs">
+      <span class="font-semibold">导入文件</span>
+      <input id="import-file" type="file" accept=".xls,.xlsx,.csv,.tsv,.json,.ics" hidden/>
+      <button id="import-file-button" type="button" class="import-file-card" aria-controls="import-file" aria-describedby="import-file-help">
+        <span class="import-file-icon material-symbols-outlined" aria-hidden="true">upload_file</span>
+        <span class="import-file-info"><strong id="import-file-name">选择课表或日程文件</strong><span id="import-file-meta">在本机解析，预览后确认导入</span></span>
+        <span id="import-file-action" class="import-file-action">选择文件</span>
+      </button>
+      <span id="import-file-help" class="import-file-help">XLS / XLSX · CSV / TSV · JSON · ICS，最大 5 MB</span>
+    </div>
+    <div id="import-workbook" hidden><label class="flex flex-col gap-2 text-xs">工作表<select id="import-sheet"></select></label></div>
+    <div id="import-encoding-group" hidden><label class="flex flex-col gap-2 text-xs">文本编码<select id="import-encoding"><option value="utf-8">UTF-8</option><option value="gb18030">GBK / GB18030</option></select></label></div>
+    <details id="import-mapping-group" class="bg-surface-container-low rounded-xl p-4" hidden>
+      <summary class="text-xs font-semibold cursor-pointer">日程字段对应 · 点击检查或调整</summary><div id="import-mapping" class="import-mapping mt-3"></div>
+      <button type="button" id="import-map-preview" class="h-11 rounded-xl bg-surface-container text-xs font-semibold">更新预览</button>
+    </details>
+    <div id="import-course-options" class="bg-surface-container-low rounded-xl p-4 flex flex-col gap-3" hidden>
+      <h3 class="text-xs font-semibold">课表日期与节次</h3>
+      <p id="import-course-summary" class="text-xs text-on-surface-variant"></p>
+      <label class="flex flex-col gap-2 text-xs">学期第一周周一<input id="import-first-monday" type="date" min="1900-01-01" max="2100-12-31"/></label>
+      <p class="text-xs text-outline">请按学校课时填写起止时间；系统不会假定每节课的时长。</p>
+      <div class="import-time-row text-outline"><span>节次</span><span>开始时间</span><span>结束时间</span></div>
+      <div id="import-section-times" class="flex flex-col gap-2"></div>
+      <p id="import-course-warnings" class="text-xs text-on-surface-variant"></p>
+      <button type="button" id="import-course-preview" class="h-11 rounded-xl bg-surface-container text-xs font-semibold">生成日程预览</button>
+    </div>
+    <p id="import-status" role="status" aria-live="polite" class="text-xs text-on-surface-variant leading-relaxed">尚未选择文件。</p>
+    <div id="import-preview-group" hidden>
+      <div class="flex items-center justify-between gap-2 mb-3"><h3 class="text-xs font-semibold" id="import-count">日程预览</h3><label class="flex items-center gap-2 text-xs"><input type="checkbox" id="import-select-all"/>全选</label></div>
+      <div id="import-errors" class="text-xs text-error mb-3" role="alert"></div>
+      <div id="import-preview"></div>
+      <button id="import-more" type="button" class="w-full h-11 rounded-xl text-xs hover:bg-surface-container" hidden>显示更多</button>
+    </div>
+  </main>
+  <footer class="import-actions shrink-0 px-5 pt-3 bg-surface flex flex-col gap-2">
+    <button id="import-confirm" type="button" disabled class="w-full h-12 bg-primary text-on-primary font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-md">确认导入</button>
+    <button id="import-cancel" type="button" data-router-return class="w-full h-10 text-on-surface-variant text-xs font-semibold rounded-xl hover:bg-surface-container">取消</button>
+  </footer>
+</section>
+</body></html>

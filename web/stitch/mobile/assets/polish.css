@@ -206,59 +206,35 @@ nav.fixed.bottom-0 {
 }
 
 @media (max-width: 780px) {
-  html[data-route='profile'] body {
-    overflow-x: hidden;
-  }
-
-  html[data-route='profile'] body > aside.fixed {
-    width: 64px !important;
-  }
-
-  html[data-route='profile'] body > aside.fixed > div:first-child > div:first-child {
-    justify-content: center;
-    padding: 12px 0;
-  }
-
-  html[data-route='profile'] body > aside.fixed > div:first-child > div:first-child > img {
-    width: 32px;
-    height: 32px;
-  }
-
-  html[data-route='profile'] body > aside.fixed > div:first-child > div:first-child > div,
-  html[data-route='profile'] aside .overflow-y-auto .space-y-1 > div:first-child,
-  html[data-route='profile'] aside nav a > span:not(.material-symbols-outlined),
-  html[data-route='profile'] aside .p-3 button div span:not(.material-symbols-outlined),
-  html[data-route='profile'] aside .p-3 button > span:last-child,
-  html[data-route='profile'] aside .p-3 > div.flex > div:last-child {
+  body > nav.fixed.bottom-0 {
     display: none !important;
   }
 
-  html[data-route='profile'] aside .overflow-y-auto {
-    padding-inline: 4px !important;
+  html[data-route] body {
+    overflow-x: hidden;
+    padding-bottom: 4.5rem !important;
   }
 
-  html[data-route='profile'] aside nav a {
-    justify-content: center;
-    padding-inline: 0;
+  html[data-route='profile'] body {
+    min-width: 0;
   }
 
-  html[data-route='profile'] aside .p-3 {
-    padding: 8px 4px;
-  }
-
-  html[data-route='profile'] aside .p-3 button,
-  html[data-route='profile'] aside .p-3 > div.flex {
-    justify-content: center;
-    padding-inline: 0;
+  html[data-route='profile'] body > aside.fixed {
+    display: none !important;
   }
 
   html[data-route='profile'] body > div {
-    padding-left: 64px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 0 !important;
   }
 
   html[data-route='profile'] body > div > header.fixed {
-    left: 64px !important;
-    padding-inline: 12px;
+    left: 0 !important;
+    right: 0 !important;
+    width: auto !important;
+    padding-inline: 12px !important;
   }
 
   html[data-route='profile'] body > div > header.fixed > div:first-child > img {
@@ -266,15 +242,76 @@ nav.fixed.bottom-0 {
   }
 
   html[data-route='profile'] body > div > main > div {
-    padding: 16px 12px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    padding: 16px 12px 24px !important;
   }
 
-  html[data-route='profile'] body > div > main > div > div:first-child {
-    padding: 16px !important;
+  html[data-route='profile'] main {
+    overflow-x: hidden !important;
+  }
+
+  html[data-route='profile'] body > div > main > div > div {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
   }
 
   html[data-route='profile'] body > div > main > div > div:first-child button {
     padding-inline: 8px;
+  }
+
+  html[data-route='profile'] main,
+  html[data-route='profile'] main * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  html[data-route='profile'] main .rounded-xl {
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  html[data-route='profile'] main .grid,
+  html[data-route='profile'] main .flex,
+  html[data-route='profile'] main .space-y-6 {
+    min-width: 0;
+  }
+
+  html[data-route='profile'] main svg {
+    max-width: 100%;
+  }
+
+  html[data-route='profile'] main .flex.items-center.justify-between {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  /* Metric values and their units must be allowed to wrap independently on
+     phone widths; a nowrap flex row makes the last two values overlap. */
+  html[data-route='profile'] main [data-profile-metrics] > div {
+    min-width: 0;
+  }
+
+  html[data-route='profile'] main [data-profile-metrics] .flex.items-baseline {
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 6px;
+    row-gap: 2px;
+  }
+
+  html[data-route='profile'] main [data-profile-metrics] .flex.items-baseline > span {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  html[data-route='profile'] main [data-profile-metrics] .flex.items-baseline > span:last-child {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 

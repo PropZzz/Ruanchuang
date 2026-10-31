@@ -19,6 +19,7 @@ from .repositories import (
     TaskEventConflictError,
     apply_rescue,
     list_task_events,
+    list_schedules,
     undo_rescue,
 )
 from .schemas import (
@@ -47,10 +48,19 @@ def _error(status_code: int, code: str, message: str) -> HTTPException:
 @router.post("/rescue/options", response_model=RescueOptionsOut)
 def rescue_options(
     payload: RescueOptionsRequest,
+    request: Request,
     user_id: str = Depends(current_user_id),
 ) -> dict[str, object]:
-    del user_id  # options are pure computation, but the route requires auth
-    return build_options(payload.model_dump(mode="json", by_alias=True))
+    data = payload.model_dump(mode="json", by_alias=True)
+    # Older native clients omit optional notes. Restore only omitted fields from
+    # this account; explicitly supplied notes still participate in stale checks.
+    saved = {str(entry["id"]): entry for entry in list_schedules(_db_path(request), user_id)}
+    for models, key in ((payload.current_entries, "currentEntries"), (payload.fixed, "fixed")):
+        for model, entry in zip(models, data[key]):
+            original = saved.get(str(entry.get("id")))
+            if original and "description" not in model.model_fields_set:
+                entry["description"] = original.get("description")
+    return build_options(data)
 
 
 @router.post("/rescue/apply", response_model=RescueApplyOut)

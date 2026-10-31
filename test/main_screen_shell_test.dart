@@ -193,6 +193,22 @@ void main() {
     tester.view.reset();
   });
 
+  testWidgets('mobile chrome and profile stay within a narrow viewport', (
+    tester,
+  ) async {
+    await pumpShell(tester, const Size(320, 844));
+
+    await tester.tap(find.text('我的'));
+    await tester.pumpAndSettle(const Duration(milliseconds: 100));
+
+    expect(find.byKey(const ValueKey('stitch-profile-mobile')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stitch-mobile-header')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stitch-mobile-bottom-bar')), findsOneWidget);
+    expect(tester.getRect(find.byType(NavigationBar)).width, 320);
+    expect(tester.takeException(), isNull);
+    tester.view.reset();
+  });
+
   testWidgets('narrow iOS shell uses Cupertino tab navigation', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

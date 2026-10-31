@@ -23,6 +23,8 @@ def _entry(entry_id, hour=9, minute=0, height=80.0, day=DAY, **over):
         "time": {"hour": hour, "minute": minute},
         "reminderMinutesBefore": 10,
         "repeat": "none",
+        "rescheduleFlexible": True,
+        "hardLocked": False,
     }
     entry.update(over)
     return entry

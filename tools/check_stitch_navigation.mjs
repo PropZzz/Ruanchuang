@@ -24,17 +24,32 @@ await new Promise(r => server.listen(0, '127.0.0.1', r));
 const base = process.argv.includes('--url') ? process.argv[process.argv.indexOf('--url') + 1] : `http://127.0.0.1:${server.address().port}/`;
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-await context.addInitScript(() => { window.__RUANCHUANG_API__ = location.origin + '/api'; });
+await context.addInitScript(() => {
+  window.__RUANCHUANG_API__ = location.origin + '/api';
+  localStorage.setItem('ruanchuang-focus-mode', 'pomodoro');
+});
 const page = await context.newPage();
 await page.route('**/api/**', r => ['GET', 'HEAD', 'OPTIONS'].includes(r.request().method())
   ? r.continue() : r.fulfill({ json: {} }));
+const focusNow = new Date(Date.now() + 60 * 1000);
+const focusStartMinute = focusNow.getMinutes();
+await page.route('**/api/schedule', r => r.fulfill({ json: [{
+  id: 'navigation-focus-fixture',
+  title: '导航测试专注',
+  day: null,
+  time: { hour: focusNow.getHours(), minute: focusStartMinute },
+  height: 80,
+  tag: 'General',
+}] }));
 const documents = [];
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('request', r => { if (r.isNavigationRequest() && /stitch\/(screens|mobile)/.test(r.url())) documents.push(r.url()); });
 const ready = route => page.waitForFunction(route => {
   const f = document.getElementById('prototype-screen');
-  return f?.title === `时序智配 ${route}` && f.contentDocument?.getElementById('ruanchuang-polish-styles');
+  if (f?.title !== `时序智配 ${route}` || !f.contentDocument?.getElementById('ruanchuang-polish-styles')) return false;
+  const style = getComputedStyle(f);
+  return !f.hidden && style.visibility !== 'hidden' && Number(style.opacity) >= 0.99;
 }, route);
 const go = async route => { await page.evaluate(route => { location.hash = '#/' + route; }, route); await ready(route); };
 try {
@@ -52,10 +67,10 @@ try {
   await checkPageMotion(page, go);
   await page.evaluate(() => { window.__shell = document.getElementById('workspace-shell'); });
   for (const route of ['review', 'diagnostics', 'goals', 'team', 'profile', 'focus', 'schedule', 'micro']) {
-    await page.locator(`#workspace-shell a[data-route="${route}"]`).click();
+    await page.locator(`#workspace-shell aside a[data-route="${route}"]`).click();
     await ready(route);
     assert.equal(await page.evaluate(() => window.__shell === document.getElementById('workspace-shell')), true);
-    assert.equal(await page.locator('#workspace-shell a[aria-current="page"]').getAttribute('data-route'), route);
+    assert.equal(await page.locator('#workspace-shell aside a[aria-current="page"]').getAttribute('data-route'), route);
     assert.deepEqual(await page.locator('#workspace-shell header button').evaluateAll(buttons => buttons.map(button => button.dataset.route)), ['settings-drawer']);
   }
   const beforeWarm = documents.length;
@@ -86,15 +101,41 @@ try {
   const resumedTime = await page.frameLocator('#prototype-screen').locator('#focus-timer-display').innerText();
   const seconds = value => value.split(':').reduce((a, b) => a * 60 + Number(b), 0);
   assert.ok(seconds(hiddenTime) - seconds(resumedTime) >= 2);
+  await page.unroute('**/api/schedule');
   console.log('Hidden countdown stops DOM work and reconciles elapsed time on return.');
 
   await go('profile');
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.waitForFunction(() => document.getElementById('workspace-shell').hidden);
+  await page.waitForFunction(() => !document.getElementById('workspace-shell').hidden);
+  await page.waitForFunction(() => {
+    const frame = document.getElementById('prototype-screen');
+    const shell = frame?.contentDocument?.body?.querySelector(':scope > div');
+    return frame?.contentDocument?.getElementById('ruanchuang-polish-styles')?.href.includes('/stitch/mobile/assets/polish.css')
+      && shell && getComputedStyle(shell).paddingLeft === '0px';
+  });
+  assert.deepEqual(
+    await page.locator('#workspace-shell .shell-mobile-nav a').evaluateAll(links => links.map(link => link.dataset.route)),
+    ['focus', 'schedule', 'micro', 'team', 'profile'],
+  );
+  assert.equal(await page.locator('#workspace-shell .shell-mobile-nav a[aria-current="page"]').getAttribute('data-route'), 'profile');
+  assert.equal(await page.frameLocator('#prototype-screen').locator('body > nav.fixed.bottom-0').isVisible(), false);
+  assert.equal(await page.frameLocator('#prototype-screen').locator('body > aside.fixed').isVisible(), false);
+  const profileLayout = await page.locator('#prototype-screen').evaluate(frame => {
+    const cards = [...frame.contentDocument.querySelectorAll('main .rounded-xl')];
+    return {
+      scrollWidth: frame.contentDocument.documentElement.scrollWidth,
+      width: frame.contentWindow.innerWidth,
+      cards: cards.map(card => ({ left: card.getBoundingClientRect().left, right: card.getBoundingClientRect().right })),
+    };
+  });
+  assert.ok(profileLayout.scrollWidth <= profileLayout.width + 1, 'Profile must not overflow horizontally on mobile');
+  assert.ok(profileLayout.cards.every(card => card.left >= -1 && card.right <= profileLayout.width + 1), 'Profile cards must fit the mobile viewport');
   await go('micro');
+  assert.equal(await page.locator('#workspace-shell .shell-mobile-nav a[aria-current="page"]').getAttribute('data-route'), 'micro');
   await page.locator('#prototype-screen').evaluate(f => { f.contentWindow.__mobileProbe = true; });
   await go('schedule'); await go('micro');
   assert.equal(await page.locator('#prototype-screen').evaluate(f => f.contentWindow.__mobileProbe), true);
+  assert.equal(await page.locator('#workspace-shell .shell-mobile-nav a[aria-current="page"]').getAttribute('data-route'), 'micro');
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.waitForFunction(() => !document.getElementById('workspace-shell').hidden);
   await go('profile');
@@ -111,7 +152,7 @@ try {
   const coldGate = new Promise(resolve => { finishCold = resolve; });
   await page.route('**/stitch/screens/team/index.html?*', async r => { await coldGate; await r.continue(); });
   const coldRequest = page.waitForRequest('**/stitch/screens/team/index.html?*');
-  await page.locator('#workspace-shell a[data-route="team"]').click();
+  await page.locator('#workspace-shell aside a[data-route="team"]').click();
   await coldRequest;
   assert.equal(await page.locator('#prototype-screen').getAttribute('title'), '时序智配 profile');
   await go('micro'); finishCold();
@@ -129,7 +170,7 @@ try {
   await page.unroute('**/stitch/screens/rescue-comparison/index.html?*');
   await go('micro');
   await page.route('**/stitch/screens/diagnostics/index.html?*', r => r.fulfill({ status: 503, contentType: 'text/html', body: '<h1>Unavailable</h1>' }));
-  await page.locator('#workspace-shell a[data-route="diagnostics"]').click();
+  await page.locator('#workspace-shell aside a[data-route="diagnostics"]').click();
   await page.locator('#page-load-status button').waitFor();
   assert.equal(await page.locator('#prototype-screen').getAttribute('title'), '时序智配 micro');
   await page.unroute('**/stitch/screens/diagnostics/index.html?*');
@@ -148,7 +189,7 @@ try {
   const beforeReads = reads;
   const beforeSchedule = documents.filter(u => u.includes('/screens/smart-calendar/')).length;
   await go('create-schedule');
-  await page.frameLocator('#prototype-screen').locator('textarea').fill('导航测试日程');
+  await page.frameLocator('#prototype-screen').locator('#schedule-title-input').fill('导航测试日程');
   await page.frameLocator('#prototype-screen').getByRole('button', { name: /保存并写入日程/ }).click();
   await ready('schedule');
   await page.waitForFunction(() => document.getElementById('prototype-screen').contentDocument.documentElement.dataset.backendState !== 'loading');

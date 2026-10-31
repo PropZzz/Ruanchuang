@@ -93,6 +93,53 @@ class EmotionPolicy {
     );
   }
 
+  /// Derive an energy status from a recorded emotion check-in.
+  ///
+  /// The battery values line up with the app-wide tier thresholds
+  /// (veryLow <20, low <40, medium <60, high <80) so consumers that map
+  /// battery percent back to an [EnergyTier] stay consistent with `level`.
+  /// `level` uses the backend vocabulary: veryLow/low/medium/high/veryHigh.
+  static EnergyStatus energyFromState(EmotionState state) {
+    switch (state) {
+      case EmotionState.efficient:
+        return const EnergyStatus(
+          level: 'high',
+          status: '高效',
+          description: '根据情绪打卡记录推算',
+          batteryPercent: 75,
+          emotion: EmotionType.highEfficiency,
+          flowState: 'flow',
+        );
+      case EmotionState.stable:
+        return const EnergyStatus(
+          level: 'medium',
+          status: '平稳',
+          description: '根据情绪打卡记录推算',
+          batteryPercent: 55,
+          emotion: EmotionType.stable,
+          flowState: 'normal',
+        );
+      case EmotionState.tired:
+        return const EnergyStatus(
+          level: 'low',
+          status: '疲惫',
+          description: '根据情绪打卡记录推算，建议安排恢复时间',
+          batteryPercent: 35,
+          emotion: EmotionType.fatigue,
+          flowState: 'low',
+        );
+      case EmotionState.irritable:
+        return const EnergyStatus(
+          level: 'veryLow',
+          status: '烦躁',
+          description: '根据情绪打卡记录推算，建议先处理轻量任务',
+          batteryPercent: 15,
+          emotion: EmotionType.irritable,
+          flowState: 'low',
+        );
+    }
+  }
+
   static EnergyTier adjustEnergy({
     required EnergyTier base,
     required EmotionState emotion,

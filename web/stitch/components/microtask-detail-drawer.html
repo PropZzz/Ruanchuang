@@ -11,6 +11,7 @@
   <script id="tailwind-config">tailwind.config={"darkMode":"class","theme":{"extend":{"colors":{"outline":"#717978","error-container":"#ffdad6","on-primary-container":"#81a8a7","secondary-fixed":"#d6e3ff","surface-variant":"#e3e2e7","on-secondary":"#ffffff","tertiary-fixed-dim":"#53e16f","on-error":"#ffffff","surface-bright":"#faf8fe","primary-fixed-dim":"#a7cecd","on-tertiary-fixed":"#002107","inverse-on-surface":"#f1f0f6","surface":"#faf8fe","on-surface-variant":"#414848","primary-container":"#163d3d","inverse-surface":"#2f3034","on-tertiary-fixed-variant":"#00531c","secondary":"#005db5","on-secondary-fixed-variant":"#00468b","primary-fixed":"#c2eae9","surface-container-highest":"#e3e2e7","outline-variant":"#c0c8c7","surface-container-low":"#f4f3f8","on-surface":"#1a1b1f","surface-tint":"#3f6564","on-secondary-container":"#00376f","tertiary-container":"#004114","surface-dim":"#dbd9df","on-error-container":"#93000a","secondary-fixed-dim":"#a8c8ff","surface-container-high":"#e9e7ed","error":"#ba1a1a","on-secondary-fixed":"#001b3d","tertiary":"#00290a","surface-container":"#efedf3","primary":"#002727","secondary-container":"#62a1fe","tertiary-fixed":"#72fe88","background":"#faf8fe","on-tertiary-container":"#1db84d","inverse-primary":"#a7cecd","on-background":"#1a1b1f","on-tertiary":"#ffffff","surface-container-lowest":"#ffffff","on-primary":"#ffffff","on-primary-fixed-variant":"#274d4d","on-primary-fixed":"#002020"},"borderRadius":{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},"spacing":{},"fontFamily":{"headline":["Noto Serif"],"display":["Noto Serif"],"body":["Inter"],"label":["Inter"]},"fontSize":{}}}}
   </script>
 
+<link rel="stylesheet" href="../assets/drawer-controls.css"/>
 </head>
 <body>
 <div id="root" class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-primary/20 backdrop-blur-sm">
@@ -18,7 +19,7 @@
   <div class="w-full max-w-2xl bg-surface-container-lowest rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col max-h-[90vh] md:max-h-[85vh]">
 
     <!-- Header -->
-    <div class="px-6 py-4 bg-surface-container-low flex items-center justify-between border-b border-outline-variant">
+    <div data-drawer-header class="px-6 py-4 bg-surface-container-low flex items-center justify-between border-b border-outline-variant">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-secondary-container flex items-center justify-center">
           <span class="material-symbols-outlined text-[22px] text-on-secondary-container">task_alt</span>
@@ -28,8 +29,8 @@
           <p class="text-xs text-on-surface-variant font-label">Microtask Detail</p>
         </div>
       </div>
-      <button onclick="closeDrawer()" aria-label="关闭抽屉" class="w-10 h-10 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center text-on-surface-variant">
-        <span class="material-symbols-outlined text-[24px]">close</span>
+      <button onclick="closeDrawer()" aria-label="关闭抽屉" class="stitch-drawer-close" type="button" data-drawer-close>
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
       </button>
     </div>
 

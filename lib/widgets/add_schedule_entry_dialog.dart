@@ -11,14 +11,8 @@ import 'stitch_form_sheet.dart';
 const _tagPresets = ['General', 'Deep Work', 'Micro Task', 'Routine', 'Goal'];
 const _durationOptions = <int, double>{30: 40, 45: 60, 60: 80, 90: 120};
 
-String _presetTagLabel(BuildContext context, String tag) => switch (tag) {
-  'General' => AppStrings.of(context, 'tag_general'),
-  'Deep Work' => AppStrings.of(context, 'tag_deep_work'),
-  'Micro Task' => AppStrings.of(context, 'tag_micro_task'),
-  'Routine' => AppStrings.of(context, 'tag_routine'),
-  'Goal' => AppStrings.of(context, 'tag_goal'),
-  _ => tag,
-};
+String _presetTagLabel(BuildContext context, String tag) =>
+    tagLabel(context, tag);
 
 /// Collects a new schedule entry (title, tag, duration, color, start time,
 /// reminder, repeat rule) and returns it, or null when cancelled.

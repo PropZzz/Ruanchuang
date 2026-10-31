@@ -1,4 +1,5 @@
 import getpass
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -9,7 +10,13 @@ import paramiko
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-build = json.loads(subprocess.check_output(['node', str(PROJECT_ROOT / 'tools/build_stitch_web.mjs')], cwd=PROJECT_ROOT, text=True))
+parser = argparse.ArgumentParser()
+parser.add_argument('--source-root', type=Path, help='Reviewed isolated web source snapshot')
+args = parser.parse_args()
+build_command = ['node', str(PROJECT_ROOT / 'tools/build_stitch_web.mjs')]
+if args.source_root:
+    build_command += ['--source-root', str(args.source_root.resolve())]
+build = json.loads(subprocess.check_output(build_command, cwd=PROJECT_ROOT, text=True))
 release = build['release']
 output = Path(build['output'])
 archive = PROJECT_ROOT / 'build' / f'stitch-{release}.tar.gz'

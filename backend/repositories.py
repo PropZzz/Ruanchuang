@@ -164,6 +164,7 @@ def init_db(db_path: str | Path | None = None, connection: sqlite3.Connection | 
                 day TEXT,
                 title TEXT NOT NULL,
                 tag TEXT NOT NULL,
+                description TEXT,
                 load TEXT,
                 goal_id TEXT,
                 goal_task_id TEXT,
@@ -180,6 +181,17 @@ def init_db(db_path: str | Path | None = None, connection: sqlite3.Connection | 
             )
             """
         )
+        schedule_columns = {row[1] for row in connection.execute("PRAGMA table_info(schedules)")}
+        for column, default in (("description", None), ("reschedule_flexible", 1), ("hard_locked", 0)):
+            if column not in schedule_columns:
+                if column == "description":
+                    connection.execute("ALTER TABLE schedules ADD COLUMN description TEXT")
+                else:
+                    connection.execute(f"ALTER TABLE schedules ADD COLUMN {column} INTEGER NOT NULL DEFAULT {default}")
+        if owns_connection:
+            # Startup migration of settings saved before the exclusivity rule.
+            connection.execute("UPDATE schedules SET reschedule_flexible = 0 "
+                               "WHERE hard_locked = 1 AND reschedule_flexible = 1")
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS microtasks (
@@ -513,6 +525,7 @@ def _schedule_row_to_dict(row: sqlite3.Row) -> dict[str, object]:
         "day": row["day"],
         "title": row["title"],
         "tag": row["tag"],
+        "description": row["description"],
         "load": row["load"],
         "goalId": row["goal_id"],
         "goalTaskId": row["goal_task_id"],
@@ -522,7 +535,42 @@ def _schedule_row_to_dict(row: sqlite3.Row) -> dict[str, object]:
         "reminderMinutesBefore": row["reminder_minutes_before"],
         "repeat": row["repeat"],
         "repeatUntil": row["repeat_until"],
+        "rescheduleFlexible": bool(row["reschedule_flexible"]),
+        "hardLocked": bool(row["hard_locked"]),
     }
+
+
+def _save_schedule_constraints(connection: sqlite3.Connection, user_id: str,
+                               schedule_id: str, payload: dict[str, object]) -> None:
+    """Used by all schedule writes, including sync and snapshot restoration."""
+    values = []
+    for alias, field in (("rescheduleFlexible", "reschedule_flexible"), ("hardLocked", "hard_locked")):
+        value = payload.get(alias, payload.get(field))
+        if alias in payload or field in payload:
+            if not isinstance(value, bool):
+                raise RepositoryValidationError(f"{alias} must be a boolean")
+            values.append(int(value))
+        else:
+            values.append(None)
+    if all(value is None for value in values):
+        return
+    if values == [1, 1]:
+        raise RepositoryValidationError("rescheduleFlexible and hardLocked are mutually exclusive")
+    if values[0] == 1:
+        values[1] = 0
+    elif values[1] == 1:
+        values[0] = 0
+    connection.execute(
+        "UPDATE schedules SET reschedule_flexible = COALESCE(?, reschedule_flexible), "
+        "hard_locked = COALESCE(?, hard_locked) WHERE id = ? AND user_id = ?",
+        (*values, schedule_id, user_id),
+    )
+
+
+def _repair_legacy_schedule_constraints(entry: dict[str, object]) -> dict[str, object]:
+    if entry.get("hardLocked") is True and entry.get("rescheduleFlexible", True) is True:
+        return {**entry, "rescheduleFlexible": False}
+    return entry
 
 
 def _normalize_schedule_values(
@@ -547,6 +595,8 @@ def _normalize_schedule_values(
     )
     repeat = str(_first_non_none(payload, "repeat", default="none"))
     repeat_until = _parse_date(_first_non_none(payload, "repeatUntil", "repeat_until"))
+    description_value = payload.get("description")
+    description = None if description_value is None else str(description_value)
     return (
         schedule_id,
         day,
@@ -562,6 +612,7 @@ def _normalize_schedule_values(
         reminder_minutes_before,
         repeat,
         repeat_until,
+        description,
     )
 
 
@@ -581,6 +632,7 @@ def upsert_schedule(db_path: str | Path | None, user_id: str, payload: dict[str,
         reminder_minutes_before,
         repeat,
         repeat_until,
+        description,
     ) = _normalize_schedule_values(payload)
     now = _now()
 
@@ -592,10 +644,10 @@ def upsert_schedule(db_path: str | Path | None, user_id: str, payload: dict[str,
                 connection.execute(
                     """
                     INSERT INTO schedules (
-                        id, user_id, day, title, tag, load, goal_id, goal_task_id, height, color,
+                        id, user_id, day, title, tag, description, load, goal_id, goal_task_id, height, color,
                         time_hour, time_minute, reminder_minutes_before, repeat, repeat_until,
                         created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         schedule_id,
@@ -603,6 +655,7 @@ def upsert_schedule(db_path: str | Path | None, user_id: str, payload: dict[str,
                         day,
                         title,
                         tag,
+                        description,
                         load,
                         goal_id,
                         goal_task_id,
@@ -627,7 +680,7 @@ def upsert_schedule(db_path: str | Path | None, user_id: str, payload: dict[str,
                 UPDATE schedules
                 SET day = ?, title = ?, tag = ?, load = ?, goal_id = ?, goal_task_id = ?, height = ?,
                     color = ?, time_hour = ?, time_minute = ?, reminder_minutes_before = ?, repeat = ?,
-                    repeat_until = ?, updated_at = ?
+                    repeat_until = ?, description = CASE WHEN ? THEN ? ELSE description END, updated_at = ?
                 WHERE id = ? AND user_id = ?
                 """,
                 (
@@ -644,11 +697,14 @@ def upsert_schedule(db_path: str | Path | None, user_id: str, payload: dict[str,
                     reminder_minutes_before,
                     repeat,
                     repeat_until,
+                    "description" in payload,
+                    description,
                     now,
                     schedule_id,
                     user_id,
                 ),
             )
+        _save_schedule_constraints(connection, user_id, schedule_id, payload)
         connection.commit()
         row = connection.execute(
             "SELECT * FROM schedules WHERE id = ? AND user_id = ?",
@@ -661,6 +717,7 @@ def upsert_schedules_batch(
     db_path: str | Path | None,
     user_id: str,
     payloads: list[dict[str, object]],
+    *, create_only: bool = False,
 ) -> list[dict[str, object]]:
     now = _now()
     with _connect(db_path) as connection:
@@ -680,27 +737,38 @@ def upsert_schedules_batch(
             reminder = _parse_int(_first_non_none(payload, "reminderMinutesBefore", "reminder_minutes_before", default=10), 10)
             repeat = str(_first_non_none(payload, "repeat", default="none"))
             repeat_until = _parse_date(_first_non_none(payload, "repeatUntil", "repeat_until"))
-            _check_global_owner(connection, "schedules", schedule_id, user_id, "Schedule")
-            connection.execute(
-                """
+            description_value = payload.get("description")
+            description = None if description_value is None else str(description_value)
+            existing = _check_global_owner(connection, "schedules", schedule_id, user_id, "Schedule")
+            if create_only and existing is not None:
+                continue
+            conflict_action = "DO NOTHING" if create_only else """DO UPDATE SET
+                day = excluded.day, title = excluded.title, tag = excluded.tag,
+                description = CASE WHEN ? THEN excluded.description ELSE schedules.description END, load = excluded.load,
+                goal_id = excluded.goal_id, goal_task_id = excluded.goal_task_id, height = excluded.height,
+                color = excluded.color, time_hour = excluded.time_hour, time_minute = excluded.time_minute,
+                reminder_minutes_before = excluded.reminder_minutes_before, repeat = excluded.repeat,
+                repeat_until = excluded.repeat_until, updated_at = excluded.updated_at
+                WHERE schedules.user_id = excluded.user_id"""
+            values = (schedule_id, user_id, day, title, tag, description, load,
+                      None if goal_id_value is None else str(goal_id_value),
+                      None if goal_task_id_value is None else str(goal_task_id_value),
+                      height, color, hour, minute, reminder, repeat, repeat_until, now, now)
+            cursor = connection.execute(
+                f"""
                 INSERT INTO schedules (
-                    id, user_id, day, title, tag, load, goal_id, goal_task_id, height, color,
+                    id, user_id, day, title, tag, description, load, goal_id, goal_task_id, height, color,
                     time_hour, time_minute, reminder_minutes_before, repeat, repeat_until,
                     created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    day = excluded.day, title = excluded.title, tag = excluded.tag, load = excluded.load,
-                    goal_id = excluded.goal_id, goal_task_id = excluded.goal_task_id, height = excluded.height,
-                    color = excluded.color, time_hour = excluded.time_hour, time_minute = excluded.time_minute,
-                    reminder_minutes_before = excluded.reminder_minutes_before, repeat = excluded.repeat,
-                    repeat_until = excluded.repeat_until, updated_at = excluded.updated_at
-                WHERE schedules.user_id = excluded.user_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) {conflict_action}
                 """,
-                (schedule_id, user_id, day, title, tag, load,
-                 None if goal_id_value is None else str(goal_id_value),
-                 None if goal_task_id_value is None else str(goal_task_id_value),
-                 height, color, hour, minute, reminder, repeat, repeat_until, now, now),
+                values if create_only else (*values, "description" in payload),
             )
+            if create_only and cursor.rowcount == 0:
+                _check_global_owner(connection, "schedules", schedule_id, user_id, "Schedule")
+                continue
+            _save_schedule_constraints(connection, user_id, schedule_id, payload)
             row = connection.execute("SELECT * FROM schedules WHERE id = ? AND user_id = ?", (schedule_id, user_id)).fetchone()
             results.append(_schedule_row_to_dict(row))
         connection.commit()
@@ -745,16 +813,17 @@ def replace_schedules_with_snapshot(
             hour, minute = _parse_time(payload.get("time") or {})
             connection.execute(
                 """
-                INSERT INTO schedules (id, user_id, day, title, tag, load, goal_id, goal_task_id, height, color,
+                INSERT INTO schedules (id, user_id, day, title, tag, description, load, goal_id, goal_task_id, height, color,
                     time_hour, time_minute, reminder_minutes_before, repeat, repeat_until, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (schedule_id, user_id, day, str(payload.get("title") or ""), str(payload.get("tag") or ""),
+                (schedule_id, user_id, day, str(payload.get("title") or ""), str(payload.get("tag") or ""), payload.get("description"),
                  payload.get("load"), payload.get("goalId"), payload.get("goalTaskId"),
                  _parse_float(payload.get("height"), 60.0), _parse_int(payload.get("color"), 0), hour, minute,
                  _parse_int(payload.get("reminderMinutesBefore"), 10), str(payload.get("repeat") or "none"),
                  _parse_date(payload.get("repeatUntil")), now, now),
             )
+            _save_schedule_constraints(connection, user_id, schedule_id, payload)
         connection.execute(
             "INSERT INTO rescue_snapshots (id, user_id, strategy, baseline_hash, before_json, after_json, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (snapshot_id, user_id, strategy, baseline_hash, json.dumps(before, ensure_ascii=False), json.dumps(after, ensure_ascii=False), "applied", now, now),
@@ -778,22 +847,23 @@ def undo_schedule_snapshot(db_path: str | Path | None, user_id: str, snapshot_id
             raise RepositoryNotFoundError(f"Rescue snapshot not found: {snapshot_id}")
         if row["status"] != "applied":
             raise RepositoryConflictError("Rescue snapshot has already been undone.")
-        before = json.loads(row["before_json"])
+        before = [_repair_legacy_schedule_constraints(entry) for entry in json.loads(row["before_json"])]
         connection.execute("DELETE FROM schedules WHERE user_id = ?", (user_id,))
         for payload in before:
             schedule_id = str(payload.get("id") or uuid.uuid4().hex)
             hour, minute = _parse_time(payload.get("time") or {})
             connection.execute(
                 """
-                INSERT INTO schedules (id, user_id, day, title, tag, load, goal_id, goal_task_id, height, color,
+                INSERT INTO schedules (id, user_id, day, title, tag, description, load, goal_id, goal_task_id, height, color,
                     time_hour, time_minute, reminder_minutes_before, repeat, repeat_until, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (schedule_id, user_id, _parse_date(payload.get("day")), str(payload.get("title") or ""), str(payload.get("tag") or ""),
+                (schedule_id, user_id, _parse_date(payload.get("day")), str(payload.get("title") or ""), str(payload.get("tag") or ""), payload.get("description"),
                  payload.get("load"), payload.get("goalId"), payload.get("goalTaskId"), _parse_float(payload.get("height"), 60.0),
                  _parse_int(payload.get("color"), 0), hour, minute, _parse_int(payload.get("reminderMinutesBefore"), 10),
                  str(payload.get("repeat") or "none"), _parse_date(payload.get("repeatUntil")), now, now),
             )
+            _save_schedule_constraints(connection, user_id, schedule_id, payload)
         connection.execute("UPDATE rescue_snapshots SET status = 'undone', updated_at = ? WHERE id = ?", (now, snapshot_id))
         _upsert_task_event_on_connection(
             connection, user_id,
@@ -2177,16 +2247,17 @@ def _insert_schedule_on_connection(
         reminder_minutes_before,
         repeat,
         repeat_until,
+        description,
     ) = _normalize_schedule_values(payload)
     _check_global_owner(connection, "schedules", schedule_id, user_id, "Schedule")
     try:
         connection.execute(
             """
             INSERT INTO schedules (
-                id, user_id, day, title, tag, load, goal_id, goal_task_id, height, color,
+                id, user_id, day, title, tag, description, load, goal_id, goal_task_id, height, color,
                 time_hour, time_minute, reminder_minutes_before, repeat, repeat_until,
                 created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 schedule_id,
@@ -2194,6 +2265,7 @@ def _insert_schedule_on_connection(
                 day,
                 title,
                 tag,
+                description,
                 load,
                 goal_id,
                 goal_task_id,
@@ -2210,6 +2282,7 @@ def _insert_schedule_on_connection(
         )
     except sqlite3.IntegrityError as exc:
         raise RepositoryConflictError(f"Schedule id already exists: {schedule_id}") from exc
+    _save_schedule_constraints(connection, user_id, schedule_id, payload)
     row = connection.execute(
         "SELECT * FROM schedules WHERE id = ? AND user_id = ?",
         (schedule_id, user_id),
@@ -2276,9 +2349,13 @@ def apply_rescue(
         before = [_schedule_row_to_dict(row) for row in rows]
         if compute_baseline_hash(before, day_iso) != baseline_hash:
             raise RepositoryConflictError("Schedule baseline changed; regenerate rescue options")
+        before_by_id = {str(entry["id"]): entry for entry in before}
         _delete_schedules_for_day_on_connection(connection, user_id, day_iso)
         now = _now()
         for payload in after_payloads:
+            if str(payload.get("id")) in before_by_id:
+                # Rescue changes time placement, never the user's event notes.
+                payload = {**payload, "description": before_by_id[str(payload["id"])].get("description")}
             _insert_schedule_on_connection(connection, user_id, payload, now)
         event_payload = dict(event_payload)
         event_payload.update({"type": "interrupt", "reason": f"rescue_accept:{strategy}", "at": now})
@@ -2329,7 +2406,7 @@ def undo_rescue(
         day_iso = str(row["day"])
         strategy = str(row["strategy"])
         try:
-            before = json.loads(row["before_json"])
+            before = [_repair_legacy_schedule_constraints(entry) for entry in json.loads(row["before_json"])]
         except (TypeError, ValueError):
             before = []
         urgent = None

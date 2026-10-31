@@ -5,8 +5,21 @@ import test from 'node:test';
 
 const context = vm.createContext({ Date, Intl, console });
 vm.runInContext(await readFile(new URL('../../web/stitch/calendar.js', import.meta.url), 'utf8'), context);
-const { dayKey, parseDay, addDays, addMonths, visibleRange, occurrences, layoutEvents, countConflicts } = context.StitchCalendar;
+const { dayKey, parseDay, addDays, addMonths, visibleRange, occurrences, layoutEvents, countConflicts, ganttRows } = context.StitchCalendar;
 const record = (id, day, hour, minute, minutes, extra = {}) => ({ id, title: id, day, time: { hour, minute }, height: minutes * 80 / 60, ...extra });
+
+test('course cards recover classrooms from imported and explicitly labelled notes without exposing unrelated notes', () => {
+  const room = context.StitchCalendar.classroomFor;
+  assert.equal(room({ tag: '上课学习', description: '王老师 · B座507' }), 'B座507');
+  assert.equal(room({ tag: '上课学习', description: '教师：李老师\n上课教室：三教 204\n请带教材' }), '三教 204');
+  assert.equal(room({ tag: '上课学习', description: 'Room 204' }), 'Room 204');
+  assert.equal(room({ tag: '上课学习', description: '复习资料 · C座302 · 李老师' }), 'C座302');
+  assert.equal(room({ tag: '上课学习', description: '王老师 · 体育馆' }), '体育馆');
+  assert.equal(room({ tag: '上课学习', description: '王老师' }), '');
+  assert.equal(room({ tag: '上课学习', description: '请提前阅读资料' }), '');
+  assert.equal(room({ tag: '工作会议', description: '地点：会议室 204' }), '');
+  assert.equal(room({ tag: '上课学习' }), '');
+});
 
 test('local date keys validate dates and keep local days across month and year boundaries', () => {
   assert.equal(dayKey(new Date(2026, 9, 29, 0, 5)), '2026-10-29');
@@ -52,4 +65,22 @@ test('overlapping events receive separate columns while adjacent events share on
   assert.equal(output[0].columns, 2); assert.notEqual(output[0].column, output[1].column);
   assert.equal(output[2].columns, 1); assert.equal(input[0].column, undefined);
   assert.equal(countConflicts(input), 1);
+});
+
+test('Gantt merges overnight segments, clips visible week boundaries and preserves recurrence rows', () => {
+  const range = visibleRange('gantt', '2026-10-29');
+  assert.equal(range.start, '2026-10-26'); assert.equal(range.end, '2026-11-01');
+  const items = [record('night', '2026-10-28', 23, 30, 120),
+    record('before', '2026-10-25', 23, 30, 120), record('after', '2026-11-01', 23, 30, 120),
+    record('daily', '2026-10-26', 9, 0, 30, { repeat: 'daily', repeatUntil: '2026-10-28' })];
+  const rows = ganttRows(occurrences(items, range.start, range.end), range.start);
+  const night = rows.find(r => r.event.id === 'night');
+  assert.equal(rows.filter(r => r.event.id === 'night').length, 1);
+  assert.equal(night.minutes, 120); assert.equal(night.end - night.start, 120);
+  assert.equal(night.event.day, '2026-10-28'); assert.equal(night.endEvent.day, '2026-10-29');
+  assert.equal(rows.find(r => r.event.id === 'before').start, 0);
+  assert.equal(rows.find(r => r.event.id === 'before').minutes, 90);
+  assert.equal(rows.find(r => r.event.id === 'after').end, 7 * 1440);
+  assert.equal(rows.filter(r => r.event.id === 'daily').length, 3);
+  assert.ok(rows.every(r => r.start >= 0 && r.end <= 7 * 1440));
 });

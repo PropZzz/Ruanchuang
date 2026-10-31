@@ -5,10 +5,27 @@
     body {
       min-height: max(884px, 100dvh);
     }
+    #tagGroup .tag-pill { min-height: 32px; }
+    #tagGroup .tag-pill > span:first-child { background: var(--schedule-tag-accent, #717978); }
+    #tagGroup .tag-pill:hover { background-color: #e9e7ed; }
+    #tagGroup .tag-pill[aria-pressed="true"] {
+      background: var(--schedule-tag-bg, #62a1fe);
+      color: var(--schedule-tag-title, #00376f);
+      font-weight: 600;
+      box-shadow: inset 0 0 0 1px var(--schedule-tag-accent, #005db5);
+    }
+    #tagGroup .tag-pill:focus-visible { outline: 2px solid #005db5; outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { #tagGroup .tag-pill { transition: none; } }
   </style>
-  </head><body class="bg-[rgba(24,50,56,0.45)] backdrop-blur-md font-body text-on-surface min-h-screen flex flex-col justify-end"><button aria-label="关闭抽屉" class="fixed inset-0 z-0 cursor-default" type="button"></button><section class="w-full max-w-[420px] mx-auto bg-surface rounded-t-3xl shadow-[0_-8px_32px_rgba(22,61,61,0.18)] flex flex-col max-h-[813px] overflow-hidden"><div class="w-full pt-3 pb-1 flex justify-center items-center cursor-grab active:cursor-grabbing"><div class="w-12 h-1.5 rounded-full bg-outline-variant/60"></div></div><div class="h-14 px-5 flex items-center justify-between shrink-0"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-on-tertiary-container"></span><h2 class="text-base font-headline font-bold text-on-surface tracking-tight leading-none">Quick Reschedule Drawer</h2></div><button aria-label="关闭抽屉" class="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container active:scale-95 transition-all"><span class="material-symbols-outlined text-[20px]">close</span></button></div><main class="flex-1 overflow-y-auto px-5 pt-1 pb-safe bg-surface"><div class="flex flex-col w-full pb-8">
+  <link rel="stylesheet" href="../../assets/drawer-controls.css"/>
+<link rel="stylesheet" href="../../assets/time-picker.css"/>
+<script src="../../time-picker.js" defer></script>
+</head><body class="bg-[rgba(24,50,56,0.45)] backdrop-blur-md font-body text-on-surface min-h-screen flex flex-col justify-end"><button aria-label="关闭抽屉" class="fixed inset-0 z-0 cursor-default" type="button"></button><section class="w-full max-w-[420px] mx-auto bg-surface rounded-t-3xl shadow-[0_-8px_32px_rgba(22,61,61,0.18)] flex flex-col max-h-[813px] overflow-hidden"><div class="w-full pt-3 pb-1 flex justify-center items-center cursor-grab active:cursor-grabbing"><div class="w-12 h-1.5 rounded-full bg-outline-variant/60"></div></div><div data-drawer-header class="h-14 px-5 flex items-center justify-between shrink-0"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-on-tertiary-container"></span><h2 class="text-base font-headline font-bold text-on-surface tracking-tight leading-none" id="schedule-form-title">新建日程</h2></div><button aria-label="关闭抽屉" class="stitch-drawer-close" type="button" data-drawer-close><span class="material-symbols-outlined" aria-hidden="true">close</span></button></div><main class="flex-1 overflow-y-auto px-5 pt-1 pb-safe bg-surface"><div id="schedule-form-status" class="py-6 text-sm text-on-surface-variant" role="status" hidden><p id="schedule-form-message"></p><button id="schedule-form-retry" class="mt-3 px-4 py-2 rounded-lg bg-secondary text-on-secondary text-xs font-semibold" type="button" hidden>重试</button></div><fieldset id="schedule-form-fields" class="min-w-0 border-0 p-0 m-0 w-full"><div class="flex flex-col w-full pb-8">
 <div class="flex flex-col gap-4">
 <!-- Schedule Title Input -->
+<button id="schedule-import-action" type="button" class="w-full min-h-11 px-3.5 py-3 rounded-xl bg-surface-container-low text-on-surface-variant text-xs font-medium flex items-center gap-2 hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]" aria-hidden="true">file_upload</span><span>导入日程</span><span class="material-symbols-outlined text-[18px] ml-auto" aria-hidden="true">chevron_right</span>
+</button>
 <div class="flex flex-col gap-1.5">
 <label class="text-xs font-medium text-on-surface-variant tracking-wider flex items-center justify-between" for="schedule-title-input">
 <span>日程主题</span>
@@ -25,31 +42,63 @@
 </div>
 </div>
 </div>
-<!-- Category Tag Carousel -->
+<label class="flex flex-col gap-1.5 text-xs font-medium text-on-surface-variant" for="schedule-description-input">备注（选填）
+<textarea id="schedule-description-input" rows="2" maxlength="4000" class="w-full bg-surface-container-low rounded-xl p-3.5 text-sm text-on-surface placeholder:text-outline focus:outline-none resize-y leading-relaxed" placeholder="教师、地点或其他说明…"></textarea>
+</label>
+<!-- Schedule category tags wrap to keep every option discoverable. -->
 <div class="flex flex-col gap-2">
 <label class="text-xs font-medium text-on-surface-variant tracking-wider">日程属性标签</label>
-<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5" id="tagGroup">
-<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all flex items-center gap-1.5" onclick="selectTag(this)" type="button">
-<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+<div class="flex flex-wrap items-center gap-2 py-0.5" id="tagGroup" role="group" aria-label="日程属性标签">
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1.5" aria-pressed="false" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full" aria-hidden="true"></span>
 <span>方案评审</span>
 </button>
-<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary-container text-on-secondary-container transition-all flex items-center gap-1.5 shadow-sm active-tag" onclick="selectTag(this)" type="button">
-<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1.5 active-tag" aria-pressed="true" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full" aria-hidden="true"></span>
 <span>跨部门协同</span>
 </button>
-<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all flex items-center gap-1.5" onclick="selectTag(this)" type="button">
-<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1.5" aria-pressed="false" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full" aria-hidden="true"></span>
 <span>架构编码</span>
 </button>
-<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all flex items-center gap-1.5" onclick="selectTag(this)" type="button">
-<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1.5" aria-pressed="false" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full" aria-hidden="true"></span>
 <span>随笔调研</span>
+</button>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1.5" aria-pressed="false" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full" aria-hidden="true"></span>
+<span>日常规程</span>
+</button>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1.5" aria-pressed="false" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full" aria-hidden="true"></span>
+<span>上课学习</span>
+</button>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1.5" aria-pressed="false" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full" aria-hidden="true"></span>
+<span>作业自习</span>
+</button>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1.5" aria-pressed="false" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full" aria-hidden="true"></span>
+<span>考试复习</span>
+</button>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1.5" aria-pressed="false" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full" aria-hidden="true"></span>
+<span>工作会议</span>
+</button>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1.5" aria-pressed="false" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full" aria-hidden="true"></span>
+<span>项目推进</span>
+</button>
+<button class="tag-pill shrink-0 px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container text-on-surface-variant transition-colors flex items-center gap-1.5" aria-pressed="false" onclick="selectTag(this)" type="button">
+<span class="w-1.5 h-1.5 rounded-full" aria-hidden="true"></span>
+<span>运动休息</span>
 </button>
 </div>
 </div>
 <!-- Editable schedule date, time and duration -->
 <div class="bg-surface-container-low rounded-2xl p-4 flex flex-col gap-3">
 <label class="flex flex-col gap-1.5 text-xs text-on-surface-variant">日程日期<input id="schedule-date-input" aria-label="日程日期" type="date" required class="min-h-11 px-3 rounded-xl bg-surface-container-lowest text-on-surface text-sm"/></label>
+<p id="schedule-floating-note" class="text-xs text-on-surface-variant" hidden>尚未固定日期，每天显示；选择日期后将固定到该日。</p>
 <div class="grid grid-cols-2 gap-3">
 <label class="flex flex-col gap-1.5 text-xs text-on-surface-variant">开始时间<input id="schedule-time-input" aria-label="开始时间" type="time" required value="09:00" class="min-h-11 px-3 rounded-xl bg-surface-container-lowest text-on-surface text-sm"/></label>
 <label class="flex flex-col gap-1.5 text-xs text-on-surface-variant">时长（分钟）<input id="schedule-duration-input" aria-label="时长（分钟）" type="number" min="5" max="1440" step="5" value="60" required class="min-h-11 px-3 rounded-xl bg-surface-container-lowest text-on-surface text-sm"/></label>
@@ -64,27 +113,27 @@
 <span class="material-symbols-outlined text-[18px] text-primary">psychology</span>
 <span class="text-xs font-semibold text-on-surface">认知负荷评估</span>
 </div>
-<span class="text-xs font-bold text-on-surface tabular-nums">中等 (3/5)</span>
+<span class="text-xs font-bold text-on-surface tabular-nums" id="schedule-load-summary">中等 (3/5)</span>
 </div>
 <!-- Multi-segment visual bar -->
-<div class="flex items-center gap-1.5 w-full">
+<div class="flex items-center gap-1.5 w-full" id="schedule-load-gauge">
 <div class="h-2 flex-1 rounded-full bg-on-tertiary-container"></div>
 <div class="h-2 flex-1 rounded-full bg-on-tertiary-container"></div>
 <div class="h-2 flex-1 rounded-full bg-secondary-container"></div>
 <div class="h-2 flex-1 rounded-full bg-surface-container-highest"></div>
 <div class="h-2 flex-1 rounded-full bg-surface-container-highest"></div>
 </div>
-<p class="text-[11px] text-on-surface-variant">常态脑力消耗 · 适宜进行多方方案校准与系统边界验证</p>
+<div class="grid grid-cols-4 gap-2" id="loadGroup" role="group" aria-label="认知负荷"><button type="button" data-load="" aria-pressed="false" onclick="selectRadio(this, 'loadGroup')" class="py-2 rounded-xl text-xs font-medium bg-surface-container text-on-surface-variant">未评估</button><button type="button" data-load="low" aria-pressed="false" onclick="selectRadio(this, 'loadGroup')" class="py-2 rounded-xl text-xs font-medium bg-surface-container text-on-surface-variant">低负荷</button><button type="button" data-load="medium" aria-pressed="true" onclick="selectRadio(this, 'loadGroup')" class="py-2 rounded-xl text-xs font-medium bg-primary text-on-primary active-radio">中负荷</button><button type="button" data-load="high" aria-pressed="false" onclick="selectRadio(this, 'loadGroup')" class="py-2 rounded-xl text-xs font-medium bg-surface-container text-on-surface-variant">高负荷</button></div><p class="text-[11px] text-on-surface-variant">按实际精力消耗选择，未确定时可保留未评估。</p>
 </div>
 <!-- Toggles -->
 <div class="flex flex-col gap-3 pt-2">
 <!-- Toggle 1: Elastic Reschedule -->
 <div class="flex items-center justify-between gap-3">
 <div class="flex flex-col min-w-0">
-<span class="text-xs font-semibold text-on-surface truncate">排期灵活性微调</span>
-<span class="text-[11px] text-outline">允许算法在冲突时前后弹性微调 (±15m)</span>
+<span id="schedule-flexible-label" class="text-xs font-semibold text-on-surface truncate">排期灵活性微调</span>
+<span id="schedule-flexible-description" class="text-[11px] text-outline">允许算法在冲突时前后弹性微调 (±15m)</span>
 </div>
-<button aria-checked="true" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full bg-primary-container p-0.5 transition-colors duration-200 ease-in-out" onclick="toggleSwitch(this)" role="switch" type="button">
+<button id="schedule-flexible-switch" aria-labelledby="schedule-flexible-label" aria-describedby="schedule-flexible-description schedule-constraints-note" aria-checked="true" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full bg-primary-container p-0.5 transition-colors duration-200 ease-in-out" onclick="toggleSwitch(this)" role="switch" type="button">
 <span class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-surface-container-lowest shadow-md transition duration-200 ease-in-out"></span>
 </button>
 </div>
@@ -92,16 +141,18 @@
 <div class="flex items-center justify-between gap-3">
 <div class="flex flex-col min-w-0">
 <div class="flex items-center gap-1">
-<span class="text-xs font-semibold text-on-surface truncate">硬约束防挤压锁定</span>
+<span id="schedule-locked-label" class="text-xs font-semibold text-on-surface truncate">硬约束防挤压锁定</span>
 <span class="material-symbols-outlined text-[14px] text-outline">lock</span>
 </div>
-<span class="text-[11px] text-outline">不可被后续紧急任务或突发会议静默挤占</span>
+<span id="schedule-locked-description" class="text-[11px] text-outline">不可被后续紧急任务或突发会议静默挤占</span>
 </div>
-<button aria-checked="false" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full bg-surface-container-highest p-0.5 transition-colors duration-200 ease-in-out" onclick="toggleSwitch(this)" role="switch" type="button">
+<button id="schedule-locked-switch" aria-labelledby="schedule-locked-label" aria-describedby="schedule-locked-description schedule-constraints-note" aria-checked="false" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full bg-surface-container-highest p-0.5 transition-colors duration-200 ease-in-out" onclick="toggleSwitch(this)" role="switch" type="button">
 <span class="translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-surface-container-lowest shadow-md transition duration-200 ease-in-out"></span>
 </button>
 </div>
 </div>
+<p id="schedule-constraints-summary" class="text-[11px] text-on-surface-variant" aria-live="polite">允许前后微调 15 分钟，持续时间不变。</p>
+<p id="schedule-constraints-note" class="text-[11px] text-outline">设置随日程保存，自动重排接入后生效。</p>
 </div>
 <!-- Alert & Repeat Parameters -->
 <div class="bg-surface-container-low rounded-2xl p-4 flex flex-col gap-3.5 shadow-sm">
@@ -112,13 +163,13 @@
 <span class="text-xs font-semibold text-on-surface">提前提醒</span>
 </div>
 <div class="grid grid-cols-3 gap-2" id="reminderGroup">
-<button class="py-2 px-1 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'reminderGroup')" type="button">
+<button data-reminder="10" class="py-2 px-1 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'reminderGroup')" type="button">
             提前 10 分钟
           </button>
-<button class="py-2 px-1 text-center rounded-xl bg-primary text-on-primary text-xs font-semibold shadow-sm transition-all active-radio" onclick="selectRadio(this, 'reminderGroup')" type="button">
+<button data-reminder="30" class="py-2 px-1 text-center rounded-xl bg-primary text-on-primary text-xs font-semibold shadow-sm transition-all active-radio" onclick="selectRadio(this, 'reminderGroup')" type="button">
             提前 30 分钟
           </button>
-<button class="py-2 px-1 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'reminderGroup')" type="button">
+<button data-reminder="0" class="py-2 px-1 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'reminderGroup')" type="button">
             不提醒
           </button>
 </div>
@@ -130,16 +181,16 @@
 <span class="text-xs font-semibold text-on-surface">重复周期</span>
 </div>
 <div class="grid grid-cols-4 gap-1.5" id="repeatGroup">
-<button class="py-2 text-center rounded-xl bg-primary text-on-primary text-xs font-semibold shadow-sm transition-all active-radio" onclick="selectRadio(this, 'repeatGroup')" type="button">
+<button data-repeat="none" class="py-2 text-center rounded-xl bg-primary text-on-primary text-xs font-semibold shadow-sm transition-all active-radio" onclick="selectRadio(this, 'repeatGroup')" type="button">
             不重复
           </button>
-<button class="py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'repeatGroup')" type="button">
+<button data-repeat="daily" class="py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'repeatGroup')" type="button">
             每天
           </button>
-<button class="py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'repeatGroup')" type="button">
+<button data-repeat="weekly" class="py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'repeatGroup')" type="button">
             每周
           </button>
-<button class="py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'repeatGroup')" type="button">
+<button data-repeat="monthly" class="py-2 text-center rounded-xl bg-surface-container text-on-surface-variant text-xs font-medium hover:bg-surface-container-high transition-all" onclick="selectRadio(this, 'repeatGroup')" type="button">
             每月
           </button>
 </div>
@@ -162,9 +213,9 @@
 </div>
 <!-- Bottom Actions -->
 <div class="flex flex-col gap-2 pt-2">
-<button class="w-full h-12 bg-primary text-on-primary font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform" type="button">
+<button id="schedule-save-action" class="w-full h-12 bg-primary text-on-primary font-medium text-sm rounded-xl flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-transform" type="button">
 <span class="material-symbols-outlined text-[18px]">event_available</span>
-<span>保存并写入日程</span>
+<span id="schedule-save-label">保存并写入日程</span>
 </button>
 <button class="w-full h-10 text-on-surface-variant text-xs font-semibold rounded-xl flex items-center justify-center hover:bg-surface-container transition-colors" type="button">
         取消
@@ -172,44 +223,54 @@
 </div>
 </div>
 </div>
-<script>
+</fieldset><script>
   function toggleSwitch(btn) {
-    const isChecked = btn.getAttribute('aria-checked') === 'true';
-    const thumb = btn.firstElementChild;
-    if (isChecked) {
-      btn.setAttribute('aria-checked', 'false');
-      btn.classList.remove('bg-primary-container');
-      btn.classList.add('bg-surface-container-highest');
-      thumb.classList.remove('translate-x-5');
-      thumb.classList.add('translate-x-0');
-    } else {
-      btn.setAttribute('aria-checked', 'true');
-      btn.classList.remove('bg-surface-container-highest');
-      btn.classList.add('bg-primary-container');
-      thumb.classList.remove('translate-x-0');
-      thumb.classList.add('translate-x-5');
+    const checked = btn.getAttribute('aria-checked') !== 'true';
+    setScheduleSwitch(btn, checked);
+    if (checked) {
+      const otherId = btn.id === 'schedule-flexible-switch' ? 'schedule-locked-switch' : 'schedule-flexible-switch';
+      setScheduleSwitch(document.getElementById(otherId), false);
     }
+    updateConstraintSummary();
+  }
+
+  function setScheduleSwitch(btn, checked) {
+    const thumb = btn.firstElementChild;
+    btn.setAttribute('aria-checked', String(checked));
+    btn.classList.toggle('bg-primary-container', checked);
+    btn.classList.toggle('bg-surface-container-highest', !checked);
+    thumb.classList.toggle('translate-x-5', checked);
+    thumb.classList.toggle('translate-x-0', !checked);
+  }
+
+  function updateConstraintSummary() {
+    const locked = document.getElementById('schedule-locked-switch').getAttribute('aria-checked') === 'true';
+    const flexible = document.getElementById('schedule-flexible-switch').getAttribute('aria-checked') === 'true';
+    document.getElementById('schedule-constraints-summary').textContent = locked
+      ? '已选择硬锁定，不允许弹性微调，仍可手动编辑。'
+      : flexible ? '允许前后微调 15 分钟，持续时间不变。' : '保持原定时段，不允许自动微调。';
+  }
+
+  function setScheduleConstraints(flexible, locked) {
+    setScheduleSwitch(document.getElementById('schedule-flexible-switch'), flexible && !locked);
+    setScheduleSwitch(document.getElementById('schedule-locked-switch'), locked);
+    updateConstraintSummary();
   }
 
   function selectTag(selectedBtn) {
-    const container = document.getElementById('tagGroup');
-    const buttons = container.querySelectorAll('.tag-pill');
-    buttons.forEach(btn => {
-      btn.classList.remove('bg-secondary-container', 'text-on-secondary-container', 'shadow-sm', 'font-semibold');
-      btn.classList.add('bg-surface-container', 'text-on-surface-variant', 'font-medium');
-      const dot = btn.querySelector('span');
-      if (dot) {
-        dot.classList.remove('bg-secondary');
-        dot.classList.add('bg-outline');
-      }
-    });
+    for (const btn of document.querySelectorAll('#tagGroup .tag-pill')) {
+      const selected = btn === selectedBtn;
+      btn.classList.toggle('active-tag', selected);
+      btn.setAttribute('aria-pressed', String(selected));
+    }
+  }
 
-    selectedBtn.classList.remove('bg-surface-container', 'text-on-surface-variant', 'font-medium');
-    selectedBtn.classList.add('bg-secondary-container', 'text-on-secondary-container', 'shadow-sm', 'font-semibold');
-    const dot = selectedBtn.querySelector('span');
-    if (dot) {
-      dot.classList.remove('bg-outline');
-      dot.classList.add('bg-secondary');
+  function updateLoadGauge(load) {
+    const levels = { low: 1, medium: 3, high: 5 };
+    const level = levels[load] || 0;
+    document.getElementById('schedule-load-summary').textContent = ({ low: '低负荷 (1/5)', medium: '中等 (3/5)', high: '高负荷 (5/5)' })[load] || '未评估';
+    for (const [i, bar] of [...document.querySelectorAll('#schedule-load-gauge > div')].entries()) {
+      bar.className = 'h-2 flex-1 rounded-full ' + (i >= level ? 'bg-surface-container-highest' : i < 2 ? 'bg-on-tertiary-container' : 'bg-secondary-container');
     }
   }
 
@@ -217,12 +278,15 @@
     const group = document.getElementById(groupName);
     const buttons = group.querySelectorAll('button');
     buttons.forEach(btn => {
-      btn.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm', 'font-semibold');
+      btn.classList.remove('bg-primary', 'text-on-primary', 'shadow-sm', 'font-semibold', 'active-radio');
+      btn.setAttribute('aria-pressed', 'false');
       btn.classList.add('bg-surface-container', 'text-on-surface-variant', 'font-medium');
     });
 
     selectedBtn.classList.remove('bg-surface-container', 'text-on-surface-variant', 'font-medium');
-    selectedBtn.classList.add('bg-primary', 'text-on-primary', 'shadow-sm', 'font-semibold');
+    selectedBtn.classList.add('bg-primary', 'text-on-primary', 'shadow-sm', 'font-semibold', 'active-radio');
+    selectedBtn.setAttribute('aria-pressed', 'true');
+    if (groupName === 'loadGroup') updateLoadGauge(selectedBtn.dataset.load);
   }
 
 </script></main></section></body></html>

@@ -19,6 +19,16 @@ String _cognitiveLoadLabel(BuildContext context, CognitiveLoad load) {
   }
 }
 
+/// Mirrors the scheduler's load -> block color mapping so the preview shows
+/// the color the placed urgent block will actually use.
+Color _urgentBlockColor(CognitiveLoad load) => switch (load) {
+  CognitiveLoad.high => Colors.teal,
+  CognitiveLoad.medium => Colors.blue,
+  CognitiveLoad.low => Colors.orange,
+};
+
+const _durationOptions = [10, 15, 25, 30, 45, 60];
+
 /// Collects an urgent task draft (title, duration, priority, load, deadline)
 /// and returns it as a [PlanTask], or null when cancelled.
 ///
@@ -67,6 +77,8 @@ class _UrgentTaskDialogState extends State<_UrgentTaskDialog> {
 
   DateTime get _scheduleDay => dateOnly(widget.scheduleDay);
 
+  bool get _hasTitle => _titleCtrl.text.trim().isNotEmpty;
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +87,9 @@ class _UrgentTaskDialogState extends State<_UrgentTaskDialog> {
       now: DateTime.now(),
       scheduleDay: _scheduleDay,
     );
+    _titleCtrl.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -169,70 +184,188 @@ class _UrgentTaskDialogState extends State<_UrgentTaskDialog> {
     );
   }
 
+  Widget _sectionLabel(BuildContext context, String text) {
+    final scheme = Theme.of(context).colorScheme;
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: scheme.onSurfaceVariant,
+      ),
+    );
+  }
+
+  /// Miniature of the calendar block (same radius, alpha and shadow as
+  /// `_buildScheduleBlock` in the calendar page) colored the way the
+  /// scheduler will color the placed urgent entry.
+  Widget _buildPreview(BuildContext context) {
+    final title = _titleCtrl.text.trim();
+    return AnimatedContainer(
+      key: const ValueKey('calendar-urgent-preview'),
+      duration: const Duration(milliseconds: 180),
+      constraints: const BoxConstraints(minHeight: 64),
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _urgentBlockColor(_load).withAlpha((0.9 * 255).round()),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.warning_amber_outlined,
+                size: 18,
+                color: Colors.white70,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title.isEmpty ? AppStrings.of(context, 'label_title') : title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              _previewChip(
+                Icons.timelapse,
+                '${_minutes.toString()} ${AppStrings.of(context, 'label_minutes')}',
+              ),
+              _previewChip(
+                Icons.event_outlined,
+                MaterialLocalizations.of(context).formatShortDate(_deadline),
+              ),
+              _previewChip(
+                Icons.schedule_outlined,
+                MaterialLocalizations.of(
+                  context,
+                ).formatTimeOfDay(TimeOfDay.fromDateTime(_deadline)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _previewChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white24,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: Colors.white70),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDurationPicker() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final minutes in _durationOptions)
+          ChoiceChip(
+            label: Text('$minutes'),
+            selected: _minutes == minutes,
+            onSelected: (_) => setState(() => _minutes = minutes),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPriorityPicker() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final priority in const [1, 2, 3, 4, 5])
+          ChoiceChip(
+            label: Text('$priority'),
+            selected: _priority == priority,
+            onSelected: (_) => setState(() => _priority = priority),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLoadPicker(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final load in CognitiveLoad.values)
+          ChoiceChip(
+            label: Text(_cognitiveLoadLabel(context, load)),
+            selected: _load == load,
+            onSelected: (_) => setState(() => _load = load),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final title = AppStrings.of(context, 'calendar_insert_urgent_title');
     final form = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildPreview(context),
+        const SizedBox(height: 16),
         TextField(
           controller: _titleCtrl,
           decoration: InputDecoration(
             labelText: AppStrings.of(context, 'label_title'),
           ),
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _confirm(),
         ),
+        const SizedBox(height: 16),
+        _sectionLabel(context, AppStrings.of(context, 'label_minutes')),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(AppStrings.of(context, 'label_minutes')),
-            DropdownButton<int>(
-              value: _minutes,
-              items: const [10, 15, 25, 30, 45, 60]
-                  .map((v) => DropdownMenuItem(value: v, child: Text('$v')))
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) setState(() => _minutes = v);
-              },
-            ),
-            Text(AppStrings.of(context, 'label_priority')),
-            DropdownButton<int>(
-              value: _priority,
-              items: const [1, 2, 3, 4, 5]
-                  .map((v) => DropdownMenuItem(value: v, child: Text('$v')))
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) setState(() => _priority = v);
-              },
-            ),
-          ],
-        ),
+        _buildDurationPicker(),
+        const SizedBox(height: 16),
+        _sectionLabel(context, AppStrings.of(context, 'label_priority')),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(AppStrings.of(context, 'label_cognitive_load')),
-            DropdownButton<CognitiveLoad>(
-              value: _load,
-              items: CognitiveLoad.values
-                  .map(
-                    (v) => DropdownMenuItem(
-                      value: v,
-                      child: Text(_cognitiveLoadLabel(context, v)),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) setState(() => _load = v);
-              },
-            ),
-          ],
-        ),
+        _buildPriorityPicker(),
+        const SizedBox(height: 16),
+        _sectionLabel(context, AppStrings.of(context, 'label_cognitive_load')),
+        const SizedBox(height: 8),
+        _buildLoadPicker(context),
         const SizedBox(height: 8),
         Column(
           key: const ValueKey('calendar-urgent-deadline'),
@@ -241,7 +374,7 @@ class _UrgentTaskDialogState extends State<_UrgentTaskDialog> {
               key: const ValueKey('calendar-urgent-deadline-date'),
               contentPadding: EdgeInsets.zero,
               dense: true,
-              leading: const Icon(Icons.calendar_today_outlined),
+              leading: const Icon(Icons.event_outlined),
               title: Text(
                 AppStrings.of(context, 'calendar_urgent_deadline_date'),
               ),
@@ -270,9 +403,17 @@ class _UrgentTaskDialogState extends State<_UrgentTaskDialog> {
         if (_deadlineValidationMessage != null)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              _deadlineValidationMessage!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            child: Row(
+              children: [
+                Icon(Icons.error_outline, size: 16, color: scheme.error),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _deadlineValidationMessage!,
+                    style: TextStyle(color: scheme.error, fontSize: 12),
+                  ),
+                ),
+              ],
             ),
           ),
       ],
@@ -284,6 +425,7 @@ class _UrgentTaskDialogState extends State<_UrgentTaskDialog> {
         onCancel: () => Navigator.of(context).pop(),
         onConfirm: _confirm,
         confirmLabel: AppStrings.of(context, 'calendar_insert_urgent_confirm'),
+        confirmEnabled: _hasTitle,
       );
     }
     return AlertDialog(
@@ -298,7 +440,7 @@ class _UrgentTaskDialogState extends State<_UrgentTaskDialog> {
           child: Text(AppStrings.of(context, 'btn_cancel')),
         ),
         ElevatedButton(
-          onPressed: _confirm,
+          onPressed: _hasTitle ? _confirm : null,
           child: Text(AppStrings.of(context, 'calendar_insert_urgent_confirm')),
         ),
       ],

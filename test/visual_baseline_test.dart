@@ -37,9 +37,10 @@ void main() {
 
   Future<void> seedSchedule(
     WidgetTester tester,
-    MockDataService service,
-  ) async {
-    final today = dateOnly(DateTime.now());
+    MockDataService service, {
+    DateTime? day,
+  }) async {
+    final today = dateOnly(day ?? DateTime.now());
     final entries = [
       ScheduleEntry(
         day: today,
@@ -99,8 +100,15 @@ void main() {
     });
 
     testWidgets('calendar page baseline ${entry.key}', (tester) async {
-      await seedSchedule(tester, MockDataService());
-      await pumpPage(tester, entry.value, const SmartCalendarPage());
+      // Pin the calendar date to the original baseline date: wall-clock date
+      // labels must not turn an unchanged layout into a pixel regression.
+      final baselineDay = DateTime(2026, 9, 25);
+      await seedSchedule(tester, MockDataService(), day: baselineDay);
+      await pumpPage(
+        tester,
+        entry.value,
+        SmartCalendarPage(initialDay: baselineDay),
+      );
       expect(tester.takeException(), isNull);
       await expectLater(
         find.byType(SmartCalendarPage),
