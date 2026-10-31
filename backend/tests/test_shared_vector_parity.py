@@ -17,6 +17,7 @@ from scripts.scheduling_parity import (
     DartRunResult,
     PythonFixtureResult,
     build_report,
+    canonicalize_plan,
     compare_fixture,
     parse_dart_output,
     run_dart_runner,
@@ -127,6 +128,40 @@ def test_run_dart_runner_reports_missing_output_and_exit_code(tmp_path: Path) ->
     assert failed.invalid is True
     assert "exit code" in failed.error
     assert failed.stderr == "compile error"
+
+
+def test_run_dart_runner_reuses_prepared_dependencies(tmp_path: Path) -> None:
+    invocations: list[dict] = []
+
+    def prepared_runner(**kwargs: object) -> DartRunResult:
+        invocations.append(kwargs)
+        return DartRunResult(_payload(), "", 0)
+
+    result = run_dart_runner(tmp_path, runner=prepared_runner)
+
+    assert result.invalid is False
+    assert len(invocations) == 1
+    assert "--no-pub" in invocations[0]["args"]
+    assert invocations[0]["env"]["SHARED_VECTOR_FIXTURES_DIR"] == str(tmp_path.resolve())
+
+
+def test_canonical_plan_preserves_production_explanations_and_dependencies() -> None:
+    actual = canonicalize_plan(
+        {
+            "entries": [{
+                "id": "placed", "time": {"hour": 9, "minute": 0}, "height": 40,
+                "explanationCodes": ["priority", "energy_fit"],
+            }],
+            "issues": [{
+                "code": "dependency_blocked", "taskId": "blocked",
+                "blockedBy": ["missing"], "explanationCodes": [],
+            }],
+        },
+        day="2026-10-31",
+    )
+
+    assert actual["entries"][0]["explanationCodes"] == ["priority", "energy_fit"]
+    assert actual["issues"][0]["blockedBy"] == ["missing"]
 
 
 def test_python_transaction_rejects_duplicate_entry_ids() -> None:

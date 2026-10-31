@@ -41,10 +41,10 @@
       "day-end": {"hour": 23, "minute": 58, "durationMinutes": 1}
     },
     "issues": [],
-    "explanationCodes": ["boundary_time"]
+    "explanationCodes": ["deadline_proximity", "priority"]
   },
   "review": {
     "classification": "implementation_error",
-    "reason": "Python 保留 1 分钟边界时长，Dart 的 ScheduleEntry 高度最小值把 1 分钟任务扩大为 15 分钟；这是 Dart 边界时长转换错误，boundary_time 解释码也尚未实现。"
+    "reason": "修复 Dart 持久化高度的 15 分钟下限，保留 1 分钟真实时长；boundary_time 是覆盖标签，实际比较 deadline_proximity/priority 解释码。"
   }
 }

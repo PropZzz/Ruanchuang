@@ -7,7 +7,8 @@
     "day": "2026-09-16",
     "energy": "veryLow",
     "windows": [
-      {"start": {"hour": 8, "minute": 0}, "end": {"hour": 12, "minute": 0}}
+      {"start": {"hour": 8, "minute": 0}, "end": {"hour": 12, "minute": 0}},
+      {"start": {"hour": 13, "minute": 0}, "end": {"hour": 17, "minute": 0}}
     ],
     "fixed": [],
     "tasks": [
@@ -33,13 +34,13 @@
     "taskOrder": ["low-load", "high-load"],
     "timeBlocks": {
       "low-load": {"hour": 8, "minute": 0, "durationMinutes": 60},
-      "high-load": {"hour": 9, "minute": 0, "durationMinutes": 60}
+      "high-load": {"hour": 13, "minute": 0, "durationMinutes": 60}
     },
     "issues": [],
-    "explanationCodes": ["low_energy_match"]
+    "explanationCodes": ["priority", "energy_fit", "priority"]
   },
   "review": {
     "classification": "implementation_error",
-    "reason": "Dart 按低负荷优先且保持 60 分钟；Python 按高优先级先排并把 high 任务放大到 72 分钟，违反低精力匹配与跨端规则。"
+    "reason": "默认时长倍率按公开调优模型统一为 1.0；增加下午窗口以验证低精力的跨窗口匹配：高负荷任务选下午、低负荷任务留在上午，保持 due/priority/duration/id 稳定排序。"
   }
 }

@@ -79,22 +79,22 @@
         "timeBlocks": {
           "urgent": {"hour": 8, "minute": 0, "durationMinutes": 30},
           "deep": {"hour": 8, "minute": 30, "durationMinutes": 90},
-          "review": {"hour": 13, "minute": 30, "durationMinutes": 60}
+          "review": {"hour": 10, "minute": 0, "durationMinutes": 60}
         },
         "issues": [],
-        "explanationCodes": ["protect_deadline"]
+        "explanationCodes": ["deadline_proximity", "priority", "energy_fit", "priority", "priority", "energy_fit"]
       },
       {
         "strategy": "protectRecovery",
-        "taskOrder": ["urgent", "deep", "review", "rescue_recovery_2026-09-16"],
+        "taskOrder": ["urgent", "review", "deep", "rescue_recovery_2026-09-16"],
         "timeBlocks": {
-          "urgent": {"hour": 8, "minute": 0, "durationMinutes": 30},
-          "deep": {"hour": 8, "minute": 30, "durationMinutes": 90},
-          "review": {"hour": 10, "minute": 0, "durationMinutes": 60},
-          "rescue_recovery_2026-09-16": {"hour": 13, "minute": 30, "durationMinutes": 15}
+          "urgent": {"hour": 8, "minute": 0, "durationMinutes": 32},
+          "deep": {"hour": 13, "minute": 30, "durationMinutes": 90},
+          "review": {"hour": 8, "minute": 32, "durationMinutes": 63},
+          "rescue_recovery_2026-09-16": {"hour": 15, "minute": 0, "durationMinutes": 15}
         },
         "issues": [],
-        "explanationCodes": ["protect_recovery"]
+        "explanationCodes": ["deadline_proximity", "priority", "priority", "priority"]
       },
       {
         "strategy": "minimizeChanges",
@@ -105,12 +105,12 @@
           "review": {"hour": 14, "minute": 0, "durationMinutes": 60}
         },
         "issues": [],
-        "explanationCodes": ["minimize_changes"]
+        "explanationCodes": ["deadline_proximity", "priority", "energy_fit", "kept_baseline", "kept_baseline"]
       }
     ]
   },
   "review": {
-    "classification": "implementation_error",
-    "reason": "三策略顺序一致，但 protectRecovery 的 Python 时长/时间块与 Dart 不同，源于 Python 低精力时长惩罚；同时保护截止时间的示例断言把非硬约束的下午空档写死，需后续另行修订契约。"
+    "classification": "contract_error",
+    "reason": "按当前三策略规则比较实际解释码，不使用未定义的策略解释码；截止策略不强制下午空档，恢复策略降低一档精力并对中负荷使用 1.05 倍率，恢复缓冲安排在合法下午空档。"
   }
 }

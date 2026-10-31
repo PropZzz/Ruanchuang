@@ -27,10 +27,10 @@
       "window-task": {"hour": 13, "minute": 0, "durationMinutes": 60}
     },
     "issues": [],
-    "explanationCodes": ["work_window"]
+    "explanationCodes": ["priority", "energy_fit"]
   },
   "review": {
     "classification": "contract_error",
-    "reason": "双端均把任务安排在 13:00-17:00 工作窗口内；work_window 不是现有稳定解释码，原断言的解释码要求超出契约。"
+    "reason": "双端必须把任务安排在 13:00-15:00 工作窗口内，并输出实际 priority/energy_fit；work_window 是场景标签，不是 v1 稳定解释码。"
   }
 }

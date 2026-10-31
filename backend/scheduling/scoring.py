@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from math import floor
 from typing import Any
 
 
@@ -9,7 +10,7 @@ def load_penalty(load: object, energy: object, tuning: dict[str, Any]) -> float:
     if energy not in {"low", "veryLow"}:
         return 1.0
     if load == "high":
-        return float(tuning.get("highLoadPenaltyWhenLowEnergy") or 1.2)
+        return float(tuning.get("highLoadPenaltyWhenLowEnergy") or 1.0)
     if load == "medium":
         return 1.05
     return 1.0
@@ -34,7 +35,8 @@ def task_duration(
     base = duration * float(tuning.get("defaultDurationMultiplier") or 1.0)
     base *= tag_multiplier
     base *= load_penalty(task.get("load"), energy, tuning)
-    return max(1, round(base))
+    # Match Dart's positive-duration rounding, including exact half minutes.
+    return max(1, floor(base + 0.5))
 
 
 def score_placement(

@@ -195,7 +195,10 @@ def run_dart_runner(
     """Execute the Flutter shared-vector test and preserve all diagnostics."""
 
     flutter = shutil.which("flutter.bat") or shutil.which("flutter") or "flutter.bat"
-    command = [flutter, "test", "test/shared_vector_runner_test.dart", "-r", "compact"]
+    # Dependency restoration is an explicit setup step. Re-running pub here
+    # can change the lockfile and requires native plugin symlinks on Windows,
+    # even though this runner only needs the Flutter test shell.
+    command = [flutter, "test", "--no-pub", "test/shared_vector_runner_test.dart", "-r", "compact"]
     environment = os.environ.copy()
     environment["SHARED_VECTOR_FIXTURES_DIR"] = str(fixtures_dir.resolve())
     process_runner = runner or _subprocess_runner
@@ -337,8 +340,7 @@ def canonicalize_plan(
                     "time": _time(raw.get("time")),
                     "durationMinutes": _duration_from_height(raw.get("height", 80)),
                     "source": _source(raw, fixed_ids=fixed_set, recovery_ids=recovery_set),
-                    # Python's current service does not emit explanation metadata.
-                    "explanationCodes": [],
+                    "explanationCodes": list(raw.get("explanationCodes") or []),
                 }
             )
     entries.sort(key=lambda item: (_minutes(item["time"]), str(item.get("id") or "")))
@@ -353,8 +355,8 @@ def canonicalize_plan(
                 {
                     "code": raw.get("code"),
                     "taskId": raw.get("taskId"),
-                    # The Python service currently has no dependency/explanation
-                    # fields; preserve that absence as empty canonical lists.
+                    # Absence is normalized to an empty list; production
+                    # dependency/explanation metadata must remain observable.
                     "blockedBy": list(raw.get("blockedBy") or [])
                     if isinstance(raw.get("blockedBy"), list)
                     else [],

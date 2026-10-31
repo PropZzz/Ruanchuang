@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import time
 import json
+import sys
+import tracemalloc
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -16,11 +18,16 @@ from scripts.scheduling_benchmark import (
     run_benchmark,
     write_benchmark_report,
     main,
+    _process_peak_rss,
 )
 
 
 def _picklable_echo() -> dict[str, str]:
     return {"ok": "yes"}
+
+
+def _picklable_large_result() -> dict[str, str]:
+    return {"payload": "x" * (1024 * 1024)}
 
 
 def test_percentile_uses_linear_interpolation() -> None:
@@ -124,9 +131,18 @@ def test_measure_call_reports_exception_type_for_failure() -> None:
 
 def test_measure_call_uses_process_for_picklable_runner() -> None:
     result = measure_call(_picklable_echo, timeoutMs=1000)
+    assert result["status"] == "success", result
     assert result["isolation"] == "process"
     assert result["result"] == {"ok": "yes"}
     assert result["durationMs"] >= 0
+
+
+def test_measure_call_drains_large_results_before_joining_worker() -> None:
+    result = measure_call(_picklable_large_result, timeoutMs=1000)
+
+    assert result["status"] == "success"
+    assert result["isolation"] == "process"
+    assert len(result["result"]["payload"]) == 1024 * 1024
 
 
 def test_measure_call_requires_boolean_degradation_flags() -> None:
@@ -197,6 +213,33 @@ def test_run_benchmark_records_plan_and_rescue_matrix_after_parity_gate() -> Non
         "minimizeChanges",
     ]
     assert report["runs"]
+    assert report["errors"] == []
+
+
+def test_benchmark_loads_rss_counter_before_parent_allocation_tracing(monkeypatch) -> None:
+    import scripts.scheduling_benchmark as benchmark
+
+    initialized = []
+
+    def read_peak():
+        if not initialized:
+            assert not tracemalloc.is_tracing(), "Cold counter imports must precede benchmark tracing"
+            initialized.append(True)
+        return 1234, "test_counter"
+
+    monkeypatch.setattr(benchmark, "_process_peak_rss", read_peak)
+    report = run_benchmark(
+        task_counts=(1,), warmups=0, samples=1, seed=7, timeoutMs=100,
+        parity_report=_passed_parity(),
+        plan_runner=lambda _: {"entries": [], "issues": []},
+        rescue_runner=lambda _: {"options": [
+            {"strategy": strategy, "plannedEntries": [], "issueCount": 0,
+             "hardIssueCount": 0, "movedEntryCount": 0, "recoveryMinutes": 0,
+             "recommended": strategy == "protectDeadline"}
+            for strategy in ("protectDeadline", "protectRecovery", "minimizeChanges")
+        ]},
+    )
+    assert initialized == [True]
     assert report["errors"] == []
 
 
@@ -438,10 +481,37 @@ def test_benchmark_exposes_peak_memory_aliases() -> None:
         rescue_runner=lambda _: {"options": [{"strategy": s, "plannedEntries": [], "issueCount": 0, "hardIssueCount": 0, "movedEntryCount": 0, "recoveryMinutes": 0, "recommended": False} for s in ("protectDeadline", "protectRecovery", "minimizeChanges")]},
     )
     assert isinstance(report["peakMemoryBytes"], int) and report["peakMemoryBytes"] >= 0
-    assert report["peakRssBytes"] is None
     assert all(isinstance(row["peakMemoryBytes"], int) and row["peakMemoryBytes"] >= 0 for row in report["runs"])
-    assert all(row["peakRssBytes"] is None for row in report["runs"])
-    assert report["rssSource"] == "unavailable"
+    if sys.platform == "win32" or sys.platform.startswith("linux"):
+        assert report["peakRssBytes"] > 0
+        assert report["peakRssBytes"] == max(row["peakRssBytes"] for row in report["runs"])
+        assert report["rssScope"] == "shared_process_lifetime"
+        assert report["rssSampleCount"] == 2
+    else:
+        assert report["peakRssBytes"] is None
+        assert report["rssSource"] == "unavailable"
+
+
+def test_windows_rss_reports_peak_working_set_instead_of_current_rss(monkeypatch) -> None:
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setitem(sys.modules, "psutil", SimpleNamespace(
+        Process=lambda: SimpleNamespace(memory_info=lambda: SimpleNamespace(rss=100, peak_wset=400)),
+    ))
+    assert _process_peak_rss() == (400, "psutil.peak_wset")
+
+
+def test_linux_peak_rss_converts_kernel_kib_to_bytes(monkeypatch) -> None:
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setitem(sys.modules, "resource", SimpleNamespace(
+        RUSAGE_SELF=0, getrusage=lambda _: SimpleNamespace(ru_maxrss=123),
+    ))
+    assert _process_peak_rss() == (123 * 1024, "resource.ru_maxrss_kib")
+
+
+def test_rss_counter_failure_is_not_reported_as_a_zero_measurement(monkeypatch) -> None:
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setitem(sys.modules, "psutil", SimpleNamespace(Process=lambda: None))
+    assert _process_peak_rss() == (None, "unavailable")
 
 
 def test_runner_receives_deepcopied_request_each_sample() -> None:

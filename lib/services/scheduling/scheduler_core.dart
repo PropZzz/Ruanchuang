@@ -34,8 +34,9 @@ int _durationFromHeight(double height) {
 }
 
 double _heightFromDuration(int minutes) {
-  final h = (minutes / 60.0) * 80.0;
-  return h.clamp(20.0, 24 * 60 * 80.0).toDouble();
+  // Persist the real duration. Minimum readable heights belong to the view.
+  final boundedMinutes = minutes.clamp(1, 24 * 60);
+  return (boundedMinutes / 60.0) * 80.0;
 }
 
 int _taskDuration(PlanTask task, EnergyTier energy, SchedulingTuning tuning) {

@@ -5,6 +5,59 @@ import 'package:shixuzhipei/services/scheduling/schedule_rescue.dart';
 import 'package:shixuzhipei/services/scheduling/scheduler_core.dart';
 
 void main() {
+  for (final sample in [
+    (
+      minutes: 1,
+      load: CognitiveLoad.low,
+      energy: EnergyTier.medium,
+      expected: 1,
+    ),
+    (
+      minutes: 10,
+      load: CognitiveLoad.medium,
+      energy: EnergyTier.veryLow,
+      expected: 11,
+    ),
+    (
+      minutes: 60,
+      load: CognitiveLoad.high,
+      energy: EnergyTier.veryLow,
+      expected: 60,
+    ),
+  ]) {
+    test(
+      'scheduler preserves effective duration ${sample.expected} minutes',
+      () {
+        final plan = const SchedulerCore().plan(
+          SchedulingRequest(
+            day: DateTime(2026, 9, 16),
+            tasks: [
+              PlanTask(
+                id: 'work',
+                title: 'Work',
+                durationMinutes: sample.minutes,
+                priority: 3,
+                load: sample.load,
+                tag: 'Task',
+              ),
+            ],
+            windows: const [
+              TimeWindow(
+                start: TimeOfDay(hour: 9, minute: 0),
+                end: TimeOfDay(hour: 11, minute: 0),
+              ),
+            ],
+            energy: sample.energy,
+          ),
+        );
+
+        expect(plan.issues, isEmpty);
+        expect((plan.entries.single.height / 80 * 60).round(), sample.expected);
+        expect(plan.entries.single.time, const TimeOfDay(hour: 9, minute: 0));
+      },
+    );
+  }
+
   test('empty work windows do not create a default slot', () {
     final plan = const SchedulerCore().plan(
       SchedulingRequest(
