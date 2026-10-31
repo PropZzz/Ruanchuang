@@ -1,0 +1,372 @@
+{
+  "schemaVersion": "project-verification/v1",
+  "capturedAt": "2026-10-31T15:47:41.419243+00:00",
+  "baseCommit": "44cb49f2ad65158217bc200c5a68592b6efecfea",
+  "codeCommit": "3aeb439e758b4c99d1edae8aadb12bca96399be8",
+  "branch": "codex/baseline-closeout-20261031",
+  "scope": "Local Windows checkout and isolated test databases; production deployment is not included.",
+  "environment": {
+    "os": "Windows-11-10.0.26100-SP0",
+    "logicalCpuCount": 32,
+    "python": "3.13.5",
+    "flutter": "3.38.7",
+    "dart": "3.10.7",
+    "node": "v24.15.0",
+    "packages": {
+      "fastapi": "0.136.3",
+      "uvicorn": "0.49.0",
+      "pydantic": "2.13.4",
+      "pytest": "9.1.0",
+      "httpx": "0.28.1",
+      "jsonschema": "4.26.0",
+      "psutil": "7.2.2"
+    },
+    "browser": "Existing Google Chrome 136.0.7103.114",
+    "playwrightCore": "1.64.1",
+    "browserDownloaded": false
+  },
+  "baseline": {
+    "flutterTests": 333,
+    "backendTests": 239,
+    "nodeTests": 30,
+    "parity": {
+      "total": 12,
+      "matched": 3,
+      "mismatched": 9,
+      "invalid": 0
+    }
+  },
+  "final": {
+    "flutterTests": 398,
+    "backendTests": [
+      265,
+      265
+    ],
+    "backendWarningsEach": 107,
+    "nodeTests": 34,
+    "calendarPageLines": 1189,
+    "dependencyLockAndGoldensUnchanged": true,
+    "parity": {
+      "invalid": 0,
+      "matched": 13,
+      "mismatched": 0,
+      "total": 13
+    },
+    "fixtureClassificationCounts": {
+      "allowed_difference": 3,
+      "contract_error": 7,
+      "implementation_error": 3,
+      "pending_a_review": 0
+    },
+    "benchmark": {
+      "report": "reports/benchmarks/scheduling-benchmark-20261031T152150Z.json",
+      "sha256": "4b5107c7eb033a96ed6a397228a1443b4ae04a7065b3f13c75132f2f35ff6c1d",
+      "status": "completed",
+      "samples": 80,
+      "timeouts": 0,
+      "failures": 0,
+      "taskCounts": [
+        10,
+        50,
+        100,
+        200
+      ],
+      "warmups": 2,
+      "samplesPerOperation": 10,
+      "timeoutMs": 1000,
+      "rssScope": "worker_process_lifetime",
+      "rssSource": "psutil.peak_wset",
+      "timing": [
+        {
+          "operation": "plan",
+          "taskCount": 10,
+          "p50Ms": 1.119,
+          "p95Ms": 1.278,
+          "p99Ms": 1.313,
+          "peakRssBytes": 36831232
+        },
+        {
+          "operation": "rescue",
+          "taskCount": 10,
+          "p50Ms": 5.253,
+          "p95Ms": 5.867,
+          "p99Ms": 5.873,
+          "peakRssBytes": 37027840
+        },
+        {
+          "operation": "plan",
+          "taskCount": 50,
+          "p50Ms": 3.134,
+          "p95Ms": 4.454,
+          "p99Ms": 4.734,
+          "peakRssBytes": 36941824
+        },
+        {
+          "operation": "rescue",
+          "taskCount": 50,
+          "p50Ms": 13.051,
+          "p95Ms": 14.798,
+          "p99Ms": 15.104,
+          "peakRssBytes": 36986880
+        },
+        {
+          "operation": "plan",
+          "taskCount": 100,
+          "p50Ms": 5.818,
+          "p95Ms": 6.812,
+          "p99Ms": 7.148,
+          "peakRssBytes": 37089280
+        },
+        {
+          "operation": "rescue",
+          "taskCount": 100,
+          "p50Ms": 20.935,
+          "p95Ms": 23.815,
+          "p99Ms": 24.298,
+          "peakRssBytes": 37273600
+        },
+        {
+          "operation": "plan",
+          "taskCount": 200,
+          "p50Ms": 11.058,
+          "p95Ms": 14.511,
+          "p99Ms": 14.597,
+          "peakRssBytes": 37343232
+        },
+        {
+          "operation": "rescue",
+          "taskCount": 200,
+          "p50Ms": 39.858,
+          "p95Ms": 41.854,
+          "p99Ms": 41.906,
+          "peakRssBytes": 37724160
+        }
+      ]
+    },
+    "web": {
+      "files": 110,
+      "routePages": 27,
+      "localReferences": 296,
+      "nativeAssets": 7,
+      "release": "ae3487088fa89577",
+      "manifestSha256": "833edaf6e3875e7047a822057085fdc76c4854d79b49f49d53297423931619ea"
+    }
+  },
+  "checks": [
+    {
+      "command": "flutter analyze --no-pub",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/flutter-final-analyze2.log",
+      "logSha256": "0483bdad21ba43208fcb0bf5f42d39454b7717b71d4935e82545153925f26686",
+      "finishedAt": "2026-10-31T15:30:37.957190+00:00",
+      "output": "Flutter assets will be downloaded from https://storage.flutter-io.cn. Make sure you trust this source!\nAnalyzing Ruanchuang...                                         \nNo issues found! (ran in 3.9s)"
+    },
+    {
+      "command": "flutter test --no-pub --reporter expanded",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/flutter-final-tests3.log",
+      "logSha256": "9cb02c4ca34d5412c5d836b44cb24d577a6d0fc7ec94e0ae0e09e7324facf55b",
+      "finishedAt": "2026-10-31T15:29:14.047146+00:00",
+      "output": "00:22 +396: D:/AAACode/Ruanchuang/test/workspace_failure_states_test.dart: review keeps offline visible and recovers on retry\n00:22 +397: D:/AAACode/Ruanchuang/test/workspace_failure_states_test.dart: profile identifies partial data and can refresh it\n00:23 +398: All tests passed!"
+    },
+    {
+      "command": "python -m pytest backend/tests -q",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/backend-final-run4.log",
+      "logSha256": "7df9dfe27cffbde3d534a6a56be4ffd5e4643eb15ecd315ea9543fd4b1e7b2fd",
+      "finishedAt": "2026-10-31T15:14:38.471042+00:00",
+      "output": "\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n265 passed, 107 warnings in 32.38s"
+    },
+    {
+      "command": "python -m pytest backend/tests -q",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/backend-final-run5.log",
+      "logSha256": "055b38268fe8456fe6f5fac9c23b81e986c143451832610e79647a1633006d13",
+      "finishedAt": "2026-10-31T15:15:36.315632+00:00",
+      "output": "\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n265 passed, 107 warnings in 19.69s"
+    },
+    {
+      "command": "node --test tools/tests/*.test.mjs",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/node-final2.log",
+      "logSha256": "a8863c0027107a7bac0a00e81447398aac5ea66a15237087f1b19be830067c4e",
+      "finishedAt": "2026-10-31T15:38:33.565550+00:00",
+      "output": "ℹ tests 34\nℹ suites 0\nℹ pass 34\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 451.8041"
+    },
+    {
+      "command": "python scripts/scheduling_parity.py",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/parity-final.log",
+      "logSha256": "3881e9f6d8e418ab2bd987366ac44fb5836bf552251049ec16a0218d74023842",
+      "finishedAt": "2026-10-31T15:16:43.262561+00:00",
+      "output": "共享向量比较完成：total=13 matched=13 mismatched=0 invalid=0\nDart stderr:\nFlutter assets will be downloaded from https://storage.flutter-io.cn. Make sure you trust this source!"
+    },
+    {
+      "command": "python scripts/scheduling_benchmark.py --parity-report reports/shared-vector-diff.json",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/benchmark-final.log",
+      "logSha256": "2c40d1222cc82a645b18f2ed8d7546a3db56ce704bfe596b8a46ccf944f1bcec",
+      "finishedAt": "2026-10-31T15:21:50.255138+00:00",
+      "output": "共享向量比较完成：total=13 matched=13 mismatched=0 invalid=0\nDart stderr:\nFlutter assets will be downloaded from https://storage.flutter-io.cn. Make sure you trust this source!\nbenchmark report: D:\\AAACode\\Ruanchuang\\reports\\benchmarks\\scheduling-benchmark-20261031T152150Z.json status=completed"
+    },
+    {
+      "command": "node tools/check_stitch_navigation.mjs",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/final-browser-navigation.log",
+      "logSha256": "519854b65a184be36290a75c4e99b027d2819e3df41114b4be75ea03344f3a6c"
+    },
+    {
+      "command": "node tools/check_stitch_release.mjs",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/final-browser-release.log",
+      "logSha256": "5578b0ff09af8388af29183825cfd6b974b0f8e4173f5ead8a28cb72088a821c"
+    },
+    {
+      "command": "node tools/check_stitch_drawers.mjs",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/final-browser-drawers.log",
+      "logSha256": "fbc6aac47b78b382c8b2cc0e1d527a9d59f534ee68b60c556a9b61eb3ad7ebef"
+    },
+    {
+      "command": "node tools/check_stitch_account_settings.mjs",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/final-browser-account_settings.log",
+      "logSha256": "94c2554a3f21c11765febce420cc78ee416ee195eedc651bb41a8e3c87ecc4f2"
+    },
+    {
+      "command": "node tools/check_stitch_schedule_create.mjs",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/final-browser-schedule_create.log",
+      "logSha256": "29201d11441c101c426a8b03a9900ddf35fdde305e0550eb206c91907fc55d67"
+    },
+    {
+      "command": "node tools/check_stitch_schedule_edit.mjs",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/final-browser-schedule_edit.log",
+      "logSha256": "e04ac263fb5e3fbf083a1d40784175d14c732c49992cd4c9c77ace4eba8d71e5"
+    },
+    {
+      "command": "node tools/check_stitch_calendar_import.mjs",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/final-browser-calendar_import.log",
+      "logSha256": "5aa5f7a31a706ad8b0b5933d6b68011d43181ebbe6da8e57da5a19dc072426d7"
+    },
+    {
+      "command": "node tools/check_stitch_focus_regressions.mjs",
+      "exitCode": 0,
+      "log": "build/verification-2026-10-31/final-browser-focus_regressions.log",
+      "logSha256": "820919a97deca48012db62f4941456c91c44e9bfd21f71a7888405dcd52f39c9"
+    }
+  ],
+  "sourceHashNormalization": "CRLF normalized to LF for textual source files",
+  "changedSourceSha256": {
+    ".github/workflows/checks.yml": "96f8cfd911d32288915b0ab6ec04484ffc24ed0df731f32a3b8891fd83ba95cb",
+    "backend/auth.py": "772eb82fe58e672d76027fd0cae93ca352dc52a82908d4a3773b819260944239",
+    "backend/main.py": "ea84c983078710ff8d433dae6d3c070b08748f4c72d3a1c2cd3d441af88429a2",
+    "backend/repositories.py": "bdff20ab06ff245f62db542e1601904c9b21cf33919d4bea8b5789dcc992b003",
+    "backend/requirements.txt": "412dc5248a85e40c2c5897a5f65322950cb1ff03e70d6f13fedda52a99d8f5d9",
+    "backend/routers_auth.py": "84662a20b1de460efb4a0c380ef2045b91c3ffb717eb35d8edacf4a51499455f",
+    "backend/scheduling/scoring.py": "abec9e727b7d963392a034b6408f2827b9870e3854e82376ffffcf392d9b4dee",
+    "backend/session_store.py": "fc026d26d23565d36b6925d051cdc3d7e59999c5fdcaa85871ff7568054b3fc4",
+    "backend/settings.py": "fbdab0283b5f09714b6368a98eeaecd834af1060a92c9408ba549df759c7e602",
+    "backend/tests/test_api_flow.py": "4a1c9993d50483d5928b4b786cb3f8cc789d8d56c26f9e1c56da48b9f4740eff",
+    "backend/tests/test_backend_hardening.py": "75cff35250b152cda29a017778c88b91f15ec83fbd919b54b53cef418fcf17b5",
+    "backend/tests/test_database_maintenance.py": "6281e5a7201f56beff097f80dc4c80849d6bbce9e651e8a9f87bdf3987bf97cf",
+    "backend/tests/test_emotion_energy_api.py": "a30b0cedbb5c71c7bdc8cd23fe12467c662a4726ddcac1a68fecdea1986d094d",
+    "backend/tests/test_events.py": "a486d0ab1bc0db244a21cac46a210088855eeb7dc7ae8f1f61ecb3a79872fdb7",
+    "backend/tests/test_goals_api.py": "590b9b404a8106620a558c05773d887916f4e34c3db73588bbb1126855c3d3d4",
+    "backend/tests/test_health.py": "426b309f7d35bbe327cbb3500e9ff02dd68d61952c398ea023424d89c650cf8e",
+    "backend/tests/test_persistent_sessions.py": "15d41bc8fe8c478942569332dda18cd90dfcc8445f24c0fca6deb7ca2ff333c4",
+    "backend/tests/test_platform_api.py": "b2fc8983b57b540033430c87313ef4cd0961c84e62e9f225b195a42160bc0891",
+    "backend/tests/test_rescue_api.py": "671d1aa24622df2e0d6dd80a8328a8337ad27b6c60f2788df4b75242fac671ea",
+    "backend/tests/test_reserved_endpoints.py": "635822de12ce83b0016325401dd446bed4be022d1c060a067c3f5d102d637235",
+    "backend/tests/test_review_api.py": "71c988b1fb44f679c2892fb46c5e00e497d44978772d6b5079881b201451f44c",
+    "backend/tests/test_schedule_constraints.py": "271220f369b07d6fd8ecf2d0f8c9c83d3ff48fc669a2c8751e36d775afbf5e0a",
+    "backend/tests/test_schedule_extensions.py": "6f414a1f0d7fe98ad50e9fa16d4c729135c4e967d325186b8257de99b870816f",
+    "backend/tests/test_schedule_import.py": "e5a50d2d28ebf0e364c270b5c9f466547c452a33b6fb6828c1d471f48d59a1a6",
+    "backend/tests/test_scheduler_core.py": "73e2b043cddf7c953203ff19179ee9fa9749e76e927afbe7577546d7fd86046c",
+    "backend/tests/test_scheduling_benchmark.py": "a3a9a0091f411fe4d1983924251791ac8ad3563deaac6829327c50a8c731621b",
+    "backend/tests/test_scheduling_contract.py": "26dc0dae2c5adc2eb588641d63d4332c9826cf95d4d925bb85dca6552c896c06",
+    "backend/tests/test_services_rescue.py": "0aed38c3140dd43d58c803bf3c769cba4008ac69c08787d740371e8c3c2e4962",
+    "backend/tests/test_shared_vector_parity.py": "c854e9af827dd28d51b59731142e175313455e45d036281ca78ccc59066cca50",
+    "backend/tests/test_sync_and_reserved_boundary.py": "9d770b1934e241a5fce99412fac903bd771eb094fbfd09c47b2412884277463b",
+    "backend/tests/test_team_api.py": "adc0d5dde84e5d3a6d5aab6c4671bd07ec7282159a6f2de6e9b6b35d9e256269",
+    "backend/tests/test_user_isolation.py": "92d7462a0c3f8504a3da98da888941b04de535694761377884c3b974801bb56f",
+    "backend/tests/test_workflow_extensions.py": "23ffc0c03efd42a3f66140e64474ae9b0580b066072d1d0a5dc7a0e0eecca3f4",
+    "contracts/scheduling/v1/fixtures/001-fixed-conflict.json": "7fe9fe5c0989133702a7f6f05c051a86e023770b7f57f80170df4e23336d4f3f",
+    "contracts/scheduling/v1/fixtures/002-work-window.json": "c98145780c1675cfba9ce6f2844e6b95ce9542b3478d7d2b08172f9bca9c9a63",
+    "contracts/scheduling/v1/fixtures/003-deadline-infeasible.json": "25386aa0cc5deec16d5ee9a19c12a01e68d33504dc8f526b4bf459d5dca1ecc3",
+    "contracts/scheduling/v1/fixtures/004-dependency-blocked.json": "d2888fd1e3614cba6939307ca6fd1b552b9c7bb13058ab5562677d6487ac02a8",
+    "contracts/scheduling/v1/fixtures/005-low-energy-match.json": "654c7bc169e21f786c1cd1e4cbc124521ccc41da848915e8966b2abcbc2e0e87",
+    "contracts/scheduling/v1/fixtures/006-rescue-strategies.json": "4363773c7491eef0d4e5c5e0022c7d2592cd1f4f1e648790026ab124be370ade",
+    "contracts/scheduling/v1/fixtures/007-no-available-block.json": "e90787489a0d583c2d2932782f5ca4a33dde50a4120bd0c2b91d7799b4457bcb",
+    "contracts/scheduling/v1/fixtures/008-overdue.json": "6baaaf37d81d732daa9c92fbfed7f29959d74521b269242790d18fc6d60d52eb",
+    "contracts/scheduling/v1/fixtures/012-boundary-time.json": "64f11e93b14955c9b552f94443c25d8526b1c2a50ffbde6c4e4158f923bd7b5a",
+    "contracts/scheduling/v1/fixtures/013-duration-rounding.json": "93cb8dbb0e97d758a6cd00cf6c63444a252c7722f7abe5ddf593845cd0d03523",
+    "deploy/backend.env.example": "d2e80f07c5ffaecbfb92f63985bb8c0b04aa939f37b3e32c8121a56645bc4391",
+    "deploy/bootstrap_backend.sh": "fef9d55e9e02571ab8aeee884e0b781c47655a4fab8ff13d7f94b7167c91bf2f",
+    "deploy/database_maintenance.py": "a07474d0d6807b6c3efc36a61f30a8c32e742e3af522b34a9ecbc12723e8cd25",
+    "deploy/nginx-ruanchuang-tls.conf.example": "de3288ef459a6c92aea16623dde29c9ada75ebbb79aadc6d72232769038190b1",
+    "lib/screens/focus_page.dart": "382b878634b3b9e59ffb67f4e8d5a4f12528ad951d47941158f88d8864577b2b",
+    "lib/screens/goals_page.dart": "231a2838630409efca0a84ca8724481ba61842d0f119081b4da95eb4e70d8f49",
+    "lib/screens/micro_task_page.dart": "c0ad3eace4e5bea910d847aaa14793286726021d51649bb811254550ed763057",
+    "lib/screens/profile_page.dart": "6d36d10512887e0637901b0e4f5f3bf5041ee1eb525f05a5f3eef5f30c60d9af",
+    "lib/screens/review_page.dart": "7794c21fcf27c9fb22bba431d73e6740c7c1b793f39e59468441c59d3c0aa3ca",
+    "lib/screens/smart_calendar_page.dart": "3ed02febc347771499a00d1f32e72b5f2fc35ea8851b72a28f1cc554100cfb96",
+    "lib/screens/team_page.dart": "efef08bc15349a6e9d63ca38835f1bf6925c8d7e66161b9a0859deec7b406241",
+    "lib/services/composite_data_service.dart": "4ce97ac9290d10b36c96cb0f28255e5aaac7e8c6fcbb6f3de0aa357cc278a902",
+    "lib/services/remote_data_service.dart": "45a9ddd205389fe79ae92847cec6e3105be7a51d11e01fa8c630354492a370f5",
+    "lib/services/scheduling/scheduler_core.dart": "7c0955d7c2e1fac8e10ea301d19b9ab0d1af6d34440007c9b5d9b2d70787396a",
+    "lib/utils/mobile_feedback.dart": "488f6a43c8a29638fe31c7c5f6c055c1bad01c50203b48d459fb4f9dda8bef31",
+    "lib/utils/service_failure_message.dart": "4aae00de9dcfe0c9a3275208a9c61340558579ae62a966888f5817ebb96b3ee4",
+    "lib/widgets/calendar/calendar_controls.dart": "20569faa7d62d4ef35b9e854f41d4314681be458c76cc3541279917a964be4c3",
+    "lib/widgets/calendar/calendar_ics_import_form.dart": "451582de8412522815662ea9b83323e1252ae7c659b71b3d88179b55165cc1b1",
+    "lib/widgets/calendar/calendar_labels.dart": "984c1a9adc5833807fbaaa7a55ff10487700bda36f9f3458e8976d7abbd7a9f4",
+    "lib/widgets/calendar/calendar_navigation.dart": "f91246e161c3b83f9b78c2cb33944b9f4f15c144d108f7e25c21c4128d3f49e8",
+    "lib/widgets/calendar/calendar_status_panels.dart": "fe2b33e3a60131344f328c9f0346e2e59770cf3a72309daac8c5529a77ed0e12",
+    "pubspec.lock": "cd1257648b838a9715e5d50a7863cc27b7b5857367196d4a5c817cd47ff7fb1b",
+    "pubspec.yaml": "c9e92d19cffed531c99ae23735f0ee3f1d7b5b70cc1720289a9394d0148c4bd0",
+    "scripts/scheduling_benchmark.py": "fd9c18cf3c06e424d186a68d1700fefe1f90072e2494a668ac5e265ce959939c",
+    "scripts/scheduling_parity.py": "dca97a4fe5352fd3a556f498fa5fcda317d026f17bff62e2b9651120747395a1",
+    "test/calendar_navigation_test.dart": "18b9b6f800138cbb5d000403f98bde99c051b2f39b83f0aaaf2fbe5b4f718754",
+    "test/composite_data_service_test.dart": "5c6d12a8df1cb95ba0542be5d8b6ff7afe533c04a19a4107b9b73e58c3795557",
+    "test/remote_data_service_test.dart": "84e2441d0e50472f2d5b7e6408f9b1d548ef281bb3f4ba2e5bd28f875938a8ca",
+    "test/scheduler_core_test.dart": "e2b733a3bf9f35c9d366b892dca1ebf02f9af7f5a3af9c2b4c283e8a3816ef9c",
+    "test/shared_vector_runner_contract_test.dart": "e50fa92d2dcc789598a5320d7abbd00f3cc48bf0a728e2ffc3def2bc6b0cc832",
+    "test/support/shared_vector_runner.dart": "666c5e29c1db064997a4f3b6837f3393e6fa3ab02a3dcb5ec8f2e653eb9579a3",
+    "test/web_stitch_pending_validation_test.dart": "e6f14ab912dcaffebf037a3e939c1d5500e2b0afdd37876c7243cd979cf86e87",
+    "test/workspace_failure_states_test.dart": "c113c0b8cbf8d19e79cd5ff0b56d7a2dcd0bca032be247776413184b501583df",
+    "tools/build_stitch_web.mjs": "896dd4db274067729e182cba3d26284d5a83f47c437f69937ac7093cb9ee287a",
+    "tools/check_stitch_account_settings.mjs": "9d608f5f3fc8f1b78c11ac6486a532f350c14ef6049b9d332d5ed8ea7a46124a",
+    "tools/check_stitch_calendar_import.mjs": "18955684765d6a259edbd3ab001891496ca4dcefe6590aa2cbc4b9746a133d5b",
+    "tools/check_stitch_schedule_create.mjs": "666d2bd66ac52e3caca41f257ed7be87872aee241836831f8e82c3eab9a8df82",
+    "tools/check_stitch_schedule_edit.mjs": "110fa44eed3bd66c9249eeb1b2e0b4e08a70042d0b184f4ff9a9d8bbb611e3b7",
+    "tools/test_backend_process.mjs": "217b1a383eb9cf26bc8888bcd5fd5aaba47a364caf1efed8b57c051e0eeca808",
+    "tools/tests/stitch_actions.test.mjs": "3e062ac5549352251bbe7bbb5ef4027fe19bb34d0b6c8c5cb69d2d931b331e57",
+    "tools/tests/stitch_release.test.mjs": "a52787f942cd453ace6219a1e914b2aa45d59335eba53725c2a551158226ad8a",
+    "web/index.html": "01210a71562fadb915d6241f4fbf083c22c05f5f9aae11179fbb55fa8bad8c9c",
+    "web/stitch/actions.js": "b817abd8bddc1fa5e1412a9fe8e7e93bb8d52c6bf285e6c7ad9f18ed72d91a4a",
+    "web/stitch/mobile/create-schedule-drawer/index.html": "97e71256a9c3743169fb5e88b9b12c96fd031b306777b3e0124d8c32527b95c7",
+    "web/stitch/mobile/insert-urgent-task-drawer/index.html": "6aa9605730d4dea5c22b3b1e5d8ea2a1c9312a12b84248ab086a80da2e140650",
+    "web/stitch/mobile/microtasks/index.html": "578e301c34b2263ed107fe839a388bf9762b2b7971005a910b305d848091127c",
+    "web/stitch/mobile/settings-drawer/index.html": "f3ab7e8186ae061ab1e1c620c5d758f9d72ab8593348f6033b75c7a7fc5092d7",
+    "web/stitch/mobile/urgent-rescue-comparison/index.html": "42740efb13a5e89058562ea4b46ec41da0f9fd34070cc7fadd99863c63070e6f",
+    "web/stitch/router.js": "f91151b6074914ee3dfba66480fb0a6091363e260908cc5685cda217c722ae3e",
+    "web/stitch/screens/diagnostics/index.html": "7a6d5a31b80be889a5f23c87bad87e2c180c1cdc410a6557506802f6fef45bff",
+    "web/stitch/screens/login/index.html": "a2d55566eb80c7a618dd7decd8ab9d2a0c4226bfd7cae573154e3890bde8f04d",
+    "web/stitch/screens/profile/index.html": "083f3092f291640f32f826d8a153567ca45083236128e0b290885027b14f6b61",
+    "web/stitch/screens/rescue-comparison/index.html": "9f7101038d8d828acdc601342800e13abf770082255ae5294c6a9371090a385f",
+    "web/stitch/screens/settings-drawer/index.html": "a53acde5fd4673c2bb06d7789abe677ce4fc42059fc393d561a26c55824bcf4e",
+    "web/stitch/screens/team/index.html": "4c0ca0bbadb462b8ec4361cbca5c639103d6a5f79ed2e49066cbd7ec19295da5"
+  },
+  "sourceSnapshotSha256": "af06f070bb344a9d5c22f15af534095626453d6f8d687e157b5f3c44c8b64e1d",
+  "externalAcceptance": {
+    "githubCi": "Not run at local capture. See the work branch pull request checks.",
+    "productionDeployed": false,
+    "domain": null,
+    "tlsEnabled": false,
+    "targetLinuxBootstrapExecuted": false,
+    "targetBackupScheduleConfigured": false,
+    "nativePackagesBuilt": false
+  }
+}
