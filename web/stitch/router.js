@@ -16,6 +16,8 @@
     'settings-drawer': ['screens/settings-drawer/index.html', 'mobile/settings-drawer/index.html'],
     'create-schedule': ['mobile/create-schedule-drawer/index.html'],
     'urgent-task': ['mobile/insert-urgent-task-drawer/index.html'],
+    'calendar-options': ['mobile/calendar-options-drawer/index.html'],
+    'calendar-import': ['mobile/import-schedule-drawer/index.html'],
     'microtask-entry': ['mobile/microtask-entry-breakdown/index.html'],
     'schedule-detail': ['components/schedule-detail-drawer.html'],
     'microtask-detail': ['components/microtask-detail-drawer.html'],
@@ -41,12 +43,14 @@
 
   const parentRoutes = {
     goals: 'profile',
-    integrations: 'profile',
+    integrations: 'schedule',
     bluetooth: 'profile',
     'emotion-energy': 'profile',
     'rescue-comparison': 'schedule',
     'create-schedule': 'schedule',
     'urgent-task': 'schedule',
+    'calendar-options': 'schedule',
+    'calendar-import': 'schedule',
     'schedule-detail': 'schedule',
     'microtask-detail': 'micro',
     'microtask-entry': 'micro',
@@ -250,14 +254,19 @@
 
   function injectPolishStyles(document, route = activeRoute) {
     const existing = document.getElementById('ruanchuang-polish-styles');
-    if (existing) return;
-    const link = document.createElement('link');
-    link.id = 'ruanchuang-polish-styles';
-    link.rel = 'stylesheet';
-    link.href = new URL(
+    const href = new URL(
       mobileQuery.matches ? 'stitch/mobile/assets/polish.css' : 'stitch/assets/polish.css',
       window.location.href,
     ).toString();
+    if (existing) {
+      if (existing.href !== href) existing.href = href;
+      document.documentElement.dataset.route = route;
+      return;
+    }
+    const link = document.createElement('link');
+    link.id = 'ruanchuang-polish-styles';
+    link.rel = 'stylesheet';
+    link.href = href;
     document.head.appendChild(link);
     document.documentElement.dataset.route = route;
     if (route === 'create-schedule' || route === 'urgent-task' || route === 'microtask-entry') {
@@ -278,8 +287,20 @@
     }
   }
 
+  function syncPolishStyles() {
+    const href = new URL(
+      mobileQuery.matches ? 'stitch/mobile/assets/polish.css' : 'stitch/assets/polish.css',
+      window.location.href,
+    ).toString();
+    for (const document of pageHost.documents()) {
+      const link = document.getElementById('ruanchuang-polish-styles');
+      if (link && link.href !== href) link.href = href;
+    }
+  }
+
   async function hydrateBackend(document, route) {
     if (route === 'schedule' && document.stitchCalendar) return document.stitchCalendar.refresh();
+    if (route === 'focus' && document.stitchFocus) return document.stitchFocus.refresh();
     const identity = accountIdentity();
     const refresh = Symbol('backend-refresh');
     document.backendRefresh = refresh;
@@ -712,20 +733,10 @@
       }
 
       const saveButton = settingsDocument.querySelector('#save-settings-btn, #btn-save-settings');
-      const editNameButton = Array.from(drawer.querySelectorAll('button')).find(
-        (button) => /修改昵称|edit name/i.test(button.textContent),
-      );
-      if (editNameButton) editNameButton.id = 'settings-profile-edit-action';
-      const logoutButton = Array.from(drawer.querySelectorAll('button')).find(
-        (button) => /退出登录|log out/i.test(button.textContent),
-      );
-      if (logoutButton) logoutButton.id = 'settings-logout-action';
       const resetButton = Array.from(settingsDocument.querySelectorAll('button')).find(
         (button) => /恢复默认设置|restore default/i.test(button.textContent),
       );
       if (resetButton) resetButton.dataset.settingsReset = 'true';
-      const storedUser = readStoredUser();
-      if (storedUser.displayName) updateSettingsUserName(settingsDocument, storedUser.displayName);
       markUnsupportedSettingsControls(settingsDocument);
       setSettingsControlsDisabled(settingsDocument, true);
 
@@ -802,13 +813,6 @@
           event.preventDefault();
           event.stopPropagation();
           closeSettingsOverlay();
-          return;
-        }
-
-        if (target.closest?.('#settings-profile-cancel')) {
-          event.preventDefault();
-          event.stopPropagation();
-          settingsDocument.getElementById('settings-profile-dialog')?.close();
           return;
         }
 
@@ -989,13 +993,8 @@
     prepare: prepareFrame,
     beforeActivate(nextFrame, route) {
       const doc = nextFrame.contentDocument;
-      if (route === 'create-schedule' && doc.documentElement.dataset.resetScheduleOnNextOpen) {
-        const params = new URL(doc.URL).searchParams;
-        doc.getElementById('schedule-date-input').value = params.get('day') || calendarState.day || todayIso();
-        doc.getElementById('schedule-time-input').value = params.get('time') || '09:00';
-        doc.getElementById('schedule-duration-input').value = '60';
-        delete doc.documentElement.dataset.resetScheduleOnNextOpen;
-      }
+      if (route === 'create-schedule') hydrateScheduleForm(doc);
+      if (route === 'schedule-detail') hydrateScheduleDetail(doc);
       return route !== 'rescue-comparison' || hydrateRescueComparisonView(nextFrame.contentDocument);
     },
     activate(nextFrame, route) {
@@ -1071,6 +1070,10 @@
       navigate(loginReturnRoute, { replace: true });
       return;
     }
+    if (activeRoute === 'calendar-import' && history.state?.importReturnHash?.startsWith('create-schedule')) {
+      navigate(history.state.importReturnHash, { returnRoute: 'schedule' });
+      return;
+    }
     const parent = parentRouteFor(activeRoute);
     if (parent) {
       navigate(parent);
@@ -1130,57 +1133,46 @@
     })[character]);
   }
 
-  function openProfileEditor(settingsDocument) {
-    if (settingsDocument.getElementById('settings-profile-dialog')) return;
-    const user = JSON.parse(localStorage.getItem('ruanchuang_user') || '{}');
-    const accountSection = Array.from(settingsDocument.querySelectorAll('#settings-drawer section'))
-      .find((section) => section.textContent.includes('账户与多用户管理'));
-    const currentName = user.displayName || accountSection?.textContent.match(/林知行/)?.[0] || '';
-    const dialog = settingsDocument.createElement('dialog');
-    dialog.id = 'settings-profile-dialog';
-    dialog.setAttribute('aria-labelledby', 'settings-profile-title');
+  function openProfileEditor(profileDocument) {
+    if (profileDocument.getElementById('profile-dialog')) return;
+    const currentName = readStoredUser().displayName || '';
+    const dialog = profileDocument.createElement('dialog');
+    dialog.id = 'profile-dialog';
+    dialog.setAttribute('aria-labelledby', 'profile-title');
     dialog.innerHTML = `
       <form method="dialog" class="profile-editor-form">
-        <h2 id="settings-profile-title">修改昵称</h2>
-        <label for="settings-profile-name">新昵称</label>
-        <input id="settings-profile-name" maxlength="40" value="${escapeHtml(currentName)}" />
-        <p id="settings-profile-error" role="alert" hidden></p>
+        <h2 id="profile-title">修改昵称</h2>
+        <label for="profile-name">新昵称</label>
+        <input id="profile-name" maxlength="40" value="${escapeHtml(currentName)}" />
+        <p id="profile-error" role="alert" hidden></p>
         <div class="profile-editor-actions">
-          <button id="settings-profile-cancel" type="button">取消</button>
-          <button id="settings-profile-save" type="button">保存</button>
+          <button id="profile-cancel" type="button">取消</button>
+          <button id="profile-save" type="button">保存</button>
         </div>
       </form>
     `;
-    const style = settingsDocument.createElement('style');
+    const style = profileDocument.createElement('style');
     style.textContent = `
-      #settings-profile-dialog { width: min(420px, calc(100vw - 32px)); border: 1px solid #c0c8c7; border-radius: 12px; padding: 22px; color: #1a1b1f; background: #fff; box-shadow: 0 16px 40px rgba(16,27,29,.22); }
-      #settings-profile-dialog::backdrop { background: rgba(16,27,29,.42); backdrop-filter: blur(4px); }
+      #profile-dialog { width: min(420px, calc(100vw - 32px)); border: 1px solid #c0c8c7; border-radius: 12px; padding: 22px; color: #1a1b1f; background: #fff; box-shadow: 0 16px 40px rgba(16,27,29,.22); }
+      #profile-dialog::backdrop { background: rgba(16,27,29,.42); backdrop-filter: blur(4px); }
       .profile-editor-form { display: grid; gap: 10px; }
       .profile-editor-form h2 { margin: 0 0 4px; font-size: 18px; }
       .profile-editor-form label { font-size: 13px; font-weight: 600; }
       .profile-editor-form input { width: 100%; height: 44px; border: 1px solid #c0c8c7; border-radius: 8px; padding: 0 12px; background: #faf8fe; color: #1a1b1f; }
       .profile-editor-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
       .profile-editor-actions button { min-height: 40px; padding: 0 14px; border: 1px solid #c0c8c7; border-radius: 8px; background: #f4f3f8; color: #1a1b1f; }
-      .profile-editor-actions #settings-profile-save { border-color: #005db5; background: #005db5; color: #fff; }
+      .profile-editor-actions #profile-save { border-color: #005db5; background: #005db5; color: #fff; }
     `;
-    settingsDocument.head.appendChild(style);
-    settingsDocument.getElementById('settings-drawer').appendChild(dialog);
+    profileDocument.head.appendChild(style);
+    profileDocument.body.appendChild(dialog);
+    dialog.addEventListener('close', () => { dialog.remove(); style.remove(); }, { once: true });
+    dialog.querySelector('form').addEventListener('submit', event => {
+      event.preventDefault();
+      const save = dialog.querySelector('#profile-save');
+      if (!save.disabled) runApiAction('auth-profile-save', profileDocument, save);
+    });
     dialog.showModal();
-    dialog.querySelector('#settings-profile-name').focus();
-  }
-
-  function updateSettingsUserName(settingsDocument, displayName) {
-    const drawer = settingsDocument.getElementById('settings-drawer');
-    if (!drawer) return;
-    const accountSection = Array.from(drawer.querySelectorAll('section'))
-      .find((section) => section.textContent.includes('账户与多用户管理'));
-    let nameNode = accountSection?.querySelector('[data-user-display-name]');
-    if (!nameNode) {
-      nameNode = Array.from(accountSection?.querySelectorAll('*') || [])
-        .find((node) => node.children.length === 0 && node.textContent.trim() === '林知行');
-      if (nameNode) nameNode.dataset.userDisplayName = 'true';
-    }
-    if (nameNode) nameNode.textContent = displayName;
+    dialog.querySelector('#profile-name').focus();
   }
 
   function updateProfileDisplayName(profileDocument, displayName) {
@@ -1282,6 +1274,12 @@
 
     const user = readStoredUser();
     updateProfileDisplayName(profileDocument, user.displayName || '');
+    const signedIn = Boolean(authHeaders().Authorization);
+    for (const button of profileDocument.querySelectorAll('#profile-edit-action, #profile-logout-action')) {
+      button.classList.toggle('hidden', !signedIn);
+    }
+    const switchLabel = profileDocument.querySelector('#profile-switch-account [data-account-label]');
+    if (switchLabel) switchLabel.textContent = signedIn ? '切换账户' : '登录 / 注册';
 
     for (const link of profileDocument.querySelectorAll('aside nav a[data-path]')) {
       const label = link.querySelector('span.truncate')?.textContent.trim();
@@ -1348,26 +1346,146 @@
     }
   }
 
-  function prepareRouteControls(document, route) {
-    if (route === 'schedule-detail') {
-      const identity = accountIdentity();
-      const id = new URL(document.URL).searchParams.get('id');
-      if (!id) {
-        document.defaultView.dispatchEvent(new document.defaultView.CustomEvent('stitch:open-schedule-detail', { detail: { entry: {}, mode: 'edit' } }));
-      } else {
-        backendRequest('/schedule').then(entries => {
-          if (identity !== accountIdentity() || !document.defaultView?.frameElement?.isConnected) return;
-          const entry = Array.isArray(entries) && entries.find(entry => entry.id === id);
-          if (!entry) throw new Error('日程不存在或已被删除');
-          document.documentElement.dataset.scheduleAnchorDay = entry.day || '';
-          document.defaultView.dispatchEvent(new document.defaultView.CustomEvent('stitch:open-schedule-detail', { detail: { entry, mode: 'view' } }));
-        }).catch(error => {
-          document.getElementById('loadingState').hidden = true;
-          document.getElementById('errorState').hidden = false;
-          const copy = document.querySelector('#errorState p');
-          if (copy) copy.textContent = error.message;
-        });
+  function setScheduleTagColors(document) {
+    for (const button of document.querySelectorAll('#tagGroup .tag-pill')) {
+      const tag = button.querySelector('span:last-child')?.textContent.trim();
+      const theme = window.StitchCalendar.themeFor({ tag });
+      button.style.setProperty('--schedule-tag-bg', theme.background);
+      button.style.setProperty('--schedule-tag-title', theme.title);
+      button.style.setProperty('--schedule-tag-accent', theme.accent);
+    }
+  }
+
+  function setScheduleFormValues(document, entry, params) {
+    document.querySelectorAll('[data-schedule-legacy]').forEach(button => button.remove());
+    const editing = Boolean(entry);
+    document.getElementById('schedule-title-input').value = entry?.title || '';
+    document.getElementById('schedule-description-input').value = entry?.description || '';
+    const date = document.getElementById('schedule-date-input');
+    date.value = editing ? entry.day || '' : params.get('day') || calendarState.day || todayIso();
+    date.required = !editing || entry.day != null;
+    document.getElementById('schedule-floating-note').hidden = !editing || entry.day != null;
+    document.getElementById('schedule-time-input').value = editing
+      ? formatPlanClock(entry.time) : params.get('time') || '09:00';
+    document.getElementById('schedule-duration-input').value = editing
+      ? Math.round(entry.height * 60 / 80) : 60;
+    document.defaultView.setScheduleConstraints(entry?.rescheduleFlexible ?? true, entry?.hardLocked ?? false);
+    const group = document.getElementById('tagGroup');
+    const tag = editing ? entry.tag : '跨部门协同';
+    let tagButton = [...group.children].find(button => button.querySelector('span:last-child')?.textContent === tag);
+    if (!tagButton) {
+      tagButton = group.firstElementChild.cloneNode(true);
+      tagButton.dataset.scheduleLegacy = 'true';
+      tagButton.querySelector('span:last-child').textContent = tag;
+      group.append(tagButton);
+    }
+    setScheduleTagColors(document);
+    document.defaultView.selectTag(tagButton);
+    for (const [groupId, key, value, label] of [
+      ['loadGroup', 'load', editing ? entry.load ?? '' : 'medium', '原负荷'],
+      ['reminderGroup', 'reminder', editing ? entry.reminderMinutesBefore ?? 0 : 30, '提前提醒'],
+      ['repeatGroup', 'repeat', entry?.repeat || 'none', '原重复规则'],
+    ]) {
+      const group = document.getElementById(groupId);
+      let button = [...group.children].find(button => button.dataset[key] === String(value));
+      if (!button) {
+        button = group.firstElementChild.cloneNode(true);
+        button.dataset.scheduleLegacy = 'true';
+        button.dataset[key] = value;
+        button.textContent = key === 'reminder' ? `提前 ${value} 分钟` : `${label}：${value}`;
+        group.append(button);
       }
+      document.defaultView.selectRadio(button, groupId);
+    }
+  }
+
+  async function hydrateScheduleForm(document) {
+    const params = new URL(document.URL).searchParams, id = params.get('id');
+    document.getElementById('schedule-import-action').hidden = Boolean(id);
+    if (!id && document.scheduleForm?.ready && !document.documentElement.dataset.resetScheduleOnNextOpen) return;
+    const state = { id, entry: null, identity: accountIdentity(), ready: false };
+    document.scheduleForm = state;
+    delete document.documentElement.dataset.resetScheduleOnNextOpen;
+    document.documentElement.dataset.scheduleMode = id ? 'edit' : 'create';
+    document.documentElement.dataset.scheduleReady = 'false';
+    document.getElementById('schedule-form-title').textContent = id ? '编辑日程' : '新建日程';
+    document.getElementById('schedule-save-label').textContent = id ? '保存修改' : '保存并写入日程';
+    const fields = document.getElementById('schedule-form-fields');
+    const status = document.getElementById('schedule-form-status');
+    const retry = document.getElementById('schedule-form-retry');
+    fields.disabled = true; fields.hidden = Boolean(id); status.hidden = !id; retry.hidden = true;
+    document.getElementById('schedule-form-message').textContent = '正在读取日程…';
+    const current = () => document.scheduleForm === state && state.identity === accountIdentity() && document.defaultView?.frameElement?.isConnected;
+    try {
+      if (id) {
+        const entries = await backendRequest('/schedule');
+        if (!current()) return;
+        state.entry = Array.isArray(entries) && entries.find(entry => entry.id === id);
+        if (!state.entry) throw new Error('日程不存在或已被删除');
+      }
+      setScheduleFormValues(document, state.entry, params);
+      state.ready = true; fields.disabled = false; fields.hidden = false; status.hidden = true;
+      document.documentElement.dataset.scheduleReady = 'true';
+    } catch (error) {
+      if (!current()) return;
+      document.getElementById('schedule-form-message').textContent = error.status === 401
+        ? '登录后才能编辑日程。' : '无法读取日程，请重试。';
+      status.hidden = false; retry.hidden = false;
+    }
+  }
+
+  async function hydrateScheduleDetail(document) {
+    const identity = accountIdentity(), request = {};
+    document.scheduleDetailRequest = request;
+    document.defaultView.dispatchEvent(new document.defaultView.CustomEvent('stitch:loading-schedule-detail'));
+    try {
+      const id = new URL(document.URL).searchParams.get('id');
+      if (!id) throw new Error('请先从日历选择一项日程');
+      const entries = await backendRequest('/schedule');
+      if (identity !== accountIdentity() || document.scheduleDetailRequest !== request || !document.defaultView?.frameElement?.isConnected) return;
+      const entry = Array.isArray(entries) && entries.find(entry => entry.id === id);
+      if (!entry) throw new Error('日程不存在或已被删除');
+      document.documentElement.dataset.scheduleAnchorDay = entry.day || '';
+      const theme = window.StitchCalendar.themeFor(entry), tag = document.getElementById('detailTag');
+      tag.style.background = theme.background; tag.style.color = theme.title;
+      document.defaultView.dispatchEvent(new document.defaultView.CustomEvent('stitch:open-schedule-detail', { detail: { entry } }));
+    } catch (error) {
+      if (identity !== accountIdentity() || document.scheduleDetailRequest !== request) return;
+      document.defaultView.dispatchEvent(new document.defaultView.CustomEvent('stitch:error-schedule-detail', { detail: { message: error.status === 401 ? '请先登录后查看日程。' : error.message } }));
+    }
+  }
+
+  function prepareCalendarImport(document) {
+    return document.defaultView.StitchCalendarImportUI.mount(document, {
+      request: backendRequest,
+      identity: accountIdentity,
+      themeFor: window.StitchCalendar.themeFor,
+      onImported(count) {
+        for (const page of pageHost.documents()) page.stitchCalendar?.refresh();
+        if (activeRoute === 'calendar-import') {
+          showNotice(window.document, `已导入 ${count} 条日程。`);
+          navigate('schedule');
+        }
+      },
+    });
+  }
+
+  function prepareRouteControls(document, route) {
+    if (route === 'focus') {
+      document.stitchFocus = window.StitchFocus.mount(document, {
+        request: backendRequest,
+        identity: accountIdentity,
+        notify: (message) => showNotice(document, message),
+        onState(state, label, error) {
+          document.documentElement.dataset.backendState = state;
+          updateSyncLabel(document, label);
+          if (document.documentElement.dataset.pageVisible !== 'false') window.dispatchEvent(new CustomEvent('stitch:backend-state', { detail: { state, route, label, ...(error ? { error: String(error) } : {}) } }));
+        },
+      });
+      (document.stitchDrawerCleanup ||= []).push(() => document.stitchFocus.dispose());
+    }
+    if (route === 'calendar-import') {
+      (document.stitchDrawerCleanup ||= []).push(prepareCalendarImport(document));
     }
     if (route === 'schedule') {
       document.stitchCalendar = window.StitchCalendar.mount(document, {
@@ -1463,28 +1581,19 @@
       const dateInput = document.getElementById('schedule-date-input');
       if (dateInput) dateInput.value = window.StitchCalendar.parseDay(params.get('day')) ? params.get('day') : calendarState.day || todayIso();
       const clockInput = document.getElementById('schedule-time-input');
-      if (clockInput) clockInput.value = /^\d{2}:\d{2}$/.test(params.get('time') || '') ? params.get('time') : '09:00';
+      if (clockInput) {
+        clockInput.value = /^\d{2}:\d{2}$/.test(params.get('time') || '') ? params.get('time') : '09:00';
+        const picker = document.defaultView.StitchTimePicker.mount(document);
+        const field = document.createElement('span');
+        clockInput.replaceWith(field);
+        field.replaceWith(picker.timeField(clockInput));
+        (document.stitchDrawerCleanup ||= []).push(() => picker.dispose());
+      }
       const dateLabel = document.getElementById('schedule-date-label');
       if (dateLabel) {
         const date = new Date();
         const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
         dateLabel.textContent = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 周${weekdays[date.getDay()]}`;
-      }
-      const switches = document.querySelectorAll('[role="switch"]');
-      for (const control of switches) {
-        control.disabled = true;
-        control.title = '当前排期接口不支持保存此项约束';
-        control.setAttribute('aria-disabled', 'true');
-        control.style.cursor = 'not-allowed';
-        control.style.opacity = '0.58';
-      }
-      const switchGroup = switches[0]?.closest('.bg-surface-container-low');
-      if (switchGroup && !switchGroup.querySelector('[data-route-unavailable]')) {
-        const note = document.createElement('p');
-        note.dataset.routeUnavailable = 'true';
-        note.className = 'text-[11px] text-on-surface-variant';
-        note.textContent = '排期弹性和硬约束标记暂未提供服务端字段。';
-        switchGroup.appendChild(note);
       }
     }
   }
@@ -2047,12 +2156,13 @@
       }
 
       if (action === 'auth-profile-edit') {
+        if (!authHeaders().Authorization) { navigate('login'); return; }
         openProfileEditor(document);
         return;
       }
 
       if (action === 'auth-profile-save') {
-        const displayName = document.getElementById('settings-profile-name')?.value.trim();
+        const displayName = document.getElementById('profile-name')?.value.trim();
         if (!displayName) throw new Error('昵称不能为空');
         const user = await backendRequest('/auth/profile', {
           method: 'PUT',
@@ -2060,11 +2170,10 @@
         });
         localStorage.setItem('ruanchuang_user', JSON.stringify(user));
         const updatedName = user.displayName || displayName;
-        updateSettingsUserName(document, updatedName);
         if (activeRoute === 'profile') {
           updateProfileDisplayName(frame.contentDocument, updatedName);
         }
-        document.getElementById('settings-profile-dialog')?.close();
+        document.getElementById('profile-dialog')?.close();
         showNotice(document, '昵称已更新。');
         return;
       }
@@ -2094,40 +2203,47 @@
       }
 
       if (action === 'create-schedule') {
-        const title = document.querySelector('textarea')?.value.trim();
+        const state = document.scheduleForm;
+        if (!state?.ready || state.identity !== accountIdentity()) throw new Error('请先读取日程后再保存');
+        const entry = state.entry;
+        const title = document.getElementById('schedule-title-input')?.value.trim();
         if (!title) throw new Error('日程主题不能为空');
-        const tag = document.querySelector('.tag-pill.active-tag span:last-child')?.textContent.trim() || '未分类';
-        const day = document.getElementById('schedule-date-input')?.value;
+        const tag = document.querySelector('#tagGroup .tag-pill.active-tag span:last-child')?.textContent.trim() || '';
+        if (!tag) throw new Error('请选择日程属性标签');
+        const dateValue = document.getElementById('schedule-date-input')?.value;
+        const day = !dateValue && entry?.day == null && entry ? null : dateValue;
         const time = document.getElementById('schedule-time-input')?.value;
         const minutes = Number(document.getElementById('schedule-duration-input')?.value);
-        if (!window.StitchCalendar.parseDay(day)) throw new Error('请选择有效的日程日期');
+        if (day !== null && !window.StitchCalendar.parseDay(day)) throw new Error('请选择有效的日程日期');
         if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time || '')) throw new Error('请选择有效的开始时间');
         if (!Number.isFinite(minutes) || minutes < 5 || minutes > 1440) throw new Error('日程时长应为 5 至 1440 分钟');
-        const repeatText = document.querySelector('#repeatGroup button.bg-primary')?.textContent.trim();
-        const reminderText = document.querySelector('#reminderGroup button.bg-primary')?.textContent.trim();
-        const repeat = ({ 不重复: 'none', 每天: 'daily', 每周: 'weekly', 每月: 'monthly' })[repeatText] || 'none';
-        const reminderMinutesBefore = reminderText?.includes('不提醒')
-          ? 0
-          : Number(reminderText?.match(/\d+/)?.[0] || 30);
-        await backendRequest('/schedule', {
-          method: 'POST',
+        const repeat = document.querySelector('#repeatGroup .active-radio')?.dataset.repeat || 'none';
+        const reminderMinutesBefore = Number(document.querySelector('#reminderGroup .active-radio')?.dataset.reminder);
+        if (!Number.isInteger(reminderMinutesBefore) || reminderMinutesBefore < 0) throw new Error('请选择有效的提前提醒时间');
+        const load = document.querySelector('#loadGroup .active-radio')?.dataset.load || null;
+        const rescheduleFlexible = document.getElementById('schedule-flexible-switch').getAttribute('aria-checked') === 'true';
+        const hardLocked = document.getElementById('schedule-locked-switch').getAttribute('aria-checked') === 'true';
+        const saved = await backendRequest(entry ? `/schedule/${encodeURIComponent(entry.id)}` : '/schedule', {
+          method: entry ? 'PUT' : 'POST',
           body: {
-            day,
-            title,
-            tag,
+            ...entry, day, title, tag, load, rescheduleFlexible, hardLocked,
+            description: document.getElementById('schedule-description-input').value.trim(),
             height: minutes * 80 / 60,
-            color: 0,
-            time: parseClock(time),
-            reminderMinutesBefore,
-            repeat,
+            color: entry && entry.tag === tag ? entry.color ?? 0 : window.StitchCalendar.themeFor({ tag }).color,
+            time: parseClock(time), reminderMinutesBefore, repeat,
+            ...(repeat === 'none' ? { repeatUntil: null } : {}),
           },
         });
-        calendarState.day = day;
-        for (const page of pageHost.documents()) page.stitchCalendar?.selectDay(day);
-        document.querySelector('textarea').value = '';
+        const targetDay = saved.day && (!entry || saved.day !== entry.day) ? saved.day : calendarState.day;
+        for (const page of pageHost.documents()) {
+          if (window.StitchCalendar.parseDay(targetDay)) page.stitchCalendar?.selectDay(targetDay);
+          else page.stitchCalendar?.refresh();
+        }
         document.documentElement.dataset.resetScheduleOnNextOpen = 'true';
-        showNotice(document, '日程已写入服务端排期。');
-        navigate('schedule');
+        if (frame.contentDocument === document && activeRoute === 'create-schedule') {
+          showNotice(window.document, entry ? '日程修改已保存。' : '日程已写入服务端排期。');
+          navigate('schedule');
+        }
         return;
       }
 
@@ -2509,7 +2625,9 @@
 
   function routeForButton(button) {
     const label = `${button.innerText || ''} ${button.title || ''} ${button.getAttribute('aria-label') || ''}`.toLowerCase();
+    if (button.id === 'close-care-modal') return null;
     if (button.id === 'login-back-action') return '__login_back__';
+    if (button.id === 'profile-switch-account') return 'login';
     if (button.id === 'schedule-create-urgent-task') return 'urgent-task';
     if (button.id === 'mobile-rescue-generate') return 'urgent-task';
     if (activeRoute === 'schedule' && mobileQuery.matches && label.includes('救援')) return 'urgent-task';
@@ -2529,7 +2647,7 @@
       return parentRouteFor(activeRoute);
     }
     if (label.includes('设置') || label.includes('settings')) {
-      return activeRoute === 'profile' ? 'settings-drawer' : 'profile';
+      return 'settings-drawer';
     }
     if (label.includes('目标') || label.includes('goals')) return 'goals';
     if (label.includes('复盘') || label.includes('review')) return 'review';
@@ -2539,6 +2657,7 @@
     if (label.includes('mcp') || label.includes('接入')) return 'integrations';
     if (label.includes('插入紧急') || label.includes('urgent task')) return 'urgent-task';
     if (label.includes('ics') || label.includes('导入/导出')) return 'integrations';
+    if (label.includes('导入日程') || label.includes('import schedule')) return 'calendar-import';
     if (label.includes('新增日程') || label.includes('新建日程') || label.includes('add schedule') || label.includes('new schedule')) return 'create-schedule';
     if (activeRoute === 'schedule' && label.includes('立即对比并执行救援方案')) return 'urgent-task';
     if (label.includes('添加微任务') || label.includes('add microtask') || label.includes('import list') || label.includes('导入清单')) return 'microtask-entry';
@@ -2556,6 +2675,7 @@
   }
 
   function apiActionForButton(button) {
+    if (button.id === 'schedule-save-action') return 'create-schedule';
     if (button.id === 'btn-quick-add') return 'microtask-quick-add';
     if (button.id === 'btn-sweep-start') return 'microtask-sweep';
     if (button.id === 'schedule-rescue-undo' || button.id === 'mobile-rescue-undo') return 'rescue-history';
@@ -2564,13 +2684,13 @@
     if (button.id === 'btn-quick-reserve' || button.id === 'btn-silent-room') return 'team-book';
     if (button.id === 'btn-conflict-check') return 'team-conflicts';
     if (button.id === 'profile-weekly-export') return 'profile-weekly-export';
-    if (button.id === 'settings-profile-edit-action') return 'auth-profile-edit';
-    if (button.id === 'settings-profile-save') return 'auth-profile-save';
+    if (button.id === 'profile-edit-action') return 'auth-profile-edit';
+    if (button.id === 'profile-save') return 'auth-profile-save';
     if (activeRoute === 'login' && button.id === 'auth-submit') {
       return button.dataset.authMode === 'register' ? 'auth-register' : 'auth-login';
     }
     if (button.id === 'auth-guest') return 'auth-guest';
-    if (button.id === 'settings-logout-action') return 'auth-logout';
+    if (button.id === 'profile-logout-action') return 'auth-logout';
     const label = `${button.textContent || ''} ${button.title || ''} ${button.getAttribute('aria-label') || ''}`;
     if (activeRoute === 'create-schedule' && label.includes('保存并写入日程')) return 'create-schedule';
     if (activeRoute === 'urgent-task' && label.includes('立即生成三方案救援对比')) return 'rescue-options';
@@ -2612,6 +2732,13 @@
       childDocument.defaultView.openDissectModal = () => modalMotion.open();
       childDocument.defaultView.closeDissectModal = () => modalMotion.close();
     }
+    childDocument.defaultView.addEventListener('stitch:edit-schedule', event => {
+      if (frame.contentDocument !== childDocument || activeRoute !== 'schedule-detail' || !event.detail?.id) return;
+      navigate(`create-schedule?id=${encodeURIComponent(event.detail.id)}`, { returnRoute: 'schedule' });
+    });
+    childDocument.defaultView.addEventListener('stitch:retry-schedule-detail', () => {
+      if (frame.contentDocument === childDocument && activeRoute === 'schedule-detail') hydrateScheduleDetail(childDocument);
+    });
     childDocument.defaultView.addEventListener('stitch:close-drawer', () => {
       if (frame.id === 'prototype-screen' && childDocument.documentElement.dataset.pageVisible !== 'false') returnFromSecondary();
     });
@@ -2714,6 +2841,21 @@
 
       const button = event.target.closest('button');
       if (!button) return;
+      if (button.id === 'schedule-form-retry') {
+        event.preventDefault(); hydrateScheduleForm(childDocument); return;
+      }
+      if (button.id === 'schedule-import-action') {
+        event.preventDefault();
+        const importReturnHash = window.location.hash.slice(2);
+        navigate('calendar-import', { returnRoute: 'schedule' });
+        history.replaceState({ ...history.state, importReturnHash }, '', window.location.hash);
+        return;
+      }
+      if (button.id === 'profile-cancel') {
+        event.preventDefault();
+        childDocument.getElementById('profile-dialog')?.close();
+        return;
+      }
       if (button.id === 'rescue-view-details') {
         event.preventDefault();
         childDocument.querySelector('[data-rescue-details]')?.scrollIntoView({
@@ -2800,6 +2942,7 @@
   window.addEventListener('hashchange', syncRouteFromHistory);
   window.addEventListener('popstate', syncRouteFromHistory);
   mobileQuery.addEventListener('change', () => {
+    syncPolishStyles();
     renderRoute(routeFromHash() === 'settings-drawer' ? activeRoute : routeFromHash());
     resizeSettingsOverlay();
   });

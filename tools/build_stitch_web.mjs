@@ -73,6 +73,7 @@ export async function buildStitchWeb({
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const { output, release, router } = await buildStitchWeb();
+  const sourceArgument = process.argv.indexOf('--source-root');
+  const { output, release, router } = await buildStitchWeb(sourceArgument < 0 ? {} : { sourceRoot: resolve(process.argv[sourceArgument + 1]) });
   console.log(JSON.stringify({ output, release, router }, null, 2));
 }

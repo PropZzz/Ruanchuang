@@ -528,7 +528,9 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('shell-nav-micro')));
       await tester.pumpAndSettle();
 
-      expect(find.text('添加微任务'), findsOneWidget);
+      // Fresh storage starts empty, so the empty-state CTA joins the FAB with
+      // the same label; the add action just has to stay reachable.
+      expect(find.text('添加微任务'), findsWidgets);
       expect(find.byTooltip('批量模式'), findsOneWidget);
       expect(tester.takeException(), isNull);
     } finally {

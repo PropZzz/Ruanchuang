@@ -1,0 +1,12 @@
+/* Import controls use the same surfaces and accents as the schedule form. */
+.import-file-card{display:flex;align-items:center;gap:12px;width:100%;padding:16px;text-align:left;border:1px solid #e3e2e7;border-radius:12px;background:#f4f3f8;color:#1a1b1f;cursor:pointer;transition:background-color 140ms ease-out,border-color 140ms ease-out}
+.import-file-card:hover{background:#efedf3;border-color:#a7cecd}
+.import-file-card:disabled{cursor:wait}
+.import-file-icon{display:grid;place-items:center;flex-shrink:0;width:40px;height:40px;border-radius:10px;background:#c2eae9;color:#274d4d;font-size:23px}
+.import-file-info{display:flex;flex:1;min-width:0;flex-direction:column;gap:5px}
+.import-file-info strong{font-size:12px;line-height:1.5;font-weight:600;overflow-wrap:anywhere}
+.import-file-info>span,.import-file-help{color:#414848;font-size:11px;line-height:1.6;font-weight:400}
+.import-file-action{flex-shrink:0;white-space:nowrap;color:#005db5;font-size:11px;font-weight:600}
+#import-workbook select,#import-encoding-group select,#import-mapping select{appearance:none;padding-right:34px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23414848' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;font-size:12px}
+@media(max-width:420px){.import-file-card{gap:10px;padding:12px}.import-file-icon{width:34px;height:36px;font-size:21px}.import-time-row{grid-template-columns:60px minmax(0,1fr) minmax(0,1fr)!important;gap:6px!important}}
+@media(prefers-reduced-motion:reduce){.import-file-card{transition:none}}

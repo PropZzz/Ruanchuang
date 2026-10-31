@@ -1,0 +1,60 @@
+/* Close controls follow the new-schedule drawer on every surface. */
+[data-drawer-header] {
+  display: flex;
+  align-items: center !important;
+  justify-content: space-between;
+  gap: 12px;
+  padding-inline: 20px !important;
+  flex-shrink: 0;
+}
+
+[data-drawer-header] > :not(.stitch-drawer-close) { min-width: 0; }
+[data-drawer-header="inset"] { padding-inline: 0 !important; margin-inline: -4px; }
+[data-drawer-header="content"] { padding-inline: 0 !important; }
+[data-drawer-header="leading"] { justify-content: flex-start; }
+
+.stitch-drawer-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0 -8px 0 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  border-radius: 9999px;
+  background: transparent;
+  color: #414848;
+  box-shadow: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 150ms, color 150ms, transform 150ms;
+  transition-timing-function: cubic-bezier(.2, 0, 0, 1);
+}
+
+.stitch-drawer-close > .material-symbols-outlined {
+  font-size: 20px;
+  line-height: 1;
+  margin-top: -1px;
+}
+
+.stitch-drawer-close[data-drawer-close-position="start"] { margin: 0 0 0 -8px; }
+
+@media (hover: hover) {
+  .stitch-drawer-close:hover { color: #1a1b1f; background: #efedf3; }
+}
+
+/* Drawers focus this control on open; only pointer hover should reveal its background. */
+.stitch-drawer-close:active:not(:disabled) { transform: scale(.95) !important; }
+.stitch-drawer-close:focus-visible { outline: none; color: #005db5; }
+.stitch-drawer-close:focus-visible > .material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 700, 'GRAD' 0, 'opsz' 24;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stitch-drawer-close { transition: none; }
+}

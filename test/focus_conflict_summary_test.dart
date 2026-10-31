@@ -56,6 +56,13 @@ void main() {
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
+      // The rhythm summary sits below the fold; scroll it into view the way a
+      // user would. Plain pumps keep this safe even if a scheduled task
+      // auto-starts while the test clock advances.
+      await tester.drag(find.byType(ListView).first, const Offset(0, -700));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
     }
 
     testWidgets('shows the real conflict count for overlapping entries', (

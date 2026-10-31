@@ -1,6 +1,6 @@
 (() => {
   const primary = new Set(['focus', 'schedule', 'micro', 'goals', 'team', 'review', 'diagnostics', 'profile']);
-  const drawers = new Set(['create-schedule', 'urgent-task', 'microtask-entry', 'schedule-detail', 'microtask-detail']);
+  const drawers = new Set(['create-schedule', 'urgent-task', 'calendar-options', 'calendar-import', 'microtask-entry', 'schedule-detail', 'microtask-detail', 'integrations']);
   const labels = { focus: '专注', schedule: '智能日历', micro: '微任务', goals: '目标', team: '团队', review: '智能复盘', diagnostics: '接入与诊断', profile: '我的' };
   const icons = { focus: 'timer', schedule: 'calendar_today', micro: 'checklist', goals: 'flag', team: 'group', review: 'insights', diagnostics: 'hub', profile: 'person' };
 
@@ -82,7 +82,7 @@
     shell.hidden = true;
     shell.innerHTML = `<aside aria-label="主导航"><div class="shell-brand"><img src="stitch/assets/images/a2aaefce0709.png" alt=""><div><strong>时序智配</strong><small>时间地图工作台</small></div></div><nav>${[
       ['今天', ['focus', 'schedule']], ['规划', ['micro', 'goals']], ['协作', ['team']], ['系统', ['review', 'diagnostics', 'profile']],
-    ].map(([group, routes]) => `<section><small>${group}</small>${routes.map(route => `<a href="#/${route}" data-route="${route}"><span class="material-symbols-outlined">${icons[route]}</span><span>${labels[route]}</span></a>`).join('')}</section>`).join('')}</nav><div class="shell-footer"><button data-notice><span class="material-symbols-outlined">notifications</span>系统通知 <small>预留</small></button></div></aside><header><div class="shell-breadcrumb">时序智配 <span>/</span> <strong id="shell-title">时间工作台</strong></div><span id="shell-sync" role="status">正在连接</span><div class="shell-actions"><button data-route="settings-drawer" aria-label="设置"><span class="material-symbols-outlined">settings</span></button></div></header>`;
+    ].map(([group, routes]) => `<section><small>${group}</small>${routes.map(route => `<a href="#/${route}" data-route="${route}"><span class="material-symbols-outlined">${icons[route]}</span><span>${labels[route]}</span></a>`).join('')}</section>`).join('')}</nav><div class="shell-footer"><button data-notice><span class="material-symbols-outlined">notifications</span>系统通知 <small>预留</small></button></div></aside><header><div class="shell-breadcrumb">时序智配 <span>/</span> <strong id="shell-title">时间工作台</strong></div><span id="shell-sync" role="status">正在连接</span><div class="shell-actions"><button data-route="settings-drawer" aria-label="设置"><span class="material-symbols-outlined">settings</span></button></div></header><nav class="shell-mobile-nav" aria-label="移动端主导航">${['focus', 'schedule', 'micro', 'team', 'profile'].map(route => `<a href="#/${route}" data-route="${route}"><span class="material-symbols-outlined">${icons[route]}</span><span>${labels[route]}</span></a>`).join('')}</nav>`;
     document.body.append(shell);
     const status = document.createElement('div');
     status.id = 'page-load-status';
@@ -138,8 +138,11 @@
       document.body.classList.toggle('has-workspace-shell', entry.desktopShell);
       shell.querySelector('#shell-title').textContent = labels[entry.route] || '时间工作台';
       shell.querySelector('#shell-sync').textContent = entry.frame.contentDocument.documentElement.dataset.backendState === 'online' ? '已连接 · FastAPI' : '正在同步';
+      const mobileParent = { goals: 'profile', review: 'profile', diagnostics: 'profile' };
       for (const link of shell.querySelectorAll('a[data-route]')) {
-        if (link.dataset.route === entry.route) link.setAttribute('aria-current', 'page');
+        const isMobileLink = link.closest('.shell-mobile-nav');
+        const activeRoute = isMobileLink ? (mobileParent[entry.route] || entry.route) : entry.route;
+        if (link.dataset.route === activeRoute) link.setAttribute('aria-current', 'page');
         else link.removeAttribute('aria-current');
       }
     }
@@ -147,6 +150,7 @@
       const doc = entry.frame.contentDocument;
       const panel = doc.querySelector('body > section, #root > div');
       if (!panel) throw new Error('抽屉内容暂时无法打开');
+      const bottomSheet = entry.mobile && panel.dataset.drawerEdge !== 'right';
       let scrim = doc.querySelector('body > button.fixed.inset-0');
       if (!scrim) {
         scrim = doc.createElement('button');
@@ -170,12 +174,12 @@
         #root { display: contents !important; background: transparent !important; backdrop-filter: none !important; }
         [data-drawer-scrim] { position: fixed !important; inset: 0 !important; width: 100% !important; height: 100% !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: rgba(26,27,31,.32) !important; transform: none !important; cursor: default; z-index: 0 !important; }
         [data-drawer-panel] { position: absolute !important; z-index: 1 !important; margin: 0 !important; animation: none !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
-        ${entry.mobile
+        ${bottomSheet
           ? '[data-drawer-panel] { left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important; width: 100% !important; max-width: 520px !important; margin-inline: auto !important; max-height: 92dvh !important; border-radius: 24px 24px 0 0 !important; }'
-          : '[data-drawer-panel] { inset: 0 0 0 auto !important; width: min(480px, 100vw) !important; max-width: none !important; height: 100% !important; max-height: none !important; border-radius: 0 !important; }'}
+          : '[data-drawer-panel] { inset: 0 0 0 auto !important; width: min(var(--stitch-drawer-width, 480px), 100vw) !important; max-width: none !important; height: 100% !important; max-height: none !important; border-radius: 0 !important; }'}
       `;
       doc.head.append(style);
-      entry.drawerMotion = window.createStitchDrawerMotion({ panel, scrim, axis: entry.mobile ? 'y' : 'x' });
+      entry.drawerMotion = window.createStitchDrawerMotion({ panel, scrim, axis: bottomSheet ? 'y' : 'x' });
       doc.addEventListener('keydown', event => {
         if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); window.__RUANCHUANG_RETURN__(); }
         if (event.key !== 'Tab') return;
@@ -188,7 +192,7 @@
     }
     function createEntry(route, url, mobile, key) {
       const frame = document.createElement('iframe');
-      const entry = { key, route, frame, mobile, ready: false, desktopShell: !mobile && primary.has(route), lastUsed: Date.now() };
+      const entry = { key, route, frame, mobile, ready: false, desktopShell: primary.has(route), lastUsed: Date.now() };
       frame.className = 'workspace-page';
       frame.title = `时序智配 ${route}`;
       frame.hidden = true;
@@ -199,7 +203,10 @@
         frame.addEventListener('load', async () => {
           try {
             const doc = frame.contentDocument;
-            if (!doc?.body || !doc.querySelector('#tailwind-config')) throw new Error('页面暂时无法打开');
+            const authenticationPage = route === 'login'
+              && doc?.querySelector('meta[name="shell-type"][content="authentication"]')
+              && doc.querySelector('#auth-submit');
+            if (!doc?.body || (!doc.querySelector('#tailwind-config') && !authenticationPage)) throw new Error('页面暂时无法打开');
             doc.documentElement.dataset.pageVisible = 'false';
             doc.documentElement.dataset.route = route;
             const lifecycleStyle = doc.createElement('style');
@@ -209,7 +216,7 @@
               const css = doc.createElement('style');
               css.textContent = 'body > aside, body > div > header, body > header { visibility: hidden !important; pointer-events: none !important; }';
               doc.head.append(css);
-            } else entry.desktopShell = false;
+            }
             prepare(frame, route);
             visibility(entry, false);
             await Promise.all(['ruanchuang-polish-styles', 'ruanchuang-calendar-styles'].map(id => {

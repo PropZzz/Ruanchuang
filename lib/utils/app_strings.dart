@@ -102,8 +102,11 @@ class AppStrings {
       'focus_header_next': '后续待办',
       'focus_empty_task': '今天没有更多日程',
       'focus_time_remaining': '剩余时间：',
-      'focus_snack_start': '任务「{task}」将在 {min} 分钟后开始',
-      'focus_snack_upcoming': '任务「{task}」将在 {min} 分钟后开始',
+      'focus_snack_auto_start': '已到「{task}」的计划时间，自动开始计时',
+      'focus_snack_early_start': '已提前开始「{task}」，日历安排已前移至现在',
+      'focus_snack_manual_start': '已开始「{task}」',
+      'focus_load_label': '负荷 {load}',
+      'focus_next_status': '到点自动开始',
       'focus_time_crystal_title': '时间晶体推荐',
       'focus_time_crystal_empty': '暂无可用空档或微任务。',
       'focus_time_crystal_subtitle':
@@ -503,8 +506,13 @@ class AppStrings {
       'focus_header_next': 'Upcoming',
       'focus_empty_task': 'No more schedules for today',
       'focus_time_remaining': 'Time Left: ',
-      'focus_snack_start': 'Starting {task} in {min} min',
-      'focus_snack_upcoming': '{task} will start in {min} min...',
+      'focus_snack_auto_start':
+          '{task} reached its scheduled time; the timer started automatically',
+      'focus_snack_early_start':
+          'Started "{task}" early; the calendar entry was moved to now',
+      'focus_snack_manual_start': 'Started {task}',
+      'focus_load_label': 'Load {load}',
+      'focus_next_status': 'Starts automatically on schedule',
       'focus_time_crystal_title': 'Time Crystal Recommendations',
       'focus_time_crystal_empty': 'No available gaps or micro tasks.',
       'focus_time_crystal_subtitle':

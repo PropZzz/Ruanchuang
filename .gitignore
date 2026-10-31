@@ -94,3 +94,4 @@ android/gradle/wrapper/gradle-8.14-all.zip
 
 # Local isolated workspaces
 /.worktrees/
+/flutter-preview-*.log

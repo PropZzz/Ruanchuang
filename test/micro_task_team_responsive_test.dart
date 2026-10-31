@@ -106,7 +106,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('添加微任务'));
+      // The add FAB is the canonical mobile entry; the empty-state CTA shares
+      // the same label now that fresh storage starts without seeded tasks.
+      await tester.tap(find.byType(FloatingActionButton));
       await tester.pumpAndSettle();
 
       expect(find.byType(BottomSheet), findsOneWidget);

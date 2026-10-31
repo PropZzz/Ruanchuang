@@ -6,18 +6,17 @@
       min-height: max(884px, 100dvh);
     }
   </style>
-  </head><body class="bg-surface font-body text-on-surface flex flex-col min-h-screen antialiased selection:bg-secondary-fixed"><header class="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.03)] pt-safe"><div class="h-20 px-4 flex flex-col justify-center gap-1.5"><div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="font-headline font-bold text-lg tracking-tight text-primary-container">时序智配</span><div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high text-[11px] font-label font-medium text-on-surface-variant"><span class="w-1.5 h-1.5 rounded-full bg-tertiary-container animate-pulse"></span><span>已同步·本地优先</span></div></div><div class="flex items-center gap-1.5"><button aria-label="插入紧急任务" class="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary active:scale-95 transition-transform" type="button"><span class="material-symbols-outlined text-[22px]">add_circle</span></button><button aria-label="通知与提醒" class="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary active:scale-95 transition-transform" type="button"><span class="material-symbols-outlined text-[22px]">notifications</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center ml-1"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div><div class="flex items-center justify-between text-[11px] font-label"><div class="flex items-center gap-2"><div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant"><span class="material-symbols-outlined text-[14px] text-secondary">bolt</span><span class="font-semibold text-on-surface">能量 86 分</span></div><div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant"><span class="material-symbols-outlined text-[14px] text-tertiary-container">nature_people</span><span>恢复缓冲 <span class="font-semibold text-on-surface font-mono">25m</span></span></div></div><div class="text-[12px] font-medium text-on-surface-variant truncate max-w-[130px] text-right font-headline">Focus</div></div></div></header><main class="flex flex-col relative w-full pt-20 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full px-4 pt-2 pb-8 gap-4 select-none">
+  </head><body class="bg-surface font-body text-on-surface flex flex-col min-h-screen antialiased selection:bg-secondary-fixed"><header class="fixed top-0 w-full z-50 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.03)] pt-safe"><div class="h-20 px-4 flex flex-col justify-center gap-1.5"><div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="font-headline font-bold text-lg tracking-tight text-primary-container">时序智配</span><div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high text-[11px] font-label font-medium text-on-surface-variant"><span class="w-1.5 h-1.5 rounded-full bg-tertiary-container animate-pulse"></span><span>已同步·本地优先</span></div></div><div class="flex items-center gap-1.5"><button aria-label="插入紧急任务" class="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary active:scale-95 transition-transform" type="button"><span class="material-symbols-outlined text-[22px]">add_circle</span></button><button aria-label="通知与提醒" class="min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary active:scale-95 transition-transform" type="button"><span class="material-symbols-outlined text-[22px]">notifications</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center ml-1"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div><div class="flex items-center justify-between text-[11px] font-label"><div class="flex items-center gap-2"><div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant"><span class="material-symbols-outlined text-[14px] text-secondary">bolt</span><span class="font-semibold text-on-surface" id="focus-header-energy">能量 --</span></div></div><div class="text-[12px] font-medium text-on-surface-variant truncate max-w-[130px] text-right font-headline">Focus</div></div></div></header><main class="flex flex-col relative w-full pt-20 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full px-4 pt-2 pb-8 gap-4 select-none">
 <!-- 今日状态概览与环境基准 -->
 <section class="flex flex-col gap-2 rounded-xl bg-surface-container-low p-3.5 shadow-sm">
 <div class="flex items-center justify-between">
 <div class="flex items-center gap-2">
-<span class="font-headline font-bold text-sm text-primary-container tracking-tight">9月25日 星期五</span>
+<span class="font-headline font-bold text-sm text-primary-container tracking-tight" id="focus-date-label">--月--日</span>
 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-highest text-[10px] font-label font-medium text-on-surface-variant">
 <span class="w-1.5 h-1.5 rounded-full bg-tertiary-container animate-ping"></span>
 <span>已同步 · SQLite WAL</span>
 </span>
 </div>
-<span class="font-label text-[11px] text-secondary font-medium tracking-wide">时序引擎 #V4.8</span>
 </div>
 <!-- 能量池状态条 -->
 <div class="flex items-center justify-between bg-surface-container-lowest px-3 py-2 rounded-lg">
@@ -27,14 +26,14 @@
 </div>
 <div class="flex flex-col">
 <div class="flex items-center gap-1.5">
-<span class="text-xs font-semibold text-on-surface">认知能量池 86分</span>
-<span class="text-[10px] px-1.5 py-0.2 rounded bg-tertiary-fixed-dim/30 text-on-tertiary-fixed-variant font-medium">清醒专注</span>
+<span class="text-xs font-semibold text-on-surface" id="focus-energy-title">认知能量池 --</span>
+<span class="text-[10px] px-1.5 py-0.2 rounded bg-tertiary-fixed-dim/30 text-on-tertiary-fixed-variant font-medium" id="focus-energy-status">暂无数据</span>
 </div>
-<span class="text-[11px] text-on-surface-variant">恢复缓冲余量 <span class="font-semibold text-on-surface font-mono">25m</span> · 认知负荷低</span>
+<span class="text-[11px] text-on-surface-variant" id="focus-energy-sub">暂无能量数据</span>
 </div>
 </div>
 <div class="w-16 h-2 rounded-full bg-surface-container-high overflow-hidden">
-<div class="h-full bg-secondary-container w-[86%] rounded-full"></div>
+<div class="h-full bg-secondary-container rounded-full" id="focus-energy-bar" style="width:0%"></div>
 </div>
 </div>
 </section>
@@ -42,33 +41,34 @@
 <section class="flex flex-col rounded-xl bg-surface-container-lowest p-4 shadow-sm relative overflow-hidden">
 <!-- 背景流光点缀 -->
 <div class="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-primary-fixed/20 blur-3xl pointer-events-none"></div>
-<!-- 当前 P0 核心攻坚任务卡片 -->
-<div class="flex flex-col gap-1.5 mb-3 z-10">
+<div data-focus-task-body class="z-10">
+<!-- 当前任务卡片 -->
+<div class="flex flex-col gap-1.5 mb-3">
 <div class="flex items-center justify-between">
 <div class="flex items-center gap-1.5">
-<span class="px-1.5 py-0.5 rounded bg-error-container text-on-error-container font-label text-[10px] font-bold tracking-wider">P0 核心攻坚</span>
-<span class="text-[11px] font-label text-on-surface-variant font-mono">#Ruanchuang-Core</span>
+<span class="px-1.5 py-0.5 rounded bg-error-container text-on-error-container font-label text-[10px] font-bold tracking-wider" id="focus-load-chip">负荷 高</span>
+<span class="text-[11px] font-label text-on-surface-variant font-mono" id="focus-tag-chip">通用</span>
 </div>
 <div class="flex items-center gap-1 text-[11px] text-on-surface-variant font-mono">
 <span class="material-symbols-outlined text-[14px] text-secondary">alarm</span>
-<span>目标 12:00</span>
-<span class="text-secondary font-semibold ml-1">(剩 28:45)</span>
+<span id="focus-time-range">--:-- - --:--</span>
+<span class="text-secondary font-semibold ml-1" id="focus-remaining-label">等待开始</span>
 </div>
 </div>
-<h2 class="font-headline font-bold text-base text-primary-container leading-snug">
-        生产网关鉴权补丁上线与热重载验证
+<h2 class="font-headline font-bold text-base text-primary-container leading-snug" id="focus-task-title">
+        今天没有更多日程
       </h2>
 </div>
-<!-- 模式切换分段按钮 -->
+<!-- 计时模式切换（由 stitch/focus.js 驱动） -->
 <div class="grid grid-cols-3 gap-1 p-1 bg-surface-container-low rounded-lg mb-4 text-xs font-label">
-<button class="py-1.5 rounded-md text-center text-on-surface-variant hover:text-on-surface font-medium transition-all" onclick="setTimerMode(this, 'flow')" type="button">
+<button class="py-1.5 rounded-md text-center text-on-surface-variant hover:text-on-surface font-medium transition-all" data-focus-mode="flow" type="button">
         正向心流
       </button>
-<button class="py-1.5 rounded-md text-center bg-surface-container-lowest text-secondary font-semibold shadow-xs transition-all" onclick="setTimerMode(this, 'pomodoro')" type="button">
-        经典番茄 (25m)
+<button class="py-1.5 rounded-md text-center text-on-surface-variant hover:text-on-surface font-medium transition-all" data-focus-mode="pomodoro" type="button">
+        番茄钟
       </button>
-<button class="py-1.5 rounded-md text-center text-on-surface-variant hover:text-on-surface font-medium transition-all" onclick="setTimerMode(this, 'deep')" type="button">
-        超深沉浸 (90m)
+<button class="py-1.5 rounded-md text-center text-on-surface-variant hover:text-on-surface font-medium transition-all" data-focus-mode="deep" type="button">
+        沉浸 · 勿扰
       </button>
 </div>
 <!-- 环形倒计时仪表盘 -->
@@ -76,31 +76,33 @@
 <div class="relative w-52 h-52 flex items-center justify-center">
 <svg class="w-full h-full -rotate-90 transform" viewbox="0 0 100 100">
 <circle class="text-surface-container-high" cx="50" cy="50" fill="none" r="42" stroke="currentColor" stroke-width="5"></circle>
-<circle class="text-secondary transition-all duration-1000" cx="50" cy="50" fill="none" id="timer-progress" r="42" stroke="currentColor" stroke-dasharray="263.89" stroke-dashoffset="36.94" stroke-linecap="round" stroke-width="5.5"></circle>
+<circle class="text-secondary transition-all duration-1000" cx="50" cy="50" fill="none" id="focus-progress-ring" r="42" stroke="currentColor" stroke-dasharray="263.89" stroke-dashoffset="263.89" stroke-linecap="round" stroke-width="5.5"></circle>
 </svg>
 <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-<span class="text-[11px] font-label uppercase tracking-widest text-on-surface-variant mb-0.5 flex items-center gap-1">
-<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
-            专注状态中
-          </span>
-<span class="font-headline font-bold text-4xl text-primary tracking-tight font-mono" id="timer-display">23:39</span>
-<span class="text-[11px] text-tertiary-container font-medium mt-1">深度心流指数 94%</span>
+<span class="text-[11px] font-label uppercase tracking-widest text-on-surface-variant mb-0.5" id="focus-timer-status">暂无任务</span>
+<span class="font-headline font-bold text-4xl text-primary tracking-tight font-mono" id="focus-timer-display">--:--</span>
+<span class="text-[11px] text-tertiary-container font-medium mt-1" id="focus-sub-status">添加日程后即可开始专注</span>
 </div>
 </div>
 </div>
 <!-- 快捷触控按键组合 -->
 <div class="flex items-center gap-2 mt-3 pt-2">
-<button class="flex-1 h-12 rounded-lg bg-secondary text-on-secondary font-label text-sm font-semibold flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-transform" id="toggle-focus-btn" type="button">
-<span class="material-symbols-outlined text-[20px]">pause_circle</span>
-<span>暂停专注</span>
+<button class="flex-1 h-12 rounded-lg bg-secondary text-on-secondary font-label text-sm font-semibold flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-transform" id="toggle-focus-btn" data-focus-action="toggle" type="button">
+<span class="material-symbols-outlined text-[20px]">play_circle</span>
+<span>开始专注</span>
 </button>
-<button class="h-12 px-3.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label text-xs font-medium flex items-center justify-center gap-1 active:scale-95 transition-transform" title="跳过当前小节" type="button">
-<span class="material-symbols-outlined text-[18px]">skip_next</span>
-<span>跳过</span>
-</button>
-<button class="h-12 px-3.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label text-xs font-medium flex items-center justify-center gap-1 active:scale-95 transition-transform" title="结算并归档" type="button">
+<button class="h-12 px-3.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label text-xs font-medium flex items-center justify-center gap-1 active:scale-95 transition-transform" title="完成当前任务" data-focus-action="finish" type="button">
 <span class="material-symbols-outlined text-[18px]">fact_check</span>
-<span>结算</span>
+<span>完成</span>
+</button>
+</div>
+</div>
+<div data-focus-task-empty hidden class="z-10 py-10 flex flex-col items-center gap-3 text-center">
+<span class="material-symbols-outlined text-[30px] text-primary-container">check_circle</span>
+<p class="text-sm font-medium text-on-surface-variant">今天没有更多日程</p>
+<button class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface-container-low text-on-surface-variant text-xs font-label font-medium active:scale-95 transition-transform" data-focus-action="refresh" type="button">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+<span>检查</span>
 </button>
 </div>
 </section>
@@ -268,76 +270,4 @@
 </div>
 </section>
 </div>
-<script>
-  let isPaused = false;
-  let remainingSeconds = 23 * 60 + 39;
-  const timerDisplay = document.getElementById('timer-display');
-  const toggleBtn = document.getElementById('toggle-focus-btn');
-  const progressRing = document.getElementById('timer-progress');
-  const totalSeconds = 25 * 60;
-  const circumference = 2 * Math.PI * 42; // ~263.89
-
-  let timerDeadline = Date.now() + remainingSeconds * 1000;
-  function updateTimer() {
-    if (!isPaused && remainingSeconds > 0) {
-      remainingSeconds = Math.max(0, Math.ceil((timerDeadline - Date.now()) / 1000));
-      const mins = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
-      const secs = String(remainingSeconds % 60).padStart(2, '0');
-      if (timerDisplay) timerDisplay.textContent = `${mins}:${secs}`;
-
-      if (progressRing) {
-        const offset = circumference - (remainingSeconds / totalSeconds) * circumference;
-        progressRing.style.strokeDashoffset = offset;
-      }
-    }
-  }
-
-  let timerInterval = null;
-  function resumeTimerRendering() {
-    clearInterval(timerInterval);
-    timerInterval = null;
-    if (document.documentElement.dataset.pageVisible === 'false' || document.hidden) return;
-    updateTimer();
-    if (!isPaused) timerInterval = setInterval(updateTimer, 1000);
-  }
-  document.addEventListener('stitch:visibility', resumeTimerRendering);
-  document.addEventListener('visibilitychange', resumeTimerRendering);
-  resumeTimerRendering();
-
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-      updateTimer();
-      isPaused = !isPaused;
-      if (!isPaused) timerDeadline = Date.now() + remainingSeconds * 1000;
-      resumeTimerRendering();
-      if (isPaused) {
-        toggleBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">play_circle</span><span>继续专注</span>';
-        toggleBtn.classList.replace('bg-secondary', 'bg-primary');
-      } else {
-        toggleBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">pause_circle</span><span>暂停专注</span>';
-        toggleBtn.classList.replace('bg-primary', 'bg-secondary');
-      }
-    });
-  }
-
-  function setTimerMode(btn, mode) {
-    const parent = btn.parentElement;
-    parent.querySelectorAll('button').forEach(b => {
-      b.className = 'py-1.5 rounded-md text-center text-on-surface-variant hover:text-on-surface font-medium transition-all';
-    });
-    btn.className = 'py-1.5 rounded-md text-center bg-surface-container-lowest text-secondary font-semibold shadow-xs transition-all';
-
-    if (mode === 'flow') {
-      remainingSeconds = 0;
-      if (timerDisplay) timerDisplay.textContent = '00:00';
-    } else if (mode === 'pomodoro') {
-      remainingSeconds = 25 * 60;
-      if (timerDisplay) timerDisplay.textContent = '25:00';
-    } else if (mode === 'deep') {
-      remainingSeconds = 90 * 60;
-      if (timerDisplay) timerDisplay.textContent = '90:00';
-    }
-    timerDeadline = Date.now() + remainingSeconds * 1000;
-    resumeTimerRendering();
-  }
-</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-2xl shadow-[0_-2px_12px_rgba(0,0,0,0.04)]" data-active-classes="text-primary font-bold"><div class="flex items-center justify-around h-16 px-2"><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] transition-all select-none text-primary font-bold" data-path="focus" href="#"><span class="material-symbols-outlined text-[24px]">hourglass_top</span><span class="text-[11px] font-label mt-0.5">专注</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] text-on-surface-variant hover:text-on-surface transition-all select-none" data-path="schedule" href="#"><span class="material-symbols-outlined text-[24px]">calendar_today</span><span class="text-[11px] font-label mt-0.5">日程</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] text-on-surface-variant hover:text-on-surface transition-all select-none" data-path="micro" href="#"><span class="material-symbols-outlined text-[24px]">auto_awesome</span><span class="text-[11px] font-label mt-0.5">微任务</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] text-on-surface-variant hover:text-on-surface transition-all select-none" data-path="team" href="#"><span class="material-symbols-outlined text-[24px]">groups</span><span class="text-[11px] font-label mt-0.5">团队</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] text-on-surface-variant hover:text-on-surface transition-all select-none" data-path="profile" href="#"><span class="material-symbols-outlined text-[24px]">account_circle</span><span class="text-[11px] font-label mt-0.5">我的</span></a></div></nav></body></html>
+</main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-2xl shadow-[0_-2px_12px_rgba(0,0,0,0.04)]" data-active-classes="text-primary font-bold"><div class="flex items-center justify-around h-16 px-2"><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] transition-all select-none text-primary font-bold" data-path="focus" href="#"><span class="material-symbols-outlined text-[24px]">hourglass_top</span><span class="text-[11px] font-label mt-0.5">专注</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] text-on-surface-variant hover:text-on-surface transition-all select-none" data-path="schedule" href="#"><span class="material-symbols-outlined text-[24px]">calendar_today</span><span class="text-[11px] font-label mt-0.5">日程</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] text-on-surface-variant hover:text-on-surface transition-all select-none" data-path="micro" href="#"><span class="material-symbols-outlined text-[24px]">auto_awesome</span><span class="text-[11px] font-label mt-0.5">微任务</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] text-on-surface-variant hover:text-on-surface transition-all select-none" data-path="team" href="#"><span class="material-symbols-outlined text-[24px]">groups</span><span class="text-[11px] font-label mt-0.5">团队</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[48px] text-on-surface-variant hover:text-on-surface transition-all select-none" data-path="profile" href="#"><span class="material-symbols-outlined text-[24px]">account_circle</span><span class="text-[11px] font-label mt-0.5">我的</span></a></div></nav></body></html>

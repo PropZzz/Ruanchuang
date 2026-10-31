@@ -250,6 +250,17 @@ void main() {
     final service = LocalDataService.forPersistence(persistence);
     final day = DateTime(2026, 1, 1);
 
+    await service.upsertTeamMember(
+      const TeamMemberCalendar(
+        memberId: 'm_test',
+        displayName: '测试成员',
+        role: '工程师',
+        energy: EnergyTier.high,
+        permission: TeamSharePermission.details,
+        busy: [],
+      ),
+    );
+
     final calendars = await service.getTeamCalendars(day);
     expect(calendars.isNotEmpty, isTrue);
     final member = calendars.first;
@@ -269,6 +280,26 @@ void main() {
   test('LocalDataService derives team members with progress', () async {
     final persistence = InMemoryLocalPersistence();
     final service = LocalDataService.forPersistence(persistence);
+
+    await service.upsertTeamMember(
+      const TeamMemberCalendar(
+        memberId: 'm_test',
+        displayName: '测试成员',
+        role: '工程师',
+        energy: EnergyTier.high,
+        permission: TeamSharePermission.details,
+        busy: [
+          ScheduleEntry(
+            id: 'm_test_1',
+            title: '产品同步',
+            tag: 'Meeting',
+            height: 80.0,
+            color: Colors.blue,
+            time: TimeOfDay(hour: 14, minute: 0),
+          ),
+        ],
+      ),
+    );
 
     final members = await service.getTeamMembers();
 
@@ -778,7 +809,9 @@ void main() {
     () async {
       final persistence = _ControllableLocalPersistence();
       final service = LocalDataService.forPersistence(persistence);
-      await service.getGoals();
+      // Persist one real write first so the rollback has a non-empty storage
+      // baseline; fresh installs no longer seed anything on load.
+      await service.setThemeMode('dark');
       final persistedBefore = await persistence.read();
       final failedGoal = Goal(
         id: 'goal_failed_ordinary_mutation',

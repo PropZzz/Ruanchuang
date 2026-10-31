@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../utils/schedule_occurrence.dart';
 import 'data_service.dart';
+import 'emotion/emotion_policy.dart';
 import 'local_persistence/local_persistence.dart';
 import 'local_persistence/local_persistence_io.dart'
     if (dart.library.html) 'local_persistence/local_persistence_web.dart';
@@ -399,15 +400,9 @@ class LocalDataService implements DataService {
         }
       }
 
-      if (_schedule.isEmpty && _microTasks.isEmpty) {
-        _seed();
-        shouldSave = true;
-      }
-
-      if (_teamCalendars.isEmpty) {
-        _seedTeam();
-        shouldSave = true;
-      }
+      // Fresh installs start empty on purpose: the focus page and calendar
+      // must show the user's real data (or an honest empty state), never
+      // seeded demo content.
 
       if (shouldSave) {
         await _save();
@@ -437,65 +432,6 @@ class LocalDataService implements DataService {
       await _ensureLoaded();
       rethrow;
     }
-  }
-
-  void _seed() {
-    _schedule
-      ..clear()
-      ..addAll([
-        ScheduleEntry(
-          id: _newId('sch_'),
-          title: '深度工作：架构设计',
-          tag: 'Deep Work',
-          height: 120,
-          color: Colors.teal,
-          time: const TimeOfDay(hour: 9, minute: 0),
-        ),
-        ScheduleEntry(
-          id: _newId('sch_'),
-          title: '邮件清理（微任务）',
-          tag: 'Micro Task',
-          height: 40,
-          color: Colors.orange,
-          time: const TimeOfDay(hour: 11, minute: 30),
-        ),
-      ]);
-
-    _microTasks
-      ..clear()
-      ..addAll([
-        MicroTask(
-          id: _newId('mt_'),
-          title: '回复人事邮件',
-          tag: 'Micro Task',
-          minutes: 5,
-          requirement: '笔记本电脑',
-        ),
-      ]);
-  }
-
-  void _seedTeam() {
-    _teamCalendars
-      ..clear()
-      ..addAll([
-        const TeamMemberCalendar(
-          memberId: 'm_li',
-          displayName: '李明',
-          role: '项目经理',
-          energy: EnergyTier.high,
-          permission: TeamSharePermission.details,
-          busy: [
-            ScheduleEntry(
-              id: 'li_1',
-              title: '产品同步',
-              tag: 'Meeting',
-              height: 80.0,
-              color: Colors.blue,
-              time: TimeOfDay(hour: 14, minute: 0),
-            ),
-          ],
-        ),
-      ]);
   }
 
   List<GoalTask> _cloneGoalTasks(List<GoalTask> tasks) {
@@ -651,12 +587,26 @@ class LocalDataService implements DataService {
   @override
   Future<EnergyStatus> getEnergyStatus() async {
     await _ensureLoaded();
-    return const EnergyStatus(
-      level: "medium",
-      status: '心流',
-      description: '仅本地模拟',
-      batteryPercent: 85,
-    );
+    // Energy is derived from the emotion check-ins the user actually records,
+    // following the same recency rule as getEmotionState: today's latest
+    // first, then the latest overall.
+    final now = DateTime.now();
+    final today = _emotion.where((e) => sameDay(e.at, now)).toList()
+      ..sort((a, b) => a.at.compareTo(b.at));
+    if (today.isNotEmpty) {
+      return EmotionPolicy.energyFromState(today.last.state);
+    }
+    if (_emotion.isEmpty) {
+      return const EnergyStatus(
+        level: 'medium',
+        status: '默认节奏',
+        description: '暂无情绪打卡记录，按平衡默认值显示',
+        batteryPercent: 85,
+      );
+    }
+    final all = List<EmotionCheckIn>.from(_emotion)
+      ..sort((a, b) => a.at.compareTo(b.at));
+    return EmotionPolicy.energyFromState(all.last.state);
   }
 
   @override

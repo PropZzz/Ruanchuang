@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
+import '../utils/helpers.dart';
 import 'glass_surface.dart';
 import 'press_scale.dart';
 
@@ -18,11 +19,19 @@ class FocusTaskCard extends StatelessWidget {
     required this.onPause,
     required this.onFinish,
     required this.onRefresh,
+    this.isNextTask = false,
   });
 
   final ScheduleEntry? task;
+
+  /// For the active task this is the remaining time; for a not-yet-started
+  /// task it is the planned block length shown as the initial countdown.
   final int remainingSeconds;
   final bool isRunning;
+
+  /// True when [task] is the upcoming (not yet started) task rather than the
+  /// task currently inside its scheduled window.
+  final bool isNextTask;
   final VoidCallback onStart;
   final VoidCallback onPause;
   final VoidCallback onFinish;
@@ -40,6 +49,78 @@ class FocusTaskCard extends StatelessWidget {
     final end = entry.time.hour * 60 + entry.time.minute + minutes;
     final endTime = TimeOfDay(hour: (end ~/ 60) % 24, minute: end % 60);
     return '${entry.time.format(context)} - ${endTime.format(context)}';
+  }
+
+  String _statusLabel(BuildContext context) {
+    if (isNextTask) return AppStrings.of(context, 'focus_next_status');
+    return AppStrings.of(
+      context,
+      isRunning ? 'calendar_status_in_progress' : 'calendar_status_not_started',
+    );
+  }
+
+  Widget _loadChip(BuildContext context, ScheduleEntry entry, ThemeData theme) {
+    final scheme = theme.colorScheme;
+    final load = effectiveCognitiveLoad(entry);
+    final (Color background, Color foreground) = switch (load) {
+      CognitiveLoad.high => (scheme.errorContainer, scheme.onErrorContainer),
+      CognitiveLoad.medium => (
+        scheme.secondaryContainer,
+        scheme.onSecondaryContainer,
+      ),
+      CognitiveLoad.low => (scheme.tertiaryContainer, scheme.onTertiaryContainer),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        AppStrings.of(
+          context,
+          'focus_load_label',
+          params: {'load': AppStrings.of(context, switch (load) {
+            CognitiveLoad.low => 'cognitive_load_low',
+            CognitiveLoad.medium => 'cognitive_load_medium',
+            CognitiveLoad.high => 'cognitive_load_high',
+          })},
+        ),
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: foreground,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _tagChip(BuildContext context, ScheduleEntry entry, ThemeData theme) {
+    final scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(iconForTag(entry.tag), size: 11, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              tagLabel(context, entry.tag),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -124,9 +205,21 @@ class FocusTaskCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 5),
-                    Text(
-                      '${current.tag} · ${isRunning ? AppStrings.of(context, 'calendar_status_in_progress') : AppStrings.of(context, 'calendar_status_not_started')}',
-                      style: theme.textTheme.bodyMedium,
+                    Row(
+                      children: [
+                        _loadChip(context, current, theme),
+                        const SizedBox(width: 6),
+                        Flexible(child: _tagChip(context, current, theme)),
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            _statusLabel(context),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -178,13 +271,14 @@ class FocusTaskCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        PressScale(
-                          child: OutlinedButton.icon(
-                            onPressed: onFinish,
-                            icon: const Icon(Icons.check_rounded),
-                            label: Text(AppStrings.of(context, 'btn_finish')),
+                        if (!isNextTask)
+                          PressScale(
+                            child: OutlinedButton.icon(
+                              onPressed: onFinish,
+                              icon: const Icon(Icons.check_rounded),
+                              label: Text(AppStrings.of(context, 'btn_finish')),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ],
@@ -223,23 +317,9 @@ class FocusTaskCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: scheme.errorContainer,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'P0 核心攻坚',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: scheme.onErrorContainer,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
+                        _loadChip(context, current, theme),
+                        const SizedBox(width: 6),
+                        Flexible(child: _tagChip(context, current, theme)),
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
@@ -266,7 +346,7 @@ class FocusTaskCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${current.tag} · ${isRunning ? '专注状态中' : '等待开始'}',
+                      '${tagLabel(context, current.tag)} · ${isRunning ? '专注状态中' : '等待开始'}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: scheme.onSurfaceVariant,
                       ),
@@ -300,7 +380,12 @@ class FocusTaskCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          isRunning ? '专注状态中' : '准备开始',
+                          isNextTask
+                              ? AppStrings.of(context, 'focus_next_status')
+                              : (isRunning ? '专注状态中' : '准备开始'),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                           style: theme.textTheme.labelSmall?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
@@ -326,12 +411,14 @@ class FocusTaskCard extends StatelessWidget {
                   label: Text(isRunning ? '暂停专注' : '开始专注'),
                 ),
               ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: onFinish,
-                icon: const Icon(Icons.fact_check_outlined),
-                label: const Text('结算'),
-              ),
+              if (!isNextTask) ...[
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: onFinish,
+                  icon: const Icon(Icons.fact_check_outlined),
+                  label: const Text('结算'),
+                ),
+              ],
             ],
           ),
         ],

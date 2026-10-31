@@ -6,7 +6,8 @@
       min-height: max(884px, 100dvh);
     }
   </style>
-  </head><body class="bg-surface font-body text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-40 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.03)] pt-safe"><div class="h-16 px-5 flex items-center justify-between"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-primary-fixed text-[20px]">schedule</span></div><div><span class="text-xs font-semibold tracking-wider text-outline uppercase block leading-none mb-1">时序智配</span><h1 class="text-lg font-headline font-bold text-on-surface leading-none">Settings</h1></div></div><div class="flex items-center gap-2"><button aria-label="通知" class="w-11 h-11 flex items-center justify-center rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"><span class="material-symbols-outlined text-[22px]">notifications</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full relative">
+  <link rel="stylesheet" href="../../assets/drawer-controls.css"/>
+</head><body class="bg-surface font-body text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-40 bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.03)] pt-safe"><div class="h-16 px-5 flex items-center justify-between"><div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-primary-fixed text-[20px]">schedule</span></div><div><span class="text-xs font-semibold tracking-wider text-outline uppercase block leading-none mb-1">时序智配</span><h1 class="text-lg font-headline font-bold text-on-surface leading-none">Settings</h1></div></div><div class="flex items-center gap-2"><button aria-label="通知" class="w-11 h-11 flex items-center justify-center rounded-full text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"><span class="material-symbols-outlined text-[22px]">notifications</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full relative">
 <!-- Backdrop Simulator (Drawer in opened state) -->
 <div class="fixed inset-0 bg-primary/40 backdrop-blur-sm z-50 transition-opacity duration-300" id="drawer-backdrop"></div>
 <!-- Sliding Bottom Sheet Container -->
@@ -16,7 +17,7 @@
 <div class="w-10 h-1.5 rounded-full bg-surface-variant"></div>
 </div>
 <!-- Header Panel -->
-<div class="px-5 pt-2 pb-4 flex items-center justify-between border-b-0">
+<div data-drawer-header class="px-5 pt-2 pb-4 flex items-center justify-between border-b-0">
 <div class="flex flex-col gap-0.5">
 <div class="flex items-center gap-2">
 <span class="w-2 h-2 rounded-full bg-on-tertiary-container animate-pulse"></span>
@@ -24,50 +25,12 @@
 </div>
 <p class="text-xs text-on-surface-variant">个性化您的移动端工作台与算法策略</p>
 </div>
-<button aria-label="关闭设置抽屉" class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-95 transition-all" id="btn-close-drawer">
-<span class="material-symbols-outlined text-[20px]">close</span>
+<button aria-label="关闭设置抽屉" class="stitch-drawer-close" id="btn-close-drawer" type="button" data-drawer-close>
+<span class="material-symbols-outlined" aria-hidden="true">close</span>
 </button>
 </div>
 <!-- Scrollable Content Stack -->
 <div class="flex-1 overflow-y-auto px-5 py-2 space-y-6 pb-6" style="overscroll-behavior: contain;">
-<!-- Section 1: 账户与多用户管理 -->
-<section class="space-y-3">
-<div class="flex items-center justify-between">
-<span class="text-xs font-semibold tracking-wider text-outline uppercase">账户与多用户管理</span>
-<span class="text-[11px] font-medium text-on-tertiary-container bg-surface-container px-2 py-0.5 rounded-full">已认证状态</span>
-</div>
-<div class="p-3.5 rounded-xl bg-surface-container-low flex flex-col gap-3 shadow-sm">
-<div class="flex items-center gap-3">
-<div class="relative w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-on-primary font-headline text-base font-bold shadow-inner">
-              知行
-              <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-tertiary-fixed flex items-center justify-center ring-2 ring-surface-container-lowest">
-<span class="material-symbols-outlined text-tertiary text-[12px] font-bold">verified</span>
-</div>
-</div>
-<div class="flex-1 min-w-0">
-<div class="flex items-center gap-1.5 flex-wrap">
-<span class="text-sm font-bold text-on-surface font-headline truncate">林知行</span>
-<span class="text-[11px] font-mono font-medium text-outline px-1.5 py-0.2 bg-surface-container-high rounded text-opacity-90">TX-90248</span>
-</div>
-<p class="text-xs text-on-surface-variant mt-0.5 truncate">首席研发工程师 · 本地主账户</p>
-</div>
-</div>
-<div class="grid grid-cols-3 gap-2 pt-1">
-<button class="h-8 px-2 rounded-lg bg-surface-container-highest text-on-surface text-xs font-medium flex items-center justify-center gap-1 hover:bg-surface-container-high active:scale-95 transition-all">
-<span class="material-symbols-outlined text-[15px] text-outline">edit</span>
-              修改昵称
-            </button>
-<button class="h-8 px-2 rounded-lg bg-surface-container-highest text-on-surface text-xs font-medium flex items-center justify-center gap-1 hover:bg-surface-container-high active:scale-95 transition-all">
-<span class="material-symbols-outlined text-[15px] text-secondary">swap_horiz</span>
-              切换账户
-            </button>
-<button class="h-8 px-2 rounded-lg bg-surface-container-highest text-error text-xs font-medium flex items-center justify-center gap-1 hover:bg-error-container active:scale-95 transition-all">
-<span class="material-symbols-outlined text-[15px]">logout</span>
-              退出登录
-            </button>
-</div>
-</div>
-</section>
 <!-- Section 2: 外观与主题偏好 -->
 <section class="space-y-3">
 <span class="text-xs font-semibold tracking-wider text-outline uppercase block">外观与主题偏好</span>

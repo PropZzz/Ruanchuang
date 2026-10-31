@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
 
 class APIModel(BaseModel):
@@ -119,6 +119,7 @@ class ScheduleEntryIn(APIModel):
     day: date | None = None
     title: str
     tag: str
+    description: str | None = Field(default=None, max_length=4000)
     load: str | None = None
     goal_id: str | None = Field(default=None, alias="goalId")
     goal_task_id: str | None = Field(default=None, alias="goalTaskId")
@@ -128,6 +129,27 @@ class ScheduleEntryIn(APIModel):
     reminder_minutes_before: int = Field(default=10, alias="reminderMinutesBefore")
     repeat: str = "none"
     repeat_until: date | None = Field(default=None, alias="repeatUntil")
+    reschedule_flexible: StrictBool = Field(default=True, alias="rescheduleFlexible")
+    hard_locked: StrictBool = Field(default=False, alias="hardLocked")
+
+    @model_validator(mode="after")
+    def exclusive_constraints(self):
+        if self.reschedule_flexible and self.hard_locked:
+            if {"reschedule_flexible", "hard_locked"} <= self.model_fields_set:
+                raise ValueError("rescheduleFlexible and hardLocked are mutually exclusive")
+            # A hard-lock-only request overrides the default flexibility.
+            self.reschedule_flexible = False
+        return self
+
+    def persistence_payload(self) -> dict[str, object]:
+        """Older clients may omit constraints; an update must retain their saved values."""
+        data = self.model_dump(mode="json", by_alias=True)
+        if "description" not in self.model_fields_set:
+            data.pop("description", None)
+        for field in ("reschedule_flexible", "hard_locked"):
+            if field not in self.model_fields_set:
+                data.pop(type(self).model_fields[field].alias, None)
+        return data
 
 
 class ScheduleEntryOut(ScheduleEntryIn):

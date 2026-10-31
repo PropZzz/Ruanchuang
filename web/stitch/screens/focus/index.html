@@ -9,18 +9,16 @@
 - Font: notoSerif
 - Mode: light
 - Roundness: rounded-md
-" class="h-8 w-auto object-contain md:hidden" src="../../assets/images/a2aaefce0709.png"/><div class="flex items-center gap-2 text-xs font-label text-on-surface-variant min-w-0"><span class="shrink-0">时序智配</span><span class="text-outline shrink-0">/</span><span class="font-medium text-on-surface truncate">时间工作台</span></div><div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high text-[11px] font-label font-medium text-on-surface"><span class="material-symbols-outlined text-[14px] text-on-tertiary-container">cloud_done</span><span class="truncate">已同步 · 本地优先 SQLite</span></div></div><div class="flex items-center gap-3"><div class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container text-xs font-label"><span class="w-2 h-2 rounded-full bg-on-tertiary-container shrink-0"></span><span class="font-medium text-on-surface">能量 86 分</span><span class="text-outline">·</span><span class="text-on-surface-variant">平静专注</span><span class="text-outline">·</span><span class="font-medium text-primary">恢复缓冲 25m</span></div><div class="flex items-center gap-2"><button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container text-xs font-medium text-on-surface transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" type="button"><span class="material-symbols-outlined text-[16px] text-error">bolt</span><span class="hidden md:inline">插入紧急任务</span></button><button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-on-secondary-fixed-variant text-xs font-medium text-on-secondary transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" type="button"><span class="material-symbols-outlined text-[16px]">add</span><span class="hidden md:inline">新增日程</span></button></div><div class="flex items-center gap-2 pl-1"><button class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[18px]">settings</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full">
+" class="h-8 w-auto object-contain md:hidden" src="../../assets/images/a2aaefce0709.png"/><div class="flex items-center gap-2 text-xs font-label text-on-surface-variant min-w-0"><span class="shrink-0">时序智配</span><span class="text-outline shrink-0">/</span><span class="font-medium text-on-surface truncate">时间工作台</span></div><div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high text-[11px] font-label font-medium text-on-surface"><span class="material-symbols-outlined text-[14px] text-on-tertiary-container">cloud_done</span><span class="truncate">已同步 · 本地优先 SQLite</span></div></div><div class="flex items-center gap-3"><div class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container text-xs font-label"><span class="w-2 h-2 rounded-full bg-on-tertiary-container shrink-0"></span><span class="font-medium text-on-surface" id="focus-header-energy">能量 --</span></div><div class="flex items-center gap-2"><button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container text-xs font-medium text-on-surface transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" type="button"><span class="material-symbols-outlined text-[16px] text-error">bolt</span><span class="hidden md:inline">插入紧急任务</span></button><button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-on-secondary-fixed-variant text-xs font-medium text-on-secondary transition-colors shadow-[0_1px_8px_rgba(0,0,0,0.04)]" type="button"><span class="material-symbols-outlined text-[16px]">add</span><span class="hidden md:inline">新增日程</span></button></div><div class="flex items-center gap-2 pl-1"><button class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" type="button"><span class="material-symbols-outlined text-[18px]">settings</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full">
 <div class="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto w-full space-y-6">
 <!-- Top Focus Metrics Band -->
 <section class="grid grid-cols-2 md:grid-cols-4 gap-3.5">
 <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm flex items-center justify-between">
 <div class="space-y-1 min-w-0">
-<p class="text-xs font-label text-outline uppercase tracking-wider">今日累计专注</p>
+<p class="text-xs font-label text-outline uppercase tracking-wider">今日专注</p>
 <div class="flex items-baseline gap-1.5">
-<span class="text-2xl font-bold font-body text-primary [font-variant-numeric:tabular-nums]">4h 15m</span>
-<span class="text-xs font-semibold text-on-tertiary-container flex items-center">
-<span class="material-symbols-outlined text-[14px]">arrow_upward</span>12%
-            </span>
+<span class="text-2xl font-bold font-body text-primary [font-variant-numeric:tabular-nums]" id="focus-stat-current">--:--</span>
+<span class="text-xs text-outline font-medium truncate max-w-[140px]" id="focus-stat-current-sub">今天没有更多日程</span>
 </div>
 </div>
 <div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary shrink-0">
@@ -29,34 +27,34 @@
 </div>
 <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm flex items-center justify-between">
 <div class="space-y-1 min-w-0">
-<p class="text-xs font-label text-outline uppercase tracking-wider">番茄完成轮数</p>
+<p class="text-xs font-label text-outline uppercase tracking-wider">今日的节奏</p>
 <div class="flex items-baseline gap-1.5">
-<span class="text-2xl font-bold font-body text-on-surface [font-variant-numeric:tabular-nums]">7</span>
-<span class="text-xs text-outline font-medium">/ 目标 8 轮</span>
+<span class="text-2xl font-bold font-body text-on-surface [font-variant-numeric:tabular-nums]" id="focus-stat-energy">--</span>
+<span class="text-xs text-outline font-medium truncate max-w-[140px]" id="focus-stat-energy-sub">暂无能量数据</span>
 </div>
 </div>
 <div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-secondary shrink-0">
-<span class="material-symbols-outlined text-[22px]">verified</span>
-</div>
-</div>
-<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm flex items-center justify-between">
-<div class="space-y-1 min-w-0">
-<p class="text-xs font-label text-outline uppercase tracking-wider">心流深度指数</p>
-<div class="flex items-baseline gap-1.5">
-<span class="text-2xl font-bold font-body text-primary [font-variant-numeric:tabular-nums]">92</span>
-<span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed">超深沉浸</span>
-</div>
-</div>
-<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary-container shrink-0">
 <span class="material-symbols-outlined text-[22px]">psychology</span>
 </div>
 </div>
 <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm flex items-center justify-between">
 <div class="space-y-1 min-w-0">
-<p class="text-xs font-label text-outline uppercase tracking-wider">打扰静默拦截</p>
+<p class="text-xs font-label text-outline uppercase tracking-wider">后续待办</p>
 <div class="flex items-baseline gap-1.5">
-<span class="text-2xl font-bold font-body text-on-surface [font-variant-numeric:tabular-nums]">3</span>
-<span class="text-xs text-outline font-medium">次已转入免打扰</span>
+<span class="text-2xl font-bold font-body text-primary [font-variant-numeric:tabular-nums]" id="focus-stat-next">0</span>
+<span class="text-xs text-outline font-medium truncate max-w-[140px]" id="focus-stat-next-sub">今天没有更多日程</span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary-container shrink-0">
+<span class="material-symbols-outlined text-[22px]">verified</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm flex items-center justify-between">
+<div class="space-y-1 min-w-0">
+<p class="text-xs font-label text-outline uppercase tracking-wider">日程救援</p>
+<div class="flex items-baseline gap-1.5">
+<span class="text-2xl font-bold font-body text-on-surface [font-variant-numeric:tabular-nums]" id="focus-stat-conflict">0</span>
+<span class="text-xs text-outline font-medium truncate max-w-[140px]" id="focus-stat-conflict-sub">无需处理</span>
 </div>
 </div>
 <div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-outline shrink-0">
@@ -68,67 +66,70 @@
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 <!-- Left Master Workspace: 65% on Desktop (col-span-8 approx 66.6%) -->
 <div class="lg:col-span-8 space-y-6">
-<!-- Active Focal Task Master Card -->
+<!-- Active Focal Task Master Card: hydrated by stitch/focus.js -->
 <section class="bg-surface-container-lowest rounded-xl p-6 shadow-sm relative overflow-hidden">
+<div data-focus-task-body>
 <div class="flex flex-wrap items-center justify-between gap-3 pb-4">
 <div class="flex items-center gap-2">
-<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-error-container text-on-error-container text-xs font-bold font-label">
-<span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
-                P0 关键攻坚
+<span class="inline-flex items-center px-2.5 py-1 rounded-full bg-error-container text-on-error-container text-xs font-bold font-label" id="focus-load-chip" data-desktop="true">
+                负荷 高
               </span>
-<span class="px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-medium font-label">
-                #Ruanchuang-Core
+<span class="px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-medium font-label" id="focus-tag-chip">
+                通用
               </span>
 </div>
 <div class="flex items-center gap-2 text-xs font-label text-on-surface-variant bg-surface-container-low px-3 py-1.5 rounded-lg [font-variant-numeric:tabular-nums]">
 <span class="material-symbols-outlined text-[16px] text-outline">schedule</span>
-<span>10:45 – 预计 12:00</span>
+<span id="focus-time-range">--:-- - --:--</span>
 <span class="text-outline">·</span>
-<span class="font-semibold text-secondary">剩余 28:45</span>
+<span class="font-semibold text-secondary" id="focus-remaining-label">等待开始</span>
 </div>
 </div>
 <div class="space-y-2">
-<h1 class="text-xl sm:text-2xl font-bold font-body text-on-surface tracking-tight">
-              生产网关鉴权补丁上线与热重载验证
+<h1 class="text-xl sm:text-2xl font-bold font-body text-on-surface tracking-tight" id="focus-task-title">
+              今天没有更多日程
             </h1>
-<p class="text-sm text-on-surface-variant leading-relaxed">
-              部署 OAuth2 令牌撤回拦截机制，保证多机房高可用集群无缝平滑切量，避免鉴权缓存雪崩。
-            </p>
+<p class="text-sm text-on-surface-variant leading-relaxed" id="focus-task-desc" hidden></p>
 </div>
 <!-- Flow Timer Core Canvas -->
 <div class="mt-6 p-6 rounded-xl bg-surface-container-low flex flex-col items-center relative">
-<!-- Mode Switcher Pills -->
+<!-- Timer Mode Switcher (driven by stitch/focus.js) -->
 <div class="flex items-center gap-1.5 p-1 rounded-lg bg-surface-container-lowest shadow-sm mb-6 text-xs font-label">
-<button class="px-3.5 py-1.5 rounded-md font-semibold text-on-surface-variant hover:text-on-surface transition-all" type="button">正向心流 (Count-Up)</button>
-<button class="px-3.5 py-1.5 rounded-md font-semibold bg-primary text-on-primary shadow-sm transition-all" type="button">经典番茄 (25m / 5m)</button>
-<button class="px-3.5 py-1.5 rounded-md font-semibold text-on-surface-variant hover:text-on-surface transition-all" type="button">超深沉浸 (90m)</button>
+<button class="px-3.5 py-1.5 rounded-md font-semibold text-on-surface-variant hover:text-on-surface transition-all" data-focus-mode="flow" data-desktop="true" type="button">正向心流 (Count-Up)</button>
+<button class="px-3.5 py-1.5 rounded-md font-semibold text-on-surface-variant hover:text-on-surface transition-all" data-focus-mode="pomodoro" data-desktop="true" type="button">番茄钟 · 任务时长</button>
+<button class="px-3.5 py-1.5 rounded-md font-semibold text-on-surface-variant hover:text-on-surface transition-all" data-focus-mode="deep" data-desktop="true" type="button">沉浸 · 勿扰</button>
 </div>
 <!-- Radial Gauge Visual Presentation -->
 <div class="relative w-56 h-56 flex items-center justify-center my-2">
 <svg class="w-full h-full -rotate-90 transform" viewbox="0 0 200 200">
 <circle class="text-surface-container-highest" cx="100" cy="100" fill="transparent" r="86" stroke="currentColor" stroke-width="10"></circle>
-<circle class="text-primary-container transition-all duration-1000 ease-linear" cx="100" cy="100" fill="transparent" r="86" stroke="currentColor" stroke-dasharray="540.35" stroke-dashoffset="27.01" stroke-linecap="round" stroke-width="10"></circle>
+<circle class="text-primary-container transition-all duration-1000 ease-linear" cx="100" cy="100" fill="transparent" r="86" stroke="currentColor" stroke-dasharray="540.35" stroke-dashoffset="540.35" stroke-linecap="round" stroke-width="10" id="focus-progress-ring"></circle>
 </svg>
 <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-<span class="text-4xl sm:text-5xl font-headline font-bold text-primary tracking-tight [font-variant-numeric:tabular-nums]" id="focus-timer-display">23:42</span>
-<span class="text-xs font-label font-medium text-outline mt-1 uppercase tracking-wider">剩余 95% · 专注状态</span>
+<span class="text-4xl sm:text-5xl font-headline font-bold text-primary tracking-tight [font-variant-numeric:tabular-nums]" id="focus-timer-display">--:--</span>
+<span class="text-xs font-label font-medium text-outline mt-1 uppercase tracking-wider" id="focus-timer-status">暂无任务</span>
 </div>
 </div>
 <!-- Controller Action Buttons -->
 <div class="flex items-center gap-3 mt-6 w-full max-w-md justify-center">
-<button class="flex-1 inline-flex items-center justify-center gap-2 h-11 px-5 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label font-semibold text-sm transition-all shadow-md ring-2 ring-primary/15 active:scale-95" id="toggle-timer-btn" type="button">
+<button class="flex-1 inline-flex items-center justify-center gap-2 h-11 px-5 rounded-lg bg-primary hover:bg-primary-container text-on-primary font-label font-semibold text-sm transition-all shadow-md ring-2 ring-primary/15 active:scale-95" id="toggle-timer-btn" data-focus-action="toggle" type="button">
 <span class="material-symbols-outlined text-[18px]">play_arrow</span>
 <span>开始专注</span>
 </button>
-<button class="inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg bg-surface-container-lowest hover:bg-surface-container text-on-surface-variant font-label font-medium text-sm transition-all shadow-sm" type="button">
-<span class="material-symbols-outlined text-[18px]">skip_next</span>
-<span>跳过本节</span>
-</button>
-<button class="inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg bg-surface-container-lowest hover:bg-error-container hover:text-on-error-container text-on-surface-variant font-label font-medium text-sm transition-all shadow-sm" type="button">
+<button class="inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg bg-surface-container-lowest hover:bg-error-container hover:text-on-error-container text-on-surface-variant font-label font-medium text-sm transition-all shadow-sm" data-focus-action="finish" type="button">
 <span class="material-symbols-outlined text-[18px]">task_alt</span>
-<span>结算归档</span>
+<span>完成</span>
 </button>
 </div>
+</div>
+</div>
+<div data-focus-task-empty hidden class="py-12 flex flex-col items-center gap-3 text-center">
+<span class="material-symbols-outlined text-[34px] text-primary-container">check_circle</span>
+<p class="text-sm font-medium text-on-surface-variant">今天没有更多日程</p>
+<button class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant text-xs font-label font-medium transition-all" data-focus-action="refresh" type="button">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+<span>检查</span>
+</button>
 </div>
 </section>
 <!-- Sub-task Checklist & Fleeting Note Board -->
@@ -282,13 +283,13 @@
 <section class="bg-surface-container-lowest rounded-xl p-5 shadow-sm space-y-3">
 <div class="flex items-center justify-between">
 <div class="flex items-center gap-2">
-<span class="material-symbols-outlined text-[18px] text-on-tertiary-container">check_circle_outline</span>
-<h2 class="text-sm font-bold font-body text-on-surface">排期状态无冲突</h2>
+<span class="material-symbols-outlined text-[18px] text-on-tertiary-container" id="focus-schedule-icon">check_circle_outline</span>
+<h2 class="text-sm font-bold font-body text-on-surface" id="focus-schedule-title">排期状态检查中</h2>
 </div>
 <a class="text-xs font-label font-medium text-secondary hover:underline" href="#">查看完整日历</a>
 </div>
-<p class="text-xs text-on-surface-variant leading-relaxed">
-            算法守护引擎已锁定当前 90 分钟硬核时段，已为您阻断 2 封日历会议邀请并自动协商顺延。
+<p class="text-xs text-on-surface-variant leading-relaxed" id="focus-schedule-copy">
+            根据当前日程自动检查时间冲突。
           </p>
 </section>
 <!-- Next 4 Hours Upcoming Cadence Pipeline -->
@@ -393,52 +394,4 @@
 </div>
 </div>
 </div>
-<script>
-  (function () {
-    const timerBtn = document.getElementById('toggle-timer-btn');
-    const timerDisplay = document.getElementById('focus-timer-display');
-    if (!timerBtn || !timerDisplay) return;
-
-    let isRunning = false;
-    let seconds = 23 * 60 + 42;
-
-    let deadline = 0;
-    let interval = null;
-    function paintTimer() {
-      if (isRunning) seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-      timerDisplay.textContent = Math.floor(seconds / 60).toString().padStart(2, '0') + ':' + (seconds % 60).toString().padStart(2, '0');
-    }
-    function resumeRendering() {
-      clearInterval(interval);
-      interval = null;
-      if (document.documentElement.dataset.pageVisible === 'false' || document.hidden) return;
-      paintTimer();
-      if (isRunning) interval = setInterval(paintTimer, 1000);
-    }
-    document.addEventListener('stitch:visibility', resumeRendering);
-    document.addEventListener('visibilitychange', resumeRendering);
-
-    timerBtn.addEventListener('click', function () {
-      paintTimer();
-      isRunning = !isRunning;
-      if (isRunning) deadline = Date.now() + seconds * 1000;
-      resumeRendering();
-      const icon = timerBtn.querySelector('.material-symbols-outlined');
-      const text = timerBtn.querySelector('span:not(.material-symbols-outlined)');
-      if (isRunning) {
-        icon.textContent = 'pause';
-        text.textContent = '暂停专注';
-        timerBtn.classList.remove('bg-primary');
-        timerBtn.classList.add('bg-secondary');
-        if (window.parent !== window && window.parent.__RUANCHUANG_API_ACTION__) {
-          window.parent.__RUANCHUANG_API_ACTION__('focus-start', document, timerBtn);
-        }
-      } else {
-        icon.textContent = 'play_arrow';
-        text.textContent = '继续专注';
-        timerBtn.classList.remove('bg-secondary');
-        timerBtn.classList.add('bg-primary');
-      }
-    });
-  })();
-</script></main></div></body></html>
+</main></div></body></html>

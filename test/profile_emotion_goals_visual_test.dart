@@ -157,12 +157,34 @@ void main() {
       const GoalsPage(),
     ];
 
-    for (final width in [390.0, 1440.0]) {
+    for (final width in [320.0, 390.0, 1440.0]) {
       for (final page in pages) {
         await _pumpPage(tester, page, width);
         expect(tester.takeException(), isNull, reason: 'width=$width');
       }
     }
+  });
+
+  testWidgets('profile metric values stay inside their cards on a narrow phone', (
+    tester,
+  ) async {
+    await _pumpPage(tester, const ProfilePage(), 320);
+
+    final dashboard = tester.getRect(
+      find.byKey(const ValueKey('profile-dashboard')),
+    );
+    for (final detail in ['日程块', '任务', '已完成任务', '次记录']) {
+      final finder = find.text(detail);
+      expect(finder, findsWidgets, reason: 'missing metric detail: $detail');
+      for (var index = 0; index < tester.widgetList(finder).length; index++) {
+        expect(
+          tester.getRect(finder.at(index)).right,
+          lessThanOrEqualTo(dashboard.right + 0.5),
+          reason: '$detail must not overflow the profile card',
+        );
+      }
+    }
+    expect(tester.takeException(), isNull);
   });
 }
 

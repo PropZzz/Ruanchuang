@@ -80,7 +80,7 @@ def create_schedule(
     user_id: str = Depends(current_user_id),
 ) -> dict[str, object]:
     try:
-        return upsert_schedule(_db_path(request), user_id, payload.model_dump(mode="json", by_alias=True))
+        return upsert_schedule(_db_path(request), user_id, payload.persistence_payload())
     except RepositoryConflictError as exc:
         raise _conflict(exc) from exc
 
@@ -92,7 +92,7 @@ def update_schedule(
     request: Request,
     user_id: str = Depends(current_user_id),
 ) -> dict[str, object]:
-    data = payload.model_dump(mode="json", by_alias=True)
+    data = payload.persistence_payload()
     data["id"] = entry_id
     try:
         return upsert_schedule(_db_path(request), user_id, data)
@@ -120,12 +120,14 @@ def batch_schedule(
     payload: list[ScheduleEntryIn],
     request: Request,
     user_id: str = Depends(current_user_id),
+    create_only: bool = Query(default=False, alias="createOnly"),
 ) -> list[dict[str, object]]:
     try:
         return upsert_schedules_batch(
             _db_path(request),
             user_id,
-            [item.model_dump(mode="json", by_alias=True) for item in payload],
+            [item.persistence_payload() for item in payload],
+            create_only=create_only,
         )
     except RepositoryConflictError as exc:
         raise _conflict(exc) from exc

@@ -43,7 +43,9 @@ enum _CalendarField { time, tag, status, reminder, goal }
 enum _EntryStatus { notStarted, inProgress, completed, overdue }
 
 class SmartCalendarPage extends StatefulWidget {
-  const SmartCalendarPage({super.key});
+  const SmartCalendarPage({super.key, this.initialDay});
+
+  final DateTime? initialDay;
 
   @override
   State<SmartCalendarPage> createState() => _SmartCalendarPageState();
@@ -87,7 +89,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
   @override
   void initState() {
     super.initState();
-    _selectedDay = dateOnly(DateTime.now());
+    _selectedDay = dateOnly(widget.initialDay ?? DateTime.now());
     _loadSchedule();
   }
 
@@ -643,23 +645,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     return minutesFromStart / 60.0 * _hourHeight;
   }
 
-  String _tagLabel(BuildContext context, String tag) {
-    switch (tag) {
-      case 'General':
-        return AppStrings.of(context, 'tag_general');
-      case 'Deep Work':
-        return AppStrings.of(context, 'tag_deep_work');
-      case 'Micro Task':
-        return AppStrings.of(context, 'tag_micro_task');
-      case 'Routine':
-        return AppStrings.of(context, 'tag_routine');
-      case 'Urgent':
-        return AppStrings.of(context, 'tag_urgent');
-      case 'Goal':
-        return AppStrings.of(context, 'tag_goal');
-    }
-    return tag;
-  }
+  String _tagLabel(BuildContext context, String tag) => tagLabel(context, tag);
 
   String _scheduleTitleLabel(BuildContext context, String title) {
     switch (title) {

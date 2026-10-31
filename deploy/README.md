@@ -18,7 +18,13 @@ python deploy/deploy_web_release.py
 
 脚本以自身位置定位项目，可从任意工作目录调用。SSH 密码仅通过交互提示输入；不要写入源码或文档。它完成构建、上传校验、Nginx 配置备份与检查、原子切换、健康检查以及失败回滚。发布日志写入 `build/deployment-result.txt`。不要把维护脚本存放在可清理的 `build/` 目录。
 
+多人并行开发时可用 `python deploy/deploy_web_release.py --source-root <已审查的Web源码快照>` 发布隔离快照；应从当前线上版本建立并核对差异、在该快照上验收，再发布，避免混入其他未完成改动。构建脚本支持同名参数。默认仍从 `web/` 构建。
+
+2026-10-30 日程约束后端增量发布使用 `python deploy/deploy_schedule_constraints.py`；仅检查线上布局用 `--inspect`。初次迁移基于本轮 Git HEAD 与工作树的差异，需在提交本轮改动前使用；后续互斥修正用 `--base-directory build/backend-exclusive-base`，基于修改前保存的本地源码快照合入，避免重复应用前轮迁移。它保留线上其他差异，先做隔离数据验证，随后备份源码和 SQLite、增量迁移、检查记录数和健康状态，失败恢复源码。备份在 `/opt/ruanchuang/backups/schedule-constraints-*`。部署会重启后端，当前内存令牌会失效。此专用脚本不能替代通用后端发布流程。
+
 发布前执行 `node tools/check_web_sources.mjs`；`web/stitch/mobile/` 与桌面页面同为当前源码，不能再用历史导出覆盖。当前目录职责见 `docs/current-architecture.md`。
+
+2026-10-31 日程导入增量使用同一脚本的 `--change calendar-import --base-directory <修改前本地源码目录>`，覆盖五个经过合并的后端文件。若出现合并冲突，先人工核对，使用 `--resolved-directory <已审查合并目录>` 提供对应文件和同名 `.py.before` 服务器快照；服务器源码与该快照不一致时拒绝发布。此次记录及证据见 `docs/visual-qa/2026-10-31-calendar-import.md`，备份前缀为 `/opt/ruanchuang/backups/calendar-import-*`。不要用部署后的源码作为修改前基线重复应用此次迁移。
 
 将本次输出完整上传到新的服务器 release 目录，验证文件 SHA-256，再原子切换 `/opt/ruanchuang/web/current` 符号链接。保留上一版目录用于回滚；不修改后端或数据库。发布时应用本目录的 Nginx 配置，先 `nginx -t` 再 reload。
 

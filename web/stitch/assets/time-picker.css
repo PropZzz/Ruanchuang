@@ -1,0 +1,24 @@
+.import-time-field{display:flex;align-items:center;min-width:0;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px transparent}
+.import-time-field:focus-within{box-shadow:inset 0 0 0 1px #005db5}
+.import-time-field input{width:100%;min-width:0;padding:10px 0 10px 12px;background:transparent;font-variant-numeric:tabular-nums;outline:none}
+.import-time-field input:focus-visible{outline:none}
+.import-time-field input::placeholder{color:#414848;font-size:11px}
+.import-time-field button{display:grid;place-items:center;flex-shrink:0;width:40px;min-height:44px;border:0;border-radius:10px;background:transparent;color:#414848;cursor:pointer}
+.import-time-field button:hover,.import-time-field button[aria-expanded="true"]{background:#efedf3;color:#005db5}
+.import-time-field button .material-symbols-outlined{font-size:18px}
+.import-time-popover{position:fixed;inset:auto;margin:0;padding:14px;width:260px;max-width:calc(100vw - 24px);box-sizing:border-box;max-height:calc(100dvh - 24px);border:1px solid #e3e2e7;border-radius:16px;background:#faf8fe;color:#1a1b1f;box-shadow:0 8px 28px rgba(22,61,61,.16);z-index:30;overflow:auto;font-family:Inter,sans-serif}
+.import-time-popover::backdrop{background:transparent}
+.import-time-popover header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.import-time-popover header strong{font-size:12px;font-weight:600}
+.import-time-value{font-size:18px;font-weight:600;color:#002727;font-variant-numeric:tabular-nums}
+.import-time-columns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.import-time-columns label{display:block;margin-bottom:6px;text-align:center;font-size:11px;color:#414848}
+.import-time-list{height:168px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#c0c8c7 transparent;padding:4px;background:#fff;border-radius:10px;outline-offset:2px}
+.import-time-list [role="option"]{display:flex;align-items:center;justify-content:center;min-height:40px;border-radius:8px;font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;cursor:pointer}
+.import-time-list [role="option"]:hover{background:#f4f3f8}
+.import-time-list [role="option"][aria-selected="true"]{background:#c2eae9;color:#002727;font-weight:700}
+.import-time-apply{width:100%;min-height:40px;margin-top:12px;border:0;border-radius:10px;background:#002727;color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.import-time-popover :focus-visible{outline:2px solid #005db5;outline-offset:2px}
+
+.import-time-popover[hidden]{display:none!important}
+@media(max-width:420px){.import-time-field input{padding-left:10px}.import-time-field button{width:32px}}

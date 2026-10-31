@@ -1,6 +1,7 @@
 import '../models/models.dart';
 import 'api_client.dart';
 import 'data_service.dart';
+import 'emotion/emotion_policy.dart';
 import 'package:flutter/material.dart' show TimeOfDay;
 
 class RemoteDataException implements Exception {
@@ -88,6 +89,24 @@ class RemoteDataService implements DataService {
   @override
   Future<void> addEmotionCheckIn(EmotionCheckIn checkIn) async {
     await _api.post('/emotion/checkins', checkIn.toJson());
+    // /energy/current reads the latest energy sample, so every check-in also
+    // records the energy it implies; otherwise the focus page would only ever
+    // see the balanced default. Best effort: the check-in itself succeeded.
+    try {
+      final energy = EmotionPolicy.energyFromState(checkIn.state);
+      await _api.post('/energy/samples', {
+        'at': checkIn.at.toIso8601String(),
+        'level': energy.level,
+        'status': energy.status,
+        'description': energy.description,
+        'batteryPercent': energy.batteryPercent,
+        'emotion': checkIn.state.name,
+        'flowState': energy.flowState,
+        'source': 'emotion_checkin',
+      });
+    } catch (_) {
+      // Keep the check-in result even if the energy sample was rejected.
+    }
   }
 
   @override

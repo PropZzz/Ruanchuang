@@ -35,7 +35,7 @@ try {
     await context.addInitScript(() => {
       window.__RUANCHUANG_API__ = location.origin + '/api';
       const NativeDate = Date, fixed = new NativeDate('2026-10-29T10:30:00+08:00').valueOf();
-      window.Date = class extends NativeDate { constructor(...args) { super(...(args.length ? args : [fixed])); } static now() { return fixed; } };
+      window.Date = class extends NativeDate { constructor(...args) { super(...(args.length ? args : [fixed + (window.__calendarClockOffset || 0)])); } static now() { return fixed + (window.__calendarClockOffset || 0); } };
       if (!localStorage.getItem('access_token')) localStorage.setItem('access_token', 'calendar-account-a');
     });
     let records = seed(), mode = 'normal', writes = 0;
@@ -70,6 +70,15 @@ try {
     assert.ok(await frame().locator('[data-schedule-id="real-1"]').count());
     assert.equal(await frame().locator('[data-schedule-id="schedule-001"]').count(), 0);
     assert.equal(await frame().locator('.cal-now').count(), mobile ? 0 : 1);
+    if (!mobile) {
+      assert.equal(await frame().locator('.cal-now').textContent(), '现在 10:30', 'Current-time line must explain its meaning visibly');
+      assert.equal(await frame().locator('.cal-now').evaluate(n => n.parentElement.dataset.calendarDay), '2026-10-29');
+      const top = await frame().locator('.cal-now').evaluate(n => parseFloat(n.style.top));
+      await page.locator('#prototype-screen').evaluate(f => { window.__calendarClockOffset = 60000; f.contentDocument.dispatchEvent(new f.contentWindow.CustomEvent('stitch:visibility', {detail:{visible:true}})); });
+      assert.equal(await frame().locator('.cal-now').textContent(), '现在 10:31');
+      assert.equal(await frame().locator('.cal-now').evaluate(n => parseFloat(n.style.top)), top + 1);
+      await page.locator('#prototype-screen').evaluate(f => { window.__calendarClockOffset = 0; f.contentDocument.dispatchEvent(new f.contentWindow.CustomEvent('stitch:visibility', {detail:{visible:true}})); });
+    }
     assert.equal(await frame().locator('.cal-heading, .cal-layout, .cal-agenda').count(), 0, 'The calendar must enhance the original layout');
     assert.ok(await frame().getByText(mobile ? '生成服务端救援方案' : '日程健康与救援摘要', { exact: true }).count(), 'Original rescue component must remain');
     await page.locator('#prototype-screen').evaluate(f => { const d = f.contentDocument; d.__calendarDeck = d.getElementById('calendar-period'); d.__calendarRescue = d.getElementById('calendar-conflict-status') || d.getElementById('schedule-conflict-status'); });
@@ -89,7 +98,57 @@ try {
     await selectView('week');
     assert.equal(await frame().locator('.cal-column-heading').count(), 7);
     await page.screenshot({ path: `build/calendar-qa/${mobile ? 'mobile' : 'desktop'}-week.png` });
+    await selectView('gantt');
+    assert.equal(await frame().locator('[data-cal-action="gantt"]').getAttribute('aria-pressed'), 'true');
+    assert.equal(await frame().locator('.cal-gantt-day').count(), 7);
+    assert.equal(await frame().locator('.cal-gantt-bar[data-schedule-id="night"]').count(), 1, 'Overnight segments must share one continuous Gantt bar');
+    assert.equal(await frame().locator('.cal-gantt-label[data-schedule-id="floating"]').count(), 7, 'Legacy floating events stay visible for each day');
+    assert.equal(await frame().locator('.cal-gantt-bar[data-schedule-id="repeat"]').count(), 1);
+    assert.match(await frame().locator('.cal-gantt-label[data-schedule-id="night"]').textContent(), /10\/28 23:30 – 10\/29 01:30/);
+    const theme = await frame().locator('.cal-gantt-bar[data-schedule-id="real-1"]').evaluate(el => getComputedStyle(el).backgroundColor);
+    assert.equal(theme, 'rgb(22, 61, 61)', 'Gantt bars keep the incumbent schedule theme');
+    const ganttGeometry = await frame().locator('.cal-gantt-bar[data-schedule-id="night"]').evaluate(el => {
+      const r = el.getBoundingClientRect(), track = el.parentElement.getBoundingClientRect();
+      const marker = el.ownerDocument.querySelector('.cal-gantt-now');
+      return { left: (r.left - track.left) / track.width, width: r.width / track.width,
+        marker: (marker.getBoundingClientRect().left - track.left) / track.width };
+    });
+    assert.ok(Math.abs(ganttGeometry.left - (2 * 1440 + 1410) / 10080) < .002, 'Gantt start follows actual start date and time');
+    assert.ok(Math.abs(ganttGeometry.width - 120 / 10080) < .002, 'Gantt width follows actual duration');
+    assert.ok(Math.abs(ganttGeometry.marker - (3 * 1440 + 630) / 10080) < .002, 'Gantt now marker follows the browser clock');
+    await page.screenshot({ path: `build/calendar-qa/${mobile ? 'mobile' : 'desktop'}-gantt.png` });
+    const ganttScroll = await frame().locator('#calendar-gantt').evaluate(el => { el.scrollLeft = 300; return el.scrollLeft; });
+    await frame().locator('[data-cal-action="retry"]').click(); await settled();
+    assert.equal(await frame().locator('#calendar-gantt').evaluate(el => el.scrollLeft), ganttScroll, 'Refreshing Gantt keeps the scrolled timeline');
+    await frame().locator('.cal-gantt-label[data-schedule-id="real-1"]').click(); await ready('schedule-detail');
+    assert.match(await frame().locator('#detailTitle').textContent(), /真实账号的架构评审/);
+    await frame().locator('[data-drawer-close]').click(); await ready('schedule'); await settled();
+    assert.equal(await frame().locator('#live-calendar-root').getAttribute('data-calendar-view'), 'gantt', 'Closing detail keeps the selected Gantt view');
+    await frame().locator('[data-cal-action="next"]').click(); await settled();
+    assert.equal(await frame().locator('[data-cal-date]').inputValue(), '2026-11-05');
+    await frame().locator('[data-cal-action="previous"]').click(); await settled();
+    await frame().locator('[data-cal-action="today"]').click(); await settled();
+    assert.equal(await frame().locator('[data-cal-date]').inputValue(), '2026-10-29');
+    await frame().locator('[data-cal-action="gantt-day"]').click(); await settled();
+    assert.equal(await frame().locator('.cal-gantt-hour').count(), 24, 'Daily Gantt uses an hourly axis');
+    const dailyBar = await frame().locator('.cal-gantt-bar[data-schedule-id="real-1"]').evaluate(el => {
+      const r = el.getBoundingClientRect(), track = el.parentElement.getBoundingClientRect();
+      return { left: (r.left - track.left) / track.width, width: r.width / track.width };
+    });
+    assert.ok(Math.abs(dailyBar.left - 570 / 1440) < .002 && Math.abs(dailyBar.width - 90 / 1440) < .002, 'Daily zoom keeps exact start and duration');
+    await frame().locator('#calendar-gantt').evaluate(el => { el.scrollLeft = 340; });
+    await page.screenshot({ path: `build/calendar-qa/${mobile ? 'mobile' : 'desktop'}-gantt-day.png` });
+    await frame().locator('[data-cal-action="next"]').click(); await settled();
+    assert.equal(await frame().locator('[data-cal-date]').inputValue(), '2026-10-30', 'Daily Gantt advances by one day');
+    await frame().locator('[data-cal-action="today"]').click(); await settled();
+    mode = 'offline'; await frame().locator('[data-cal-action="retry"]').click(); await settled();
+    assert.ok(await frame().locator('.cal-gantt-bar[data-schedule-id="real-1"]').count(), 'Offline Gantt keeps loaded account events');
+    assert.match(await frame().locator('[data-calendar-status]').textContent(), /上次读取/);
+    mode = 'normal'; await frame().locator('[data-cal-action="retry"]').click(); await settled();
+    await frame().locator('[data-cal-action="gantt-week"]').click(); await settled();
+    await selectView('week');
     await selectDate('2027-01-03');
+    assert.equal(await frame().locator('.cal-now').count(), 0, 'Periods without today must not show a current-time line');
     assert.match(await frame().locator('#calendar-range').textContent(), mobile ? /53/ : /2026\/12\/28/);
     await selectView('month'); assert.equal(await frame().locator('.cal-month-day').count(), 42);
     await frame().locator('[data-cal-action="next"]').click(); await settled();
@@ -98,9 +157,10 @@ try {
     await page.screenshot({ path: `build/calendar-qa/${mobile ? 'mobile' : 'desktop'}-month.png` });
 
     await selectDate('2026-11-05');
+    await selectView('gantt');
     await frame().locator('[data-cal-action="create"]').first().click(); await ready('create-schedule');
     assert.equal(await frame().locator('#schedule-date-input').inputValue(), '2026-11-05');
-    await frame().locator('textarea').fill('新增 <真实> 日程');
+    await frame().locator('#schedule-title-input').fill('新增 <真实> 日程');
     await frame().locator('#schedule-time-input').fill('16:15');
     await frame().locator('#schedule-duration-input').fill('50');
     await frame().getByRole('button', { name: /保存并写入日程/ }).click(); await ready('schedule'); await settled();
@@ -110,13 +170,13 @@ try {
     assert.match(await frame().locator('[data-schedule-id="created-calendar-record"]').first().textContent(), /新增 <真实> 日程/);
     await frame().locator('[data-cal-action="create"]').first().click(); await ready('create-schedule');
     assert.equal(await frame().locator('#schedule-time-input').inputValue(), '09:00', 'A committed form must reset when starting a fresh schedule');
-    assert.equal(await frame().locator('textarea').inputValue(), '');
+    assert.equal(await frame().locator('#schedule-title-input').inputValue(), '');
     await frame().locator('[data-drawer-panel] button[aria-label="关闭抽屉"]').click(); await ready('schedule'); await settled();
     await frame().locator('[data-schedule-id="created-calendar-record"]').first().click(); await ready('schedule-detail');
-    await frame().locator('#editBtn').click();
-    await frame().locator('#titleInput').fill('修改后的真实日程');
-    await frame().locator('#dateInput').fill('2026-11-06');
-    await frame().locator('#saveBtn').click(); await ready('schedule'); await settled();
+    await frame().locator('#editBtn').click(); await ready('create-schedule'); await page.waitForFunction(() => document.getElementById('prototype-screen')?.contentDocument?.documentElement.dataset.scheduleReady === 'true');
+    await frame().locator('#schedule-title-input').fill('修改后的真实日程');
+    await frame().locator('#schedule-date-input').fill('2026-11-06');
+    await frame().locator('#schedule-save-action').click(); await ready('schedule'); await settled();
     assert.equal(await frame().locator('[data-cal-date]').inputValue(), '2026-11-06');
     assert.match(await frame().locator('[data-schedule-id="created-calendar-record"]').first().textContent(), /修改后的真实日程/);
     await frame().locator('[data-schedule-id="created-calendar-record"]').first().click(); await ready('schedule-detail');
@@ -124,6 +184,7 @@ try {
     await frame().locator('#deleteBtn').click(); await ready('schedule'); await settled();
     assert.equal(await frame().locator('[data-schedule-id="created-calendar-record"]').count(), 0);
     assert.equal(writes, 3, 'Create/edit/delete must each write once');
+    assert.equal(await frame().locator('#live-calendar-root').getAttribute('data-calendar-view'), 'gantt', 'Create, edit and delete all return to Gantt');
     assert.equal(await page.locator('#prototype-screen').evaluate(f => { const d = f.contentDocument; return d.__calendarDeck === d.getElementById('calendar-period') && d.__calendarRescue === (d.getElementById('calendar-conflict-status') || d.getElementById('schedule-conflict-status')); }), true, 'Calendar updates must preserve the original controller and rescue DOM');
 
     for (const day of ['2026-11-07', '2026-11-08']) {
@@ -135,17 +196,17 @@ try {
 
     await selectDate('2026-10-29'); await selectView('day');
     await frame().locator('[data-schedule-id="repeat"]').click(); await ready('schedule-detail');
-    await frame().locator('#editBtn').click(); await frame().locator('#titleInput').fill('重复规则保留');
-    await frame().locator('#saveBtn').click(); await ready('schedule'); await settled();
+    await frame().locator('#editBtn').click(); await ready('create-schedule'); await page.waitForFunction(() => document.getElementById('prototype-screen')?.contentDocument?.documentElement.dataset.scheduleReady === 'true'); await frame().locator('#schedule-title-input').fill('重复规则保留');
+    await frame().locator('#schedule-save-action').click(); await ready('schedule'); await settled();
     assert.equal(await frame().locator('[data-cal-date]').inputValue(), '2026-10-29', 'Editing an occurrence must keep the viewed day when its anchor is unchanged');
     const repeated = records.find(r => r.id === 'repeat');
     assert.equal(repeated.repeatUntil, '2026-12-31'); assert.equal(repeated.goalId, 'goal-a'); assert.equal(repeated.goalTaskId, 'goal-task-a'); assert.equal(repeated.color, 4280954708);
     await frame().locator('[data-schedule-id="midnight"]').click(); await ready('schedule-detail');
-    await frame().locator('#editBtn').click(); assert.equal(await frame().locator('#timeInput').inputValue(), '00:15');
-    await frame().locator('#closeBtn').click(); await ready('schedule'); await settled();
+    await frame().locator('#editBtn').click(); await ready('create-schedule'); await page.waitForFunction(() => document.getElementById('prototype-screen')?.contentDocument?.documentElement.dataset.scheduleReady === 'true'); assert.equal(await frame().locator('#schedule-time-input').inputValue(), '00:15');
+    await frame().locator('[data-drawer-panel] button[aria-label="关闭抽屉"]').click(); await ready('schedule'); await settled();
     await frame().locator('[data-schedule-id="floating"]').click(); await ready('schedule-detail');
-    await frame().locator('#editBtn').click(); assert.equal(await frame().locator('#dateInput').inputValue(), '');
-    await frame().locator('#titleInput').fill('保留无固定日期'); await frame().locator('#saveBtn').click(); await ready('schedule'); await settled();
+    await frame().locator('#editBtn').click(); await ready('create-schedule'); await page.waitForFunction(() => document.getElementById('prototype-screen')?.contentDocument?.documentElement.dataset.scheduleReady === 'true'); assert.equal(await frame().locator('#schedule-date-input').inputValue(), '');
+    await frame().locator('#schedule-title-input').fill('保留无固定日期'); await frame().locator('#schedule-save-action').click(); await ready('schedule'); await settled();
     assert.equal(records.find(r => r.id === 'floating').day, null);
 
     await selectDate('2026-11-07');
@@ -167,11 +228,12 @@ try {
     releaseViewportRead(); await (await viewportResponse).finished();
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await page.unroute('**/api/schedule', holdOneRead);
+    await selectView('gantt');
     await page.evaluate(() => { window.__viewportCalendar = document.getElementById('prototype-screen'); });
     await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 });
     await page.waitForFunction(() => document.getElementById('prototype-screen') !== window.__viewportCalendar); await settled();
     assert.equal(await frame().locator('[data-cal-date]').inputValue(), '2026-11-08', 'Returning to a cached viewport must keep the latest selected date');
-    assert.equal(await frame().locator('#live-calendar-root').getAttribute('data-calendar-view'), 'month');
+    assert.equal(await frame().locator('#live-calendar-root').getAttribute('data-calendar-view'), 'gantt');
 
     await selectDate('2026-10-29'); await selectView('day');
     await page.evaluate(() => { window.__calendarDocument = document.getElementById('prototype-screen'); location.hash = '#/micro'; }); await ready('micro');
@@ -184,7 +246,12 @@ try {
     mode = 'unauthorized'; await frame().locator('[data-cal-action="retry"]').click(); await settled();
     assert.equal(await frame().locator('[data-schedule-id]').count(), 0);
     assert.match(await frame().locator('[data-calendar-status]').textContent(), /登录后/);
+    assert.equal(await frame().locator('.cal-now').count(), mobile ? 0 : 1, 'The current-time marker is independent of account data');
+    if (!mobile) assert.equal(await frame().locator('.cal-now').textContent(), '现在 10:30');
     await page.screenshot({ path: `build/calendar-qa/${mobile ? 'mobile' : 'desktop'}-login.png` });
+    await selectView('gantt');
+    assert.equal(await frame().locator('.cal-gantt-bar').count(), 0, 'Unauthorized Gantt clears account events');
+    assert.match(await frame().locator('#calendar-gantt .cal-empty').textContent(), /尚未加载/);
     mode = 'normal';
     let releaseRead;
     const gate = new Promise(resolve => { releaseRead = resolve; });
@@ -202,7 +269,7 @@ try {
     assert.match(await frame().locator('.cal-empty').textContent(), /还没有日程/);
     assert.equal(await page.locator('#prototype-screen').evaluate(f => f.contentDocument.documentElement.scrollWidth <= f.contentWindow.innerWidth), true, 'Page must not overflow horizontally');
     assert.deepEqual(errors, []);
-    report.push({ viewport: mobile ? 'mobile' : 'desktop', passed: true, checks: ['real-date', 'day-week-month', 'cross-year', 'recurrence', 'floating-legacy', 'overnight', 'overlap', 'create-edit-delete', 'create-date-context', 'recurrence-metadata', 'retained-document', 'viewport-return', 'offline', 'login', 'account-isolation-with-late-response', 'responsive'] });
+    report.push({ viewport: mobile ? 'mobile' : 'desktop', passed: true, checks: ['real-date', 'day-week-month-gantt', 'gantt-geometry-and-now', 'gantt-theme-and-overlapping-rows', 'gantt-detail-create-edit-delete', 'gantt-scroll-and-viewport-return', 'cross-year', 'recurrence', 'floating-legacy', 'overnight', 'overlap', 'create-edit-delete', 'create-date-context', 'recurrence-metadata', 'retained-document', 'viewport-return', 'offline', 'login', 'account-isolation-with-late-response', 'responsive'] });
     await context.close();
   }
   for (const [timezoneId, expectedDay] of [['Asia/Shanghai', '2026-10-29'], ['Pacific/Honolulu', '2026-10-28']]) {
