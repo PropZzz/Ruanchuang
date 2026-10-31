@@ -1,6 +1,5 @@
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
@@ -18,7 +17,6 @@ def _headers(client: TestClient, account: str) -> dict[str, str]:
 
 
 def test_emotion_current_requires_authentication(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "emotion.sqlite3")) as client:
         response = client.get("/emotion/current")
 
@@ -26,7 +24,6 @@ def test_emotion_current_requires_authentication(tmp_path):
 
 
 def test_emotion_checkins_roundtrip_current_and_user_isolation(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "emotion.sqlite3")) as client:
         alice_headers = _headers(client, "alice-emotion@example.com")
         bob_headers = _headers(client, "bob-emotion@example.com")
@@ -68,7 +65,6 @@ def test_emotion_checkins_roundtrip_current_and_user_isolation(tmp_path):
 
 
 def test_emotion_same_day_keeps_latest_and_care_alert_is_rule_based(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "emotion-care.sqlite3")) as client:
         headers = _headers(client, "care@example.com")
 
@@ -113,7 +109,6 @@ def test_emotion_same_day_keeps_latest_and_care_alert_is_rule_based(tmp_path):
 
 
 def test_energy_samples_drive_current_status_and_profile(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "energy.sqlite3")) as client:
         headers = _headers(client, "energy@example.com")
 
@@ -151,7 +146,6 @@ def test_energy_samples_drive_current_status_and_profile(tmp_path):
 
 
 def test_emotion_and_energy_reject_invalid_fields(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "emotion-validation.sqlite3")) as client:
         headers = _headers(client, "validation@example.com")
 

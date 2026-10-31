@@ -2,7 +2,6 @@ import sqlite3
 
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 from backend.repositories import init_db
 
@@ -21,7 +20,6 @@ def entry(identifier="import-1", **extra):
 
 
 def test_notes_survive_old_database_create_edit_batch_and_omitted_field(tmp_path):
-    reset_token_store()
     database = tmp_path / "old.sqlite3"
     init_db(database)
     with sqlite3.connect(database) as connection:
@@ -47,7 +45,6 @@ def test_notes_survive_old_database_create_edit_batch_and_omitted_field(tmp_path
 
 
 def test_create_only_import_never_overwrites_an_existing_edit(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "repeat.sqlite3")) as client:
         headers = register(client)
         client.post("/schedule", headers=headers, json=entry(title="用户改过的标题", description="用户备注"))
@@ -61,7 +58,6 @@ def test_create_only_import_never_overwrites_an_existing_edit(tmp_path):
 
 
 def test_batch_conflict_rolls_back_all_writes_and_keeps_accounts_isolated(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "atomic.sqlite3")) as client:
         first = register(client)
         second = register(client, "other@example.com")
@@ -75,7 +71,6 @@ def test_batch_conflict_rolls_back_all_writes_and_keeps_accounts_isolated(tmp_pa
 def test_import_notes_survive_rescue_options_apply_undo_and_legacy_client(tmp_path):
     from backend.tests.test_rescue_api import _entry, _options_request, DAY
 
-    reset_token_store()
     with TestClient(create_app(tmp_path / "notes-rescue.sqlite3")) as client:
         headers = register(client)
         created = client.post("/schedule", headers=headers, json=_entry("import-course", description="王老师 · B座507")).json()

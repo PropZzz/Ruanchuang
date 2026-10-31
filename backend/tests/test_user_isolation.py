@@ -1,6 +1,5 @@
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
@@ -38,7 +37,6 @@ def _microtask(task_id: str, title: str = "Reply mail") -> dict[str, object]:
 
 
 def test_schedule_id_conflict_across_users_returns_409(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "schedule-isolation.sqlite3")) as client:
         alice = _register(client, "alice-schedule@example.com")
         bob = _register(client, "bob-schedule@example.com")
@@ -67,7 +65,6 @@ def test_schedule_id_conflict_across_users_returns_409(tmp_path):
 
 
 def test_microtask_id_conflict_across_users_returns_409(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "microtask-isolation.sqlite3")) as client:
         alice = _register(client, "alice-micro@example.com")
         bob = _register(client, "bob-micro@example.com")

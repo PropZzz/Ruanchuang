@@ -1,6 +1,5 @@
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
@@ -29,7 +28,6 @@ def _busy(member_id: str, title: str, hour: int) -> dict[str, object]:
 
 
 def test_microtask_batch_completion_schedule_and_import(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "microtasks.sqlite3")) as client:
         headers = _headers(client)
         client.post("/microtasks", headers=headers, json=_microtask("m1"))
@@ -49,7 +47,6 @@ def test_microtask_batch_completion_schedule_and_import(tmp_path):
 
 
 def test_goal_schedule_next_respects_dependencies(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "goals.sqlite3")) as client:
         headers = _headers(client)
         goal = client.post(
@@ -73,7 +70,6 @@ def test_goal_schedule_next_respects_dependencies(tmp_path):
 
 
 def test_team_conflicts_windows_and_meeting_booking(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "team.sqlite3")) as client:
         headers = _headers(client)
         client.post("/team/members", headers=headers, json=_busy("a", "A busy", 9))

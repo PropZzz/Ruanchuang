@@ -1,44 +1,29 @@
 from __future__ import annotations
 
-from secrets import token_urlsafe
-from threading import RLock
+from pathlib import Path
 
-from fastapi import Header, HTTPException, status
+from fastapi import Header, HTTPException, Request, status
 
-
-# 进程内令牌只适合单进程演示；多进程/生产前必须替换为签名 JWT 或持久化会话。
-_TOKEN_TO_USER_ID: dict[str, str] = {}
-_LOCK = RLock()
+from .session_store import SessionStore
+from .settings import DEFAULT_SESSION_TTL_SECONDS
 
 
-def issue_token(user_id: str) -> str:
-    token = token_urlsafe(32)
-    with _LOCK:
-        _TOKEN_TO_USER_ID[token] = user_id
-    return token
+def issue_token(
+    user_id: str, db_path: str | Path | None = None,
+    *, ttl_seconds: int = DEFAULT_SESSION_TTL_SECONDS,
+) -> str:
+    return SessionStore(db_path).issue(user_id, ttl_seconds)
 
 
-def resolve_token(token: str) -> str | None:
-    with _LOCK:
-        return _TOKEN_TO_USER_ID.get(token)
+def resolve_token(token: str, db_path: str | Path | None = None) -> str | None:
+    return SessionStore(db_path).resolve(token)
 
 
-def revoke_token(token: str) -> None:
-    """退出登录时直接移除映射。
-
-    令牌一经删除即无法再解析为任何用户，效果等同于加入撤销黑名单；
-    区别是不再保留只增不减的已撤销令牌集合，避免长期运行时内存持续增长。
-    """
-    with _LOCK:
-        _TOKEN_TO_USER_ID.pop(token, None)
+def revoke_token(token: str, db_path: str | Path | None = None) -> None:
+    SessionStore(db_path).revoke(token)
 
 
-def reset_token_store() -> None:
-    with _LOCK:
-        _TOKEN_TO_USER_ID.clear()
-
-
-def current_user_id(authorization: str | None = Header(default=None)) -> str:
+def current_user_id(request: Request, authorization: str | None = Header(default=None)) -> str:
     token = extract_bearer_token(authorization)
     if token is None:
         raise HTTPException(
@@ -46,7 +31,7 @@ def current_user_id(authorization: str | None = Header(default=None)) -> str:
             detail="Missing bearer token",
         )
 
-    user_id = resolve_token(token)
+    user_id = resolve_token(token, getattr(request.app.state, "db_path", None))
     if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

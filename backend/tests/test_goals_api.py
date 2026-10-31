@@ -1,6 +1,5 @@
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
@@ -39,7 +38,6 @@ def _goal(goal_id: str = "goal-1", **overrides):
 
 
 def test_goals_require_authentication(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "goals.sqlite3")) as client:
         response = client.get("/goals")
 
@@ -47,7 +45,6 @@ def test_goals_require_authentication(tmp_path):
 
 
 def test_goal_crud_and_goal_task_endpoints_roundtrip(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "goals.sqlite3")) as client:
         headers = _headers(client, "goals@example.com")
 
@@ -103,7 +100,6 @@ def test_goal_crud_and_goal_task_endpoints_roundtrip(tmp_path):
 
 
 def test_goal_ids_are_isolated_and_cross_user_conflicts_are_rejected(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "goals.sqlite3")) as client:
         alice_headers = _headers(client, "alice-goals@example.com")
         bob_headers = _headers(client, "bob-goals@example.com")
@@ -119,7 +115,6 @@ def test_goal_ids_are_isolated_and_cross_user_conflicts_are_rejected(tmp_path):
 
 
 def test_goal_task_duplicate_and_missing_goal_are_rejected(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "goals.sqlite3")) as client:
         headers = _headers(client, "goal-task-errors@example.com")
         assert client.post("/goals", json=_goal(), headers=headers).status_code == 200

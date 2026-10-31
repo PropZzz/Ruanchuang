@@ -1,6 +1,6 @@
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store, resolve_token
+from backend.auth import resolve_token
 from backend.database import BUSY_TIMEOUT_MS, get_connection
 from backend.main import create_app
 from backend.repositories import RepositoryConflictError
@@ -19,7 +19,6 @@ def test_sqlite_connections_use_wal_and_busy_timeout(tmp_path):
 
 
 def test_logout_forgets_the_token_instead_of_keeping_it(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "auth.sqlite3")) as client:
         registered = client.post(
             "/auth/register",
@@ -38,7 +37,7 @@ def test_logout_forgets_the_token_instead_of_keeping_it(tmp_path):
         logout = client.post("/auth/logout", headers=headers)
         assert logout.status_code == 204
 
-        assert resolve_token(token) is None
+        assert resolve_token(token, tmp_path / "auth.sqlite3") is None
         assert client.get("/auth/me", headers=headers).status_code == 401
 
         login = client.post(
@@ -65,7 +64,6 @@ def test_unhandled_repository_errors_are_mapped_instead_of_500(tmp_path):
 
 
 def test_registration_rejects_blank_fields_and_short_passwords(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "register.sqlite3")) as client:
         valid = {
             "contactAddress": "  padded@example.com  ",

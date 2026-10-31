@@ -3,7 +3,6 @@ import sqlite3
 import pytest
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 from backend.repositories import (
     init_db, list_schedules, replace_schedules_with_snapshot,
@@ -27,7 +26,6 @@ def entry(**overrides):
 
 @pytest.mark.parametrize("flexible,locked", [(False, False), (False, True), (True, False)])
 def test_schedule_constraints_persist_and_old_client_updates_keep_them(tmp_path, flexible, locked):
-    reset_token_store()
     path = tmp_path / "constraints.db"
     with TestClient(create_app(path)) as client:
         headers, user_id = register(client)
@@ -59,7 +57,6 @@ def test_schedule_constraints_persist_and_old_client_updates_keep_them(tmp_path,
 
 
 def test_constraints_batch_sync_and_snapshot_round_trip(tmp_path):
-    reset_token_store()
     path = tmp_path / "paths.db"
     with TestClient(create_app(path)) as client:
         headers, user_id = register(client)
@@ -86,7 +83,6 @@ def test_constraints_batch_sync_and_snapshot_round_trip(tmp_path):
 
 
 def test_existing_database_migrates_without_replacing_entries(tmp_path):
-    reset_token_store()
     path = tmp_path / "old.db"
     with TestClient(create_app(path)) as client:
         headers, user_id = register(client)
@@ -106,7 +102,6 @@ def test_existing_database_migrates_without_replacing_entries(tmp_path):
 @pytest.mark.parametrize("field", ["rescheduleFlexible", "hardLocked"])
 @pytest.mark.parametrize("value", [None, "false", 2, {}, []])
 def test_constraint_flags_reject_non_boolean_values(tmp_path, field, value):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "validation.db")) as client:
         headers, _ = register(client)
         response = client.post("/schedule", headers=headers, json=entry(**{field: value}))
@@ -115,7 +110,6 @@ def test_constraint_flags_reject_non_boolean_values(tmp_path, field, value):
 
 
 def test_rescue_round_trip_keeps_flags_and_policy_changes_invalidate_baseline(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "rescue-flags.db")) as client:
         headers, _ = register(client)
         created = client.post("/schedule", headers=headers, json=entry(rescheduleFlexible=False, hardLocked=True)).json()
@@ -155,7 +149,6 @@ def test_rescue_options_preserve_flags_when_original_entry_is_moved():
 
 
 def test_all_write_routes_reject_both_constraints_enabled(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "exclusive.db")) as client:
         headers, _ = register(client)
         payload = entry(rescheduleFlexible=True, hardLocked=True)
@@ -171,7 +164,6 @@ def test_all_write_routes_reject_both_constraints_enabled(tmp_path):
 
 
 def test_enabling_one_constraint_alone_disables_the_other(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "partial.db")) as client:
         headers, _ = register(client)
         response = client.post("/schedule", headers=headers, json=entry(hardLocked=True))
@@ -188,7 +180,6 @@ def test_enabling_one_constraint_alone_disables_the_other(tmp_path):
 def test_legacy_double_enabled_rows_and_snapshots_are_repaired(tmp_path):
     import json
 
-    reset_token_store()
     path = tmp_path / "legacy-exclusive.db"
     with TestClient(create_app(path)) as client:
         headers, user_id = register(client)

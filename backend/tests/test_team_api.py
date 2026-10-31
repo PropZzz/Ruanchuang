@@ -1,6 +1,5 @@
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
@@ -44,7 +43,6 @@ def _member(member_id: str = "member-1", **overrides):
 
 
 def test_team_members_require_authentication(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "team.sqlite3")) as client:
         response = client.get("/team/members")
 
@@ -52,7 +50,6 @@ def test_team_members_require_authentication(tmp_path):
 
 
 def test_team_member_crud_permission_and_calendar_roundtrip(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "team.sqlite3")) as client:
         headers = _headers(client, "team@example.com")
 
@@ -96,7 +93,6 @@ def test_team_member_crud_permission_and_calendar_roundtrip(tmp_path):
 
 
 def test_team_member_ids_are_isolated_and_cross_user_conflicts_are_rejected(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "team.sqlite3")) as client:
         alice_headers = _headers(client, "alice-team@example.com")
         bob_headers = _headers(client, "bob-team@example.com")
@@ -112,7 +108,6 @@ def test_team_member_ids_are_isolated_and_cross_user_conflicts_are_rejected(tmp_
 
 
 def test_team_permission_validation_and_missing_member(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "team.sqlite3")) as client:
         headers = _headers(client, "team-errors@example.com")
 

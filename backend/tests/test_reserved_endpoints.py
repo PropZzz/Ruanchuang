@@ -1,6 +1,5 @@
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
@@ -60,7 +59,6 @@ def _request(client: TestClient, method: str, path: str, headers: dict[str, str]
 
 
 def test_reserved_endpoints_require_authentication(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "reserved.sqlite3")) as client:
         response = _request(client, "GET", "/diagnostics/summary")
 
@@ -68,7 +66,6 @@ def test_reserved_endpoints_require_authentication(tmp_path):
 
 
 def test_reserved_endpoints_return_explicit_reserved_error(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "reserved.sqlite3")) as client:
         headers = _headers(client)
 
@@ -81,7 +78,6 @@ def test_reserved_endpoints_return_explicit_reserved_error(tmp_path):
 
 
 def test_reserved_endpoints_are_visible_in_openapi(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "reserved.sqlite3")) as client:
         paths = client.get("/openapi.json").json()["paths"]
 

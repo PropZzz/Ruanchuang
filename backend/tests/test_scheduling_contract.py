@@ -10,7 +10,6 @@ from jsonschema import Draft202012Validator, FormatChecker
 from pydantic import ValidationError
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 from backend.scheduling_contract import (
     SchedulingRequest,
@@ -133,7 +132,6 @@ def test_fixed_conflict_is_a_hard_canonical_issue() -> None:
 
 
 def test_replan_api_accepts_missing_schema_version_and_returns_canonical_response(tmp_path) -> None:
-    reset_token_store()
     with TestClient(create_app(tmp_path / "contract.sqlite3")) as client:
         registered = client.post(
             "/auth/register",
@@ -163,7 +161,6 @@ def test_replan_api_accepts_missing_schema_version_and_returns_canonical_respons
     [("energy", "invalid"), ("day", "2026-02-30"), ("unknownField", True)],
 )
 def test_replan_api_rejects_invalid_request_with_422(tmp_path, field, value) -> None:
-    reset_token_store()
     with TestClient(create_app(tmp_path / "invalid-contract.sqlite3")) as client:
         registered = client.post(
             "/auth/register",

@@ -140,6 +140,9 @@ def test_build_options_protect_recovery_contains_recovery_buffer():
 
 def test_build_options_recovery_buffer_prefers_afternoon_window():
     request = _request()
+    # Exercise a custom 72-minute high-load task, independently of the public
+    # default multiplier (1.0). Its afternoon finish leaves the buffer at 14:42.
+    request["tuning"] = {"highLoadPenaltyWhenLowEnergy": 1.2}
     request["windows"] = [
         {"start": {"hour": 8, "minute": 0}, "end": {"hour": 11, "minute": 0}},
         {"start": {"hour": 13, "minute": 30}, "end": {"hour": 18, "minute": 0}},

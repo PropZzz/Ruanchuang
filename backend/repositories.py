@@ -8,6 +8,7 @@ import sqlite3
 import uuid
 
 from .database import get_connection
+from .session_store import initialize_sessions
 from .services_rescue import build_rescue_event, compute_baseline_hash
 
 
@@ -156,6 +157,7 @@ def init_db(db_path: str | Path | None = None, connection: sqlite3.Connection | 
             )
             """
         )
+        initialize_sessions(connection)
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS schedules (

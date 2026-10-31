@@ -1,6 +1,5 @@
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
@@ -23,7 +22,6 @@ def _event(event_id: str, **overrides):
 
 
 def test_task_event_log_and_query_roundtrip(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "events.sqlite3")) as client:
         register = client.post(
             "/auth/register",
@@ -69,7 +67,6 @@ def test_task_event_log_and_query_roundtrip(tmp_path):
 
 
 def test_task_event_batch_upsert_replaces_by_id(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "events.sqlite3")) as client:
         register = client.post(
             "/auth/register",
@@ -144,7 +141,6 @@ def test_task_event_batch_upsert_replaces_by_id(tmp_path):
 
 
 def test_task_event_id_conflict_is_rejected_across_users_for_single_and_batch(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "events.sqlite3")) as client:
         alice = client.post(
             "/auth/register",
@@ -191,7 +187,6 @@ def test_task_event_id_conflict_is_rejected_across_users_for_single_and_batch(tm
 
 
 def test_task_event_batch_rejects_duplicate_ids_before_writing(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "events.sqlite3")) as client:
         register = client.post(
             "/auth/register",
@@ -218,7 +213,6 @@ def test_task_event_batch_rejects_duplicate_ids_before_writing(tmp_path):
 
 
 def test_task_event_batch_rejects_blank_ids_before_writing(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "events.sqlite3")) as client:
         register = client.post(
             "/auth/register",
