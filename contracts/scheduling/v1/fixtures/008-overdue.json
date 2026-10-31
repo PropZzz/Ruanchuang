@@ -32,13 +32,13 @@
         "code": "overdue",
         "taskId": "old-task",
         "blockedBy": [],
-        "explanationCodes": ["overdue"]
+        "explanationCodes": ["deadline_proximity"]
       }
     ],
-    "explanationCodes": ["overdue"]
+    "explanationCodes": ["deadline_proximity", "priority", "energy_fit", "deadline_proximity"]
   },
   "review": {
-    "classification": "implementation_error",
-    "reason": "Python 输出 overdue，Dart 没有跨日逾期问题；后端守则明确要求 overdue，Dart 端缺少该约束检查。"
+    "classification": "contract_error",
+    "reason": "当前双端均输出 overdue 问题；解释码必须是稳定的 deadline_proximity，并保留计划 entry 的 priority/energy_fit，不把问题码当作解释码。"
   }
 }

@@ -1,5 +1,7 @@
 # Web 发布
 
+2026-10-31 新增的后端持久会话、CORS、备份恢复和新主机初始化说明见 [生产准备](../docs/production-preparation-2026-10-31.md)。`bootstrap_backend.sh` 仅初始化新 Linux 主机；现有服务器继续先检查实际布局与备份，再按审查结果更新。用户暂无正式域名，TLS 模板尚未启用。本轮本地验证不等于生产部署。
+
 `nginx-ruanchuang.conf` 将 Stitch Web 静态资源从 `/opt/ruanchuang/web/current` 提供到 HTTP 80，并把 FastAPI 路由代理到 `127.0.0.1:8000`。SQLite 不在 Web 根目录。
 
 构建生产 Web：
@@ -20,7 +22,7 @@ python deploy/deploy_web_release.py
 
 多人并行开发时可用 `python deploy/deploy_web_release.py --source-root <已审查的Web源码快照>` 发布隔离快照；应从当前线上版本建立并核对差异、在该快照上验收，再发布，避免混入其他未完成改动。构建脚本支持同名参数。默认仍从 `web/` 构建。
 
-2026-10-30 日程约束后端增量发布使用 `python deploy/deploy_schedule_constraints.py`；仅检查线上布局用 `--inspect`。初次迁移基于本轮 Git HEAD 与工作树的差异，需在提交本轮改动前使用；后续互斥修正用 `--base-directory build/backend-exclusive-base`，基于修改前保存的本地源码快照合入，避免重复应用前轮迁移。它保留线上其他差异，先做隔离数据验证，随后备份源码和 SQLite、增量迁移、检查记录数和健康状态，失败恢复源码。备份在 `/opt/ruanchuang/backups/schedule-constraints-*`。部署会重启后端，当前内存令牌会失效。此专用脚本不能替代通用后端发布流程。
+2026-10-30 日程约束后端增量发布使用 `python deploy/deploy_schedule_constraints.py`；仅检查线上布局用 `--inspect`。初次迁移基于本轮 Git HEAD 与工作树的差异，需在提交本轮改动前使用；后续互斥修正用 `--base-directory build/backend-exclusive-base`，基于修改前保存的本地源码快照合入，避免重复应用前轮迁移。它保留线上其他差异，先做隔离数据验证，随后备份源码和 SQLite、增量迁移、检查记录数和健康状态，失败恢复源码。备份在 `/opt/ruanchuang/backups/schedule-constraints-*`。部署会重启后端，旧内存令牌版本的会话会失效；迁移后新签发的有效会话可跨重启。此专用脚本不能替代通用后端发布流程。
 
 发布前执行 `node tools/check_web_sources.mjs`；`web/stitch/mobile/` 与桌面页面同为当前源码，不能再用历史导出覆盖。当前目录职责见 `docs/current-architecture.md`。
 

@@ -1,3 +1,4 @@
+import { stopTestBackend } from './test_backend_process.mjs';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -171,7 +172,6 @@ try {
 } finally {
   await browser?.close();
   if (staticServer.listening) await new Promise(resolve => staticServer.close(resolve));
-  const closed = new Promise(resolve => backend.once('exit', resolve));
-  if (backend.exitCode === null) { backend.kill(); await closed; }
-  await rm(temporary, { recursive: true, force: true });
+  await stopTestBackend(backend);
+  await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }

@@ -25,6 +25,7 @@ from .routers_schedule import router as schedule_router
 from .routers_settings import router as settings_router
 from .routers_team import router as team_router
 from .routers_sync import router as sync_router
+from .settings import load_settings
 
 
 VERSION = "0.1.0"
@@ -45,6 +46,7 @@ def _domain_error_handler(status_code: int):
 
 def create_app(db_path: str | Path | None = None) -> FastAPI:
     resolved_db_path = Path(db_path) if db_path is not None else None
+    settings = load_settings()
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -53,6 +55,7 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
 
     app = FastAPI(title="Ruanchuang Backend", lifespan=lifespan)
     app.state.db_path = resolved_db_path
+    app.state.settings = settings
     app.add_exception_handler(
         RepositoryNotFoundError,
         _domain_error_handler(status.HTTP_404_NOT_FOUND),
@@ -67,7 +70,7 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
     )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=list(settings.cors_origins),
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],

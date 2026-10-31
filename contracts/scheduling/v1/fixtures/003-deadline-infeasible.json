@@ -29,13 +29,13 @@
     },
     "issues": [
       {
-        "code": "deadline_infeasible",
+        "code": "miss_due",
         "taskId": "too-late",
         "blockedBy": [],
-        "explanationCodes": ["deadline_infeasible"]
+        "explanationCodes": ["deadline_proximity"]
       }
     ],
-    "explanationCodes": ["deadline_infeasible"]
+    "explanationCodes": ["deadline_proximity", "priority", "energy_fit", "deadline_proximity"]
   },
   "review": {
     "classification": "contract_error",

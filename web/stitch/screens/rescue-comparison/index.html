@@ -155,7 +155,7 @@
 </div>
 </div>
 <!-- 底部主操作 -->
-<button class="w-full py-3 px-4 rounded-lg bg-secondary text-on-secondary font-semibold text-sm hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm" type="button">
+<button class="w-full py-3 px-4 rounded-lg bg-secondary text-on-secondary font-semibold text-sm hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm" type="button" data-action="rescue-apply">
 <span class="material-symbols-outlined text-[18px]">done_all</span>
 <span>采用此方案并写入日程</span>
 </button>
@@ -233,7 +233,7 @@
 </div>
 </div>
 <!-- 底部主操作 -->
-<button class="w-full py-3 px-4 rounded-lg bg-surface-container-high text-on-surface font-semibold text-sm hover:bg-surface-container-highest active:scale-[0.98] transition-all flex items-center justify-center gap-2" type="button">
+<button class="w-full py-3 px-4 rounded-lg bg-surface-container-high text-on-surface font-semibold text-sm hover:bg-surface-container-highest active:scale-[0.98] transition-all flex items-center justify-center gap-2" type="button" data-action="rescue-apply">
 <span>采用此方案并写入日程</span>
 </button>
 </div>
@@ -310,7 +310,7 @@
 </div>
 </div>
 <!-- 底部主操作 -->
-<button class="w-full py-3 px-4 rounded-lg bg-surface-container-high text-on-surface font-semibold text-sm hover:bg-surface-container-highest active:scale-[0.98] transition-all flex items-center justify-center gap-2" type="button">
+<button class="w-full py-3 px-4 rounded-lg bg-surface-container-high text-on-surface font-semibold text-sm hover:bg-surface-container-highest active:scale-[0.98] transition-all flex items-center justify-center gap-2" type="button" data-action="rescue-apply">
 <span>采用此方案并写入日程</span>
 </button>
 </div>
@@ -439,19 +439,14 @@
 </footer>
 </div>
 <script>
-  // 简易交互状态：点击卡片可直接切换默认采用焦点
-  document.querySelectorAll('button').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      if (this.innerText.includes('采用此方案')) {
-        if (window.parent !== window && window.parent.__RUANCHUANG_API_ACTION__) {
-          e.stopPropagation();
-          window.parent.__RUANCHUANG_API_ACTION__('rescue-apply', document, this);
-          return;
-        }
-        const planTitle = this.closest('.rounded-xl').querySelector('h4').innerText;
-        const confirmMsg = `已确认选择【${planTitle}】！\n正在写入本地 SQLite 数据库并广播 ICS 变更...`;
-        alert(confirmMsg);
+  document.querySelectorAll('[data-action="rescue-apply"]').forEach(button => {
+    button.addEventListener('click', event => {
+      if (window.parent !== window && window.parent.__RUANCHUANG_API_ACTION__) {
+        event.stopPropagation();
+        window.parent.__RUANCHUANG_API_ACTION__('rescue-apply', document, button);
+        return;
       }
+      alert('请从工作台打开此页面并登录，再生成服务端救援方案。');
     });
   });
 </script></main></div></body></html>

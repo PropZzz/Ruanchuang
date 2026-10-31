@@ -1,12 +1,10 @@
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
 def test_auth_and_repository_flow(tmp_path):
     db_path = tmp_path / "api-flow.sqlite3"
-    reset_token_store()
     with TestClient(create_app(db_path)) as client:
         register_payload = {
             "contactAddress": "alice@example.com",

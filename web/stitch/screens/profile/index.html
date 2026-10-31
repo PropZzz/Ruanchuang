@@ -48,6 +48,10 @@
 </div>
 <!-- Right: Actions -->
 <div class="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
+<button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-xs font-semibold text-on-surface transition-all" id="profile-settings-open" data-route="settings-drawer" type="button">
+<span class="material-symbols-outlined text-[17px]">settings</span>
+<span>设置</span>
+</button>
 <button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-xs font-semibold text-on-surface transition-all" type="button">
 <span class="material-symbols-outlined text-[17px] text-primary">download</span>
 <span>导出周报</span>
@@ -56,7 +60,7 @@
 <span class="material-symbols-outlined text-[17px] text-secondary">badge</span>
 <span>数字工牌</span>
 </button>
-<button class="hidden inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-xs font-semibold text-on-surface transition-all" id="profile-edit-action" type="button">
+<button class="hidden inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-xs font-semibold text-on-surface transition-all" id="profile-edit-action" type="button" data-action="auth-profile-edit">
 <span class="material-symbols-outlined text-[17px] text-primary">edit</span>
 <span>修改昵称</span>
 </button>
@@ -64,7 +68,7 @@
 <span class="material-symbols-outlined text-[17px]">switch_account</span>
 <span data-account-label>登录 / 注册</span>
 </button>
-<button class="hidden inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-container-high hover:bg-error-container text-xs font-semibold text-error transition-all" id="profile-logout-action" type="button">
+<button class="hidden inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-container-high hover:bg-error-container text-xs font-semibold text-error transition-all" id="profile-logout-action" type="button" data-action="auth-logout">
 <span class="material-symbols-outlined text-[17px]">logout</span>
 <span>退出登录</span>
 </button>

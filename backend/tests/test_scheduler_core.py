@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from backend.scheduling.core import SchedulerCore
 
 
@@ -22,6 +24,28 @@ def test_scheduler_core_returns_internal_plan() -> None:
     result = SchedulerCore().plan(_request())
     assert [entry["id"] for entry in result["entries"]] == ["a", "b"]
     assert result["entries"][0]["source"] == "planned"
+
+
+@pytest.mark.parametrize(
+    ("duration", "load", "penalty", "expected_minutes"),
+    [(60, "high", None, 60), (60, "high", 1.2, 72), (10, "medium", None, 11)],
+)
+def test_low_energy_duration_uses_public_defaults_and_rounds_half_up(
+    duration: int, load: str, penalty: float | None, expected_minutes: int,
+) -> None:
+    request = _request()
+    request["energy"] = "veryLow"
+    request["tasks"] = [{
+        "id": "work", "title": "Work", "durationMinutes": duration,
+        "priority": 3, "load": load, "tag": "Task",
+    }]
+    if penalty is not None:
+        request["tuning"] = {"highLoadPenaltyWhenLowEnergy": penalty}
+
+    plan = SchedulerCore().plan(request)
+
+    assert plan["issues"] == []
+    assert round(plan["entries"][0]["height"] / 80 * 60) == expected_minutes
 
 
 def test_scheduler_core_has_no_persistence_imports() -> None:

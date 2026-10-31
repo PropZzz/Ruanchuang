@@ -11,7 +11,8 @@
 
 `fixed_conflict`、`work_window`、`deadline_infeasible`、`dependency_blocked`、
 `low_energy_match`、`rescue_strategies`、`no_available_block`、`overdue`、
-`apply_rollback`、`undo_restore`、`timeout`、`boundary_time`。
+`apply_rollback`、`undo_restore`、`timeout`、`boundary_time`、`duration_rounding`。
+当前共 13 个共享向量。
 
 ## 请求类型
 
@@ -56,9 +57,13 @@
 ## 运行门槛
 
 ```powershell
+dart pub get --enforce-lockfile
 python -m pytest backend/tests/test_shared_vector_schema.py -q
 python scripts/scheduling_parity.py
 ```
+
+先准备锁文件依赖，再执行 runner；runner 使用 `flutter test --no-pub`，避免每次对拍
+重复触发本机平台插件准备。运行环境需能从 PATH 找到 Flutter。
 
 调度基准默认会刷新 parity：使用临时 `reports-dir` 执行 runner，并在 runner 非零
 但已生成新报告时保留该报告的 mismatch 诊断。若需复用已有报告，必须显式传入
@@ -81,8 +86,10 @@ blocked 报告是门槛状态证据，不是性能结果。
 任务规模 `10/50/100/200`，默认 `seed=20260916`、预热 `2` 次、采样 `10` 次、
 超时 `1000ms`。带时间戳的 JSON/Markdown 报告位于 `reports/benchmarks`，应至少
 记录任务数量、规划耗时 P50/P95/P99、`peakMemoryBytes`（`tracemalloc` 调用期间
-的 Python 分配增量估计）、`peakRssBytes`（当前为 `null`，未采集）和
-`rssSource`，以及超时、失败、降级和各策略指标。普通业务 `issues` 不等于
+的 Python 分配增量估计）、`peakRssBytes`（操作系统进程高水位）、
+`rssSource`、`rssScope` 和 `rssSampleCount`，以及超时、失败、降级和各策略指标。Windows
+固定使用 psutil 7.2.2 的 `peak_wset`；Linux 的 `ru_maxrss` 从 KiB 转换为字节；
+其他不支持的计数器保留 `null/unavailable`，不以当前 RSS 冒充峰值。普通业务 `issues` 不等于
 `degraded`；降级必须由调度运行状态明确记录。
 
 可 pickle 的超时调用使用可终止的 process；不可 pickle 的调用回退到 daemon
@@ -92,12 +99,33 @@ thread。thread 超时会立即返回并标记 `timeoutUncancellable=true`，不
 在获得有效 parity 和可重复的基准数据之前，禁止以性能假设推动 Go、Rust 或
 C++ 重写调度核心。
 
-## 2026-09-15 A 判定
+## 2026-10-31 复核与修复
 
-最近一次实际运行（Python 3.10.11、Flutter 3.38.7/Dart 3.10.7）执行全部 12 个
+当前报告 `reports/shared-vector-diff.json` / `.md`：13 matched，0 mismatched，
+0 invalid，Dart returncode 0，pending review 0。7 项契约断言修正、3 项实现修复和
+3 项同状态事务/边界用例的分类理由保存在各 fixture 的 `review.reason`。
+
+- 固定日程只占用自身时段，任务可排在固定块之前；工作窗口不是解释码。
+- 软截止延误使用 `miss_due` 和 `deadline_proximity`；逾期问题与解释码分开比较。
+- 依赖阻塞用例现在包含真正缺失的前置任务。原用例的前置任务已成功安排，剩余空间
+  不足应为 `no_slot`，不能把满足依赖的任务硬判为依赖阻塞。
+- 无工作窗口时输出 `no_slot`；不发明默认回退窗口。救援断言按当前三策略规则审查。
+- 公开调优默认值 `highLoadPenaltyWhenLowEnergy=1.0`。Python 私有 1.2 默认值已对齐；
+  调用方仍可显式传 1.2，保留对应自定义倍率测试。
+- 正数恰为半分钟时向上取整，10.5 分钟得到 11 分钟；两端一致。
+- 1 分钟任务的持久时长仍是 1 分钟；视觉点击区域的最小尺寸由渲染层处理。
+- 比较器与 Dart runner 保留实际 `explanationCodes` 和 `blockedBy`，不填空或忽略元数据。
+
+最新基准为 `reports/benchmarks/scheduling-benchmark-20261031T152150Z.{json,md}`，
+80 个采样、0 超时、0 失败，超时预算仍为 1000ms。较早的 `141912Z` 报告保留了
+修复队列读取顺序前的假超时，不能作为成功基准引用。
+
+## 历史：2026-09-15 A 判定
+
+当时的实际运行（Python 3.10.11、Flutter 3.38.7/Dart 3.10.7）执行全部 12 个
 fixture：`matched=3`、`mismatched=9`、`invalid=0`，命令因未获允许的差异返回
-非零。逐场景的 JSON/Markdown 证据在 `reports/shared-vector-diff.json` 和
-`reports/shared-vector-diff.md`。
+非零。[当时的主线报告](https://github.com/PropZzz/Ruanchuang/blob/44cb49f2ad65158217bc200c5a68592b6efecfea/reports/shared-vector-diff.md)
+可从基线提交查看；当前同名报告已刷新，不再代表旧状态。
 
 - `contract_error`：固定块前后顺序的过强断言、未定义的 `work_window`/
   `deadline_infeasible` 解释/问题码，以及把非硬约束空档写死的救援断言。
@@ -106,5 +134,4 @@ fixture：`matched=3`、`mismatched=9`、`invalid=0`，命令因未获允许的�
 - `allowed_difference`：应用失败回滚、撤销恢复原计划、超时保留原计划；三项均
   在两端观察到相同最终状态。
 
-这些分类是 A 对当前代码和守则的判断，不表示实现已经统一；在修复并重新运行
-报告前，禁止单独修改一端后宣称 Dart/Python 一致。
+这些是历史分类；本轮重新检查了实际依赖和空窗口语义，修正了其中的误归类。

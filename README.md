@@ -10,6 +10,8 @@
 - 本地 Web：运行 `run_web_preview.bat`；它检查当前源码，不再从旧设计导出复制页面。
 - Web 构建：`node tools/build_stitch_web.mjs`；发布：`python deploy/deploy_web_release.py`，通过交互提示输入 SSH 密码。
 - 目录边界与验证命令见 [当前架构](docs/current-architecture.md)；旧导出清理记录见 [2026-10-29 清理记录](docs/cleanup-2026-10-29.md)。
+- 2026-10-31 收口验证：Flutter analyze 无问题，Flutter **398 项**通过，后端连续两轮各 **265 项**通过，Node **34 项**通过，调度共享向量 **13/13** 一致。详见 [验证记录](docs/verification-2026-10-31.md) 和 [执行清单](docs/superpowers/plans/2026-10-31-project-closeout.md)。
+- 源码已加入持久会话、CORS 白名单、备份恢复及新机器初始化脚本；用户暂无正式域名，HTTPS 和生产主机切换仍待配置、验收。见 [生产准备](docs/production-preparation-2026-10-31.md)。
 
 ---
 
@@ -42,18 +44,25 @@ parity runner 返回非零，只要临时目录产生了新报告，也会保留
 `python scripts/scheduling_benchmark.py --no-refresh-parity --parity-report reports/shared-vector-diff.json`；此报告可能已过期，脚本会提示 stale 风险。
 
 只有 parity 报告满足 `mismatched=0`、`invalid=0`、`pending_a_review=0`，且 Dart
-运行 `returncode=0` 时，基准脚本才会采集测量数据。当前已知 parity 结果为
-`total=12`、`matched=3`、`mismatched=9`、`invalid=0`；此时脚本生成
-`status=blocked`、退出码 `2`，且不会产生性能测量，不能据此推动 Go、Rust 或
-C++ 重写调度核心。
+运行 `returncode=0` 时，基准脚本才会采集测量数据。2026-10-31 当前结果为
+`total=13`、`matched=13`、`mismatched=0`、`invalid=0`，新增半分钟舍入回归；
+解释码和阻塞依赖来自双端真实输出。修复与断言审查见 [契约说明](contracts/scheduling/v1/README.md)。
+门禁不满足时仍生成 `status=blocked`、退出码 `2`，不产生性能测量。
 
 基准默认覆盖任务数量 `10/50/100/200`，`seed=20260916`，预热 `2` 次、采样
 `10` 次、超时 `1000ms`。每次运行在 `reports/benchmarks` 生成带时间戳的 JSON
 和 Markdown 报告，记录任务数量、规划耗时（包括 P50/P95/P99）、
 `peakMemoryBytes`（`tracemalloc` 调用期间的 Python 分配增量估计）、
-`peakRssBytes`（当前为 `null`，未采集）和 `rssSource`，以及 `timeout`、`failure`、
+`peakRssBytes`（Windows 使用 `psutil.peak_wset`；Linux 使用 `resource.ru_maxrss`，
+统一为字节）、`rssSource`、`rssScope`，以及 `timeout`、`failure`、
 `degraded` 与各策略指标。普通业务 issues 只描述调度问题，不等于
 `degraded` 降级状态。
+
+[最新本地基准](reports/benchmarks/scheduling-benchmark-20261031T152150Z.md) 的 80 个采样
+均成功，超时和失败均为 0。200 项任务的 plan P95 为 14.511ms、三策略 rescue P95
+为 41.854ms。这是固定种子、本机 Python 和分配追踪下的结果，不代表生产吞吐或
+其他算法的比较结论。RSS 是含解释器、导入开销的进程生命周期高水位；
+`peakMemoryBytes` 才是调用期间的 Python 分配增量估计。两者不能混用。
 
 超时调用中，可 pickle 的调用使用可终止的 process；不可 pickle 的调用回退到
 daemon thread。thread 超时会立即返回并标记 `timeoutUncancellable=true`，因此不能

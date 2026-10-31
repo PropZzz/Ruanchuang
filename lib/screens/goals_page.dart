@@ -6,6 +6,7 @@ import '../services/app_services.dart';
 import '../services/goals/goal_dependency_helper.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
+import '../utils/service_failure_message.dart';
 import '../utils/schedule_occurrence.dart';
 import '../widgets/responsive_page_frame.dart';
 
@@ -567,7 +568,7 @@ class _GoalsPageState extends State<GoalsPage> {
           child: _loading
               ? const _GoalsLoadingState()
               : _loadError != null
-              ? _GoalsLoadFailure(onRetry: _load)
+              ? _GoalsLoadFailure(error: _loadError, onRetry: _load)
               : LayoutBuilder(
                   builder: (context, constraints) {
                     final selectedGoal = _goals
@@ -1377,8 +1378,9 @@ class _GoalEditorFormState extends State<_GoalEditorForm> {
 }
 
 class _GoalsLoadFailure extends StatelessWidget {
-  const _GoalsLoadFailure({required this.onRetry});
+  const _GoalsLoadFailure({required this.error, required this.onRetry});
 
+  final Object? error;
   final VoidCallback onRetry;
 
   @override
@@ -1392,7 +1394,9 @@ class _GoalsLoadFailure extends StatelessWidget {
           children: [
             Icon(Icons.cloud_off_outlined, color: scheme.error, size: 32),
             const SizedBox(height: 10),
-            const Text('暂时无法加载目标'),
+            Text(
+              serviceFailureMessage(context, error, fallback: '暂时无法加载目标，请重试。'),
+            ),
             const SizedBox(height: 12),
             FilledButton.icon(
               key: const ValueKey('goals-load-retry'),

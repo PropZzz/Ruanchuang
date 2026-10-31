@@ -298,7 +298,15 @@ def _process_call(call: Callable[[], Any], timeout_ms: int, clock: Callable[[], 
         except Exception:
             pass
         return _thread_call(call, timeout_ms, clock)
-    worker.join(timeout_ms / 1000.0)
+    deadline = time.monotonic() + timeout_ms / 1000.0
+    # A Queue producer can wait for its feeder to flush a large payload before
+    # exiting. Drain the result before joining, within the same timeout budget.
+    message: tuple[Any, ...] | None = None
+    try:
+        message = output.get(timeout=max(0.0, deadline - time.monotonic()))
+    except Exception:
+        pass
+    worker.join(max(0.0, deadline - time.monotonic()))
     timed_out = worker.is_alive()
     if timed_out:
         worker.terminate()
@@ -309,11 +317,6 @@ def _process_call(call: Callable[[], Any], timeout_ms: int, clock: Callable[[], 
         "isolation": "process",
     }
     result["wallDurationMs"] = result["durationMs"]
-    message: tuple[Any, ...] | None = None
-    try:
-        message = output.get(timeout=0.1) if not timed_out else None
-    except Exception:
-        message = None
     try:
         output.cancel_join_thread()
     except Exception:
@@ -498,7 +501,52 @@ def _validate_option(strategy: str, option: Mapping[str, Any] | None) -> str | N
     return None
 
 
+def _process_peak_rss() -> tuple[int | None, str]:
+    """Read the OS lifetime high-water mark, never substitute current RSS.
+
+    A fresh benchmark worker makes this its own process peak, including the
+    interpreter and imports. Thread fallbacks share the caller's lifetime.
+    """
+    try:
+        if sys.platform == "win32":
+            import psutil
+
+            peak = int(psutil.Process().memory_info().peak_wset)
+            source = "psutil.peak_wset"
+        elif sys.platform.startswith("linux"):
+            import resource
+
+            peak = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024
+            source = "resource.ru_maxrss_kib"
+        else:
+            return None, "unavailable"
+        return (peak, source) if peak > 0 else (None, "unavailable")
+    except Exception:
+        # An unavailable counter is missing evidence, not a scheduler failure.
+        return None, "unavailable"
+
+
+def _rss_summary(samples: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    observed = [
+        sample for sample in samples
+        if sample.get("status") in {"success", "degraded"}
+        and isinstance(sample.get("peakRssBytes"), int)
+        and not isinstance(sample.get("peakRssBytes"), bool)
+        and sample["peakRssBytes"] > 0
+    ]
+    sources = {str(sample["rssSource"]) for sample in observed}
+    scopes = {str(sample["rssScope"]) for sample in observed}
+    return {
+        "peakRssBytes": max((sample["peakRssBytes"] for sample in observed), default=None),
+        "rssSource": next(iter(sources)) if len(sources) == 1 else "mixed" if sources else "unavailable",
+        "rssScope": next(iter(scopes)) if len(scopes) == 1 else "mixed" if scopes else "unavailable",
+        "rssSampleCount": len(observed),
+    }
+
+
 def _memory_wrapped_call(call: Callable[[], Any]) -> dict[str, Any]:
+    # Load the counter library before timing/tracing the planner itself.
+    _process_peak_rss()
     was_tracing = tracemalloc.is_tracing()
     if not was_tracing:
         tracemalloc.start()
@@ -509,7 +557,8 @@ def _memory_wrapped_call(call: Callable[[], Any]) -> dict[str, Any]:
         value = call()
         inner_duration = (time.perf_counter() - started) * 1000.0
         _, peak = tracemalloc.get_traced_memory()
-        return {"__benchmark_value__": value, "__peak_memory_bytes__": int(max(0, peak - current_before)), "__inner_duration_ms__": round(inner_duration, 3)}
+        peak_rss, rss_source = _process_peak_rss()
+        return {"__benchmark_value__": value, "__peak_memory_bytes__": int(max(0, peak - current_before)), "__inner_duration_ms__": round(inner_duration, 3), "__peak_rss_bytes__": peak_rss, "__rss_source__": rss_source}
     finally:
         if not was_tracing:
             tracemalloc.stop()
@@ -533,6 +582,9 @@ def _run_sample(
             observed["result"] = wrapped.get("__benchmark_value__")
             observed["peakMemoryBytes"] = wrapped.get("__peak_memory_bytes__")
             observed["innerDurationMs"] = wrapped.get("__inner_duration_ms__")
+            observed["peakRssBytes"] = wrapped.get("__peak_rss_bytes__")
+            observed["rssSource"] = wrapped.get("__rss_source__", "unavailable")
+            observed["rssScope"] = "worker_process_lifetime" if observed.get("isolation") == "process" else "shared_process_lifetime"
             observed["wallDurationMs"] = observed.get("durationMs")
             observed["durationMs"] = observed.get("innerDurationMs")
             observed["status"] = _classify_value(observed["result"])
@@ -671,6 +723,9 @@ def run_benchmark(
         base["memorySource"] = "tracemalloc"
         return base
 
+    # Counter imports are harness setup, not planner allocations or timeout
+    # work. Prime them before tracing the parent; thread/fork workers reuse it.
+    _process_peak_rss()
     tracemalloc.start()
     tracemalloc.reset_peak()
     try:
@@ -685,7 +740,8 @@ def run_benchmark(
                 summary = summarize_samples(measured)
                 row_peaks = [int(sample["peakMemoryBytes"]) for sample in measured if sample.get("status") in {"success", "degraded"} and isinstance(sample.get("peakMemoryBytes"), int)]
                 row_peak = max(row_peaks) if row_peaks else None
-                row: dict[str, Any] = {"runtime": "python", "operation": operation, "taskCount": task_count, "warmups": warmups, "samples": samples, "samplesData": measured, "peakRssBytes": None, "peakMemoryBytes": row_peak}
+                row: dict[str, Any] = {"runtime": "python", "operation": operation, "taskCount": task_count, "warmups": warmups, "samples": samples, "samplesData": measured, "peakMemoryBytes": row_peak}
+                row.update(_rss_summary(measured))
                 row.update(summary)
                 if operation == "plan" and measured:
                     last = measured[-1]
@@ -731,9 +787,10 @@ def run_benchmark(
     )
     base["status"] = "completed" if completed_samples > 0 else "failed"
     base["finishedAt"] = _utc_now()
-    base["peakRssBytes"] = None
+    base.update(_rss_summary([
+        sample for row in base["runs"] for sample in row["samplesData"]
+    ]))
     base["peakMemoryBytes"] = peak
-    base["rssSource"] = "unavailable"
     base["parentPeakMemoryBytes"] = int(parent_peak)
     base["memorySource"] = "tracemalloc"
     return base
@@ -746,6 +803,10 @@ def _markdown_benchmark(report: Mapping[str, Any]) -> str:
     for run in report.get("runs", []):
         if isinstance(run, Mapping):
             lines.append(f"| {run.get('operation')} | {run.get('taskCount')} | {run.get('sampleCount', run.get('samples'))} | {run.get('p50Ms')} | {run.get('p95Ms')} | {run.get('p99Ms')} | {run.get('timeoutCount')} | {run.get('failureCount')} | {run.get('degradedCount')} |")
+    lines.extend(["", "## Process memory", "", "RSS is the OS process lifetime high-water mark, including interpreter/imports. It is not an incremental allocation measurement. Thread samples share the caller process. Missing counters stay null.", "", "| operation | taskCount | peakRssBytes | rssSource | rssScope | rssSamples | peakMemoryBytes |", "|---|---:|---:|---|---|---:|---:|"])
+    for run in report.get("runs", []):
+        if isinstance(run, Mapping):
+            lines.append(f"| {run.get('operation')} | {run.get('taskCount')} | {run.get('peakRssBytes')} | {run.get('rssSource')} | {run.get('rssScope')} | {run.get('rssSampleCount', 0)} | {run.get('peakMemoryBytes')} |")
     lines.extend(["", "## Strategies", "", "| taskCount | strategy | samples | successful | timeouts | failures | degraded | avgEntryCount | avgIssueCount | avgHardIssueCount | avgMovedEntryCount | avgRecoveryMinutes | recommended |", "|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"])
     for row in report.get("strategies", []):
         if isinstance(row, Mapping):

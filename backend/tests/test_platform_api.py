@@ -2,7 +2,6 @@ from datetime import date
 
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
@@ -20,7 +19,6 @@ def _register(client: TestClient, address: str = "platform@example.com") -> dict
 
 
 def test_logout_revokes_the_current_token(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "platform.sqlite3")) as client:
         headers = _register(client)
 
@@ -31,7 +29,6 @@ def test_logout_revokes_the_current_token(tmp_path):
 
 
 def test_profile_update_is_scoped_to_authenticated_user(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "profile.sqlite3")) as client:
         headers = _register(client)
 
@@ -43,7 +40,6 @@ def test_profile_update_is_scoped_to_authenticated_user(tmp_path):
 
 
 def test_version_and_server_time_expose_compatibility_metadata(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "metadata.sqlite3")) as client:
         headers = _register(client)
 
@@ -60,7 +56,6 @@ def test_version_and_server_time_expose_compatibility_metadata(tmp_path):
 
 
 def test_diagnostics_counts_only_the_authenticated_user(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "diagnostics.sqlite3")) as client:
         first = _register(client, "first@example.com")
         client.post(
@@ -83,7 +78,6 @@ def test_diagnostics_counts_only_the_authenticated_user(tmp_path):
 
 
 def test_settings_are_persisted_and_isolated_per_user(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "settings.sqlite3")) as client:
         first = _register(client, "settings-first@example.com")
         second = _register(client, "settings-second@example.com")

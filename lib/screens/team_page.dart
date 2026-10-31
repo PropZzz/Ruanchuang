@@ -4,6 +4,8 @@ import '../models/models.dart';
 import '../services/app_services.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
+import '../utils/service_failure_message.dart';
+import '../widgets/workbench_surface.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 import '../widgets/responsive_page_frame.dart';
@@ -20,6 +22,7 @@ class _TeamPageState extends State<TeamPage> {
   final _dataService = AppServices.dataService;
 
   bool _loading = true;
+  Object? _loadError;
 
   List<TeamMemberCalendar> _calendars = [];
   List<TeamMember> _members = [];
@@ -201,6 +204,7 @@ class _TeamPageState extends State<TeamPage> {
   Future<void> _load() async {
     setState(() {
       _loading = true;
+      _loadError = null;
     });
 
     try {
@@ -237,13 +241,13 @@ class _TeamPageState extends State<TeamPage> {
       setState(() => _loading = false);
     } catch (e, st) {
       if (!mounted) return;
-      setState(() => _loading = false);
-      MobileFeedback.showError(
-        context,
-        category: 'team',
-        message: 'load team data failed',
-        zhMessage: '暂时无法加载团队数据，请稍后重试。',
-        enMessage: 'Unable to load team data right now.',
+      setState(() {
+        _loadError = e;
+        _loading = false;
+      });
+      AppServices.logStore.error(
+        'team',
+        'load failed',
         error: e,
         stackTrace: st,
       );
@@ -935,6 +939,25 @@ class _TeamPageState extends State<TeamPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            if (_loadError != null)
+                              WorkbenchStatusBanner(
+                                key: const ValueKey('team-load-error'),
+                                message: serviceFailureMessage(
+                                  context,
+                                  _loadError,
+                                  fallback: MobileFeedback.localized(
+                                    context,
+                                    zh: '暂时无法加载团队，请重试。',
+                                    en: 'Unable to load the team. Please retry.',
+                                  ),
+                                ),
+                                actionLabel: AppStrings.of(
+                                  context,
+                                  'common_retry',
+                                ),
+                                actionKey: const ValueKey('team-load-retry'),
+                                onAction: _load,
+                              ),
                             if (mobile &&
                                 StitchMobileShellScope.isHosted(context))
                               Align(

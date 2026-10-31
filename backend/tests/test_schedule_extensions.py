@@ -1,6 +1,5 @@
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
@@ -27,7 +26,6 @@ def _entry(entry_id: str, title: str, hour: int, minutes: int = 60) -> dict[str,
 
 
 def test_schedule_batch_is_atomic_and_conflicts_are_reported(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "batch.sqlite3")) as client:
         headers = _headers(client)
         response = client.post("/schedule/batch", headers=headers, json=[_entry("a", "A", 9), _entry("b", "B", 9)])
@@ -45,7 +43,6 @@ def test_schedule_batch_is_atomic_and_conflicts_are_reported(tmp_path):
 
 
 def test_ics_import_and_export_round_trip(tmp_path):
-    reset_token_store()
     ics = "\r\n".join(
         [
             "BEGIN:VCALENDAR",
@@ -74,7 +71,6 @@ def test_ics_import_and_export_round_trip(tmp_path):
 
 
 def test_rescue_apply_undo_and_stale_baseline_are_transactional(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "rescue.sqlite3")) as client:
         headers = _headers(client)
         client.post("/schedule", headers=headers, json=_entry("baseline", "Baseline", 9))

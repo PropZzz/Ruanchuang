@@ -1,6 +1,5 @@
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
@@ -36,7 +35,6 @@ def _event(event_id: str, **overrides):
 
 
 def test_weekly_review_generates_report_and_updates_tuning(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "review.sqlite3")) as client:
         headers = _headers(client)
         events = [
@@ -84,7 +82,6 @@ def test_weekly_review_generates_report_and_updates_tuning(tmp_path):
 
 
 def test_review_tuning_can_be_read_written_and_applied(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "review.sqlite3")) as client:
         headers = _headers(client)
         payload = {
@@ -118,7 +115,6 @@ def test_review_tuning_can_be_read_written_and_applied(tmp_path):
 
 
 def test_review_rescue_history_filters_accept_and_undo_events(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "review.sqlite3")) as client:
         headers = _headers(client)
         events = [

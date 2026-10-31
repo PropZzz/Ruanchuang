@@ -83,7 +83,10 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _refreshDashboard() {
-    setState(() => _dashboardFuture = _loadDashboard());
+    final dashboard = _loadDashboard();
+    setState(() {
+      _dashboardFuture = dashboard;
+    });
   }
 
   bool _supportsDeviceEntry() {

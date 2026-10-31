@@ -29,6 +29,7 @@ void main() {
           load: CognitiveLoad.low,
           height: 40,
           color: Colors.orange,
+          explanationCodes: const ['priority', 'energy_fit'],
           time: const TimeOfDay(hour: 10, minute: 0),
         ),
       ],
@@ -37,6 +38,8 @@ void main() {
           code: 'no_slot',
           message: 'not part of the canonical comparison',
           taskId: 'blocked',
+          blockedBy: ['missing'],
+          explanationCodes: ['deadline_proximity'],
         ),
       ],
     );
@@ -70,8 +73,14 @@ void main() {
     expect((canonical['entries'] as List).first['source'], 'fixed');
     expect((canonical['entries'] as List).last['source'], 'planned');
     expect((canonical['entries'] as List).last['durationMinutes'], 30);
-    expect((canonical['issues'] as List).single['blockedBy'], isEmpty);
-    expect((canonical['issues'] as List).single['explanationCodes'], isEmpty);
+    expect((canonical['entries'] as List).last['explanationCodes'], [
+      'priority',
+      'energy_fit',
+    ]);
+    expect((canonical['issues'] as List).single['blockedBy'], ['missing']);
+    expect((canonical['issues'] as List).single['explanationCodes'], [
+      'deadline_proximity',
+    ]);
   });
 
   test('result formatter emits machine markers and review classification', () {

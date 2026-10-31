@@ -82,6 +82,7 @@ void main() {
     final router = File(
       'web/stitch/router.js',
     ).readAsStringSync().replaceAll('\r\n', '\n');
+    final actions = File('web/stitch/actions.js').readAsStringSync();
     final schedule = File(
       'web/stitch/mobile/create-schedule-drawer/index.html',
     ).readAsStringSync();
@@ -91,8 +92,12 @@ void main() {
     );
     expect(router.contains("action === 'microtask-quick-add'"), isTrue);
     expect(router.contains("action === 'microtask-sweep'"), isTrue);
-    expect(router.contains("button.id === 'btn-quick-add'"), isTrue);
-    expect(router.contains("button.id === 'btn-sweep-start'"), isTrue);
+    expect(actions.contains("'btn-quick-add': 'microtask-quick-add'"), isTrue);
+    expect(actions.contains("'btn-sweep-start': 'microtask-sweep'"), isTrue);
+    expect(
+      router,
+      contains('window.StitchActions.apiAction(button, activeRoute)'),
+    );
     expect(
       router.contains(
         "activeRoute === 'schedule' && label.includes('立即对比并执行救援方案')",
@@ -136,7 +141,11 @@ void main() {
         isTrue,
       );
       expect(router.contains('rescueSnapshotMemory'), isTrue);
-      expect(router.contains('mobile-rescue-undo'), isTrue);
+      final actions = File('web/stitch/actions.js').readAsStringSync();
+      expect(
+        actions.contains("'mobile-rescue-undo': 'rescue-history'"),
+        isTrue,
+      );
       expect(
         router.contains("url.searchParams.set('v', routeAssetVersion)"),
         isTrue,

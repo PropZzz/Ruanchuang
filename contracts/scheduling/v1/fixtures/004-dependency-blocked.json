@@ -26,7 +26,7 @@
         "priority": 3,
         "load": "low",
         "tag": "Follow-up",
-        "dependsOn": ["prerequisite"]
+        "dependsOn": ["missing-prerequisite"]
       }
     ]
   },
@@ -39,14 +39,14 @@
       {
         "code": "dependency_blocked",
         "taskId": "blocked",
-        "blockedBy": ["prerequisite"],
-        "explanationCodes": ["dependency_blocked"]
+        "blockedBy": ["missing-prerequisite"],
+        "explanationCodes": []
       }
     ],
-    "explanationCodes": ["dependency_blocked"]
+    "explanationCodes": ["priority", "energy_fit"]
   },
   "review": {
-    "classification": "implementation_error",
-    "reason": "后端守则明确要求 dependency_blocked 和 blockedBy；当前 Dart/Python 都忽略 dependsOn，实际输出 no_slot/空 blockedBy，属于两端尚未实现契约。"
+    "classification": "contract_error",
+    "reason": "原前置任务已成功排入，依赖已满足，剩余空间不足应为 no_slot；本用例改为缺失前置任务，明确验证 dependency_blocked 和真实 blockedBy，不把问题码当作解释码。"
   }
 }

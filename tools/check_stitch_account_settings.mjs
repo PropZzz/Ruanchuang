@@ -1,3 +1,4 @@
+import { stopTestBackend } from './test_backend_process.mjs';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -104,8 +105,8 @@ try {
     assert.equal((await readUser()).displayName, newName);
     for (const route of ['profile', 'focus']) {
       await go(route);
-      if (mobile && route === 'focus') await page.evaluate(() => { location.hash = '#/settings-drawer'; });
-      else if (mobile) await frame().locator('header button[aria-label="设置"]').click();
+      if (mobile && route === 'profile') await frame().locator('#profile-settings-open').click();
+      else if (mobile) await page.evaluate(() => { location.hash = '#/settings-drawer'; });
       else await page.locator('#workspace-shell button[data-route="settings-drawer"]').click();
       const settings = page.frameLocator('#ruanchuang-settings-overlay iframe');
       await settings.locator('#save-settings-btn, #btn-save-settings').waitFor();
@@ -159,7 +160,6 @@ try {
 } finally {
   await browser?.close();
   if (staticServer.listening) await new Promise(resolve => staticServer.close(resolve));
-  const closed = new Promise(resolve => backend.once('exit', resolve));
-  if (backend.exitCode === null) { backend.kill(); await closed; }
-  await rm(temporary, { recursive: true, force: true });
+  await stopTestBackend(backend);
+  await rm(temporary, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }

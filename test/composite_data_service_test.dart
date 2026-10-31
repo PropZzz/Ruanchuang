@@ -101,20 +101,36 @@ void main() {
     },
   );
 
+  test('account caches preserve the backend contact address casing', () async {
+    final local = LocalDataService.forPersistence(InMemoryLocalPersistence());
+    final remote = _ThemeModeDataService(
+      getThemeModeError: RemoteUnavailableException('Offline.'),
+      loginResult: true,
+    );
+    final service = composite(local: local, remote: remote);
+
+    expect(await service.login('Alice@example.com', 'secret123'), isTrue);
+    await service.setThemeMode('dark');
+    expect(await service.login('alice@example.com', 'secret123'), isTrue);
+
+    expect(await service.getThemeMode(), 'system');
+  });
+
   test(
-    'account caches preserve the backend contact address casing',
+    'logout leaves the account cache even when the remote rejects logout',
     () async {
       final local = LocalDataService.forPersistence(InMemoryLocalPersistence());
       final remote = _ThemeModeDataService(
-        getThemeModeError: RemoteUnavailableException('Offline.'),
         loginResult: true,
+        logoutError: const ApiException('Forbidden', statusCode: 403),
       );
       final service = composite(local: local, remote: remote);
-
-      expect(await service.login('Alice@example.com', 'secret123'), isTrue);
+      await service.login('alice@example.com', 'secret123');
       await service.setThemeMode('dark');
-      expect(await service.login('alice@example.com', 'secret123'), isTrue);
 
+      await expectLater(service.logout(), throwsA(isA<ApiException>()));
+
+      expect(await service.getCurrentUser(), isNull);
       expect(await service.getThemeMode(), 'system');
     },
   );
@@ -460,6 +476,7 @@ class _ThemeModeDataService implements DataService {
     this.loginResult = false,
     this.loginError,
     this.registerError,
+    this.logoutError,
   });
 
   final String themeMode;
@@ -468,6 +485,7 @@ class _ThemeModeDataService implements DataService {
   final bool loginResult;
   final Object? loginError;
   final Object? registerError;
+  final Object? logoutError;
   int getThemeModeCalls = 0;
   int setThemeModeCalls = 0;
   int loginCalls = 0;
@@ -476,6 +494,12 @@ class _ThemeModeDataService implements DataService {
 
   @override
   Future<void> startGuestSession() async {}
+
+  @override
+  Future<void> logout() async {
+    final error = logoutError;
+    if (error != null) throw error;
+  }
 
   @override
   Future<String> getThemeMode() async {

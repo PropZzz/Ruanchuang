@@ -5,6 +5,8 @@ import '../services/app_services.dart';
 import '../theme/app_theme.dart';
 import '../services/review/review_rules.dart';
 import '../utils/app_strings.dart';
+import '../utils/service_failure_message.dart';
+import '../widgets/workbench_surface.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 import '../widgets/press_scale.dart';
@@ -27,6 +29,7 @@ class _ReviewPageState extends State<ReviewPage> {
   MonthReviewSummary? _monthSummary;
   List<TaskEvent> _rescueEvents = const [];
   bool _loading = false;
+  Object? _loadError;
 
   _ReviewRange _range = _ReviewRange.week;
   late DateTime _weekStart;
@@ -84,6 +87,7 @@ class _ReviewPageState extends State<ReviewPage> {
     if (!alreadyLoading) {
       setState(() {
         _loading = true;
+        _loadError = null;
       });
     }
 
@@ -118,12 +122,10 @@ class _ReviewPageState extends State<ReviewPage> {
       return true;
     } catch (error, stackTrace) {
       if (mounted) {
-        MobileFeedback.showError(
-          context,
-          category: 'review',
-          message: 'generate failed',
-          zhMessage: AppStrings.of(context, 'review_load_failed'),
-          enMessage: AppStrings.of(context, 'review_load_failed'),
+        _loadError = error;
+        AppServices.logStore.error(
+          'review',
+          'generate failed',
           error: error,
           stackTrace: stackTrace,
           data: {
@@ -337,6 +339,24 @@ class _ReviewPageState extends State<ReviewPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _buildControls(context, wide: wide),
+                          if (_loadError != null)
+                            WorkbenchStatusBanner(
+                              key: const ValueKey('review-load-error'),
+                              message: serviceFailureMessage(
+                                context,
+                                _loadError,
+                                fallback: AppStrings.of(
+                                  context,
+                                  'review_load_failed',
+                                ),
+                              ),
+                              actionLabel: AppStrings.of(
+                                context,
+                                'common_retry',
+                              ),
+                              actionKey: const ValueKey('review-load-retry'),
+                              onAction: _generate,
+                            ),
                           const SizedBox(height: 18),
                           KeyedSubtree(
                             key: const Key('review-metrics'),

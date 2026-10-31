@@ -4,7 +4,6 @@ import sqlite3
 
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
@@ -97,7 +96,6 @@ def _rescue_reasons(client, headers):
 
 
 def _client_and_token(tmp_path, suffix="user1"):
-    reset_token_store()
     client = TestClient(create_app(tmp_path / "rescue.sqlite3"))
     token = _register(client, suffix)
     return client, _headers(token)
@@ -107,7 +105,6 @@ def _client_and_token(tmp_path, suffix="user1"):
 
 
 def test_rescue_options_requires_auth(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "rescue.sqlite3")) as client:
         response = client.post("/schedule/rescue/options", json=_options_request())
     assert response.status_code == 401
@@ -267,7 +264,6 @@ def test_rescue_apply_stale_baseline_409(tmp_path):
 
 
 def test_rescue_apply_cross_user_event_conflict_full_rollback(tmp_path):
-    reset_token_store()
     db_path = tmp_path / "rescue.sqlite3"
     with TestClient(create_app(db_path)) as client:
         token1 = _register(client, "user1")
@@ -383,7 +379,6 @@ def test_rescue_apply_missing_baseline_hash_422(tmp_path):
 
 
 def test_rescue_apply_requires_auth(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "rescue.sqlite3")) as client:
         response = client.post(
             "/schedule/rescue/apply",
@@ -469,7 +464,6 @@ def test_rescue_undo_restores_baseline_exactly(tmp_path):
 
 
 def test_rescue_undo_foreign_user_snapshot_404(tmp_path):
-    reset_token_store()
     db_path = tmp_path / "rescue.sqlite3"
     with TestClient(create_app(db_path)) as client:
         token1 = _register(client, "user1")
@@ -511,7 +505,6 @@ def test_rescue_undo_unknown_snapshot_404(tmp_path):
 
 
 def test_rescue_undo_requires_auth(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "rescue.sqlite3")) as client:
         response = client.post("/schedule/rescue/undo", json={"snapshotId": "x"})
     assert response.status_code == 401

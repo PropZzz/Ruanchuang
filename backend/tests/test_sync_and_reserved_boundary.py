@@ -1,6 +1,5 @@
 from starlette.testclient import TestClient
 
-from backend.auth import reset_token_store
 from backend.main import create_app
 
 
@@ -11,7 +10,6 @@ def _register(client: TestClient, address: str) -> dict[str, str]:
 
 
 def test_sync_status_pull_push_and_user_isolation(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "sync.sqlite3")) as client:
         first = _register(client, "sync-first@example.com")
         second = _register(client, "sync-second@example.com")
@@ -45,7 +43,6 @@ def test_sync_status_pull_push_and_user_isolation(tmp_path):
 
 
 def test_reserved_external_capabilities_keep_explicit_501_boundary(tmp_path):
-    reset_token_store()
     with TestClient(create_app(tmp_path / "reserved-boundary.sqlite3")) as client:
         headers = _register(client, "reserved-boundary@example.com")
         for method, path in (("POST", "/ai/parse-task"), ("GET", "/devices"), ("GET", "/integrations/providers"), ("POST", "/files/upload"), ("POST", "/notifications/test")):

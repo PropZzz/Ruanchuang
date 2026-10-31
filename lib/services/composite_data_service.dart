@@ -284,16 +284,24 @@ class CompositeDataService implements DataService {
 
   @override
   Future<void> logout() async {
+    Object? remoteError;
+    StackTrace? remoteStack;
+    _localCacheReady = false;
     if (!_guestOnly) {
       try {
         await remote.logout();
-      } catch (error) {
-        if (!_isRemoteFallbackError(error)) rethrow;
+      } catch (error, stackTrace) {
+        if (!_isRemoteFallbackError(error)) {
+          remoteError = error;
+          remoteStack = stackTrace;
+        }
       }
     }
-    _localCacheReady = false;
     await local.logout();
     _guestOnly = true;
     _localCacheReady = true;
+    if (remoteError != null) {
+      Error.throwWithStackTrace(remoteError, remoteStack!);
+    }
   }
 }

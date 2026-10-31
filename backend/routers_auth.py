@@ -30,7 +30,7 @@ def _current_user(request: Request, authorization: str | None) -> UserOut:
     if token is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
 
-    user_id = resolve_token(token)
+    user_id = resolve_token(token, _db_path(request))
     if user_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
@@ -52,7 +52,7 @@ def register(payload: UserCreate, request: Request) -> TokenResponse:
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
-    token = issue_token(str(user["id"]))
+    token = issue_token(str(user["id"]), _db_path(request), ttl_seconds=request.app.state.settings.session_ttl_seconds)
     return TokenResponse(access_token=token, user=_public_user(user))
 
 
@@ -62,7 +62,7 @@ def login(payload: UserLogin, request: Request) -> TokenResponse:
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    token = issue_token(str(user["id"]))
+    token = issue_token(str(user["id"]), _db_path(request), ttl_seconds=request.app.state.settings.session_ttl_seconds)
     return TokenResponse(access_token=token, user=_public_user(user))
 
 
@@ -72,11 +72,11 @@ def me(request: Request, authorization: str | None = Header(default=None)) -> Us
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(authorization: str | None = Header(default=None)) -> None:
+def logout(request: Request, authorization: str | None = Header(default=None)) -> None:
     token = extract_bearer_token(authorization)
-    if token is None or resolve_token(token) is None:
+    if token is None or resolve_token(token, _db_path(request)) is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    revoke_token(token)
+    revoke_token(token, _db_path(request))
 
 
 @router.put("/profile", response_model=UserOut)

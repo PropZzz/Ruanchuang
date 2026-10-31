@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/app_services.dart';
+import 'service_failure_message.dart';
 
 class MobileFeedback {
   static bool isMobilePhone(BuildContext context) {
@@ -73,7 +74,14 @@ class MobileFeedback {
 
     if (silentOnPhone && isMobilePhone(context)) return;
 
-    _showSnackBar(context, localized(context, zh: zhMessage, en: enMessage));
+    _showSnackBar(
+      context,
+      serviceFailureMessage(
+        context,
+        error,
+        fallback: localized(context, zh: zhMessage, en: enMessage),
+      ),
+    );
   }
 
   static void _showSnackBar(BuildContext context, String message) {

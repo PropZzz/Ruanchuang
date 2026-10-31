@@ -23,8 +23,7 @@ const Set<String> _reviewClassifications = {
 };
 
 /// Converts a production plan to the fields that are comparable across
-/// runtimes. The current Dart model does not carry explanation or dependency
-/// metadata, so the adapter emits empty lists rather than inventing codes.
+/// runtimes, including production explanation and dependency metadata.
 SharedJson canonicalizePlan(
   SchedulingPlan plan, {
   required DateTime day,
@@ -54,8 +53,7 @@ SharedJson canonicalizePlan(
               fixedEntryIds: fixedEntryIds,
               recoveryEntryIds: recoveryEntryIds,
             ),
-            // ScheduleEntry currently has no explanation-code field.
-            'explanationCodes': <String>[],
+            'explanationCodes': entry.explanationCodes,
           },
         )
         .toList(growable: false),
@@ -64,9 +62,8 @@ SharedJson canonicalizePlan(
           (issue) => <String, Object?>{
             'code': issue.code,
             'taskId': issue.taskId,
-            // SchedulingIssue currently has no dependency field.
-            'blockedBy': <String>[],
-            'explanationCodes': <String>[],
+            'blockedBy': issue.blockedBy ?? const <String>[],
+            'explanationCodes': issue.explanationCodes,
           },
         )
         .toList(growable: false),

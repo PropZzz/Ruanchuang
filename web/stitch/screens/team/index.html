@@ -56,7 +56,7 @@
 </div>
 <!-- 顶栏快捷操作指令 -->
 <div class="flex flex-wrap sm:flex-nowrap items-center gap-2.5 shrink-0">
-<button class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary-container hover:bg-primary text-on-primary text-xs font-label font-semibold transition-all shadow-sm active:scale-95" id="btn-silent-room" type="button">
+<button class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary-container hover:bg-primary text-on-primary text-xs font-label font-semibold transition-all shadow-sm active:scale-95" id="btn-silent-room" type="button" data-action="team-book">
 <span class="material-symbols-outlined text-[17px] text-tertiary-fixed">volume_off</span>
 <span>+ 发起无声协同自习室</span>
 </button>
@@ -68,7 +68,7 @@
 <span class="material-symbols-outlined text-[17px]">person_add</span>
 <span class="hidden md:inline">添加成员</span>
 </button>
-<button class="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-label font-medium transition-all" id="btn-conflict-check" title="检测今日潜在硬碰撞" type="button">
+<button class="inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-label font-medium transition-all" id="btn-conflict-check" title="检测今日潜在硬碰撞" type="button" data-action="team-conflicts">
 <span class="material-symbols-outlined text-[17px] text-secondary">manage_search</span>
 <span>冲突检查</span>
 </button>
@@ -170,7 +170,7 @@
 <span class="material-symbols-outlined text-[16px] text-tertiary-fixed">shield_lock</span>
 <span>已自动预留前后 10 分钟认知冷却缓冲</span>
 </div>
-<button class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary text-xs font-label font-bold transition-all shadow-md active:scale-95" id="btn-quick-reserve" type="button">
+<button class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-secondary-container hover:bg-secondary text-on-secondary-container hover:text-on-secondary text-xs font-label font-bold transition-all shadow-md active:scale-95" id="btn-quick-reserve" type="button" data-action="team-book">
 <span class="material-symbols-outlined text-[16px]">bolt</span>
 <span>一键发起团队会议预约</span>
 </button>

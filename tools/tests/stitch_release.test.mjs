@@ -11,10 +11,11 @@ test('release is deterministic, verifies every file, and versions router and ent
   const sourceRoot = join(root, 'web');
   const outputRoot = join(root, 'output');
   await mkdir(join(sourceRoot, 'stitch'), { recursive: true });
-  await writeFile(join(sourceRoot, 'index.html'), '<script src="stitch/drawer-motion.js" defer></script><script src="stitch/calendar.js" defer></script><script src="stitch/page-host.js" defer></script><script src="stitch/router.js" defer></script>');
+  await writeFile(join(sourceRoot, 'index.html'), '<script src="stitch/drawer-motion.js" defer></script><script src="stitch/calendar.js" defer></script><script src="stitch/page-host.js" defer></script><script src="stitch/actions.js" defer></script><script src="stitch/router.js" defer></script>');
   await writeFile(join(sourceRoot, 'stitch/calendar.js'), 'window.StitchCalendar = {};');
   await writeFile(join(sourceRoot, 'stitch/drawer-motion.js'), 'window.createStitchDrawerMotion = () => {};');
   await writeFile(join(sourceRoot, 'stitch/page-host.js'), 'window.createStitchPageHost = () => {};');
+  await writeFile(join(sourceRoot, 'stitch/actions.js'), 'window.StitchActions = {};');
   await writeFile(join(sourceRoot, 'stitch/router.js'), 'console.log("version one");');
   const first = await buildStitchWeb({ sourceRoot, outputRoot });
   const second = await buildStitchWeb({ sourceRoot, outputRoot });
@@ -28,9 +29,11 @@ test('release is deterministic, verifies every file, and versions router and ent
   assert.ok(entry.includes(`src="stitch/page-host.${first.release}.js"`));
   assert.ok(entry.includes(`src="stitch/drawer-motion.${first.release}.js"`));
   assert.ok(entry.includes(`src="stitch/calendar.${first.release}.js"`));
+  assert.ok(entry.includes(`src="stitch/actions.${first.release}.js"`));
   assert.equal(await readFile(join(first.output, `stitch/calendar.${first.release}.js`), 'utf8'), 'window.StitchCalendar = {};');
   assert.equal(await readFile(join(first.output, `stitch/drawer-motion.${first.release}.js`), 'utf8'), 'window.createStitchDrawerMotion = () => {};');
   assert.equal(await readFile(join(first.output, `stitch/page-host.${first.release}.js`), 'utf8'), 'window.createStitchPageHost = () => {};');
+  assert.equal(await readFile(join(first.output, `stitch/actions.${first.release}.js`), 'utf8'), 'window.StitchActions = {};');
 
   // Even if a browser caches the old script forever, it cannot substitute it
   // for the new URL. A previous release remains intact for atomic rollback.
