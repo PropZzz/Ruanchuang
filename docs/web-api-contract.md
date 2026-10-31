@@ -2,6 +2,8 @@
 
 `web/stitch/router.js` owns the deployed iframe shell and exposes the following action contract to child screens through `window.parent.__RUANCHUANG_API_ACTION__`.
 
+`web/stitch/actions.js` resolves API controls from a whitelisted `data-action` or a stable legacy ID, without reading visible text, tooltips or accessibility labels. The auth submit control reads its current `data-auth-mode`. Unknown actions do not write data. `data-focus-action` is exclusively owned by `focus.js`; generic dispatch ignores these controls so one click cannot write duplicate focus events. Navigation buttons can declare `data-route`.
+
 | Frontend action | HTTP contract | Payload source | Success behavior |
 |---|---|---|---|
 | `create-schedule` | `POST /schedule` | Create-schedule drawer title, tag, time and duration | Navigate to schedule and refresh sync state |

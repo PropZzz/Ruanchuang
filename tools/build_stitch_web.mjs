@@ -55,6 +55,13 @@ export async function buildStitchWeb({
     )));
   }
   const files = {};
+  if (index.includes('src="stitch/actions.js"')) {
+    const actionsPath = `stitch/actions.${release}.js`;
+    contents.set(actionsPath, contents.get('stitch/actions.js'));
+    contents.set('index.html', Buffer.from(contents.get('index.html').toString('utf8').replace(
+      'src="stitch/actions.js"', `src="${actionsPath}"`,
+    )));
+  }
   if (index.includes('src="stitch/calendar.js"')) {
     const calendarPath = `stitch/calendar.${release}.js`;
     contents.set(calendarPath, contents.get('stitch/calendar.js'));

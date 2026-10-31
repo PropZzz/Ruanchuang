@@ -36,6 +36,30 @@ class RemoteDataService implements DataService {
     );
   }
 
+  UserAccount _authenticatedUser(Object? raw) {
+    final data = _map(raw);
+    final id = data['id'];
+    final contact = data['contactAddress'];
+    final name = data['displayName'];
+    if (id is! String ||
+        id.trim().isEmpty ||
+        contact is! String ||
+        contact.trim().isEmpty ||
+        name is! String) {
+      throw RemoteDataException('Expected a valid authenticated user.');
+    }
+    return UserAccount(contactAddress: contact, displayName: name);
+  }
+
+  ({String token, UserAccount user}) _authenticationResponse(Object? raw) {
+    final data = _map(raw);
+    final token = data['accessToken'];
+    if (token is! String || token.trim().isEmpty) {
+      throw RemoteDataException('Expected a non-empty accessToken.');
+    }
+    return (token: token.trim(), user: _authenticatedUser(data['user']));
+  }
+
   List<Map<String, Object?>> _listOfMaps(Object? raw) {
     if (raw is! List) {
       throw RemoteDataException('Expected array response.');
@@ -334,10 +358,12 @@ class RemoteDataService implements DataService {
 
     try {
       final raw = await _api.get('/auth/me');
-      _currentUser = UserAccount.fromJson(_map(raw));
+      _currentUser = _authenticatedUser(raw);
       return _currentUser;
     } on ApiException catch (error) {
       if (error.statusCode == 401) {
+        _api.setToken(null);
+        _currentUser = null;
         return null;
       }
       rethrow;
@@ -350,9 +376,9 @@ class RemoteDataService implements DataService {
       'contactAddress': account,
       'password': password,
     });
-    final data = _map(raw);
-    _api.setToken(data['accessToken'] as String?);
-    _currentUser = UserAccount.fromJson(_map(data['user']));
+    final response = _authenticationResponse(raw);
+    _api.setToken(response.token);
+    _currentUser = response.user;
     return true;
   }
 
@@ -367,9 +393,9 @@ class RemoteDataService implements DataService {
       'displayName': displayName,
       'password': password,
     });
-    final data = _map(raw);
-    _api.setToken(data['accessToken'] as String?);
-    _currentUser = UserAccount.fromJson(_map(data['user']));
+    final response = _authenticationResponse(raw);
+    _api.setToken(response.token);
+    _currentUser = response.user;
     return true;
   }
 
@@ -379,9 +405,10 @@ class RemoteDataService implements DataService {
       await _api.post('/auth/logout', null);
     } on ApiException catch (error) {
       if (error.statusCode != 401) rethrow;
+    } finally {
+      _api.setToken(null);
+      _currentUser = null;
     }
-    _api.setToken(null);
-    _currentUser = null;
   }
 
   String _dateOnly(DateTime value) {

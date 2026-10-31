@@ -251,14 +251,14 @@
           </div>
 
           <div id="auth-error" class="auth-error" role="alert" aria-live="assertive" hidden></div>
-          <button id="auth-submit" class="submit-button" type="submit" data-auth-mode="login">
+          <button id="auth-submit" class="submit-button" type="submit" data-auth-mode="login" data-action="auth-submit">
             <span class="material-symbols-outlined" aria-hidden="true">login</span>
             <span id="auth-submit-label">登录</span>
           </button>
         </form>
 
         <div class="auth-divider">或</div>
-        <button id="auth-guest" class="guest-button" type="button">
+        <button id="auth-guest" class="guest-button" type="button" data-action="auth-guest">
           <span class="material-symbols-outlined" aria-hidden="true">person_outline</span>
           以游客身份继续
         </button>

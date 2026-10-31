@@ -10,6 +10,116 @@ import 'package:shixuzhipei/services/api_client.dart';
 import 'package:shixuzhipei/services/remote_data_service.dart';
 
 void main() {
+  const authenticatedUser = {
+    'id': 'authenticated-user',
+    'contactAddress': 'alice@example.com',
+    'displayName': 'Alice',
+  };
+  final malformedAuth = <String, Map<String, Object?>>{
+    'blank token': {'accessToken': ' ', 'user': authenticatedUser},
+    'non-string token': {'accessToken': 7, 'user': authenticatedUser},
+    'missing user id': {
+      'accessToken': 'bad-token',
+      'user': {'contactAddress': 'alice@example.com', 'displayName': 'Alice'},
+    },
+    'invalid contact': {
+      'accessToken': 'bad-token',
+      'user': {...authenticatedUser, 'contactAddress': null},
+    },
+  };
+  for (final operation in ['login', 'register']) {
+    for (final sample in malformedAuth.entries) {
+      test(
+        '$operation rejects ${sample.key} before installing a token',
+        () async {
+          String? settingsAuthorization;
+          final client = MockClient((request) async {
+            if (request.url.path.startsWith('/auth/')) {
+              return http.Response(jsonEncode(sample.value), 200);
+            }
+            settingsAuthorization = request.headers['authorization'];
+            return http.Response(jsonEncode({'themeMode': 'system'}), 200);
+          });
+          final service = RemoteDataService(
+            apiClient: ApiClient(
+              httpClient: client,
+              baseUrl: 'http://server.test',
+            ),
+          );
+          final attempt = operation == 'login'
+              ? service.login('alice@example.com', 'secret123')
+              : service.registerAccount(
+                  username: 'alice@example.com',
+                  displayName: 'Alice',
+                  password: 'secret123',
+                );
+
+          await expectLater(attempt, throwsA(isA<RemoteDataException>()));
+          await service.getThemeMode();
+          expect(settingsAuthorization, isNull);
+        },
+      );
+    }
+  }
+
+  for (final status in [403, 503]) {
+    test(
+      'logout clears credentials even when the server returns $status',
+      () async {
+        String? settingsAuthorization;
+        final client = MockClient((request) async {
+          if (request.url.path == '/auth/login') {
+            return http.Response(
+              jsonEncode({
+                'accessToken': 'old-token',
+                'user': authenticatedUser,
+              }),
+              200,
+            );
+          }
+          if (request.url.path == '/auth/logout')
+            return http.Response('failed', status);
+          if (request.url.path == '/auth/me')
+            return http.Response('signed out', 401);
+          settingsAuthorization = request.headers['authorization'];
+          return http.Response(jsonEncode({'themeMode': 'system'}), 200);
+        });
+        final service = RemoteDataService(
+          apiClient: ApiClient(
+            httpClient: client,
+            baseUrl: 'http://server.test',
+          ),
+        );
+
+        await service.login('alice@example.com', 'secret123');
+        await expectLater(service.logout(), throwsA(isA<ApiException>()));
+        expect(await service.getCurrentUser(), isNull);
+        await service.getThemeMode();
+        expect(settingsAuthorization, isNull);
+      },
+    );
+  }
+
+  test(
+    'an expired identity clears its stale token before the next request',
+    () async {
+      String? settingsAuthorization;
+      final client = MockClient((request) async {
+        if (request.url.path == '/auth/me')
+          return http.Response('expired', 401);
+        settingsAuthorization = request.headers['authorization'];
+        return http.Response(jsonEncode({'themeMode': 'system'}), 200);
+      });
+      final api = ApiClient(httpClient: client, baseUrl: 'http://server.test')
+        ..setToken('expired-token');
+      final service = RemoteDataService(apiClient: api);
+
+      expect(await service.getCurrentUser(), isNull);
+      await service.getThemeMode();
+      expect(settingsAuthorization, isNull);
+    },
+  );
+
   test('RemoteDataService reads and writes per-user settings', () async {
     final requests = <String>[];
     final client = MockClient((request) async {

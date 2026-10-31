@@ -5,6 +5,8 @@ import '../services/app_services.dart';
 import '../services/microtask_crystals/microtask_import_parser.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
+import '../utils/service_failure_message.dart';
+import '../widgets/workbench_surface.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
 import '../widgets/press_scale.dart';
@@ -23,6 +25,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
 
   List<MicroTask> _tasks = [];
   bool _isLoading = true;
+  Object? _loadError;
 
   bool _batchMode = false;
   final Set<String> _selected = <String>{};
@@ -72,7 +75,10 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
   }
 
   Future<void> _loadMicroTasks() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
     try {
       final tasks = await _dataService.getMicroTasks();
       if (!mounted) return;
@@ -95,14 +101,12 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     } catch (e, st) {
       if (!mounted) return;
       setState(() {
+        _loadError = e;
         _isLoading = false;
       });
-      MobileFeedback.showError(
-        context,
-        category: 'microtask',
-        message: 'load micro tasks failed',
-        zhMessage: '暂时无法加载微任务，请稍后重试。',
-        enMessage: 'Unable to load micro tasks right now.',
+      AppServices.logStore.error(
+        'microtasks',
+        'load failed',
         error: e,
         stackTrace: st,
       );
@@ -1787,6 +1791,22 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (_loadError != null)
+                        WorkbenchStatusBanner(
+                          key: const ValueKey('microtasks-load-error'),
+                          message: serviceFailureMessage(
+                            context,
+                            _loadError,
+                            fallback: MobileFeedback.localized(
+                              context,
+                              zh: '暂时无法加载微任务，请重试。',
+                              en: 'Unable to load microtasks. Please retry.',
+                            ),
+                          ),
+                          actionLabel: AppStrings.of(context, 'common_retry'),
+                          actionKey: const ValueKey('microtasks-load-retry'),
+                          onAction: _loadMicroTasks,
+                        ),
                       if (isMobile && StitchMobileShellScope.isHosted(context))
                         _buildHostedMobileActions(),
                       _buildPageHeading(mobile: isMobile),

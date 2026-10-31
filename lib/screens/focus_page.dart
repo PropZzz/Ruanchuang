@@ -9,6 +9,7 @@ import '../services/remote_data_service.dart';
 import '../services/microtask_crystals/microtask_crystal_engine.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
+import '../utils/service_failure_message.dart';
 import '../utils/helpers.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
@@ -56,7 +57,7 @@ class _FocusPageState extends State<FocusPage> {
   bool _isTimerRunning = false;
   bool _isLoading = true;
   bool _hasLoadedOnce = false;
-  String? _loadErrorKey;
+  Object? _loadError;
   bool _careNoticeShown = false;
   bool _careNoticeVisible = false;
   bool _careNoticeExpanded = false;
@@ -200,7 +201,7 @@ class _FocusPageState extends State<FocusPage> {
   Future<void> _loadTasks() async {
     setState(() {
       _isLoading = true;
-      _loadErrorKey = null;
+      _loadError = null;
     });
 
     try {
@@ -276,7 +277,7 @@ class _FocusPageState extends State<FocusPage> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _loadErrorKey = 'focus_load_error';
+        _loadError = e;
       });
       AppServices.logStore.error(
         'focus',
@@ -512,10 +513,14 @@ class _FocusPageState extends State<FocusPage> {
               child: Column(
                 children: [
                   if (_isLoading) const LinearProgressIndicator(minHeight: 2),
-                  if (_loadErrorKey != null)
+                  if (_loadError != null)
                     WorkbenchStatusBanner(
                       key: const ValueKey('focus-load-error'),
-                      message: AppStrings.of(context, _loadErrorKey!),
+                      message: serviceFailureMessage(
+                        context,
+                        _loadError,
+                        fallback: AppStrings.of(context, 'focus_load_error'),
+                      ),
                       actionLabel: AppStrings.of(context, 'common_retry'),
                       actionKey: const ValueKey('focus-load-retry'),
                       onAction: _loadTasks,

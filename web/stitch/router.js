@@ -1973,8 +1973,7 @@
         timeline.replaceChildren(title, list);
       }
 
-      const applyButton = Array.from(card.querySelectorAll('button'))
-        .find((button) => button.textContent.includes('采用此方案'));
+      const applyButton = card.querySelector('[data-action="rescue-apply"]');
       if (applyButton) {
         applyButton.dataset.rescueOptionId = option.id;
         applyButton.setAttribute('aria-label', `采用方案 ${String.fromCharCode(65 + index)}：${option.title}`);
@@ -2624,6 +2623,7 @@
   }
 
   function routeForButton(button) {
+    if (Object.hasOwn(pages, button.dataset.route)) return button.dataset.route;
     const label = `${button.innerText || ''} ${button.title || ''} ${button.getAttribute('aria-label') || ''}`.toLowerCase();
     if (button.id === 'close-care-modal') return null;
     if (button.id === 'login-back-action') return '__login_back__';
@@ -2675,34 +2675,7 @@
   }
 
   function apiActionForButton(button) {
-    if (button.id === 'schedule-save-action') return 'create-schedule';
-    if (button.id === 'btn-quick-add') return 'microtask-quick-add';
-    if (button.id === 'btn-sweep-start') return 'microtask-sweep';
-    if (button.id === 'schedule-rescue-undo' || button.id === 'mobile-rescue-undo') return 'rescue-history';
-    if (button.id === 'btn-refresh' || button.id === 'btn-self-test') return 'diagnostics-summary';
-    if (button.id === 'save-settings-btn' || button.id === 'btn-save-settings') return 'settings-save';
-    if (button.id === 'btn-quick-reserve' || button.id === 'btn-silent-room') return 'team-book';
-    if (button.id === 'btn-conflict-check') return 'team-conflicts';
-    if (button.id === 'profile-weekly-export') return 'profile-weekly-export';
-    if (button.id === 'profile-edit-action') return 'auth-profile-edit';
-    if (button.id === 'profile-save') return 'auth-profile-save';
-    if (activeRoute === 'login' && button.id === 'auth-submit') {
-      return button.dataset.authMode === 'register' ? 'auth-register' : 'auth-login';
-    }
-    if (button.id === 'auth-guest') return 'auth-guest';
-    if (button.id === 'profile-logout-action') return 'auth-logout';
-    const label = `${button.textContent || ''} ${button.title || ''} ${button.getAttribute('aria-label') || ''}`;
-    if (activeRoute === 'create-schedule' && label.includes('保存并写入日程')) return 'create-schedule';
-    if (activeRoute === 'urgent-task' && label.includes('立即生成三方案救援对比')) return 'rescue-options';
-    if (activeRoute === 'urgent-task' && label.includes('暂存至微任务沙盒')) return 'urgent-task-to-microtask';
-    if (activeRoute === 'create-schedule' && label.includes('保存并写入日程')) return 'create-schedule';
-    if (activeRoute === 'urgent-task' && label.includes('立即生成三方案救援对比')) return 'rescue-options';
-    if (activeRoute === 'urgent-task' && label.includes('暂存至微任务沙盒')) return 'urgent-task-to-microtask';
-    if (activeRoute === 'focus' && (label.includes('跳过') || label.includes('结算'))) return 'focus-event';
-    if (activeRoute === 'schedule' && label.includes('撤销上次自动调度')) return 'rescue-history';
-    if (activeRoute === 'rescue-comparison' && button.dataset.rescueOptionId) return 'rescue-apply';
-    if (activeRoute === 'rescue-comparison' && label.includes('采用此方案')) return 'rescue-apply';
-    return null;
+    return window.StitchActions.apiAction(button, activeRoute);
   }
 
   function prepareFrame(frame, pageRoute) {
