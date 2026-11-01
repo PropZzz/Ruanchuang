@@ -11,7 +11,7 @@
 - Web 构建：`node tools/build_stitch_web.mjs`；发布：`python deploy/deploy_web_release.py`，通过交互提示输入 SSH 密码。
 - 目录边界与验证命令见 [当前架构](docs/current-architecture.md)；旧导出清理记录见 [2026-10-29 清理记录](docs/cleanup-2026-10-29.md)。
 - 2026-10-31 收口验证：Flutter analyze 无问题，Flutter **398 项**通过，后端连续两轮各 **265 项**通过，Node **34 项**通过，调度共享向量 **13/13** 一致。详见 [验证记录](docs/verification-2026-10-31.md) 和 [执行清单](docs/superpowers/plans/2026-10-31-project-closeout.md)。
-- 源码已加入持久会话、CORS 白名单、备份恢复及新机器初始化脚本；用户暂无正式域名，HTTPS 和生产主机切换仍待配置、验收。见 [生产准备](docs/production-preparation-2026-10-31.md)。
+- 2026-11-01 已向现有服务器部署持久会话、CORS、每日备份和旧库救援修复，后端扩展至 **267 项**测试；部署和恢复证据见 [生产验收](docs/production-acceptance-2026-11-01.md)。用户暂无正式域名，HTTPS 尚未启用。
 
 ---
 
