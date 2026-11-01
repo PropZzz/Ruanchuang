@@ -36,7 +36,8 @@ jobs:
         run: |
           New-Item -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock' -Force | Out-Null
           New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock' -Name AllowDevelopmentWithoutDevLicense -Value 1 -PropertyType DWord -Force | Out-Null
-      - run: dart pub get --enforce-lockfile
+      # Flutter also generates the native plugin registrant and symlinks.
+      - run: flutter pub get --enforce-lockfile
       - run: git diff --exit-code -- pubspec.lock
       - run: flutter build windows --release --no-pub --dart-define=API_BASE_URL=http://8.133.250.216/api
       - name: Bundle the C++ runtime and verify launch
