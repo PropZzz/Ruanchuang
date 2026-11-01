@@ -360,6 +360,16 @@ def init_db(db_path: str | Path | None = None, connection: sqlite3.Connection | 
             )
             """
         )
+        # Existing deployments predate the day-scoped rescue API. CREATE IF
+        # NOT EXISTS does not add its columns to an already populated table.
+        snapshot_columns = {row[1] for row in connection.execute("PRAGMA table_info(rescue_snapshots)")}
+        for name, definition in (
+            ("day", "TEXT NOT NULL DEFAULT ''"),
+            ("urgent_json", "TEXT"),
+            ("undone_at", "TEXT"),
+        ):
+            if name not in snapshot_columns:
+                connection.execute(f"ALTER TABLE rescue_snapshots ADD COLUMN {name} {definition}")
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS sync_changes (
@@ -2318,10 +2328,12 @@ def _insert_rescue_snapshot_on_connection(
         """
         INSERT INTO rescue_snapshots (
             id, user_id, day, strategy, baseline_hash, urgent_json, before_json,
-            status, created_at, undone_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, NULL)
+            after_json, status, created_at, updated_at, undone_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, '[]', 'active', ?, ?, NULL)
         """,
-        (snapshot_id, user_id, day_iso, strategy, baseline_hash, urgent_json, before_json, now),
+        # Legacy tables require after_json and updated_at explicitly: their
+        # NOT NULL columns do not have the defaults used by new databases.
+        (snapshot_id, user_id, day_iso, strategy, baseline_hash, urgent_json, before_json, now, now),
     )
 
 

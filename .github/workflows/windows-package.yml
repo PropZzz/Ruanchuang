@@ -1,0 +1,76 @@
+name: Windows package
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/windows-package.yml'
+      - 'windows/**'
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows release and launch smoke
+    runs-on: windows-2022
+    timeout-minutes: 25
+    env:
+      PUB_HOSTED_URL: https://pub.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.7'
+          channel: stable
+          cache: true
+      - name: Enable plugin symlinks on the disposable runner
+        shell: pwsh
+        run: |
+          New-Item -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock' -Force | Out-Null
+          New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock' -Name AllowDevelopmentWithoutDevLicense -Value 1 -PropertyType DWord -Force | Out-Null
+      # Flutter also generates the native plugin registrant and symlinks.
+      - run: flutter pub get --enforce-lockfile
+      - run: git diff --exit-code -- pubspec.lock
+      - run: flutter build windows --release --no-pub --dart-define=API_BASE_URL=http://8.133.250.216/api
+      - name: Bundle the C++ runtime and verify launch
+        shell: pwsh
+        run: |
+          $bundle = (Resolve-Path 'build/windows/x64/runner/Release').Path
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          $runtime = Get-ChildItem -LiteralPath (Join-Path $installation 'VC/Redist/MSVC') -Directory -Recurse -Filter Microsoft.VC143.CRT |
+            Where-Object { $_.FullName -match '\\x64\\' } | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $runtime) { throw 'The x64 Visual C++ runtime was not found' }
+          foreach ($name in @('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')) {
+            Copy-Item -LiteralPath (Join-Path $runtime.FullName $name) -Destination $bundle
+          }
+          $application = Start-Process -FilePath (Join-Path $bundle 'shixuzhipei.exe') -WorkingDirectory $bundle -WindowStyle Hidden -PassThru
+          try {
+            Start-Sleep -Seconds 10
+            $application.Refresh()
+            if ($application.HasExited) { throw "Application exited during launch smoke: $($application.ExitCode)" }
+          } finally {
+            $application.Refresh()
+            if (-not $application.HasExited) { Stop-Process -Id $application.Id }
+          }
+          [ordered]@{
+            commit = (& git rev-parse HEAD)
+            apiBaseUrl = 'http://8.133.250.216/api'
+            flutter = '3.38.7'
+            platform = 'windows-x64'
+            launchSmoke = 'process remained running for 10 seconds; no interactive device test'
+          } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $bundle 'build-info.json') -Encoding utf8
+      - uses: actions/upload-artifact@v7
+        with:
+          name: shixuzhipei-windows-x64
+          path: build/windows/x64/runner/Release/
+          if-no-files-found: error
+          retention-days: 14

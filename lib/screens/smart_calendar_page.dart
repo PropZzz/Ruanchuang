@@ -42,15 +42,20 @@ enum _CalendarMode { manual, smart }
 enum _EntryStatus { notStarted, inProgress, completed, overdue }
 
 class SmartCalendarPage extends StatefulWidget {
-  const SmartCalendarPage({super.key, this.initialDay});
+  const SmartCalendarPage({super.key, this.initialDay, this.now});
 
   final DateTime? initialDay;
+
+  /// Optional clock for deterministic calendar previews and tests.
+  final DateTime Function()? now;
 
   @override
   State<SmartCalendarPage> createState() => _SmartCalendarPageState();
 }
 
 class _SmartCalendarPageState extends State<SmartCalendarPage> {
+  DateTime _now() => widget.now?.call() ?? DateTime.now();
+
   List<ScheduleEntry> _blocks = [];
   bool _isLoading = true;
   bool _hasLoadedOnce = false;
@@ -85,7 +90,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
   @override
   void initState() {
     super.initState();
-    _selectedDay = dateOnly(widget.initialDay ?? DateTime.now());
+    _selectedDay = dateOnly(widget.initialDay ?? _now());
     _loadSchedule();
   }
 
@@ -98,7 +103,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     try {
       if (_mode == _CalendarMode.manual) {
         final entries = await _dataService.getScheduleEntries();
-        final now = DateTime.now();
+        final now = _now();
         final viewDay = dateOnly(_selectedDay);
         final events = await _dataService.getTaskEvents(
           viewDay,
@@ -337,7 +342,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
         _isLoading = preserveLoading;
       });
 
-      final today = dateOnly(DateTime.now());
+      final today = dateOnly(_now());
       if (sameDay(req.day, today)) {
         await AppServices.reminderService.rescheduleDay(
           day: req.day,
@@ -514,7 +519,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
     required DateTime day,
     required List<ScheduleEntry> entries,
   }) async {
-    if (!sameDay(day, dateOnly(DateTime.now()))) return;
+    if (!sameDay(day, dateOnly(_now()))) return;
 
     try {
       await AppServices.reminderService.rescheduleDay(
@@ -758,7 +763,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                         selectedDay: _selectedDay,
                         onViewChanged: (value) => setState(() => _view = value),
                         onShiftPeriod: _shiftSelectedPeriod,
-                        onToday: () => _jumpToDay(DateTime.now()),
+                        onToday: () => _jumpToDay(_now()),
                       ),
                     ],
                   ),
@@ -799,6 +804,7 @@ class _SmartCalendarPageState extends State<SmartCalendarPage> {
                           SizedBox(
                             width: 288,
                             child: CalendarDesktopSummary(
+                              now: TimeOfDay.fromDateTime(_now()),
                               entries: dayEntries,
                               smartMode: _mode == _CalendarMode.smart,
                               sourceLabel: _dataSourceLabel(context),

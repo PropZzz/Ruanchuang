@@ -1,0 +1,17 @@
+[Unit]
+Description=Back up the Ruanchuang SQLite database
+
+[Service]
+Type=oneshot
+User=ruanchuang
+Group=ruanchuang
+WorkingDirectory=/opt/ruanchuang
+ExecStart=/usr/bin/python3 /opt/ruanchuang/maintenance/database_maintenance.py backup /opt/ruanchuang/data/shixuzhipei.db --directory /opt/ruanchuang/data/backups
+UMask=0077
+TimeoutStartSec=60
+Nice=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/ruanchuang/data

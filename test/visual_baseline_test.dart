@@ -107,7 +107,12 @@ void main() {
       await pumpPage(
         tester,
         entry.value,
-        SmartCalendarPage(initialDay: baselineDay),
+        SmartCalendarPage(
+          initialDay: baselineDay,
+          // The desktop "next task" card also depends on the hour. Preserve
+          // the original after-work baseline regardless of the runner timezone.
+          now: () => DateTime(2026, 10, 31, 18),
+        ),
       );
       expect(tester.takeException(), isNull);
       await expectLater(
@@ -116,4 +121,27 @@ void main() {
       );
     });
   }
+
+  testWidgets('desktop next task follows the supplied calendar clock', (
+    tester,
+  ) async {
+    final day = DateTime(2026, 9, 25);
+    var now = DateTime(2026, 10, 31, 10);
+    await seedSchedule(tester, MockDataService(), day: day);
+    Future<void> showCalendar() => pumpPage(
+      tester,
+      const Size(1440, 900),
+      SmartCalendarPage(initialDay: day, now: () => now),
+    );
+    Finder nextReview() => find.descendant(
+      of: find.byKey(const ValueKey('calendar-desktop-rescue-panel')),
+      matching: find.text('Baseline review'),
+    );
+    await showCalendar();
+    expect(nextReview(), findsOneWidget);
+    now = DateTime(2026, 10, 31, 18);
+    await showCalendar();
+    expect(nextReview(), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

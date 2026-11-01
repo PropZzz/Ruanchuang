@@ -315,6 +315,30 @@ nav.fixed.bottom-0 {
   }
 }
 
+@media (max-width: 780px) {
+  /* Review reuses the desktop document inside the mobile shell. Its hidden
+     sidebar must not reserve 260px of the phone's content area. */
+  html[data-route='review'] body > div {
+    padding-left: 0 !important;
+    width: 100%;
+    min-width: 0;
+  }
+
+  html[data-route='review'] main {
+    padding: 16px 12px 24px !important;
+    box-sizing: border-box;
+  }
+
+  html[data-route='review'] main .flex,
+  html[data-route='review'] main .grid {
+    min-width: 0;
+  }
+
+  html[data-route='review'] main > div > div:first-child .flex {
+    flex-wrap: wrap;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
