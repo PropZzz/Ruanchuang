@@ -2,6 +2,7 @@
 
 import sqlite3
 
+import pytest
 from starlette.testclient import TestClient
 
 from backend.main import create_app
@@ -102,6 +103,50 @@ def _client_and_token(tmp_path, suffix="user1"):
 
 
 # --- options ---
+
+
+@pytest.mark.parametrize("has_day_columns", [False, True])
+def test_legacy_snapshot_schema_preserves_history_and_supports_apply_undo(tmp_path, has_day_columns):
+    """Production used NOT NULL columns without the new-table defaults."""
+    from backend.repositories import init_db
+
+    database = tmp_path / "legacy.sqlite3"
+    with sqlite3.connect(database) as connection:
+        connection.execute("""
+            CREATE TABLE rescue_snapshots (
+                id TEXT PRIMARY KEY, user_id TEXT NOT NULL,
+                strategy TEXT NOT NULL, baseline_hash TEXT NOT NULL,
+                before_json TEXT NOT NULL, after_json TEXT NOT NULL,
+                status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)
+        if has_day_columns:
+            connection.execute("ALTER TABLE rescue_snapshots ADD COLUMN day TEXT NOT NULL DEFAULT ''")
+            connection.execute("ALTER TABLE rescue_snapshots ADD COLUMN urgent_json TEXT")
+            connection.execute("ALTER TABLE rescue_snapshots ADD COLUMN undone_at TEXT")
+
+    with TestClient(create_app(database)) as client:
+        token = _register(client)
+        headers = _headers(token)
+        user_id = client.get("/auth/me", headers=headers).json()["id"]
+        legacy = ("legacy", user_id, "minimizeChanges", "old-hash", "[]", "[]", "applied", "old-created", "old-updated")
+        columns = "id, user_id, strategy, baseline_hash, before_json, after_json, status, created_at, updated_at"
+        with sqlite3.connect(database) as connection:
+            connection.execute(f"INSERT INTO rescue_snapshots ({columns}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", legacy)
+        init_db(database)
+        init_db(database)
+        seeded, baseline_hash = _seed_and_hash(client, headers)
+        before = _day_schedules(client, headers)
+        snapshot = _apply_rescue(client, headers, [seeded], baseline_hash)
+        assert {entry["id"] for entry in _day_schedules(client, headers)} == {"new_1", "new_2"}
+        response = client.post("/schedule/rescue/undo", json={"snapshotId": snapshot}, headers=headers)
+        assert response.status_code == 200, response.text
+        assert _day_schedules(client, headers) == before
+        assert set(_rescue_reasons(client, headers)) == {"rescue_accept:protectDeadline", "rescue_undo:protectDeadline"}
+        with sqlite3.connect(database) as connection:
+            assert connection.execute(f"SELECT {columns} FROM rescue_snapshots WHERE id='legacy'").fetchone() == legacy
+            assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 
 
 def test_rescue_options_requires_auth(tmp_path):
