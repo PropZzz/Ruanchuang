@@ -95,6 +95,18 @@ try {
     assert.equal(history.length, 2);
     assert.ok(history.some(event => event.reason.startsWith('rescue_accept:')));
     assert.ok(history.some(event => event.reason.startsWith('rescue_undo:')));
+    await page.evaluate(() => { location.hash = '#/review'; });
+    await ready('review');
+    if (mobile) {
+      const layout = await frame().locator('main').evaluate(main => {
+        const box = main.getBoundingClientRect();
+        return { left: box.left, width: box.width, viewport: innerWidth,
+          scrollWidth: document.documentElement.scrollWidth };
+      });
+      assert.ok(layout.left < 24 && layout.width >= layout.viewport - 24,
+        'Mobile review must use the full viewport instead of reserving the desktop sidebar');
+      assert.ok(layout.scrollWidth <= layout.viewport + 1, 'Mobile review must not overflow horizontally');
+    }
     assert.deepEqual(errors, []);
     console.log(`${mobile ? 'mobile' : 'desktop'}: real rescue generation, apply, reload, undo and history passed`);
     await context.close();

@@ -73,12 +73,14 @@ class CalendarTodayStatus extends StatelessWidget {
 class CalendarDesktopSummary extends StatelessWidget {
   const CalendarDesktopSummary({
     super.key,
+    required this.now,
     required this.entries,
     required this.smartMode,
     required this.sourceLabel,
     this.acceptedMovedCount,
     this.onUndo,
   });
+  final TimeOfDay now;
   final List<ScheduleEntry> entries;
   final bool smartMode;
   final String sourceLabel;
@@ -91,7 +93,6 @@ class CalendarDesktopSummary extends StatelessWidget {
       0,
       (sum, entry) => sum + _entryDurationMinutes(entry),
     );
-    final now = TimeOfDay.now();
     final nowMinutes = now.hour * 60 + now.minute;
     ScheduleEntry? nextEntry;
     for (final entry in entries) {
