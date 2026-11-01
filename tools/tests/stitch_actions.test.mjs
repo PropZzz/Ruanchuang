@@ -59,7 +59,7 @@ test('every existing API button and rescue form has an explicit template hook', 
       hooks.add(id);
     }
   }
-  for (const id of ['schedule-save-action', 'auth-submit', 'profile-edit-action', 'profile-logout-action']) {
+  for (const id of ['schedule-save-action', 'auth-submit', 'profile-edit-action', 'profile-logout-action', 'schedule-rescue-undo', 'mobile-rescue-undo']) {
     assert.ok(hooks.has(id), `Missing the ${id} form control`);
   }
   const urgent = await readFile(new URL('../../web/stitch/mobile/insert-urgent-task-drawer/index.html', import.meta.url), 'utf8');
