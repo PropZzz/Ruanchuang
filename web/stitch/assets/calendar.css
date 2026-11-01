@@ -13,6 +13,16 @@
 .cal-date-label input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
 .cal-date-label:focus-within{outline:2px solid #005db5;outline-offset:3px;border-radius:4px}
 .cal-view-button[aria-pressed="true"]{background:#fff;color:#002727;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+/* 调度模式分段：手动安排 / 智能规划，二者选一，选中态跟随 aria-pressed。 */
+#live-calendar-root .cal-mode-button{color:#717978;background:transparent;box-shadow:none;font-weight:500}
+#live-calendar-root .cal-mode-button:hover{color:#1a1b1f}
+#live-calendar-root .cal-mode-button:focus-visible{outline:2px solid #005db5;outline-offset:2px}
+#live-calendar-root .cal-mode-button[aria-pressed="true"]{background:#163d3d;color:#81a8a7;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+#live-calendar-root .cal-mode-button[aria-pressed="true"] .material-symbols-outlined{color:#53e16f}
+/* 救援摘要侧栏：方案预览卡与撤销按钮的真实数据状态 */
+#live-calendar-root button[data-rescue-preview-option]:focus-visible,#live-calendar-root [data-rescue-undo]:focus-visible{outline:2px solid #005db5;outline-offset:2px}
+#live-calendar-root button[data-rescue-preview-option].cal-rescue-preview-idle{opacity:.62}
+#live-calendar-root [data-rescue-undo]:disabled{opacity:.45;cursor:not-allowed}
 .cal-mobile-period button{display:inline-flex;align-items:center;justify-content:center;min-height:32px;min-width:28px}
 .cal-mobile-period .material-symbols-outlined{font-size:18px}
 .cal-sync-retry{display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;margin-left:4px;color:#005db5}

@@ -217,10 +217,27 @@
     };
     for (const button of document.querySelectorAll('button')) {
       const icon = button.querySelector('.material-symbols-outlined');
+      // A button that renders visible text (directly or inside spans) must keep
+      // that text as its accessible name. Synthesizing an icon label here would
+      // poison label-based routing, e.g. the scheduling-mode toggle's bolt icon
+      // used to be announced as "插入紧急任务" and opened the urgent-task drawer.
       const visibleText = [...button.childNodes]
-        .filter((node) => node.nodeType === Node.TEXT_NODE)
-        .map((node) => node.textContent.trim())
+        .map((node) => {
+          if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+          if (
+            node.nodeType === Node.ELEMENT_NODE &&
+            !node.classList.contains('material-symbols-outlined') &&
+            !node.closest('[aria-hidden="true"]')
+          ) {
+            const style = node.ownerDocument.defaultView.getComputedStyle(node);
+            if (style.display !== 'none' && style.visibility !== 'hidden') {
+              return node.textContent;
+            }
+          }
+          return '';
+        })
         .join(' ')
+        .replace(/\s+/g, ' ')
         .trim();
       if (!button.getAttribute('aria-label') && !button.title && !visibleText && icon) {
         const label = iconLabels[icon.textContent.trim()];
@@ -1490,6 +1507,14 @@
     if (route === 'schedule') {
       document.stitchCalendar = window.StitchCalendar.mount(document, {
         request: backendRequest, navigate, identity: accountIdentity, state: calendarState,
+        // 救援摘要侧栏读取最近一次服务端三方案与可撤销快照，保持与救援流程同源。
+        readRescueContext: () => ({
+          options: rescueState?.options || null,
+          currentEntries: rescueState?.currentEntries || null,
+          day: rescueState?.day || null,
+          snapshotId: rescueState?.snapshotId || null,
+          hasSnapshot: readRescueSnapshots().length > 0,
+        }),
         onState(state, label, error) {
           document.documentElement.dataset.backendState = state;
           updateSyncLabel(document, label);
@@ -2624,6 +2649,9 @@
 
   function routeForButton(button) {
     if (Object.hasOwn(pages, button.dataset.route)) return button.dataset.route;
+    // Calendar controls carry their own action identifiers; their visible or
+    // synthesized labels must never resolve to a route (mode toggles, retry…).
+    if (button.dataset.calAction) return null;
     const label = `${button.innerText || ''} ${button.title || ''} ${button.getAttribute('aria-label') || ''}`.toLowerCase();
     if (button.id === 'close-care-modal') return null;
     if (button.id === 'login-back-action') return '__login_back__';

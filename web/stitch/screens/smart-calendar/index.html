@@ -40,12 +40,12 @@
 <span>甘特视图</span>
 </button>
 </div>
-<!-- 调度模式模式切换 -->
-<div class="flex items-center bg-surface-container-low rounded-lg p-0.5">
-<button class="px-2.5 py-1.5 rounded-md text-xs text-outline hover:text-on-surface transition-colors" type="button">手动安排</button>
-<button class="px-3 py-1.5 rounded-md text-xs font-semibold bg-primary-container text-on-primary-container shadow-sm flex items-center gap-1.5 transition-all" type="button">
-<span class="material-symbols-outlined text-[15px] text-tertiary-fixed">bolt</span>
-<span>智能规划已激活</span>
+<!-- 调度模式切换：手动安排 / 智能规划二者选一，由日历脚本接线并同步选中态 -->
+<div class="flex items-center bg-surface-container-low rounded-lg p-0.5" role="group" aria-label="调度模式">
+<button class="cal-mode-button px-2.5 py-1.5 rounded-md text-xs transition-colors" data-cal-mode="manual" aria-pressed="false" type="button">手动安排</button>
+<button class="cal-mode-button px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5 transition-all" data-cal-mode="smart" aria-pressed="true" type="button">
+<span class="material-symbols-outlined text-[15px]">bolt</span>
+<span data-cal-mode-label>智能规划已激活</span>
 </button>
 </div>
 </div>
@@ -95,7 +95,7 @@
 </div>
 <div class="flex items-center gap-2 text-[11px] text-outline font-label">
 <span class="inline-block w-1.5 h-1.5 rounded-full bg-on-tertiary-container"></span>
-<span>约束准则：算法仅在硬约束不可逆边界内执行软目标弹性迁移</span>
+<span id="calendar-mode-hint">智能规划已激活：调度算法接口已预留，当前按已保存日程原样展示</span>
 </div>
 </div>
 </div>
@@ -201,59 +201,59 @@
 <!-- 3 种救援策略快速对比矩阵 -->
 <div class="flex flex-col gap-2">
 <span class="text-[11px] font-bold text-on-surface uppercase tracking-wide">推荐救援方案预览</span>
-<!-- 方案 A：选中态 -->
-<div class="p-3 rounded-xl bg-primary-container text-on-primary-container shadow-sm flex flex-col gap-2 cursor-pointer transition-all">
-<div class="flex items-center justify-between">
-<span class="text-xs font-bold text-on-primary">方案 A · 优先保护截止期</span>
-<span class="material-symbols-outlined text-[16px] text-tertiary-fixed">check_circle</span>
-</div>
-<div class="grid grid-cols-3 gap-1 text-[10px] bg-primary/40 p-2 rounded-lg text-center tabular-nums">
-<div>
+<!-- 方案 A：由服务端救援接口回填真实指标；未生成时显示待计算状态 -->
+<button type="button" data-rescue-preview-option="A" class="p-3 rounded-xl bg-primary-container text-on-primary-container shadow-sm flex flex-col gap-2 text-left cursor-pointer transition-all w-full">
+<span class="flex items-center justify-between w-full">
+<span class="text-xs font-bold text-on-primary" data-rescue-preview-title>方案 A · 优先保护截止期</span>
+<span class="material-symbols-outlined text-[16px] text-tertiary-fixed" data-rescue-preview-check hidden>check_circle</span>
+</span>
+<span class="grid grid-cols-3 gap-1 text-[10px] bg-primary/40 p-2 rounded-lg text-center tabular-nums">
+<span class="block">
 <span class="block text-outline">任务位移</span>
-<span class="font-bold text-on-primary">待计算</span>
-</div>
-<div>
+<span class="font-bold text-on-primary" data-rescue-preview-metric="moved">待计算</span>
+</span>
+<span class="block">
 <span class="block text-outline">保护缓冲</span>
-<span class="font-bold text-tertiary-fixed">待计算</span>
-</div>
-<div>
+<span class="font-bold text-tertiary-fixed" data-rescue-preview-metric="buffer">待计算</span>
+</span>
+<span class="block">
 <span class="block text-outline">扰动评分</span>
-<span class="font-bold text-on-primary">待计算</span>
-</div>
-</div>
-<p class="text-[10px] opacity-80 leading-normal">
+<span class="font-bold text-on-primary" data-rescue-preview-metric="score">待计算</span>
+</span>
+</span>
+<span class="text-[10px] opacity-80 leading-normal text-left" data-rescue-preview-note>
               填写紧急任务与截止时间后，由服务端计算实际排期与保护窗口。
-            </p>
-</div>
+            </span>
+</button>
 <!-- 方案 B -->
-<div class="p-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors flex flex-col gap-1.5 cursor-pointer">
-<div class="flex items-center justify-between">
-<span class="text-xs font-bold text-on-surface">方案 B · 最小化团队扰动</span>
-<span class="text-[10px] text-outline tabular-nums">待计算</span>
-</div>
-<p class="text-[10px] text-on-surface-variant leading-normal">
+<button type="button" data-rescue-preview-option="B" class="p-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors flex flex-col gap-1.5 text-left cursor-pointer w-full">
+<span class="flex items-center justify-between w-full">
+<span class="text-xs font-bold text-on-surface" data-rescue-preview-title>方案 B · 最小化团队扰动</span>
+<span class="text-[10px] text-outline tabular-nums" data-rescue-preview-metric="moved">待计算</span>
+</span>
+<span class="text-[10px] text-on-surface-variant leading-normal text-left" data-rescue-preview-note>
               在保护团队协作约束的前提下，计算可行的任务调整方案。
-            </p>
-</div>
+            </span>
+</button>
 <!-- 方案 C -->
-<div class="p-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors flex flex-col gap-1.5 cursor-pointer">
-<div class="flex items-center justify-between">
-<span class="text-xs font-bold text-on-surface">方案 C · 顺延次日非核心目标</span>
-<span class="text-[10px] text-outline tabular-nums">待计算</span>
-</div>
-<p class="text-[10px] text-on-surface-variant leading-normal">
+<button type="button" data-rescue-preview-option="C" class="p-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors flex flex-col gap-1.5 text-left cursor-pointer w-full">
+<span class="flex items-center justify-between w-full">
+<span class="text-xs font-bold text-on-surface" data-rescue-preview-title>方案 C · 顺延次日非核心目标</span>
+<span class="text-[10px] text-outline tabular-nums" data-rescue-preview-metric="moved">待计算</span>
+</span>
+<span class="text-[10px] text-on-surface-variant leading-normal text-left" data-rescue-preview-note>
               结合实际截止时间与弹性空间，计算后续可承接的时段。
-            </p>
+            </span>
+</button>
 </div>
-</div>
-<!-- 调度动作按钮区 -->
+<!-- 调度动作按钮区：主按钮进入紧急任务抽屉（服务端三方案入口），撤销走救援快照回滚 -->
 <div class="flex flex-col gap-2 pt-1">
-<button class="w-full py-2.5 px-4 rounded-xl bg-secondary text-on-secondary text-xs font-bold shadow-sm hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5" type="button">
+<button data-cal-action="rescue" class="w-full py-2.5 px-4 rounded-xl bg-secondary text-on-secondary text-xs font-bold shadow-sm hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5" type="button">
 <span class="material-symbols-outlined text-[16px]">auto_fix_high</span>
 <span>立即对比并执行救援方案</span>
 </button>
 <div class="flex items-center justify-between px-1 text-xs">
-<button class="text-outline hover:text-on-surface transition-colors flex items-center gap-1" type="button" id="schedule-rescue-undo" data-action="rescue-history">
+<button type="button" id="schedule-rescue-undo" data-action="rescue-history" data-rescue-undo disabled class="text-outline hover:text-on-surface transition-colors flex items-center gap-1 disabled:opacity-45 disabled:pointer-events-none">
 <span class="material-symbols-outlined text-[14px]">undo</span>
 <span>撤销上次自动调度</span>
 </button>
@@ -269,10 +269,10 @@
 </div>
 <div class="p-3 rounded-xl bg-surface-container-low text-xs flex flex-col gap-1.5">
 <div class="flex items-center justify-between text-[11px]">
-<span class="font-bold text-on-surface">暂无已加载的快照</span>
-<span class="text-tertiary font-bold">待执行</span>
+<span class="font-bold text-on-surface" id="calendar-rescue-snapshot-name">暂无已加载的快照</span>
+<span class="text-tertiary font-bold" id="calendar-rescue-snapshot-state">待执行</span>
 </div>
-<p class="text-[11px] text-on-surface-variant leading-relaxed">
+<p class="text-[11px] text-on-surface-variant leading-relaxed" id="calendar-rescue-snapshot-copy">
             执行真实救援方案后，将创建可撤销的服务端快照。
           </p>
 </div>

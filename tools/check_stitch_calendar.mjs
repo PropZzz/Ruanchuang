@@ -39,10 +39,18 @@ try {
       if (!localStorage.getItem('access_token')) localStorage.setItem('access_token', 'calendar-account-a');
     });
     let records = seed(), mode = 'normal', writes = 0;
+    let rescueHistory = [{ title: '救援任务', at: '2026-10-29T10:00:00', reason: 'rescue_accept:protectDeadline' }];
     const errors = [], page = await context.newPage();
     page.on('pageerror', e => errors.push(e.message));
     await page.route('**/api/**', async route => {
       const req = route.request(), url = new URL(req.url()), method = req.method();
+      if (url.pathname === '/api/schedule/rescue/history') return route.fulfill({ json: rescueHistory });
+      if (url.pathname === '/api/schedule/rescue/options') return route.fulfill({ json: {
+        options: ['protectDeadline', 'protectRecovery', 'minimizeChanges'].map((strategy, index) => ({
+          id: strategy, strategy, title: `真实方案 ${index + 1}`, recommended: index === 0,
+          movedEntryCount: 2, recoveryMinutes: 15, score: 3, plannedEntries: [], rationale: '测试救援预览',
+        })),
+      } });
       if (url.pathname === '/api/schedule' && method === 'GET') {
         if (mode === 'unauthorized') return route.fulfill({ status: 401, json: { detail: 'Login required' } });
         if (mode === 'offline') return route.fulfill({ status: 503, json: { detail: 'Unavailable' } });
@@ -65,6 +73,45 @@ try {
     const selectDate = async day => { await frame().locator('[data-cal-date]').fill(day); await settled(); };
     const selectView = async mode => { await frame().locator(`[data-cal-action="${mode}"]`).click(); await settled(); };
     await page.goto(base + '#/schedule'); await ready('schedule'); await settled();
+    if (!mobile) {
+      const calendarRoot = frame().locator('#live-calendar-root');
+      const smartMode = frame().locator('[data-cal-mode="smart"]');
+      const manualMode = frame().locator('[data-cal-mode="manual"]');
+      assert.equal(await smartMode.getAttribute('aria-pressed'), 'true');
+      await manualMode.click(); await settled();
+      assert.equal(await calendarRoot.getAttribute('data-calendar-mode'), 'manual');
+      assert.equal(await manualMode.getAttribute('aria-pressed'), 'true');
+      assert.equal(await smartMode.getAttribute('aria-pressed'), 'false');
+      await smartMode.click(); await settled();
+      assert.equal(await calendarRoot.getAttribute('data-calendar-mode'), 'smart');
+      assert.equal(await manualMode.getAttribute('aria-pressed'), 'false');
+      assert.equal(await page.locator('#prototype-screen').getAttribute('title'), '时序智配 schedule', 'Mode controls must not open the urgent-task drawer');
+      await frame().locator('#calendar-rescue-snapshot-state').getByText('已执行', { exact: true }).waitFor();
+      rescueHistory = [{ title: '撤销日程救援', at: '2026-10-29T10:15:00', reason: 'rescue_undo:protectDeadline' }, ...rescueHistory];
+      await page.locator('#prototype-screen').evaluate(f => f.contentDocument.stitchCalendar.refresh()); await settled();
+      await frame().locator('#calendar-rescue-snapshot-name').getByText('撤销日程救援', { exact: true }).waitFor();
+      assert.equal(await frame().locator('#calendar-rescue-snapshot-state').textContent(), '已撤销');
+      assert.match(await frame().locator('#calendar-rescue-snapshot-copy').textContent(), /已撤销/);
+      assert.doesNotMatch(await frame().locator('#calendar-rescue-snapshot-copy').textContent(), /已创建救援快照/);
+      assert.equal(await frame().locator('[data-rescue-undo]').isDisabled(), true);
+      await frame().locator('[data-cal-action="rescue"]').click(); await ready('urgent-task');
+      await frame().locator('#urgent-task-title-input').fill('日历救援预览验证');
+      await frame().locator('#urgent-task-deadline-input').fill('2026-10-29T18:00');
+      await frame().locator('[data-action="rescue-options"]').click(); await ready('rescue-comparison');
+      await page.evaluate(() => { location.hash = '#/schedule'; }); await ready('schedule'); await settled();
+      const movedMetric = frame().locator('[data-rescue-preview-option="A"] [data-rescue-preview-metric="moved"]');
+      assert.equal(await movedMetric.textContent(), '2 项');
+      await selectDate('2026-10-30');
+      assert.notEqual(await movedMetric.textContent(), '2 项', 'Another date must not display the previous date rescue metrics');
+      await selectDate('2026-10-29');
+      assert.equal(await movedMetric.textContent(), '2 项');
+      const beforeRescueEdit = records;
+      records = records.map(record => record.id === 'real-1' ? { ...record, title: '救援生成后编辑日程' } : record);
+      await page.locator('#prototype-screen').evaluate(f => f.contentDocument.stitchCalendar.refresh()); await settled();
+      assert.notEqual(await movedMetric.textContent(), '2 项', 'Changed account schedules must invalidate rescue preview metrics');
+      records = beforeRescueEdit;
+      await page.locator('#prototype-screen').evaluate(f => f.contentDocument.stitchCalendar.refresh()); await settled();
+    }
     assert.equal(await frame().locator('#live-calendar-root').getAttribute('data-selected-day'), '2026-10-29');
     assert.equal(await frame().locator('#live-calendar-root').getAttribute('data-calendar-view'), mobile ? 'day' : 'week');
     assert.ok(await frame().locator('[data-schedule-id="real-1"]').count());
