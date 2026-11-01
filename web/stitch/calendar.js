@@ -78,6 +78,14 @@
     });
     return count;
   }
+  // 与 countConflicts 同口径，但返回冲突对本身，供救援摘要计算受影响日程与风险等级。
+  function conflictPairs(events) {
+    const pairs = [];
+    events.forEach((left, index) => {
+      for (const right of events.slice(index + 1)) if (left.start < right.end && right.start < left.end) pairs.push([left, right]);
+    });
+    return pairs;
+  }
   function ganttRows(events, from) {
     const rows = new Map(), origin = dayNumber(parseDay(from)) * 1440;
     for (const event of events) {
@@ -155,7 +163,15 @@
     return parts.find(part => /(?:座|楼|馆|室|厅|教学|教\s*\d|room|building|lab).*\d|\d.*(?:教室|实验室)|^(?:[A-Z][-\s]?)?\d{2,4}(?:室)?$|^(?:.*(?:操场|体育场|体育馆|游泳馆)|线上授课|在线课堂)$/i.test(part)) || '';
   }
 
-  function mount(doc, { request, navigate, identity, state = {}, onState = () => {} }) {
+  // 智能规划算法预留接口：接入真实算法前原样返回账号日程。
+  // 约定：入参为账号日程记录数组；返回用于展示的记录数组。算法可重排时间与时段，
+  // 但不得修改入参元素、不得丢弃 id（详情抽屉依赖 id 打开）。实现时替换本函数体
+  // （或在内部调用调度引擎），保持同步签名与"不写库、仅影响展示"的语义。
+  function planEntries(records) {
+    return records;
+  }
+
+  function mount(doc, { request, navigate, identity, state = {}, onState = () => {}, readRescueContext = null }) {
     const root = doc.getElementById('live-calendar-root');
     const win = doc.defaultView;
     const mobile = win.innerWidth <= 780;
@@ -166,14 +182,145 @@
     const views = ['day', 'week', 'month', 'gantt'];
     let view = views.includes(state.view) ? state.view : mobile ? 'day' : 'week';
     let ganttScale = state.ganttScale === 'day' ? 'day' : 'week';
+    // 调度模式：smart（智能规划）与 manual（手动安排）二者选一，默认智能规划。
+    let mode = state.mode === 'manual' || state.mode === 'smart' ? state.mode : 'smart';
     let options = readOptions();
     let entries = [], loaded = false, pending = false, error = null, generation = 0, timer = null, disposed = false;
     let lastToday = dayKey(new Date());
+    // 救援摘要侧栏的数据：服务端救援历史（最近一次救援快照卡）与生成守卫。
+    let rescueHistory = null;
+    let rescueHistoryTurn = 0;
     const account = identity();
-    const remember = () => Object.assign(state, { day: selected, view, ganttScale });
+    const remember = () => Object.assign(state, { day: selected, view, ganttScale, mode });
     const icon = name => `<span class="material-symbols-outlined" aria-hidden="true">${name}</span>`;
     const action = (name, label, content, extra = '') => `<button type="button" data-cal-action="${name}" aria-label="${label}" ${extra}>${content}</button>`;
     const create = (day = selected, time = '09:00') => navigate(`create-schedule?day=${day}&time=${encodeURIComponent(time)}`);
+    // 把当前调度模式同步到分段按钮（互斥选中态）、根节点标记与提示语。
+    function syncModeControls() {
+      root.dataset.calendarMode = mode;
+      for (const button of root.querySelectorAll('[data-cal-mode]')) {
+        const active = button.dataset.calMode === mode;
+        button.setAttribute('aria-pressed', String(active));
+        const label = button.querySelector('[data-cal-mode-label]');
+        if (label) label.textContent = active ? '智能规划已激活' : '智能规划';
+      }
+      const hint = doc.getElementById('calendar-mode-hint');
+      if (hint) hint.textContent = mode === 'smart'
+        ? '智能规划已激活：调度算法接口已预留，当前按已保存日程原样展示'
+        : '手动安排：日程以保存的内容为准，可直接新增、编辑与删除';
+    }
+    function setMode(next) {
+      if (mode === next) return;
+      mode = next;
+      remember();
+      syncModeControls();
+      // 重新读取并应用调度结果：接入真实算法后，切换模式即按新算法重排当前视域。
+      refresh();
+    }
+    // 读取宿主注入的救援上下文（最近生成的服务端方案与可撤销快照）。
+    const rescueContext = () => {
+      try {
+        return typeof readRescueContext === 'function' ? readRescueContext() : null;
+      } catch (_) {
+        return null;
+      }
+    };
+    // 最近一次救援快照卡：数据源为 GET /schedule/rescue/history（服务端救援事件）。
+    function renderRescueSnapshotCard() {
+      const nameNode = doc.getElementById('calendar-rescue-snapshot-name');
+      if (!nameNode) return;
+      const stateNode = doc.getElementById('calendar-rescue-snapshot-state');
+      const copyNode = doc.getElementById('calendar-rescue-snapshot-copy');
+      const latest = Array.isArray(rescueHistory) ? rescueHistory[0] : null;
+      if (!latest) {
+        nameNode.textContent = '暂无已加载的快照';
+        if (stateNode) stateNode.textContent = rescueHistory === null ? '待同步' : '待执行';
+        if (copyNode) copyNode.textContent = rescueHistory === null
+          ? '正在读取服务端救援历史；同步失败时可稍后重试。'
+          : '执行真实救援方案后，将创建可撤销的服务端快照。';
+        return;
+      }
+      nameNode.textContent = latest.title || '救援方案';
+      const undone = String(latest.reason || '').startsWith('rescue_undo:');
+      if (stateNode) stateNode.textContent = undone ? '已撤销' : '已执行';
+      const at = latest.at ? new Date(latest.at) : null;
+      const strategy = String(latest.reason || '').split(':')[1];
+      const atText = at && !Number.isNaN(at.getTime())
+        ? `${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${clock(at.getHours() * 60 + at.getMinutes())} · `
+        : '';
+      // 是否还能回滚以账号的可用快照为准，而不是"存在过救援历史"。
+      const canUndo = Boolean(rescueContext()?.hasSnapshot);
+      if (copyNode) copyNode.textContent = `${atText}${undone ? '服务端已撤销救援并恢复原日程' : '服务端已创建救援快照'}${strategy ? `（策略 ${strategy}）` : ''}，${canUndo ? '可通过"撤销上次自动调度"回滚。' : '当前没有可撤销的快照。'}`;
+    }
+    // 拉取服务端救援历史；独立于日程同步，不阻塞 aria-busy。
+    async function refreshRescueHistory() {
+      const turn = ++rescueHistoryTurn;
+      try {
+        const events = await request('/schedule/rescue/history');
+        if (disposed || turn !== rescueHistoryTurn) return;
+        rescueHistory = Array.isArray(events) ? events : [];
+      } catch (_) {
+        if (disposed || turn !== rescueHistoryTurn) return;
+        rescueHistory = null;
+      }
+      renderRescueSnapshotCard();
+    }
+    // 推荐救援方案预览：已生成时回填服务端三方案的真实指标；否则按冲突状态给出诚实占位。
+    function renderRescuePreview(pairs, { syncing, hasError }) {
+      const context = rescueContext();
+      const matchesBaseline = context?.day === selected && !context?.snapshotId &&
+        Array.isArray(context?.currentEntries) && JSON.stringify(context.currentEntries) === JSON.stringify(entries);
+      const generated = matchesBaseline && Array.isArray(context?.options) ? context.options : [];
+      const idle = !generated.length;
+      const idleTitles = { A: '优先保护截止期', B: '最小化团队扰动', C: '顺延次日非核心目标' };
+      for (let index = 0; index < 3; index++) {
+        const letter = 'ABC'[index];
+        const card = root.querySelector(`[data-rescue-preview-option="${letter}"]`);
+        if (!card) continue;
+        const option = generated[index] || null;
+        card.classList.toggle('cal-rescue-preview-idle', idle);
+        const titleNode = card.querySelector('[data-rescue-preview-title]');
+        const checkNode = card.querySelector('[data-rescue-preview-check]');
+        const noteNode = card.querySelector('[data-rescue-preview-note]');
+        const metric = name => card.querySelector(`[data-rescue-preview-metric="${name}"]`);
+        if (option) {
+          if (titleNode) titleNode.textContent = `方案 ${letter} · ${option.title || '服务端方案'}`;
+          if (checkNode) checkNode.hidden = !option.recommended;
+          const moved = metric('moved');
+          if (moved) moved.textContent = `${option.movedEntryCount ?? 0} 项`;
+          const buffer = metric('buffer');
+          if (buffer) buffer.textContent = `${option.recoveryMinutes ?? 0}m`;
+          const score = metric('score');
+          if (score) score.textContent = Number.isFinite(Number(option.score))
+            ? String(Math.round(Number(option.score) * 10) / 10)
+            : '—';
+          if (noteNode && (option.rationale || option.tradeoff)) {
+            noteNode.textContent = option.rationale || option.tradeoff;
+          }
+          continue;
+        }
+        if (checkNode) checkNode.hidden = true;
+        const idleText = syncing || hasError ? '待同步' : pairs.length ? '待生成' : '无需救援';
+        if (titleNode) titleNode.textContent = `方案 ${letter} · ${idleTitles[letter]}`;
+        for (const name of ['moved', 'buffer', 'score']) {
+          const node = metric(name);
+          if (node) node.textContent = idleText;
+        }
+        if (noteNode && !syncing && !hasError) {
+          noteNode.textContent = pairs.length
+            ? '检测到时间重叠；插入紧急任务并填写截止时间后，由服务端计算三套救援排期。'
+            : '当前日期没有时间重叠；如需插入紧急任务，服务端会在现有空档中安排。';
+        }
+      }
+    }
+    // 日程健康与救援摘要侧栏：撤销按钮状态 + 快照卡 + 方案预览，全部随真实数据刷新。
+    function renderRescueSummaryPanel(pairs, { syncing, hasError }) {
+      const context = rescueContext();
+      const undoButton = root.querySelector('[data-rescue-undo]');
+      if (undoButton) undoButton.disabled = !context?.hasSnapshot;
+      renderRescueSnapshotCard();
+      renderRescuePreview(pairs, { syncing, hasError });
+    }
     const setText = (selector, text) => { const node = root.querySelector(selector); if (node) node.textContent = text; };
     const period = doc.getElementById('calendar-period');
     const dateLabel = doc.createElement('label'); dateLabel.className = 'cal-date-label'; dateLabel.title = '选择日期';
@@ -182,6 +329,8 @@
     dateInput.setAttribute('aria-label', '选择日期'); dateInput.min = '1900-01-01'; dateInput.max = '2100-12-31'; dateLabel.append(dateInput);
     dateLabel.addEventListener('click', () => { try { dateInput.showPicker?.(); } catch (_) {} });
     // Bind the incumbent controls without rebuilding the controller deck or rescue panels.
+    // 调度模式分段（手动安排 / 智能规划）走统一的 data-cal-action 分发，互斥切换。
+    for (const button of root.querySelectorAll('[data-cal-mode]')) button.dataset.calAction = `mode-${button.dataset.calMode}`;
     for (const button of root.querySelectorAll('button')) {
       const text = button.textContent.trim(), symbol = button.querySelector('.material-symbols-outlined')?.textContent.trim();
       let name = ({ '日视图': 'day', '周视图': 'week', '月视图': 'month', '甘特视图': 'gantt', '日': 'day', '周': 'week', '月': 'month', '甘特': 'gantt', '今天': 'today' })[text];
@@ -231,8 +380,10 @@
       const periodView = view === 'gantt' ? ganttScale : view;
       const range = visibleRange(periodView, selected), today = dayKey(new Date()), date = parseDay(selected);
       const items = occurrences(entries, range.start, range.end), chosen = occurrences(entries, selected, selected);
-      const conflicts = countConflicts(chosen);
+      const conflictPairList = conflictPairs(chosen);
+      const conflicts = conflictPairList.length;
       root.dataset.calendarView = view; root.dataset.selectedDay = selected; root.setAttribute('aria-busy', String(pending));
+      syncModeControls();
       dateInput.value = selected;
       const weekStart = parseDay(visibleRange('week', selected).start);
       const firstThursday = addDays(weekStart, 3);
@@ -249,9 +400,48 @@
       const conflictText = pending ? '正在检查所选日期…' : error ? '同步后检查日程冲突' : conflicts ? `所选日期有 ${conflicts} 处时间重叠` : '所选日期暂无时间重叠';
       setText(mobile ? '#schedule-conflict-status' : '#calendar-conflict-status', conflictText);
       setText(mobile ? '#schedule-conflict-severity' : '#calendar-conflict-severity', pending || error ? '等待同步' : conflicts ? '需要处理' : '当前正常');
-      setText(mobile ? '#schedule-conflict-copy' : '#calendar-conflict-copy', '根据当前日期的真实日程检查；可编辑日程调整时间，或填写紧急任务生成救援方案。重复日程的编辑或删除会作用于整条规则。');
       setText('#calendar-banner-conflicts', pending || error ? '日程检查待同步' : conflicts ? `待解决冲突 ${conflicts} 处` : '日程暂无冲突');
       setText('#calendar-banner-copy', '按所选日期检查');
+      // 救援摘要侧栏的真实数据：受影响日程、重叠时长与风险等级都由当天日程推导。
+      const affectedEntries = [];
+      const affectedSeen = new Set();
+      let overlapMinutes = 0;
+      for (const [left, right] of conflictPairList) {
+        overlapMinutes += Math.min(left.end, right.end) - Math.max(left.start, right.start);
+        for (const occurrence of [left, right]) {
+          if (occurrence.id && !affectedSeen.has(occurrence.id)) {
+            affectedSeen.add(occurrence.id);
+            affectedEntries.push(occurrence);
+          }
+        }
+      }
+      const riskLabel = !conflictPairList.length || (conflictPairList.length === 1 && overlapMinutes <= 30)
+        ? '低'
+        : conflictPairList.length <= 2 || overlapMinutes <= 90 ? '中' : '高';
+      const conflictCopy = pending
+        ? '正在根据当前日期的真实日程检查时间重叠…'
+        : error
+          ? '日程同步后检查冲突；可编辑日程调整时间，或填写紧急任务生成救援方案。'
+          : affectedEntries.length
+            ? `当前日期有 ${affectedEntries.length} 项日程互相重叠：${affectedEntries.slice(0, 3).map(e => e.title || '未命名日程').join('、')}${affectedEntries.length > 3 ? ' 等' : ''}。可编辑重叠日程调整时间，或插入紧急任务由服务端生成三方案救援对比。重复日程的编辑或删除会作用于整条规则。`
+            : '根据当前日期的真实日程检查，暂无时间重叠；可编辑日程调整时间，或填写紧急任务生成救援方案。重复日程的编辑或删除会作用于整条规则。';
+      setText(mobile ? '#schedule-conflict-copy' : '#calendar-conflict-copy', conflictCopy);
+      const riskNode = root.querySelector(mobile ? '#schedule-conflict-risk' : '#calendar-conflict-risk');
+      if (riskNode) {
+        const riskTarget = mobile ? riskNode.querySelector('span:last-child') || riskNode : riskNode;
+        riskTarget.textContent = pending || error
+          ? (mobile ? '紧急任务风险：待分析' : '救援风险：待服务端分析')
+          : mobile
+            ? `紧急任务风险：${riskLabel}`
+            : `救援风险：${riskLabel}（${conflictPairList.length ? `${conflictPairList.length} 处重叠 ${overlapMinutes} 分钟` : '当前无重叠'}）`;
+      }
+      const affectedNode = root.querySelector('#calendar-conflict-affected');
+      if (affectedNode) {
+        affectedNode.textContent = pending || error
+          ? '受影响日程：待分析'
+          : affectedEntries.length ? `受影响日程：${affectedEntries.length} 项` : '受影响日程：无';
+      }
+      renderRescueSummaryPanel(conflictPairList, { syncing: pending, hasError: Boolean(error) });
       const banner = root.querySelector('#calendar-banner-conflicts')?.closest('.animate-pulse'); banner?.classList.remove('animate-pulse');
       month.hidden = view !== 'month';
       gantt.hidden = view !== 'gantt';
@@ -353,6 +543,7 @@
         if (parseDay(state.day)) selected = state.day;
         if (views.includes(state.view)) view = state.view;
         ganttScale = state.ganttScale === 'day' ? 'day' : 'week';
+        if (state.mode === 'manual' || state.mode === 'smart') mode = state.mode;
       }
       const turn = ++generation;
       pending = true; error = null;
@@ -360,13 +551,15 @@
       const position = previousScroll && { top: previousScroll.scrollTop, left: previousScroll.scrollLeft };
       render();
       if (position) restoreScroll(position); else scrollTime();
+      refreshRescueHistory();
       onState('loading', '正在同步日程');
       try {
         const records = await request('/schedule');
         if (disposed || turn !== generation || account !== identity()) return;
         if (!Array.isArray(records)) throw new Error('日程响应格式不正确');
         const firstLoad = !loaded;
-        entries = records;
+        // 智能规划模式经预留接口生成展示用的日程序列；手动安排直接展示账号数据。
+        entries = mode === 'smart' ? planEntries(records) : records;
         loaded = true; pending = false;
         const pos = activeScroll();
         const keep = pos && { top: pos.scrollTop, left: pos.scrollLeft };
@@ -390,19 +583,21 @@
       selected = day; view = mode; remember(); render(); scrollTime(); refresh();
     }
     root.addEventListener('click', event => {
-      const target = event.target.closest('button[data-cal-action], button[data-cal-select], button[data-calendar-event]'); if (!target) return;
+      const target = event.target.closest('button[data-cal-action], button[data-cal-select], button[data-calendar-event], button[data-rescue-preview-option]'); if (!target) return;
       event.preventDefault(); event.stopPropagation();
       if (target.dataset.calendarEvent) { navigate(`schedule-detail?id=${encodeURIComponent(target.dataset.calendarEvent)}`); return; }
+      if (target.dataset.rescuePreviewOption) { navigate('urgent-task'); return; }
       if (target.dataset.calSelect) { select(target.dataset.calSelect, target.hasAttribute('data-cal-open-day') ? 'day' : view); return; }
       const name = target.dataset.calAction;
       if (views.includes(name)) select(selected, name);
+      else if (name === 'mode-smart' || name === 'mode-manual') setMode(name === 'mode-smart' ? 'smart' : 'manual');
       else if (name === 'gantt-day' || name === 'gantt-week') { ganttScale = name === 'gantt-day' ? 'day' : 'week'; select(selected); }
       else if (name === 'today') select(dayKey(new Date()));
       else if (name === 'previous' || name === 'next') {
         const direction = name === 'next' ? 1 : -1;
         select(dayKey(view === 'month' ? addMonths(parseDay(selected), direction) : addDays(parseDay(selected), direction * (view === 'week' || (view === 'gantt' && ganttScale === 'week') ? 7 : 1))));
       } else if (name === 'create') create();
-      else if (name === 'urgent') navigate('urgent-task');
+      else if (name === 'urgent' || name === 'rescue') navigate('urgent-task');
       else if (name === 'options') navigate('calendar-options');
       else if (name === 'retry') refresh();
       else if (name === 'login') navigate('login');
