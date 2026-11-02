@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
@@ -5,13 +7,14 @@ import '../services/app_services.dart';
 import '../services/microtask_crystals/microtask_import_parser.dart';
 import '../theme/app_theme.dart';
 import '../utils/app_strings.dart';
-import '../utils/service_failure_message.dart';
-import '../widgets/workbench_surface.dart';
 import '../utils/mobile_feedback.dart';
 import '../utils/schedule_occurrence.dart';
+import '../utils/service_failure_message.dart';
+import '../widgets/micro_task_focus_layer.dart';
 import '../widgets/press_scale.dart';
 import '../widgets/responsive_page_frame.dart';
 import '../widgets/stitch_mobile_scaffold.dart';
+import '../widgets/workbench_surface.dart';
 
 class MicroTaskPage extends StatefulWidget {
   const MicroTaskPage({super.key});
@@ -30,7 +33,8 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
   bool _batchMode = false;
   final Set<String> _selected = <String>{};
   final TextEditingController _quickEntryController = TextEditingController();
-  String _taskFilter = 'all';
+  String _taskFilter = 'pending';
+  bool _focusOpen = false;
 
   @override
   void dispose() {
@@ -85,12 +89,13 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
 
       tasks.sort((a, b) {
         if (a.done != b.done) return a.done ? 1 : -1;
+        // P5 is the most urgent priority, P1 the least urgent.
         final p = b.priority.compareTo(a.priority);
         if (p != 0) return p;
-        final tag = a.tag.compareTo(b.tag);
-        if (tag != 0) return tag;
         final m = a.minutes.compareTo(b.minutes);
         if (m != 0) return m;
+        final tag = a.tag.compareTo(b.tag);
+        if (tag != 0) return tag;
         return a.title.compareTo(b.title);
       });
 
@@ -274,7 +279,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '粘贴清单或场景文本以导入任务。',
+                    '粘贴清单以导入任务。',
                     style: TextStyle(
                       color: Theme.of(ctx2).colorScheme.onSurfaceVariant,
                     ),
@@ -396,37 +401,155 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     }
   }
 
-  Future<void> _logMicroTaskCompleted(MicroTask task) async {
+  String _taskTag(MicroTask task) =>
+      task.tag.trim().isEmpty ? '未分类' : task.tag.trim();
+
+  String _taskTitle(MicroTask task) =>
+      task.title.trim().isEmpty ? '未命名任务' : task.title.trim();
+
+  Future<void> _logMicroTaskStarted(MicroTask task, {DateTime? at}) async {
+    final taskId = _taskKey(task);
+    final now = at ?? DateTime.now();
+    await _dataService.logTaskEvent(
+      TaskEvent(
+        id: 'evt_focus_start_${now.microsecondsSinceEpoch}_$taskId',
+        taskId: taskId,
+        title: _taskTitle(task),
+        tag: _taskTag(task),
+        at: now,
+        type: TaskEventType.start,
+        plannedMinutes: task.minutes.clamp(1, 24 * 60),
+      ),
+    );
+  }
+
+  Future<void> _logMicroTaskCompleted(
+    MicroTask task, {
+    bool logStart = true,
+    int? actualMinutes,
+  }) async {
     final taskId = _taskKey(task);
     final now = DateTime.now();
     final minutes = task.minutes.clamp(1, 24 * 60);
-    final tag = task.tag.trim().isEmpty ? '未分类' : task.tag.trim();
-    final title = task.title.trim().isEmpty ? '未命名任务' : task.title.trim();
 
-    await _dataService.logTaskEvent(
-      TaskEvent(
-        id: 'evt_start_${now.microsecondsSinceEpoch}_$taskId',
-        taskId: taskId,
-        title: title,
-        tag: tag,
-        at: now,
-        type: TaskEventType.start,
-        plannedMinutes: minutes,
-      ),
-    );
+    if (logStart) {
+      await _logMicroTaskStarted(task, at: now);
+    }
 
     await _dataService.logTaskEvent(
       TaskEvent(
         id: 'evt_done_${DateTime.now().microsecondsSinceEpoch}_$taskId',
         taskId: taskId,
-        title: title,
-        tag: tag,
+        title: _taskTitle(task),
+        tag: _taskTag(task),
         at: DateTime.now(),
         type: TaskEventType.complete,
         plannedMinutes: minutes,
-        actualMinutes: minutes,
+        actualMinutes: (actualMinutes ?? minutes).clamp(1, 24 * 60),
       ),
     );
+  }
+
+  Future<void> _logFocusAbandoned(MicroTask task, int activeSeconds) async {
+    if (activeSeconds <= 0) return;
+    final taskId = _taskKey(task);
+    final now = DateTime.now();
+    try {
+      await _dataService.logTaskEvent(
+        TaskEvent(
+          id: 'evt_interrupt_${now.microsecondsSinceEpoch}_$taskId',
+          taskId: taskId,
+          title: _taskTitle(task),
+          tag: _taskTag(task),
+          at: now,
+          type: TaskEventType.interrupt,
+          plannedMinutes: task.minutes.clamp(1, 24 * 60),
+          actualMinutes: (activeSeconds / 60).round().clamp(1, 24 * 60),
+          reason: 'focus_abandoned',
+        ),
+      );
+    } catch (e, st) {
+      AppServices.logStore.error(
+        'microtask',
+        'log focus abandon failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  Future<void> _completeFocusTask(MicroTask task, int activeSeconds) async {
+    if (task.done) return;
+    task.done = true;
+    try {
+      await _dataService.updateMicroTask(task);
+    } catch (_) {
+      task.done = false;
+      rethrow;
+    }
+    try {
+      await _logMicroTaskCompleted(
+        task,
+        logStart: false,
+        actualMinutes: (activeSeconds / 60).round().clamp(1, 24 * 60),
+      );
+    } catch (e, st) {
+      // The task is already saved as done; analytics failure must not make the
+      // completion look unsuccessful to the user.
+      AppServices.logStore.error(
+        'microtask',
+        'log focus completion failed',
+        error: e,
+        stackTrace: st,
+      );
+    }
+  }
+
+  Future<void> _startFocus(MicroTask task) async {
+    if (task.done || _focusOpen) return;
+    _focusOpen = true;
+    unawaited(
+      _logMicroTaskStarted(task).catchError((Object e, StackTrace st) {
+        AppServices.logStore.error(
+          'microtask',
+          'log focus start failed',
+          error: e,
+          stackTrace: st,
+        );
+      }),
+    );
+
+    final outcome = await showMicroTaskFocusLayer(
+      context,
+      task: task,
+      totalMinutes: task.minutes.clamp(1, 24 * 60),
+      points: _pointsFor(task),
+      onComplete: (activeSeconds) => _completeFocusTask(task, activeSeconds),
+      onAbandon: (activeSeconds) => _logFocusAbandoned(task, activeSeconds),
+    );
+    _focusOpen = false;
+    if (!mounted) return;
+
+    await _loadMicroTasks();
+    if (!mounted) return;
+
+    if (outcome == MicroFocusOutcome.completed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            task.done
+                ? _taskCompletedMessage(context, task)
+                : AppStrings.of(context, 'micro_focus_sync_failed'),
+          ),
+        ),
+      );
+    } else if (outcome == MicroFocusOutcome.abandoned) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppStrings.of(context, 'micro_focus_abandoned')),
+        ),
+      );
+    }
   }
 
   Future<void> _setDone(MicroTask task, bool done) async {
@@ -1064,54 +1187,35 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
 
   Widget _buildPageHeading({required bool mobile}) {
     final scheme = Theme.of(context).colorScheme;
+    if (!mobile) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: FilledButton.icon(
+            onPressed: () => _showAddMicroTaskDialog(context),
+            icon: const Icon(Icons.add_rounded),
+            label: Text(AppStrings.of(context, 'micro_btn_add')),
+          ),
+        ),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'SANDBOX DISPATCH',
-                  style: TextStyle(
-                    color: scheme.secondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '微任务沙盒与心流调度',
-                  style: TextStyle(
-                    color: scheme.primary,
-                    fontSize: mobile ? 21 : 28,
-                    fontWeight: FontWeight.w800,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '把零散事务拆成可完成的短任务，按优先级安排下一步。',
-                  style: TextStyle(
-                    color: scheme.onSurfaceVariant,
-                    fontSize: 13,
-                    height: 1.45,
-                  ),
-                ),
-              ],
+            child: Text(
+              AppStrings.of(context, 'micro_title'),
+              style: TextStyle(
+                color: scheme.primary,
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+                height: 1.15,
+              ),
             ),
           ),
-          if (!mobile) ...[
-            const SizedBox(width: 16),
-            FilledButton.icon(
-              onPressed: () => _showAddMicroTaskDialog(context),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('添加微任务'),
-            ),
-          ],
         ],
       ),
     );
@@ -1126,23 +1230,27 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     );
     final metrics = [
       (
-        label: '待处理',
+        label: AppStrings.of(context, 'micro_metric_pending'),
         value: '${pending.length}',
-        detail: '约 ${(pendingMinutes / 60).toStringAsFixed(1)}h 负荷',
+        detail: AppStrings.of(
+          context,
+          'micro_metric_pending_detail',
+          params: {'hours': (pendingMinutes / 60).toStringAsFixed(1)},
+        ),
         icon: Icons.bubble_chart_outlined,
         color: Theme.of(context).colorScheme.secondary,
       ),
       (
-        label: '已完成',
+        label: AppStrings.of(context, 'micro_metric_done'),
         value: '$doneCount',
-        detail: '今日完成任务',
+        detail: AppStrings.of(context, 'micro_metric_done_detail'),
         icon: Icons.check_circle_outline_rounded,
         color: Theme.of(context).colorScheme.tertiary,
       ),
       (
-        label: '已获得积分',
+        label: AppStrings.of(context, 'micro_metric_points'),
         value: '$_completedPointsValue',
-        detail: '按已完成任务累计',
+        detail: AppStrings.of(context, 'micro_metric_points_detail'),
         icon: Icons.bolt_rounded,
         color: Theme.of(context).colorScheme.primary,
       ),
@@ -1244,13 +1352,21 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                 size: 18,
               ),
               const SizedBox(width: 7),
-              const Text(
-                '快速录入',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+              Expanded(
+                child: Text(
+                  AppStrings.of(context, 'micro_quick_title'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
-                '默认 15 分钟 · 任意标签',
+                AppStrings.of(context, 'micro_quick_default'),
+                maxLines: 1,
                 style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 11),
               ),
             ],
@@ -1264,7 +1380,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _addQuickTask(),
                   decoration: InputDecoration(
-                    hintText: '快速输入一项待办',
+                    hintText: AppStrings.of(context, 'micro_quick_hint'),
                     prefixIcon: const Icon(Icons.edit_note_rounded),
                     isDense: true,
                     filled: true,
@@ -1280,7 +1396,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
               FilledButton.icon(
                 onPressed: _addQuickTask,
                 icon: const Icon(Icons.arrow_forward_rounded, size: 17),
-                label: const Text('添加'),
+                label: Text(AppStrings.of(context, 'btn_add')),
               ),
             ],
           ),
@@ -1318,7 +1434,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '聚焦沙盒 · 闪电防线',
+                  AppStrings.of(context, 'micro_sprint_title'),
                   style: TextStyle(
                     color: scheme.tertiaryFixed,
                     fontSize: 11,
@@ -1327,19 +1443,17 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  quickCount == 0 ? '当前没有短时待办' : '有 $quickCount 项短时待办可优先清理',
+                  quickCount == 0
+                      ? AppStrings.of(context, 'micro_sprint_none')
+                      : AppStrings.of(
+                          context,
+                          'micro_sprint_count',
+                          params: {'count': quickCount.toString()},
+                        ),
                   style: TextStyle(
                     color: scheme.onPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  '利用会前空隙完成一项，减少任务积压。',
-                  style: TextStyle(
-                    color: scheme.onPrimary.withValues(alpha: 0.8),
-                    fontSize: 11,
                   ),
                 ),
               ],
@@ -1354,55 +1468,95 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
             icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-            label: const Text('AI 填充'),
+            label: Text(AppStrings.of(context, 'micro_sprint_fill')),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTaskListColumn() {
+  List<List<MicroTask>> _bucketPending(List<MicroTask> tasks) {
+    return [
+      tasks.where((task) => task.priority >= 5).toList(),
+      tasks.where((task) => task.priority < 5 && task.minutes <= 5).toList(),
+      tasks
+          .where(
+            (task) =>
+                task.priority >= 3 && task.priority <= 4 && task.minutes > 5,
+          )
+          .toList(),
+      tasks.where((task) => task.priority <= 2 && task.minutes > 5).toList(),
+    ];
+  }
+
+  MicroTask? get _nextTask {
+    final pending = _tasks.where((task) => !task.done).toList();
+    for (final bucket in _bucketPending(pending)) {
+      if (bucket.isNotEmpty) return bucket.first;
+    }
+    return null;
+  }
+
+  List<_MicroTaskGroup> _groupTasks(
+    List<MicroTask> tasks, {
+    MicroTask? exclude,
+  }) {
     final scheme = Theme.of(context).colorScheme;
-    final visibleTasks = _tasks.where((task) {
-      if (_taskFilter == 'pending') return !task.done;
-      if (_taskFilter == 'done') return task.done;
-      return true;
-    }).toList();
-    final groups = [
+    final excludeKey = exclude == null ? null : _taskKey(exclude);
+    final visible = tasks
+        .where((task) => excludeKey == null || _taskKey(task) != excludeKey)
+        .toList();
+    final buckets = _bucketPending(visible);
+    return [
       _MicroTaskGroup(
-        title: '紧急且今日必做',
+        title: AppStrings.of(context, 'micro_group_urgent'),
         icon: Icons.priority_high_rounded,
         color: scheme.error,
-        tasks: visibleTasks.where((task) => task.priority == 1).toList(),
+        tasks: buckets[0],
       ),
       _MicroTaskGroup(
-        title: '随手快速处理（≤5m）',
+        title: AppStrings.of(context, 'micro_group_quick'),
         icon: Icons.flash_on_rounded,
         color: scheme.secondary,
-        tasks: visibleTasks
-            .where((task) => task.priority != 1 && task.minutes <= 5)
-            .toList(),
+        tasks: buckets[1],
       ),
       _MicroTaskGroup(
-        title: '排队中（待流转）',
+        title: AppStrings.of(context, 'micro_group_queue'),
         icon: Icons.queue_rounded,
         color: scheme.primary,
-        tasks: visibleTasks
-            .where(
-              (task) =>
-                  task.priority != 1 && task.minutes > 5 && task.priority <= 3,
-            )
-            .toList(),
+        tasks: buckets[2],
       ),
       _MicroTaskGroup(
-        title: '稍后处理（低认知负荷）',
+        title: AppStrings.of(context, 'micro_group_later'),
         icon: Icons.hourglass_bottom_rounded,
         color: scheme.onSurfaceVariant,
-        tasks: visibleTasks
-            .where((task) => task.priority > 3 && task.minutes > 5)
-            .toList(),
+        tasks: buckets[3],
       ),
     ];
+  }
+
+  Widget _buildTaskListColumn() {
+    final scheme = Theme.of(context).colorScheme;
+    final pendingCount = _tasks.where((task) => !task.done).length;
+    final doneCount = _tasks.length - pendingCount;
+    final isDoneView = _taskFilter == 'done';
+    final visibleTasks = isDoneView
+        ? _tasks.where((task) => task.done).toList()
+        : _tasks.where((task) => !task.done).toList();
+    final nextTask = !isDoneView && !_batchMode ? _nextTask : null;
+    final groups = isDoneView
+        ? [
+            _MicroTaskGroup(
+              title: AppStrings.of(context, 'micro_filter_done'),
+              icon: Icons.check_circle_outline_rounded,
+              color: scheme.tertiary,
+              tasks: visibleTasks,
+            ),
+          ]
+        : _groupTasks(visibleTasks, exclude: nextTask);
+    final visibleGroups = groups
+        .where((group) => group.tasks.isNotEmpty)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1411,7 +1565,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           children: [
             Expanded(
               child: Text(
-                '任务队列',
+                AppStrings.of(context, 'micro_section_tasks'),
                 style: TextStyle(
                   color: scheme.onSurface,
                   fontSize: 18,
@@ -1420,7 +1574,11 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
               ),
             ),
             Text(
-              '${visibleTasks.length} 项',
+              AppStrings.of(
+                context,
+                'micro_task_count',
+                params: {'count': visibleTasks.length.toString()},
+              ),
               style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
             ),
           ],
@@ -1429,14 +1587,17 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
         SegmentedButton<String>(
           showSelectedIcon: false,
           segments: [
-            ButtonSegment(value: 'all', label: Text('全部 ${_tasks.length}')),
             ButtonSegment(
               value: 'pending',
-              label: Text('待处理 ${_tasks.where((task) => !task.done).length}'),
+              label: Text(
+                '${AppStrings.of(context, 'micro_filter_queue')} $pendingCount',
+              ),
             ),
             ButtonSegment(
               value: 'done',
-              label: Text('已完成 ${_tasks.where((task) => task.done).length}'),
+              label: Text(
+                '${AppStrings.of(context, 'micro_filter_done')} $doneCount',
+              ),
             ),
           ],
           selected: {_taskFilter},
@@ -1446,13 +1607,149 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
         ),
         if (_batchMode) _buildTagQuickSelect(),
         const SizedBox(height: 12),
+        if (nextTask != null) ...[
+          _buildNextFocusCard(nextTask),
+          const SizedBox(height: 12),
+        ],
         if (_tasks.isEmpty)
           _buildEmptyTasks()
         else if (visibleTasks.isEmpty)
-          _buildFilteredEmpty()
+          _buildFilteredEmpty(isDoneView: isDoneView)
         else
-          for (final group in groups) _buildTaskSection(group),
+          for (final group in visibleGroups) _buildTaskSection(group),
       ],
+    );
+  }
+
+  Widget _buildNextFocusCard(MicroTask task) {
+    final scheme = Theme.of(context).colorScheme;
+    final foreground = scheme.onPrimaryContainer;
+    final tag = task.tag.trim();
+    final meta = <Widget>[
+      _nextMetaChip('P${task.priority.clamp(1, 5)}', foreground),
+      _nextMetaChip(
+        '${task.minutes} ${AppStrings.of(context, 'micro_card_min')}',
+        foreground,
+      ),
+      if (tag.isNotEmpty) _nextMetaChip('#$tag', foreground),
+    ];
+
+    return Container(
+      key: const ValueKey('micro-next-task'),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.play_circle_outline_rounded,
+                size: 18,
+                color: foreground,
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  AppStrings.of(context, 'micro_next_title'),
+                  style: TextStyle(
+                    color: foreground,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: AppStrings.of(context, 'micro_task_menu'),
+                icon: Icon(Icons.more_horiz_rounded, color: foreground),
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    _showEditMicroTaskDialog(context, task);
+                  } else if (value == 'delete') {
+                    _confirmDeleteOne(task);
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Text(AppStrings.of(context, 'micro_edit')),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text(AppStrings.of(context, 'micro_delete')),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            task.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: foreground,
+              fontSize: 19,
+              fontWeight: FontWeight.w700,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: meta,
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                key: const ValueKey('micro-next-start'),
+                onPressed: () => _startFocus(task),
+                style: FilledButton.styleFrom(
+                  backgroundColor: foreground,
+                  foregroundColor: scheme.primaryContainer,
+                ),
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: Text(AppStrings.of(context, 'micro_start_focus')),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => _setDone(task, true),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: foreground,
+                  side: BorderSide(color: foreground.withValues(alpha: 0.4)),
+                ),
+                icon: const Icon(Icons.check_rounded),
+                label: Text(AppStrings.of(context, 'micro_complete')),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _nextMetaChip(String label, Color foreground) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: foreground.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 
@@ -1490,7 +1787,11 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                 ),
               ),
               Text(
-                '${group.tasks.length} 项待清',
+                AppStrings.of(
+                  context,
+                  'micro_task_count',
+                  params: {'count': group.tasks.length.toString()},
+                ),
                 style: TextStyle(
                   color: group.color,
                   fontSize: 11,
@@ -1500,16 +1801,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
             ],
           ),
           const SizedBox(height: 8),
-          if (group.tasks.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                '当前分组暂无任务',
-                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
-              ),
-            )
-          else
-            for (final task in group.tasks) _buildMicroTaskBubble(task),
+          for (final task in group.tasks) _buildMicroTaskBubble(task),
         ],
       ),
     );
@@ -1532,29 +1824,35 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
             size: 30,
           ),
           const SizedBox(height: 8),
-          const Text('暂无微任务', style: TextStyle(fontWeight: FontWeight.w700)),
+          Text(
+            AppStrings.of(context, 'micro_empty_title'),
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 4),
           Text(
-            '添加一项任务，或导入现有清单。',
+            AppStrings.of(context, 'micro_empty_body'),
             style: TextStyle(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: () => _showAddMicroTaskDialog(context),
             icon: const Icon(Icons.add_rounded),
-            label: const Text('添加微任务'),
+            label: Text(AppStrings.of(context, 'micro_btn_add')),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilteredEmpty() {
+  Widget _buildFilteredEmpty({required bool isDoneView}) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Center(
         child: Text(
-          '此筛选条件下暂无任务',
+          AppStrings.of(
+            context,
+            isDoneView ? 'micro_done_empty' : 'micro_queue_clear',
+          ),
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
@@ -1567,75 +1865,11 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
     final scheme = Theme.of(context).colorScheme;
     final completed = _tasks.where((task) => task.done).length;
     final ratio = _tasks.isEmpty ? 0.0 : completed / _tasks.length;
-    final quickCount = _tasks
-        .where((task) => !task.done && task.minutes <= 15)
-        .length;
     final pendingCount = _tasks.length - completed;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: scheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.bolt_rounded,
-                    color: scheme.tertiaryFixed,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    child: Text(
-                      '聚焦沙盒 · 闪电防线',
-                      style: TextStyle(
-                        color: scheme.tertiaryFixed,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                quickCount == 0 ? '当前没有短时待办' : '发现 $quickCount 项短时待办',
-                style: TextStyle(
-                  color: scheme.onPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '选一项在下一段空档里完成。',
-                style: TextStyle(
-                  color: scheme.onPrimary.withValues(alpha: 0.8),
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _fillQuickTasks,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: scheme.tertiaryFixed,
-                    foregroundColor: scheme.onTertiaryFixed,
-                  ),
-                  icon: const Icon(Icons.auto_awesome_rounded, size: 17),
-                  label: const Text('AI 填充'),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -1646,9 +1880,9 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '清零成就与节奏审计',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              Text(
+                AppStrings.of(context, 'micro_progress_title'),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 14),
               Row(
@@ -1666,7 +1900,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
                     child: Text(
-                      '$completed / ${_tasks.length} 已完成',
+                      '$completed / ${_tasks.length}',
                       style: TextStyle(
                         color: scheme.onSurfaceVariant,
                         fontSize: 11,
@@ -1686,7 +1920,7 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
               ),
               const SizedBox(height: 12),
               Text(
-                '已获得 ${_completedPoints()} 积分',
+                '${_completedPoints()} ${AppStrings.of(context, 'micro_metric_points')}',
                 style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
               ),
             ],
@@ -1703,15 +1937,19 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '积压防线预警机制',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              Text(
+                AppStrings.of(context, 'micro_backlog_title'),
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               Text(
                 pendingCount == 0
-                    ? '待办已清空，节奏保持稳定。'
-                    : '还有 $pendingCount 项待处理微任务。',
+                    ? AppStrings.of(context, 'micro_backlog_clear')
+                    : AppStrings.of(
+                        context,
+                        'micro_backlog_count',
+                        params: {'count': pendingCount.toString()},
+                      ),
                 style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
               ),
               const SizedBox(height: 10),
@@ -1720,7 +1958,12 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                 icon: Icon(
                   _batchMode ? Icons.close_rounded : Icons.checklist_rounded,
                 ),
-                label: Text(_batchMode ? '退出批量' : '批量处理'),
+                label: Text(
+                  AppStrings.of(
+                    context,
+                    _batchMode ? 'micro_batch_exit' : 'micro_batch_enter',
+                  ),
+                ),
               ),
             ],
           ),
@@ -2165,6 +2408,22 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                           const SizedBox(height: 8),
                           Row(
                             children: [
+                              if (!task.done)
+                                IconButton(
+                                  tooltip: AppStrings.of(
+                                    context,
+                                    'micro_start_focus',
+                                  ),
+                                  icon: Icon(
+                                    Icons.play_circle_outline_rounded,
+                                    size: 20,
+                                    color: scheme.primary,
+                                  ),
+                                  onPressed: () => _startFocus(task),
+                                  constraints: const BoxConstraints(),
+                                  padding: EdgeInsets.zero,
+                                ),
+                              if (!task.done) const SizedBox(width: 12),
                               IconButton(
                                 icon: Icon(
                                   Icons.edit_rounded,
@@ -2228,7 +2487,9 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
               )
             else
               IconButton(
-                tooltip: task.done ? '标记未完成' : '标记完成',
+                tooltip: task.done
+                    ? AppStrings.of(context, 'micro_mark_undone')
+                    : AppStrings.of(context, 'micro_mark_done'),
                 visualDensity: VisualDensity.compact,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints.tightFor(
@@ -2285,9 +2546,24 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                 ),
               ),
             ),
+            if (!_batchMode && !task.done)
+              IconButton(
+                tooltip: AppStrings.of(context, 'micro_start_focus'),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(
+                  width: 40,
+                  height: 44,
+                ),
+                onPressed: () => _startFocus(task),
+                icon: Icon(
+                  Icons.play_circle_outline_rounded,
+                  color: scheme.primary,
+                  size: 22,
+                ),
+              ),
             if (!_batchMode)
               PopupMenuButton<String>(
-                tooltip: '任务操作',
+                tooltip: AppStrings.of(context, 'micro_task_menu'),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints.tightFor(
                   width: 44,
@@ -2297,9 +2573,15 @@ class _MicroTaskPageState extends State<MicroTaskPage> {
                   if (value == 'edit') _showEditMicroTaskDialog(context, task);
                   if (value == 'delete') _confirmDeleteOne(task);
                 },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'edit', child: Text('编辑')),
-                  PopupMenuItem(value: 'delete', child: Text('删除')),
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Text(AppStrings.of(context, 'micro_edit')),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text(AppStrings.of(context, 'micro_delete')),
+                  ),
                 ],
                 icon: const Icon(Icons.more_horiz_rounded),
               ),
