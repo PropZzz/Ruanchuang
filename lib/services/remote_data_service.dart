@@ -31,8 +31,9 @@ class RemoteDataService implements DataService {
   }
 
   Never _unavailable(String method) {
-    throw RemoteUnavailableException(
+    throw ApiException(
       '$method is not available from remote service yet.',
+      statusCode: 501,
     );
   }
 
