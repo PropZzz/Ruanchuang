@@ -15,6 +15,24 @@ import 'package:shixuzhipei/services/service_result.dart';
 import 'package:shixuzhipei/services/service_operations.dart';
 
 void main() {
+  test(
+    'typed favorite preference uses the same explicit local route as legacy',
+    () async {
+      final composite = CompositeDataService(
+        local: LocalDataService.forPersistence(InMemoryLocalPersistence()),
+        remote: RemoteDataService(),
+      );
+      final operations = ServiceOperations(composite);
+      final saved = await operations.setFavoriteDevice('device-1');
+      expect((saved as ServiceSuccess).source, ServiceSource.local);
+      expect(saved.offline, isFalse);
+      expect(await composite.getFavoriteDevice(), 'device-1');
+      final loaded = await operations.getFavoriteDevice();
+      expect((loaded as ServiceSuccess<String?>).value, 'device-1');
+      expect(loaded.source, ServiceSource.local);
+      expect(loaded.offline, isFalse);
+    },
+  );
   LocalDataService local() =>
       LocalDataService.forPersistence(InMemoryLocalPersistence());
   RemoteDataService remote(Future<http.Response> Function(http.Request) send) =>

@@ -5,10 +5,26 @@ import 'remote_data_service.dart';
 import 'service_result.dart';
 
 /// Opt-in result boundary for pages, without changing DataService implementers.
-/// Each callback performs ONE data operation, not auth or a multi-step workflow.
+/// Generic callbacks run on adapters: ONE remote-capable data operation, not
+/// auth or a multi-step workflow. Local preferences use the named methods.
 class ServiceOperations {
   const ServiceOperations(this.service);
   final DataService service;
+
+  ServiceSource get _preferenceSource =>
+      service is CompositeDataService ? ServiceSource.local : _source;
+
+  Future<ServiceResult<String?>> getFavoriteDevice() => _capture(
+    service.getFavoriteDevice,
+    write: false,
+    source: _preferenceSource,
+  );
+
+  Future<ServiceResult<void>> setFavoriteDevice(String deviceId) => _capture(
+    () => service.setFavoriteDevice(deviceId),
+    write: true,
+    source: _preferenceSource,
+  );
 
   ServiceSource get _source => service is RemoteDataService
       ? ServiceSource.remote
@@ -31,12 +47,13 @@ class ServiceOperations {
   Future<ServiceResult<T>> _capture<T>(
     Future<T> Function() operation, {
     required bool write,
+    ServiceSource? source,
   }) async {
     try {
-      return ServiceSuccess(await operation(), source: _source);
+      return ServiceSuccess(await operation(), source: source ?? _source);
     } catch (error, stack) {
       return ServiceFailure(
-        serviceProblem(error, stack, _source, write: write),
+        serviceProblem(error, stack, source ?? _source, write: write),
       );
     }
   }
