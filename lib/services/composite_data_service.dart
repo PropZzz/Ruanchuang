@@ -52,8 +52,7 @@ class CompositeDataService implements DataService {
     }
 
     return error is ApiException &&
-        error.statusCode != null &&
-        error.statusCode! >= 500;
+        const {500, 502, 503, 504}.contains(error.statusCode);
   }
 
   Future<T> _read<T>(Future<T> Function(DataService s) fn) async {
@@ -170,10 +169,10 @@ class CompositeDataService implements DataService {
 
   @override
   Future<void> setFavoriteDevice(String deviceId) =>
-      _writeVoid((s) => s.setFavoriteDevice(deviceId));
+      local.setFavoriteDevice(deviceId);
 
   @override
-  Future<String?> getFavoriteDevice() => _read((s) => s.getFavoriteDevice());
+  Future<String?> getFavoriteDevice() => local.getFavoriteDevice();
 
   @override
   Future<void> logTaskEvent(TaskEvent event) =>
