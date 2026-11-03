@@ -13,16 +13,33 @@ import 'package:shixuzhipei/services/local_persistence/local_persistence.dart';
 import 'package:shixuzhipei/services/remote_data_service.dart';
 
 void main() {
-  test('missing remote task capability cannot return a demo local task', () async {
-    final service = CompositeDataService(
-      local: LocalDataService.forPersistence(InMemoryLocalPersistence()),
-      remote: RemoteDataService(),
-    );
-    await expectLater(
-      service.getCurrentTask(),
-      throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 501)),
-    );
-  });
+  for (final error in <Object>[
+    RemoteUnavailableException('offline logout'),
+    const ApiException('server logout failed', statusCode: 503),
+  ]) {
+    test('logout preserves $error after switching to guest', () async {
+      final service = CompositeDataService(
+        local: LocalDataService.forPersistence(InMemoryLocalPersistence()),
+        remote: _ThemeModeDataService(logoutError: error, loginResult: true),
+      );
+      await service.login('alice@example.com', 'secret123');
+      await expectLater(service.logout(), throwsA(same(error)));
+      expect(await service.getCurrentUser(), isNull);
+    });
+  }
+  test(
+    'missing remote task capability cannot return a demo local task',
+    () async {
+      final service = CompositeDataService(
+        local: LocalDataService.forPersistence(InMemoryLocalPersistence()),
+        remote: RemoteDataService(),
+      );
+      await expectLater(
+        service.getCurrentTask(),
+        throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 501)),
+      );
+    },
+  );
 
   test('favorite device is explicitly local without calling remote', () async {
     final service = CompositeDataService(
@@ -76,7 +93,7 @@ void main() {
   );
 
   test(
-    'getThemeMode falls back locally for an unimplemented remote endpoint',
+    'getThemeMode falls back locally for an unavailable remote connection',
     () async {
       final local = _ThemeModeDataService(themeMode: 'dark');
       final remote = _ThemeModeDataService(

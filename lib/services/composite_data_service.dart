@@ -1,12 +1,6 @@
-import 'dart:async';
-import 'dart:io';
-
-import 'package:http/http.dart' as http;
-
 import '../models/models.dart';
-import 'api_client.dart';
 import 'data_service.dart';
-import 'remote_data_service.dart';
+import 'service_result.dart';
 
 /// Composite remote service with a local cache and offline fallback.
 ///
@@ -43,60 +37,93 @@ class CompositeDataService implements DataService {
     }
   }
 
-  bool _isRemoteFallbackError(Object error) {
-    if (error is RemoteUnavailableException ||
-        error is TimeoutException ||
-        error is SocketException ||
-        error is http.ClientException) {
-      return true;
-    }
-
-    return error is ApiException &&
-        const {500, 502, 503, 504}.contains(error.statusCode);
+  Future<T> _read<T>(Future<T> Function(DataService s) fn) async {
+    return (await readResult(fn)).unwrap();
   }
 
-  Future<T> _read<T>(Future<T> Function(DataService s) fn) async {
-    if (_guestOnly) return fn(local);
-    if (!_localCacheReady) return fn(remote);
-    if (preferRemoteReads) {
-      try {
-        return await fn(remote);
-      } catch (error) {
-        if (!_isRemoteFallbackError(error)) rethrow;
-        return fn(local);
-      }
+  /// Run one data read. The callback must not perform writes/session commands.
+  Future<ServiceResult<T>> readResult<T>(
+    Future<T> Function(DataService) fn,
+  ) async {
+    if (_guestOnly) return _localResult(fn);
+    if (_localCacheReady && !preferRemoteReads) {
+      final result = await _localResult(fn);
+      if (result is ServiceSuccess<T>) return result;
     }
     try {
-      return await fn(local);
-    } catch (_) {
-      try {
-        return await fn(remote);
-      } catch (error) {
-        if (!_isRemoteFallbackError(error)) rethrow;
-        return fn(local);
+      return ServiceSuccess(await fn(remote), source: ServiceSource.remote);
+    } catch (error, stack) {
+      final problem = serviceProblem(
+        error,
+        stack,
+        ServiceSource.remote,
+        write: false,
+      );
+      if (!allowsLocalFallback(error) || !_localCacheReady) {
+        return ServiceFailure(problem);
       }
+      return _localResult(fn, fallback: problem);
     }
   }
 
   Future<void> _writeVoid(Future<void> Function(DataService s) fn) async {
-    if (_guestOnly) {
-      await fn(local);
-      return;
-    }
-    var remoteSucceeded = false;
+    (await writeResult(fn)).unwrap();
+  }
+
+  /// Run one idempotent data write with the same payload on both adapters.
+  /// Multi-step workflows and auth/logout are not transactions through this API.
+  Future<ServiceResult<void>> writeResult(
+    Future<void> Function(DataService) fn,
+  ) async {
+    if (_guestOnly) return _localResult(fn, write: true);
     try {
       await fn(remote);
-      remoteSucceeded = true;
-    } catch (error) {
-      if (!_isRemoteFallbackError(error)) rethrow;
-      if (!_localCacheReady) rethrow;
+    } catch (error, stack) {
+      final problem = serviceProblem(
+        error,
+        stack,
+        ServiceSource.remote,
+        write: true,
+      );
+      if (!allowsLocalFallback(error) || !_localCacheReady)
+        return ServiceFailure(problem);
+      return _localResult(fn, write: true, fallback: problem);
     }
-
     try {
       await fn(local);
-    } catch (_) {
-      if (!remoteSucceeded) rethrow;
+      return const ServiceSuccess(null, source: ServiceSource.remote);
+    } catch (error, stack) {
       _localCacheReady = false;
+      return ServiceSuccess(
+        null,
+        source: ServiceSource.remote,
+        cacheWarning: serviceProblem(
+          error,
+          stack,
+          ServiceSource.local,
+          write: true,
+        ),
+      );
+    }
+  }
+
+  Future<ServiceResult<T>> _localResult<T>(
+    Future<T> Function(DataService) fn, {
+    bool write = false,
+    ServiceProblem? fallback,
+  }) async {
+    try {
+      return ServiceSuccess(
+        await fn(local),
+        source: ServiceSource.local,
+        fallbackCause: fallback,
+        remoteCommitUncertain: write && fallback != null,
+      );
+    } catch (error, stack) {
+      return ServiceFailure(
+        serviceProblem(error, stack, ServiceSource.local, write: write),
+        fallbackCause: fallback,
+      );
     }
   }
 
@@ -290,10 +317,8 @@ class CompositeDataService implements DataService {
       try {
         await remote.logout();
       } catch (error, stackTrace) {
-        if (!_isRemoteFallbackError(error)) {
-          remoteError = error;
-          remoteStack = stackTrace;
-        }
+        remoteError = error;
+        remoteStack = stackTrace;
       }
     }
     await local.logout();
