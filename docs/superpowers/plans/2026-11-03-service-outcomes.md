@@ -48,7 +48,7 @@ Interfaces: ServiceResult<T> = ServiceSuccess<T> or ServiceFailure<T>; ServiceSo
 - [x] Only format changed Dart files.
 - [x] Run related tests, flutter analyze, flutter test -r compact, backend pytest, git diff --check. Record command/status and any bounded timeout honestly.
 - [x] Fresh whole-branch review; fix material findings with regression tests.
-- [ ] Commit small changes, push codex/cards-service-outcomes, create unmerged main-base PR with outcomes matrix, tests, limits, rollback and next-card handoff.
+- [x] Commit small changes, push codex/cards-service-outcomes, create unmerged main-base PR with outcomes matrix, tests, limits, rollback and next-card handoff.
 
 ## Execution record
 
@@ -62,3 +62,4 @@ Interfaces: ServiceResult<T> = ServiceSuccess<T> or ServiceFailure<T>; ServiceSo
 - Final `flutter analyze`: exit0, No issues found (3.3s); `flutter test -r compact`: exit0, 442 passed (22s). Only the six changed Dart files were formatted; no dependency or lockfile change.
 - `python -m pytest backend/tests -q`: exit2, 22 collection errors (4.87s). Existing default Python lacks starlette/fastapi/jsonschema. No repo .venv or documented F:/Tools/Python310 executable exists here; no dependencies installed. Backend regression remains BLOCKED, not passed.
 - Logs in ignored build/: cards-service-targeted.log, cards-service-analyze.log, cards-service-full-test.log, cards-service-pytest.log. No silent hang reproduced; all runs completed within bounded observation. No screenshots/hardware/production acceptance performed for service-only change.
+- Delivery: https://github.com/PropZzz/Ruanchuang/pull/8, base main, branch codex/cards-service-outcomes. No merge authorized or performed. Stop here pending review; Focus/calendar implementation has not started.
