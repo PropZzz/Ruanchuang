@@ -13,6 +13,59 @@ import 'package:shixuzhipei/services/local_persistence/local_persistence.dart';
 import 'package:shixuzhipei/services/remote_data_service.dart';
 
 void main() {
+  for (final error in <Object>[
+    RemoteUnavailableException('offline logout'),
+    const ApiException('server logout failed', statusCode: 503),
+  ]) {
+    test('logout preserves $error after switching to guest', () async {
+      final service = CompositeDataService(
+        local: LocalDataService.forPersistence(InMemoryLocalPersistence()),
+        remote: _ThemeModeDataService(logoutError: error, loginResult: true),
+      );
+      await service.login('alice@example.com', 'secret123');
+      await expectLater(service.logout(), throwsA(same(error)));
+      expect(await service.getCurrentUser(), isNull);
+    });
+  }
+  test(
+    'missing remote task capability cannot return a demo local task',
+    () async {
+      final service = CompositeDataService(
+        local: LocalDataService.forPersistence(InMemoryLocalPersistence()),
+        remote: RemoteDataService(),
+      );
+      await expectLater(
+        service.getCurrentTask(),
+        throwsA(isA<ApiException>().having((e) => e.statusCode, 'status', 501)),
+      );
+    },
+  );
+
+  test('favorite device is explicitly local without calling remote', () async {
+    final service = CompositeDataService(
+      local: LocalDataService.forPersistence(InMemoryLocalPersistence()),
+      remote: _ThemeModeDataService(),
+    );
+    await service.setFavoriteDevice('device-1');
+    expect(await service.getFavoriteDevice(), 'device-1');
+  });
+  for (final code in [400, 401, 403, 404, 409, 422, 429, 501, 505]) {
+    test('HTTP $code never falls back on reads or writes', () async {
+      final error = ApiException('Rejected', statusCode: code);
+      final local = _ThemeModeDataService(themeMode: 'dark');
+      final service = CompositeDataService(
+        local: local,
+        remote: _ThemeModeDataService(
+          getThemeModeError: error,
+          setThemeModeError: error,
+        ),
+      );
+      await expectLater(service.getThemeMode(), throwsA(same(error)));
+      await expectLater(service.setThemeMode('light'), throwsA(same(error)));
+      expect(local.getThemeModeCalls, 0);
+      expect(local.setThemeModeCalls, 0);
+    });
+  }
   CompositeDataService composite({
     required DataService local,
     required DataService remote,
@@ -40,7 +93,7 @@ void main() {
   );
 
   test(
-    'getThemeMode falls back locally for an unimplemented remote endpoint',
+    'getThemeMode falls back locally for an unavailable remote connection',
     () async {
       final local = _ThemeModeDataService(themeMode: 'dark');
       final remote = _ThemeModeDataService(
