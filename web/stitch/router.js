@@ -315,17 +315,6 @@
     }
   }
 
-  function publishMicroTasks(document, tasks, state = 'online') {
-    try {
-      const EventCtor = document.defaultView?.CustomEvent || CustomEvent;
-      document.dispatchEvent(new EventCtor('stitch:microtasks', {
-        detail: { tasks: Array.isArray(tasks) ? tasks : [], state },
-      }));
-    } catch (_) {
-      // A detached iframe can race with hydration; the next activate retries.
-    }
-  }
-
   async function hydrateBackend(document, route) {
     if (route === 'schedule' && document.stitchCalendar) return document.stitchCalendar.refresh();
     if (route === 'focus' && document.stitchFocus) return document.stitchFocus.refresh();
@@ -339,8 +328,6 @@
       let label = '已连接 · FastAPI';
       if (route === 'micro') {
         const tasks = await backendRequest('/microtasks');
-        if (!isCurrent()) return;
-        publishMicroTasks(document, tasks, 'online');
         label = `已连接 · 微任务 ${Array.isArray(tasks) ? tasks.length : 0} 项`;
       } else if (route === 'team') {
         const members = await backendRequest('/team/members');
@@ -362,7 +349,6 @@
       const label = state === 'auth-required' ? '请登录后同步' : '本地模式 · 后端不可用';
       document.documentElement.dataset.backendState = state;
       updateSyncLabel(document, label);
-      if (route === 'micro') publishMicroTasks(document, [], state);
       window.dispatchEvent(new CustomEvent('stitch:backend-state', {
         detail: { state, route, error: String(error) },
       }));
@@ -1056,7 +1042,6 @@
   }
 
   function navigate(route, { replace = false, returnRoute = null } = {}) {
-    window.__RUANCHUANG_FOCUS_MODE__?.(false);
     const query = route.includes('?') ? '?' + route.split('?').slice(1).join('?') : '';
     route = route.split('?')[0];
     if (!pages[route]) route = aliases[route] || 'focus';
@@ -2123,7 +2108,7 @@
     return match ? { hour: Number(match[1]), minute: Number(match[2]) } : { hour: 9, minute: 0 };
   }
 
-  async function runApiAction(action, document, button, payload = null) {
+  async function runApiAction(action, document, button) {
     const actionRoute = document.documentElement.dataset.route || activeRoute;
     try {
       setActionBusy(button, true, action.startsWith('auth-') ? '请稍候...' : '同步中...');
@@ -2324,107 +2309,13 @@
         const minutes = Number(raw.match(/~(\d+)m/i)?.[1] || 15);
         const priority = Number(raw.match(/!P(\d)/i)?.[1] || 3);
         const tag = raw.match(/#([^\s#]+)/)?.[1] || '未分类';
-        const created = await backendRequest('/microtasks', {
+        await backendRequest('/microtasks', {
           method: 'POST',
-          body: { title, tag, minutes, priority },
+          body: { title, tag, minutes, priority, requirement: 'NLP 快捷建单' },
         });
-        showNotice(document, '微任务已添加。');
-        if (activeRoute !== 'micro') navigate('micro');
-        return { ok: true, task: created };
-      }
-
-      if (action === 'microtask-set-done') {
-        const taskId = String(payload?.taskId || '').trim();
-        if (!taskId) throw new Error('缺少任务 ID');
-        const done = payload?.done !== false;
-        const updated = await backendRequest('/microtasks/batch-complete', {
-          method: 'POST',
-          body: { taskIds: [taskId], done },
-        });
-        const task = Array.isArray(updated) ? updated[0] : null;
-        if (task && done) {
-          await backendRequest('/events', {
-            method: 'POST',
-            body: {
-              id: `web_micro_complete_${Date.now()}_${taskId}`,
-              taskId,
-              title: task.title || '微任务',
-              tag: task.tag || '未分类',
-              at: new Date().toISOString(),
-              type: 'complete',
-              plannedMinutes: Number(task.minutes) || 15,
-              actualMinutes: Number(task.minutes) || 15,
-              reason: 'microtask_completed',
-            },
-          }).catch(() => {});
-        }
-        return { ok: true, task };
-      }
-
-      if (action === 'microtask-focus-start') {
-        const task = payload?.task;
-        if (!task?.id) return { ok: false };
-        await backendRequest('/events', {
-          method: 'POST',
-          body: {
-            id: `web_focus_start_${Date.now()}_${task.id}`,
-            taskId: task.id,
-            title: task.title || '微任务',
-            tag: task.tag || '未分类',
-            at: new Date().toISOString(),
-            type: 'start',
-            plannedMinutes: Number(task.minutes) || 15,
-          },
-        }).catch(() => {});
-        return { ok: true };
-      }
-
-      if (action === 'microtask-focus-complete') {
-        const taskId = String(payload?.taskId || '').trim();
-        if (!taskId) throw new Error('缺少任务 ID');
-        const tasks = await backendRequest('/microtasks');
-        const current = Array.isArray(tasks) ? tasks.find((task) => task.id === taskId) : null;
-        if (!current) throw new Error('任务不存在或已被删除');
-        const updated = await backendRequest(`/microtasks/${encodeURIComponent(taskId)}`, {
-          method: 'PUT',
-          body: { ...current, done: true },
-        });
-        await backendRequest('/events', {
-          method: 'POST',
-          body: {
-            id: `web_focus_complete_${Date.now()}_${taskId}`,
-            taskId,
-            title: current.title || '微任务',
-            tag: current.tag || '未分类',
-            at: new Date().toISOString(),
-            type: 'complete',
-            plannedMinutes: Number(current.minutes) || 15,
-            actualMinutes: Number(payload?.activeMinutes) || Number(current.minutes) || 15,
-            reason: 'focus_completed',
-          },
-        }).catch(() => {});
-        return { ok: true, task: updated };
-      }
-
-      if (action === 'microtask-focus-abandon') {
-        const taskId = String(payload?.taskId || '').trim();
-        if (taskId) {
-          await backendRequest('/events', {
-            method: 'POST',
-            body: {
-              id: `web_focus_abandon_${Date.now()}_${taskId}`,
-              taskId,
-              title: payload?.title || '微任务',
-              tag: payload?.tag || '未分类',
-              at: new Date().toISOString(),
-              type: 'interrupt',
-              plannedMinutes: Number(payload?.minutes) || 15,
-              actualMinutes: Math.max(1, Number(payload?.activeMinutes) || 1),
-              reason: 'focus_abandoned',
-            },
-          }).catch(() => {});
-        }
-        return { ok: true };
+        showNotice(document, '微任务已写入服务端。');
+        navigate('micro');
+        return;
       }
 
       if (action === 'microtask-sweep') {
@@ -2713,15 +2604,10 @@
   }
 
   window.__RUANCHUANG_API_ACTION__ = runApiAction;
-  window.__RUANCHUANG_FOCUS_MODE__ = (enabled) => {
-    const shell = document.getElementById('workspace-shell');
-    if (shell) shell.style.visibility = enabled ? 'hidden' : '';
-  };
 
   function routeForLink(anchor) {
     const path = anchor.dataset.path;
     if (path && aliases[path]) return aliases[path];
-    if (path && pages[path]) return path;
     const label = `${anchor.innerText || ''} ${anchor.getAttribute('aria-label') || ''}`.toLowerCase();
     if (label.includes('calendar') || label.includes('日历') || label.includes('日程')) return 'schedule';
     if (label.includes('micro') || label.includes('微任务')) return 'micro';
