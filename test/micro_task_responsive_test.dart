@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shixuzhipei/screens/main_screen.dart';
 import 'package:shixuzhipei/screens/profile_page.dart';
@@ -20,19 +19,13 @@ void main() {
 
     try {
       await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('zh', 'CN'),
-          supportedLocales: const [Locale('zh', 'CN')],
-          localizationsDelegates: GlobalMaterialLocalizations.delegates,
-          theme: AppTheme.light,
-          home: const MainScreen(),
-        ),
+        MaterialApp(theme: AppTheme.light, home: const MainScreen()),
       );
       await tester.pumpAndSettle(const Duration(milliseconds: 300));
       await tester.tap(find.byKey(const ValueKey('shell-nav-micro')));
       await tester.pumpAndSettle(const Duration(milliseconds: 300));
 
-      expect(find.text('短任务冲刺'), findsAtLeastNWidgets(1));
+      expect(find.text('AI 填充'), findsAtLeastNWidgets(1));
       expect(tester.takeException(), isNull);
     } finally {
       tester.view.reset();
